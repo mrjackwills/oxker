@@ -19,7 +19,6 @@
 	"mounts": [
 		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly",
 		"source=/ramdrive,target=/ramdrive,type=bind",
-		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly",
 		"source=${localEnv:HOME}/.cargo/bin/cargo-watch,target=/usr/local/cargo/bin/cargo-watch,type=bind,readonly",
 		"source=${localEnv:HOME}/.cargo/bin/cross,target=/usr/local/cargo/bin/cross,type=bind,readonly",
 	],
