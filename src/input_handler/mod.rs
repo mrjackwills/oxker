@@ -43,7 +43,7 @@ impl InputHandler {
             is_running,
             rec,
         };
-		inner.start().await;
+        inner.start().await;
     }
 
     /// check for incoming messages
@@ -129,7 +129,7 @@ impl InputHandler {
                     }
                 }
                 KeyCode::Enter => {
-					// Does is matter though?
+                    // Does is matter though?
                     // This isn't great, just means you can't send docker commands before full initialization of the program
                     // could change to to if loading = true, although at the moment don't have a loading bool
                     let panel = self.gui_state.lock().selected_panel;

@@ -85,7 +85,7 @@ async fn run_app<B: Backend>(
     } else {
         loop {
             terminal.draw(|f| ui(f, &app_data, &gui_state)).unwrap();
-				if crossterm::event::poll(input_poll_rate).unwrap() {
+            if crossterm::event::poll(input_poll_rate).unwrap() {
                 let event = event::read().unwrap();
                 if let Event::Key(key) = event {
                     sender

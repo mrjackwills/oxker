@@ -31,8 +31,7 @@ impl AppData {
         }
     }
 
-  
-	// Current time as unix timestamp
+    // Current time as unix timestamp
     fn get_systemtime(&self) -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -40,7 +39,6 @@ impl AppData {
             .as_secs()
     }
 
- 
     /// Get the current select docker command
     /// So know which command to execute
     pub fn get_docker_command(&self) -> Option<DockerControls> {
@@ -363,8 +361,8 @@ impl AppData {
         }
     }
 
-	   /// update logs of a given container, based on index not id
-	pub fn update_log_by_index(&mut self, output: Vec<String>, index: usize) {
+    /// update logs of a given container, based on index not id
+    pub fn update_log_by_index(&mut self, output: Vec<String>, index: usize) {
         let tz = self.get_systemtime();
         if let Some(container) = self.containers.items.get_mut(index) {
             container.last_updated = tz;
@@ -388,8 +386,7 @@ impl AppData {
         self.logs_parsed = true;
     }
 
-
-	pub fn update_all_logs(&mut self, all_logs: Vec<Vec<String>>) {
+    pub fn update_all_logs(&mut self, all_logs: Vec<Vec<String>>) {
         for (index, output) in all_logs.into_iter().enumerate() {
             self.update_log_by_index(output, index);
         }
