@@ -1,0 +1,76 @@
+use app_data::AppData;
+use app_error::AppError;
+use bollard::Docker;
+use docker_data::DockerData;
+use parking_lot::Mutex;
+use parse_args::CliArgs;
+use std::sync::{atomic::AtomicBool, Arc};
+use tracing::{info, Level};
+
+mod app_data;
+mod app_error;
+mod docker_data;
+mod input_handler;
+mod parse_args;
+mod ui;
+
+use ui::{create_ui, GuiState};
+
+fn setup_tracing() {
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+}
+
+#[tokio::main]
+async fn main() {
+    setup_tracing();
+    let args = CliArgs::new();
+    let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
+    let gui_state = Arc::new(Mutex::new(GuiState::default()));
+
+    let docker_args = args.clone();
+    let docker_app_data = Arc::clone(&app_data);
+    let docker_gui_state = Arc::clone(&gui_state);
+
+    // Create docker daemon handler, and only spawn up the docker data handler if ping returns non-error
+    let docker = Arc::new(Docker::connect_with_socket_defaults().unwrap());
+    match docker.ping().await {
+        Ok(_) => {
+            let docker = Arc::clone(&docker);
+            tokio::spawn(async move {
+                DockerData::init(docker_args, docker_app_data, docker, docker_gui_state).await;
+            });
+        }
+        Err(_) => app_data.lock().set_error(AppError::DockerConnect),
+    }
+
+    let input_app_data = Arc::clone(&app_data);
+
+    let (s, r) = tokio::sync::broadcast::channel(16);
+
+    let input_docker = Arc::clone(&docker);
+    let is_running = Arc::new(AtomicBool::new(true));
+    let input_is_running = Arc::clone(&is_running);
+    let input_gui_state = Arc::clone(&gui_state);
+
+    // Spawn input handling into own tokio thread
+    tokio::spawn(async {
+        input_handler::InputHandler::init(
+            input_app_data,
+            r,
+            input_docker,
+            input_gui_state,
+            input_is_running,
+        )
+        .await;
+    });
+
+    // Debug mode for testing, mostly pointless, doesn't take terminal nor draw gui
+    if !args.gui {
+        loop {
+            info!("in debug mode");
+            tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
+        }
+    } else {
+        create_ui(app_data, s, is_running, gui_state).await.unwrap();
+    }
+}

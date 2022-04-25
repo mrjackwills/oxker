@@ -1,0 +1,33 @@
+[package]
+name = "oxker"
+version = "0.0.1"
+edition = "2021"
+authors = ["Jack Wills <email@mrjackwills.com>"]
+description = "a simple tui to view & control docker containers"
+repository = "https://github.com/mrjackwills/oxker"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1.0"
+bollard = "0.12.0"
+cansi = "2.1.1"
+clap={version="3.1.0", features = ["derive", "unicode"] }
+crossterm = "0.23.2"
+futures-util = "0.3.21"
+parking_lot = {version= "0.12.0"}
+tokio = {version = "1.17.0", features=["full"]}
+tracing = "0.1.32"
+tracing-subscriber = "0.3.9"
+tui = "0.17"
+
+[dev-dependencies]
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip=true
+debug = false
+
+

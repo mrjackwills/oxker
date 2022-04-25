@@ -1,0 +1,88 @@
+name: Release CI
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+jobs:
+  deploy:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@master
+
+      # cache some rust data?
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      
+      # Build for linux x86_64
+      - name: build release linux_x86_64
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: compress oxker_linux_x86_64 binary
+        run: tar -C target/release -czf ./oxker_linux_x86_64.tar.gz oxker
+
+      # Build for linux aarch64, aka 64 bit pi 4
+      - name: build release armv7
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-unknown-linux-musl
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target aarch64-unknown-linux-musl --release
+      - name: compress aarch64 binary
+        run: tar -C target/aarch64-unknown-linux-musl/release -czf ./oxker_linux_aarch64.tar.gz oxker
+
+      # Build for linux armv6, aka 32 bit pi zero w
+      - name: build release armv6
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target:  arm-unknown-linux-musleabihf
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target arm-unknown-linux-musleabihf --release
+      - name: compress armv6 binary
+        run: tar -C target/arm-unknown-linux-musleabihf/release -czf ./oxker_linux_armv6.tar.gz oxker
+
+      # Build for windows
+      - name: build release windows_x86_64
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target:  x86_64-pc-windows-gnu 
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target x86_64-pc-windows-gnu --release
+      - name: compress windows_x86_64 binary
+        run: zip -j ./oxker_windows_x86_64.zip target/x86_64-pc-windows-gnu/release/oxker.exe 
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: ${{ github.ref_name }}
+          body_path: ".github/release-body.md"
+          draft: false
+          files: |
+             oxker_linux_x86_64.tar.gz
+             oxker_linux_aarch64.tar.gz
+             oxker_linux_armv6.tar.gz
+             oxker_windows_x86_64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

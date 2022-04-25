@@ -1,0 +1,58 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.217.4/containers/rust
+{
+	"name": "Rust",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"args": {
+			// Use the VARIANT arg to pick a Debian OS version: buster, bullseye
+			// Use bullseye when on local on arm64/Apple Silicon.
+			"VARIANT": "bullseye"
+		}
+	},
+	"runArgs": [
+		"--cap-add=SYS_PTRACE",
+		"--security-opt",
+		"seccomp=unconfined",
+	],
+
+	"mounts": [
+		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly",
+		"source=/ramdrive,target=/ramdrive,type=bind",
+		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly",
+		"source=${localEnv:HOME}/.cargo/bin/cargo-watch,target=/usr/local/cargo/bin/cargo-watch,type=bind,readonly",
+		"source=${localEnv:HOME}/.cargo/bin/cross,target=/usr/local/cargo/bin/cross,type=bind,readonly",
+	],
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"lldb.executable": "/usr/bin/lldb",
+		// VS Code don't watch files under ./target
+		"files.watcherExclude": {
+			"**/target/**": true
+		},
+		"rust-analyzer.checkOnSave.command": "clippy"
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"vadimcn.vscode-lldb",
+		"mutantdino.resourcemonitor",
+		"matklad.rust-analyzer",
+		"tamasfe.even-better-toml",
+		"serayuzgur.crates",
+		"christian-kohler.path-intellisense",
+		"timonwong.shellcheck",
+		"ms-vscode.live-server",
+		"rangav.vscode-thunder-client",
+		"bmuskalla.vscode-tldr"
+	],
+
+
+	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode",
+	"features": {
+		"docker-in-docker": "latest",
+		"git": "os-provided"
+	}
+}
