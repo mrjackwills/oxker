@@ -417,7 +417,7 @@ impl Columns {
             name: (String::from("name"), 4),
             state: (String::from("state"), 11),
             status: (String::from("status"), 16),
-            mem: (String::from("mem/limit"), 9),
+            mem: (String::from("memory/limit"), 12),
             net_rx: (String::from("↓ rx"), 5),
             net_tx: (String::from("↑ tx"), 5),
         }
