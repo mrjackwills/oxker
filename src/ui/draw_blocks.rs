@@ -222,16 +222,15 @@ pub fn draw_logs<B: Backend>(
 
     let block = generate_block(Some(panel), app_data, selected_panel);
 
-	let init = app_data.lock().init;
-	if !init {
-		let icon = gui_state.lock().get_loading();
+    let init = app_data.lock().init;
+    if !init {
+        let icon = gui_state.lock().get_loading();
         let parsing_logs = format!("parsing logs {}", icon);
         let paragraph = Paragraph::new(parsing_logs)
             .style(Style::default())
             .block(block)
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area)
-	
     } else if let Some(index) = index {
         let items = app_data.lock().containers.items[index]
             .logs
@@ -349,8 +348,8 @@ fn make_chart<T: Stats + Display>(
                             .fg(label_color),
                     ),
                 ])
-				// add 0.01, for cases when the value is 0
-                .bounds([0.0, max.get_value() +0.01]),
+                // add 0.01, for cases when the value is 0
+                .bounds([0.0, max.get_value() + 0.01]),
         )
 }
 

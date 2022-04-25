@@ -232,7 +232,7 @@ impl Stats for CpuStats {
 impl fmt::Display for CpuStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = format!("{:05.2}%", self.value);
-		write!(f, "{:>x$}", disp, x = f.width().unwrap_or(1))
+        write!(f, "{:>x$}", disp, x = f.width().unwrap_or(1))
     }
 }
 
@@ -411,13 +411,13 @@ pub struct Columns {
 impl Columns {
     pub fn new() -> Self {
         Self {
-			// 7 to allow for 100.00%
+            // 7 to allow for 100.00%
             cpu: (String::from("cpu"), 7),
             image: (String::from("image"), 5),
             name: (String::from("name"), 4),
             state: (String::from("state"), 11),
             status: (String::from("status"), 16),
-            mem: (String::from("mem/limit"), 9),
+            mem: (String::from("memory/limit"), 12),
             net_rx: (String::from("↓ rx"), 5),
             net_tx: (String::from("↑ tx"), 5),
         }

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
- A simple tui to view and control docker containers"
+ A simple tui to view and control docker containers
 </p>
 
 <p align="center">

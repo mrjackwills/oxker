@@ -193,6 +193,7 @@ release_flow() {
 	ask_changelog_update
 	git checkout -b "$RELEASE_BRANCH"
 	update_cargo_toml
+	cargo fmt
 	git add .
 	git commit -m "chore: release $NEW_TAG_VERSION"
 	git checkout main
