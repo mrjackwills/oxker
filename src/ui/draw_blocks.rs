@@ -19,6 +19,7 @@ use crate::{
     app_error::AppError,
 };
 
+use super::gui_state::BoxLocation;
 use super::{GuiState, SelectablePanel};
 
 const NAME_TEXT: &str = r#"
@@ -497,7 +498,7 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Black));
 
-    let area = centered_info(lines as u16, max_line_width as u16, f.size());
+    let area = draw_popup(lines as u16, max_line_width as u16, f.size(), BoxLocation::MiddleCentre);
 
     let split_popup = Layout::default()
         .direction(Direction::Vertical)
@@ -560,38 +561,67 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = centered_info(lines as u16, max_line_width as u16, f.size());
+    let area = draw_popup(lines as u16, max_line_width as u16, f.size(), BoxLocation::MiddleCentre);
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+/// Show info box in bottom right corner
+pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
+    let block = Block::default()
+        .title("")
+        .title_alignment(Alignment::Center)
+        .borders(Borders::NONE);
+
+	// Add a blank line, so that the text is verticall centered
+    let text = format!("\n{}", text);
+
+    let mut max_line_width = 0;
+    text.lines().into_iter().for_each(|line| {
+        let width = line.chars().count();
+        if width > max_line_width {
+            max_line_width = width;
+        }
+    });
+
+    let mut lines = text.lines().count();
+
+    // Add some horizontal & vertical margins
+    max_line_width += 8;
+    lines += 3;
+
+    let paragraph = Paragraph::new(text)
+        .style(Style::default().bg(Color::Blue).fg(Color::White))
+        .block(block)
+        .alignment(Alignment::Center);
+
+    let area = draw_popup(lines as u16, max_line_width as u16, f.size(), BoxLocation::BottomRight);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
 
 /// draw a box in the center of the screen, based on max line width + number of lines
-fn centered_info(number_lines: u16, max_line_width: u16, r: Rect) -> Rect {
+fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location:BoxLocation) -> Rect {
     // This can panic if number_lines or max_line_width is larger than r.height or r.width
-    let blank_vertical = (r.height - number_lines) / 2;
-    let blank_horizontal = (r.width - max_line_width) / 2;
+    let blank_vertical = (r.height - text_lines) / 2;
+    let blank_horizontal = (r.width - text_width) / 2;
+
+	let vertical_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
+	let horizontal_constraints = box_location.get_horizontal_constraints(blank_horizontal, text_width);
+
+	let indexes = box_location.get_indexes();
 
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
-            [
-                Constraint::Max(blank_vertical),
-                Constraint::Max(number_lines),
-                Constraint::Max(blank_vertical),
-            ]
-            .as_ref(),
+			vertical_constraints
         )
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
-            [
-                Constraint::Max(blank_horizontal),
-                Constraint::Max(max_line_width),
-                Constraint::Max(blank_horizontal),
-            ]
-            .as_ref(),
+			horizontal_constraints
         )
-        .split(popup_layout[1])[1]
+        .split(popup_layout[indexes.0])[indexes.1]
 }

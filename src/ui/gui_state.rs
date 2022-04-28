@@ -1,5 +1,5 @@
 use std::{collections::HashMap, fmt};
-use tui::layout::Rect;
+use tui::layout::{Constraint, Rect};
 
 #[derive(Debug, PartialEq, std::hash::Hash, std::cmp::Eq, Clone, Copy)]
 pub enum SelectablePanel {
@@ -7,7 +7,78 @@ pub enum SelectablePanel {
     Commands,
     Logs,
 }
-#[derive(Debug)]
+
+#[derive(Debug, Clone, Copy)]
+pub enum BoxLocation {
+    TopLeft,
+    TopCentre,
+    TopRight,
+    MiddleLeft,
+    MiddleCentre,
+    MiddleRight,
+    BottomLeft,
+    BottomCentre,
+    BottomRight,
+}
+
+impl BoxLocation {
+    pub fn get_indexes(&self) -> (usize, usize) {
+        match self {
+            Self::TopLeft => (0, 0),
+            Self::TopCentre => (0, 1),
+            Self::TopRight => (0, 2),
+            Self::MiddleLeft => (1, 0),
+            Self::MiddleCentre => (1, 1),
+            Self::MiddleRight => (1, 2),
+            Self::BottomLeft => (2, 0),
+            Self::BottomCentre => (2, 1),
+            Self::BottomRight => (2, 2),
+        }
+    }
+
+	// Should combine and just return a tupple?
+    pub fn get_horizontal_constraints(&self, blank_vertical: u16, text_width: u16) -> [Constraint; 3] {
+        match self {
+            Self::TopLeft | Self::MiddleLeft | Self::BottomLeft => [
+                Constraint::Max(text_width),
+                Constraint::Max(blank_vertical),
+                Constraint::Max(blank_vertical),
+            ],
+            Self::TopCentre | Self::MiddleCentre | Self::BottomCentre => [
+                Constraint::Max(blank_vertical),
+                Constraint::Max(text_width),
+                Constraint::Max(blank_vertical),
+            ],
+            Self::TopRight | Self::MiddleRight | Self::BottomRight => [
+                Constraint::Max(blank_vertical),
+                Constraint::Max(blank_vertical),
+                Constraint::Max(text_width),
+            ],
+        }
+    }
+	pub fn get_vertical_constraints(&self, blank_vertical: u16, number_lines: u16) -> [Constraint; 3] {
+        match self {
+            Self::TopLeft | Self::TopCentre | Self::TopRight => [
+                Constraint::Max(number_lines),
+                Constraint::Max(blank_vertical),
+                Constraint::Max(blank_vertical),
+            ],
+            Self::MiddleLeft | Self::MiddleCentre | Self::MiddleRight => [
+                Constraint::Max(blank_vertical),
+                Constraint::Max(number_lines),
+                Constraint::Max(blank_vertical),
+            ],
+            Self::BottomLeft | Self::BottomCentre | Self::BottomRight => [
+                Constraint::Max(blank_vertical),
+                Constraint::Max(blank_vertical),
+                Constraint::Max(number_lines),
+            ],
+        }
+    }
+
+}
+
+#[derive(Debug, Clone)]
 pub enum Loading {
     One,
     Two,
@@ -34,20 +105,9 @@ impl Loading {
             Self::Eight => Self::Nine,
             Self::Nine => Self::Ten,
             Self::Ten => Self::One,
-            // Self::Five => Self::One
         }
     }
 }
-// "⠋",
-// 			"⠙",
-// 			"⠹",
-// 			"⠸",
-// 			"⠼",
-// 			"⠴",
-// 			"⠦",
-// 			"⠧",
-// 			"⠇",
-// 			"⠏"
 
 impl fmt::Display for Loading {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -92,7 +152,7 @@ impl SelectablePanel {
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GuiState {
     // Think this should be a BMapTree, so can define order when iterating over potential intersects
     // Is an issue if two panels are in the same space, sush as a smaller panel embedded, yet infront of, a larger panel
@@ -101,6 +161,8 @@ pub struct GuiState {
     loading: Loading,
     pub selected_panel: SelectablePanel,
     pub show_help: bool,
+    // show_info_panel: bool,
+    pub info_box_text: Option<String>,
 }
 
 impl GuiState {
@@ -111,6 +173,8 @@ impl GuiState {
             loading: Loading::One,
             selected_panel: SelectablePanel::Containers,
             show_help: false,
+            // show_info_panel: false,
+            info_box_text: None,
         }
     }
 
@@ -157,5 +221,19 @@ impl GuiState {
 
     pub fn reset_loading(&mut self) {
         self.loading = Loading::One;
+    }
+
+    pub fn set_info_box(&mut self, text: String) {
+        self.info_box_text = Some(text);
+        // self.show_info_panel = true;
+
+        // Should spawn and after 10 seconds close?
+        // Need to copy whatever we're doing with parsing logs icon
+    }
+
+    pub fn reset_info_box(&mut self) {
+        // self.loading = Loading::One;
+        self.info_box_text = None;
+        // self.show_info_panel = false;
     }
 }

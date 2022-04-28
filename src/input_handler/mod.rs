@@ -4,7 +4,12 @@ use std::sync::{
 };
 
 use bollard::{container::StartContainerOptions, Docker};
-use crossterm::event::{KeyCode, MouseButton, MouseEvent, MouseEventKind};
+use crossterm::{
+    event::{
+        DisableMouseCapture, EnableMouseCapture, KeyCode, MouseButton, MouseEvent, MouseEventKind,
+    },
+    execute,
+};
 use parking_lot::Mutex;
 use tokio::sync::broadcast::Receiver;
 use tui::layout::Rect;
@@ -25,6 +30,7 @@ pub struct InputHandler {
     gui_state: Arc<Mutex<GuiState>>,
     is_running: Arc<AtomicBool>,
     rec: Receiver<InputMessages>,
+    mouse_capture: bool,
 }
 
 impl InputHandler {
@@ -42,6 +48,7 @@ impl InputHandler {
             gui_state,
             is_running,
             rec,
+            mouse_capture: true,
         };
         inner.start().await;
     }
@@ -69,6 +76,7 @@ impl InputHandler {
     async fn button_press(&mut self, key_code: KeyCode) {
         let show_error = self.app_data.lock().show_error;
         let show_info = self.gui_state.lock().show_help;
+
         if show_error {
             match key_code {
                 KeyCode::Char('q') => {
@@ -97,6 +105,31 @@ impl InputHandler {
                 }
                 KeyCode::Char('h') => {
                     self.gui_state.lock().show_help = true;
+                }
+                KeyCode::Char('m') => {
+                    if self.mouse_capture {
+                        match execute!(std::io::stdout(), DisableMouseCapture) {
+                            Ok(_) => self
+                                .gui_state
+                                .lock()
+                                .set_info_box("Mouse capture disabled".to_owned()),
+                            Err(_) => self
+                                .app_data
+                                .lock()
+                                .set_error(AppError::MouseCapture(false)),
+                        }
+                    } else {
+                        match execute!(std::io::stdout(), EnableMouseCapture) {
+                            Ok(_) => self
+                                .gui_state
+                                .lock()
+                                .set_info_box("Mouse capture enabled".to_owned()),
+                            Err(_) => self.app_data.lock().set_error(AppError::MouseCapture(true)),
+                        }
+						todo!("tokio spawn for x seconds and then reset, probably need to take in an arc clone for self.gui_state")
+                        // execute!(stdout, EnableMouseCapture).unwrap();
+                    };
+                    self.mouse_capture = !self.mouse_capture;
                 }
                 KeyCode::Tab => self.gui_state.lock().next_panel(),
                 KeyCode::BackTab => self.gui_state.lock().previous_panel(),
