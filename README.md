@@ -21,14 +21,21 @@
 </p>
 
 
-## Download
+## Download & install 
 
 See <a href="https://github.com/mrjackwills/oxker/releases" target='_blank' rel='noopener noreferrer'>releases</a>
 
+install
 
+```bash
+INSTALL_DIR="${HOME}/.local/bin"
+tar xzvf oxker_linux_x86_64.tar.gz oxker
+install -Dm 755 oxker -t "$INSTALL_DIR"
+rm oxker_linux_x86_64.tar.gz oxker
+```
 ## Run
 
-```./oxker```
+```oxker```
 
 available command line arguments
 | argument|result|
@@ -56,7 +63,7 @@ requires docker & <a href='https://github.com/cross-rs/cross' target='_blank' re
 
 #### 32bit pi (pi zero w)
 
-Tested, and fully working on pi zero w, running Raspberry Pi OS 32 bit, the initial logs parsing can take an extended period of time if thousands of lines long
+Tested, and fully working on pi zero w, running Raspberry Pi OS 32 bit, the initial logs parsing can take an extended period of time if thousands of lines long, suggest running with a -d argument of 5000
 
 ```cross build --target arm-unknown-linux-musleabihf --release```
 

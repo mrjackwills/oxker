@@ -19,6 +19,7 @@ use crate::{
     app_error::AppError,
 };
 
+use super::gui_state::BoxLocation;
 use super::{GuiState, SelectablePanel};
 
 const NAME_TEXT: &str = r#"
@@ -34,17 +35,20 @@ a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const REPO: &str = env!("CARGO_PKG_REPOSITORY");
+const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 const ORANGE: Color = Color::Rgb(255, 178, 36);
 const MARGIN: &str = "   ";
 
-/// Generate block, add a bored if is the selected panel,
+/// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
 fn generate_block<'a>(
     selectable_panel: Option<SelectablePanel>,
     app_data: &Arc<Mutex<AppData>>,
     selected_panel: &SelectablePanel,
 ) -> Block<'a> {
-    let mut block = Block::default().borders(Borders::ALL);
+    let mut block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
 
     if let Some(panel) = selectable_panel {
         let title = match panel {
@@ -62,11 +66,7 @@ fn generate_block<'a>(
         };
         block = block.title(title);
         if selected_panel == &panel {
-            let selected_style = Style::default().fg(Color::LightCyan);
-            let selected_border = BorderType::Plain;
-            block = block
-                .border_style(selected_style)
-                .border_type(selected_border);
+            block = block.border_style(Style::default().fg(Color::LightCyan));
         }
     }
     block
@@ -169,6 +169,15 @@ pub fn draw_containers<B: Backend>(
                 Span::styled(
                     format!("{}{:>width$}", MARGIN, mems, width = widths.mem.1),
                     state_style,
+                ),
+                Span::styled(
+                    format!(
+                        "{}{:>width$}",
+                        MARGIN,
+                        i.id.chars().take(8).collect::<String>(),
+                        width = widths.id.1
+                    ),
+                    blue,
                 ),
                 Span::styled(
                     format!("{}{:>width$}", MARGIN, i.name, width = widths.name.1),
@@ -330,7 +339,7 @@ fn make_chart<T: Stats + Display>(
                         .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
-                .border_type(BorderType::Plain),
+                .border_type(BorderType::Rounded),
         )
         .x_axis(
             Axis::default()
@@ -348,13 +357,12 @@ fn make_chart<T: Stats + Display>(
                             .fg(label_color),
                     ),
                 ])
-                // add 0.01, for cases when the value is 0
                 .bounds([0.0, max.get_value() + 0.01]),
         )
 }
 
 /// Show error popup over whole screen
-pub fn draw_info_bar<B: Backend>(
+pub fn draw_heading_bar<B: Backend>(
     area: Rect,
     columns: &Columns,
     f: &mut Frame<'_, B>,
@@ -379,6 +387,8 @@ pub fn draw_info_bar<B: Backend>(
         .push_str(format!("{}{:>width$}", MARGIN, columns.cpu.0, width = columns.cpu.1).as_str());
     column_headings
         .push_str(format!("{}{:>width$}", MARGIN, columns.mem.0, width = columns.mem.1).as_str());
+    column_headings
+        .push_str(format!("{}{:>width$}", MARGIN, columns.id.0, width = columns.id.1).as_str());
     column_headings.push_str(
         format!(
             "{}{:>width$}",
@@ -455,18 +465,21 @@ pub fn draw_info_bar<B: Backend>(
 pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 
-    let mut description_text =
-        String::from("\n  A basic docker container information viewer and controller.");
-    description_text.push_str("\n  Tab or Alt+Tab to change panels, arrows to change lines, enter to send docker container commands.");
-    description_text.push_str("\n  Mouse input also available.");
-    description_text.push_str("\n  ( q ) to quit at any time.");
-    description_text
-        .push_str("\n\n  currenty an early work in progress, all and any input appreciated");
-    description_text.push_str(format!("\n  {}", REPO.trim()).as_str());
+    let description_text = format!("\n{}", DESCRIPTION);
+
+    let mut help_text = String::from("\n  ( tab )  or ( alt+tab ) to change panels");
+    help_text.push_str("\n  ( ↑ ↓ ← → ) to change selected line");
+    help_text.push_str("\n  ( enter ) to send docker container commands");
+    help_text.push_str("\n  ( h ) to toggle this help information");
+    help_text.push_str("\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied");
+    help_text.push_str("\n  ( q ) to quit at any time");
+    help_text.push_str("\n  mouse scrolling & clicking also available");
+    help_text.push_str("\n\n  currenty an early work in progress, all and any input appreciated");
+    help_text.push_str(format!("\n  {}", REPO.trim()).as_str());
 
     let mut max_line_width = 0;
 
-    let all_text = format!("{}{}", NAME_TEXT, description_text);
+    let all_text = format!("{}{}{}", NAME_TEXT, description_text, help_text);
 
     all_text.lines().into_iter().for_each(|line| {
         let width = line.chars().count();
@@ -486,7 +499,12 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .block(Block::default())
         .alignment(Alignment::Center);
 
-    let description_paragraph = Paragraph::new(description_text.as_str())
+    let description_paragrpah = Paragraph::new(description_text.as_str())
+        .style(Style::default().bg(Color::Magenta).fg(Color::Black))
+        .block(Block::default())
+        .alignment(Alignment::Center);
+
+    let help_paragraph = Paragraph::new(help_text.as_str())
         .style(Style::default().bg(Color::Magenta).fg(Color::Black))
         .block(Block::default())
         .alignment(Alignment::Left);
@@ -497,7 +515,12 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Black));
 
-    let area = centered_info(lines as u16, max_line_width as u16, f.size());
+    let area = draw_popup(
+        lines as u16,
+        max_line_width as u16,
+        f.size(),
+        BoxLocation::MiddleCentre,
+    );
 
     let split_popup = Layout::default()
         .direction(Direction::Vertical)
@@ -505,6 +528,7 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
             [
                 Constraint::Max(NAME_TEXT.lines().count() as u16),
                 Constraint::Max(description_text.lines().count() as u16),
+                Constraint::Max(help_text.lines().count() as u16),
             ]
             .as_ref(),
         )
@@ -513,7 +537,8 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     // Order is important here
     f.render_widget(Clear, area);
     f.render_widget(name_paragraph, split_popup[0]);
-    f.render_widget(description_paragraph, split_popup[1]);
+    f.render_widget(description_paragrpah, split_popup[1]);
+    f.render_widget(help_paragraph, split_popup[2]);
     f.render_widget(block, area);
 }
 
@@ -560,38 +585,80 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = centered_info(lines as u16, max_line_width as u16, f.size());
+    let area = draw_popup(
+        lines as u16,
+        max_line_width as u16,
+        f.size(),
+        BoxLocation::MiddleCentre,
+    );
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+/// Show info box in bottom right corner
+pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
+    let block = Block::default()
+        .title("")
+        .title_alignment(Alignment::Center)
+        .borders(Borders::NONE);
+
+
+    let mut max_line_width = 0;
+    text.lines().into_iter().for_each(|line| {
+        let width = line.chars().count();
+        if width > max_line_width {
+            max_line_width = width;
+        }
+    });
+
+    let mut lines = text.lines().count();
+
+    // Add some horizontal & vertical margins
+    max_line_width += 8;
+    lines += 2;
+
+    let paragraph = Paragraph::new(text)
+        .style(Style::default().bg(Color::Blue).fg(Color::White))
+        .block(block)
+        .alignment(Alignment::Center);
+
+    let area = draw_popup(
+        lines as u16,
+        max_line_width as u16,
+        f.size(),
+        BoxLocation::BottomRight,
+    );
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
 
 /// draw a box in the center of the screen, based on max line width + number of lines
-fn centered_info(number_lines: u16, max_line_width: u16, r: Rect) -> Rect {
-    // This can panic if number_lines or max_line_width is larger than r.height or r.width
-    let blank_vertical = (r.height - number_lines) / 2;
-    let blank_horizontal = (r.width - max_line_width) / 2;
+fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocation) -> Rect {
+    // Make sure blank_space can't be an negative, as will crash
+    let blank_vertical = if r.height > text_lines {
+        (r.height - text_lines) / 2
+    } else {
+        1
+    };
+    let blank_horizontal = if r.width > text_width {
+        (r.width - text_width) / 2
+    } else {
+        1
+    };
+
+    let vertical_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
+    let horizontal_constraints =
+        box_location.get_horizontal_constraints(blank_horizontal, text_width);
+
+    let indexes = box_location.get_indexes();
 
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Max(blank_vertical),
-                Constraint::Max(number_lines),
-                Constraint::Max(blank_vertical),
-            ]
-            .as_ref(),
-        )
+        .constraints(vertical_constraints)
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(
-            [
-                Constraint::Max(blank_horizontal),
-                Constraint::Max(max_line_width),
-                Constraint::Max(blank_horizontal),
-            ]
-            .as_ref(),
-        )
-        .split(popup_layout[1])[1]
+        .constraints(horizontal_constraints)
+        .split(popup_layout[indexes.0])[indexes.1]
 }

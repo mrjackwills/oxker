@@ -11,6 +11,7 @@ use std::{
     sync::{atomic::Ordering, Arc},
 };
 use tokio::sync::broadcast::Sender;
+use tracing::error;
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout},
@@ -50,7 +51,7 @@ pub async fn create_ui(
     terminal.show_cursor().unwrap();
 
     if let Err(err) = res {
-        err.disp()
+        error!(%err);
     }
     Ok(())
 }
@@ -126,6 +127,7 @@ fn ui<B: Backend>(
     let log_index = app_data.lock().get_selected_log_index();
     let selected_panel = gui_state.lock().selected_panel;
     let show_help = gui_state.lock().show_help;
+    let info_text = gui_state.lock().info_box_text.clone();
 
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -190,7 +192,7 @@ fn ui<B: Backend>(
         &selected_panel,
     );
 
-    draw_info_bar(
+    draw_heading_bar(
         whole_layout[0],
         &column_widths,
         f,
@@ -201,6 +203,10 @@ fn ui<B: Backend>(
     // only draw charts if there are containers
     if has_containers {
         draw_chart(f, lower_main[1], app_data, log_index);
+    }
+
+    if let Some(info) = info_text {
+        draw_info(f, info);
     }
 
     // Check if error, and show popup if so
