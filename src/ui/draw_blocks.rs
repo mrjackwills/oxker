@@ -39,7 +39,7 @@ const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 const ORANGE: Color = Color::Rgb(255, 178, 36);
 const MARGIN: &str = "   ";
 
-/// Generate block, add a bored if is the selected panel,
+/// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
 fn generate_block<'a>(
     selectable_panel: Option<SelectablePanel>,
@@ -66,11 +66,7 @@ fn generate_block<'a>(
         };
         block = block.title(title);
         if selected_panel == &panel {
-            // let selected_style = Style::default().fg(Color::LightCyan);
-            // let selected_border = BorderType::Plain;
-            // let selected_border = BorderType::Rounded;
             block = block.border_style(Style::default().fg(Color::LightCyan));
-            // .border_type(BorderType::Rounded);
         }
     }
     block
@@ -343,7 +339,6 @@ fn make_chart<T: Stats + Display>(
                         .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
-                // .border_type(BorderType::Plain),
                 .border_type(BorderType::Rounded),
         )
         .x_axis(
@@ -362,7 +357,6 @@ fn make_chart<T: Stats + Display>(
                             .fg(label_color),
                     ),
                 ])
-                // add 0.01, for cases when the value is 0
                 .bounds([0.0, max.get_value() + 0.01]),
         )
 }
