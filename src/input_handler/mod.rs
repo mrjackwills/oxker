@@ -74,6 +74,41 @@ impl InputHandler {
         }
     }
 
+	fn m_button(&mut self) {
+		if self.mouse_capture {
+			match execute!(std::io::stdout(), DisableMouseCapture) {
+				Ok(_) => self
+					.gui_state
+					.lock()
+					.set_info_box("✖ mouse capture disabled".to_owned()),
+				Err(_) => self
+					.app_data
+					.lock()
+					.set_error(AppError::MouseCapture(false)),
+			}
+		} else {
+			match execute!(std::io::stdout(), EnableMouseCapture) {
+				Ok(_) => self
+					.gui_state
+					.lock()
+					.set_info_box("✓ mouse capture enabled".to_owned()),
+				Err(_) => self.app_data.lock().set_error(AppError::MouseCapture(true)),
+			}
+		};
+
+		let gui_state = Arc::clone(&self.gui_state);
+
+		if self.info_sleep.is_some() {
+			self.info_sleep.as_ref().unwrap().abort()
+		}
+		self.info_sleep = Some(tokio::spawn(async move {
+			tokio::time::sleep(std::time::Duration::from_millis(4000)).await;
+			gui_state.lock().reset_info_box()
+		}));
+
+		self.mouse_capture = !self.mouse_capture;
+	}
+
     /// Handle any keyboard button events
     async fn button_press(&mut self, key_code: KeyCode) {
         let show_error = self.app_data.lock().show_error;
@@ -92,56 +127,16 @@ impl InputHandler {
             }
         } else if show_info {
             match key_code {
-                KeyCode::Char('q') => {
-                    self.is_running.store(false, Ordering::SeqCst);
-                }
-                KeyCode::Char('h') => {
-                    self.gui_state.lock().show_help = false;
-                }
+                KeyCode::Char('q') => self.is_running.store(false, Ordering::SeqCst),
+                KeyCode::Char('h') => self.gui_state.lock().show_help = false,
+				KeyCode::Char('m') => self.m_button(),
                 _ => (),
             }
         } else {
             match key_code {
-                KeyCode::Char('q') => {
-                    self.is_running.store(false, Ordering::SeqCst);
-                }
-                KeyCode::Char('h') => {
-                    self.gui_state.lock().show_help = true;
-                }
-                KeyCode::Char('m') => {
-                    if self.mouse_capture {
-                        match execute!(std::io::stdout(), DisableMouseCapture) {
-                            Ok(_) => self
-                                .gui_state
-                                .lock()
-                                .set_info_box("✖ mouse capture disabled".to_owned()),
-                            Err(_) => self
-                                .app_data
-                                .lock()
-                                .set_error(AppError::MouseCapture(false)),
-                        }
-                    } else {
-                        match execute!(std::io::stdout(), EnableMouseCapture) {
-                            Ok(_) => self
-                                .gui_state
-                                .lock()
-                                .set_info_box("✓ mouse capture enabled".to_owned()),
-                            Err(_) => self.app_data.lock().set_error(AppError::MouseCapture(true)),
-                        }
-                    };
-
-                    let gui_state = Arc::clone(&self.gui_state);
-
-                    if self.info_sleep.is_some() {
-                        self.info_sleep.as_ref().unwrap().abort()
-                    }
-                    self.info_sleep = Some(tokio::spawn(async move {
-                        tokio::time::sleep(std::time::Duration::from_millis(4000)).await;
-                        gui_state.lock().reset_info_box()
-                    }));
-
-                    self.mouse_capture = !self.mouse_capture;
-                }
+                KeyCode::Char('q') => self.is_running.store(false, Ordering::SeqCst),
+                KeyCode::Char('h') => self.gui_state.lock().show_help = true,
+                KeyCode::Char('m') => self.m_button(),
                 KeyCode::Tab => self.gui_state.lock().next_panel(),
                 KeyCode::BackTab => self.gui_state.lock().previous_panel(),
                 KeyCode::Home => {

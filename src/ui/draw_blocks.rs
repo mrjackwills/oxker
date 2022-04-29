@@ -471,12 +471,15 @@ pub fn draw_heading_bar<B: Backend>(
 pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 
-    let mut description_text =
-        String::from("\n  A basic docker container information viewer and controller.");
-    description_text.push_str("\n  Tab or Alt+Tab to change panels, arrows to change lines, enter to send docker container commands.");
-    description_text.push_str("\n  Mouse input also available.");
-    description_text.push_str("\n  ( q ) to quit at any time.");
-	description_text.push_str("\n  ( m ) to toggle mouse capture. When disabled, text on screen can be selected & copied, but mouse clicks get disabled");
+    let mut description_text = String::new();
+        // String::from("\n  A basic docker container information viewer and controller.");
+    description_text.push_str("\n  ( tab )  or ( alt+tab ) to change panels");
+	description_text.push_str("\n  ( ↑ ↓ ← → ) mto change selected line");
+	description_text.push_str("\n  ( enter ) to send docker container commands");
+	description_text.push_str("\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied, but mouse clicks get disabled");
+    description_text.push_str("\n  ( h ) to toggle this help information");
+	description_text.push_str("\n  ( q ) to quit at any time");
+    description_text.push_str("\n  mouse scrolling & clicking also available");
     description_text
         .push_str("\n\n  currenty an early work in progress, all and any input appreciated");
     description_text.push_str(format!("\n  {}", REPO.trim()).as_str());
