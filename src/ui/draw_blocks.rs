@@ -471,7 +471,7 @@ pub fn draw_heading_bar<B: Backend>(
 pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 
-   let description_text = format!("\n{}", DESCRIPTION);
+    let description_text = format!("\n{}", DESCRIPTION);
 
     let mut help_text = String::from("\n  ( tab )  or ( alt+tab ) to change panels");
     help_text.push_str("\n  ( ↑ ↓ ← → ) mto change selected line");

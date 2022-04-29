@@ -15,10 +15,9 @@ pub struct CliArgs {
     #[clap(short = 'g')]
     pub gui: bool,
 
-	 /// Install to ./local/bin
-	 #[clap(short = 'i')]
-	 pub install: bool,
-
+    //  /// Install to ./local/bin
+    //  #[clap(short = 'i')]
+    //  pub install: bool,
     /// Remove timestamps from Docker logs
     #[clap(short = 't')]
     pub timestamp: bool,
@@ -48,7 +47,7 @@ impl CliArgs {
             docker_interval: args.docker_interval,
             gui: !args.gui,
             raw: args.raw,
-			install: args.install,
+            // install: args.install,
             timestamp: !args.timestamp,
         }
     }
