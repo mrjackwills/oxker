@@ -67,7 +67,7 @@ pub async fn create_ui(
     terminal.show_cursor().unwrap();
 
     if let Err(err) = res {
-		println!("{}", err);
+        println!("{}", err);
     }
     Ok(())
 }

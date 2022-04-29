@@ -212,8 +212,8 @@ impl DockerData {
     }
 
     /// Animate the loading icon
-    async fn loading_spin(&mut self ) -> JoinHandle<()> {
-		let gui_state = Arc::clone(&self.gui_state);
+    async fn loading_spin(&mut self) -> JoinHandle<()> {
+        let gui_state = Arc::clone(&self.gui_state);
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -228,8 +228,7 @@ impl DockerData {
         self.gui_state.lock().reset_loading();
     }
 
-
-	// Initialize docker container data, before any messages are received
+    // Initialize docker container data, before any messages are received
     async fn initialise_container_data(&mut self) {
         let loading_spin = self.loading_spin().await;
 
@@ -259,7 +258,7 @@ impl DockerData {
             let app_data = Arc::clone(&self.app_data);
             match message {
                 DockerMessage::Pause(id) => {
-                    let loading_spin =self.loading_spin().await;
+                    let loading_spin = self.loading_spin().await;
                     docker.pause_container(&id).await.unwrap_or_else(|_| {
                         app_data
                             .lock()
@@ -268,7 +267,7 @@ impl DockerData {
                     self.stop_loading_spin(loading_spin);
                 }
                 DockerMessage::Restart(id) => {
-                    let loading_spin =self.loading_spin().await;
+                    let loading_spin = self.loading_spin().await;
                     docker
                         .restart_container(&id, None)
                         .await
@@ -280,7 +279,7 @@ impl DockerData {
                     self.stop_loading_spin(loading_spin);
                 }
                 DockerMessage::Start(id) => {
-                    let loading_spin =self.loading_spin().await;
+                    let loading_spin = self.loading_spin().await;
                     docker
                         .start_container(&id, None::<StartContainerOptions<String>>)
                         .await
@@ -292,7 +291,7 @@ impl DockerData {
                     self.stop_loading_spin(loading_spin);
                 }
                 DockerMessage::Stop(id) => {
-                    let loading_spin =self.loading_spin().await;
+                    let loading_spin = self.loading_spin().await;
                     docker.stop_container(&id, None).await.unwrap_or_else(|_| {
                         app_data
                             .lock()
@@ -301,14 +300,14 @@ impl DockerData {
                     self.stop_loading_spin(loading_spin);
                 }
                 DockerMessage::Unpause(id) => {
-                    let loading_spin =self.loading_spin().await;
+                    let loading_spin = self.loading_spin().await;
                     docker.unpause_container(&id).await.unwrap_or_else(|_| {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Unpause))
                     });
                     self.stop_loading_spin(loading_spin);
-					self.update_everything().await
+                    self.update_everything().await
                 }
                 DockerMessage::Update => self.update_everything().await,
             }
