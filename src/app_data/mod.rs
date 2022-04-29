@@ -304,7 +304,7 @@ impl AppData {
                 if self.containers.state.selected().is_some() {
                     self.containers.previous();
                 }
-				// docker rm -f $(docker ps -aq) will cause this to crash
+                // docker rm -f $(docker ps -aq) will cause this to crash
                 self.containers.items.remove(index);
             }
         }
