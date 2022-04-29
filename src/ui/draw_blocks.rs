@@ -633,20 +633,17 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
 
 /// draw a box in the center of the screen, based on max line width + number of lines
 fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocation) -> Rect {
-    // This can panic if number_lines or max_line_width is larger than r.height or r.width
 
-	
-
+	// Make sure blank_space can't be an negative, as will crash
     let blank_vertical = if r.height > text_lines {
 		(r.height - text_lines) / 2
 	} else {
-		r.height / 2
+		1
 	};
     let blank_horizontal =  if r.width > text_width { 
 		(r.width - text_width) / 2
 	}else {
-		r.width / 2
-
+		1
 	};
 
     let vertical_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
