@@ -402,7 +402,7 @@ pub struct Columns {
     pub status: (String, usize),
     pub cpu: (String, usize),
     pub mem: (String, usize),
-	pub id: (String, usize),
+    pub id: (String, usize),
     pub name: (String, usize),
     pub image: (String, usize),
     pub net_rx: (String, usize),
@@ -417,7 +417,7 @@ impl Columns {
             // 7 to allow for "100.00%"
             cpu: (String::from("cpu"), 7),
             mem: (String::from("memory/limit"), 12),
-			id: (String::from("id"), 8),
+            id: (String::from("id"), 8),
             name: (String::from("name"), 4),
             image: (String::from("image"), 5),
             net_rx: (String::from("↓ rx"), 5),
