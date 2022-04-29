@@ -36,8 +36,12 @@ impl BoxLocation {
         }
     }
 
-	// Should combine and just return a tupple?
-    pub fn get_horizontal_constraints(&self, blank_vertical: u16, text_width: u16) -> [Constraint; 3] {
+    // Should combine and just return a tupple?
+    pub fn get_horizontal_constraints(
+        &self,
+        blank_vertical: u16,
+        text_width: u16,
+    ) -> [Constraint; 3] {
         match self {
             Self::TopLeft | Self::MiddleLeft | Self::BottomLeft => [
                 Constraint::Max(text_width),
@@ -56,7 +60,11 @@ impl BoxLocation {
             ],
         }
     }
-	pub fn get_vertical_constraints(&self, blank_vertical: u16, number_lines: u16) -> [Constraint; 3] {
+    pub fn get_vertical_constraints(
+        &self,
+        blank_vertical: u16,
+        number_lines: u16,
+    ) -> [Constraint; 3] {
         match self {
             Self::TopLeft | Self::TopCentre | Self::TopRight => [
                 Constraint::Max(number_lines),
@@ -75,7 +83,6 @@ impl BoxLocation {
             ],
         }
     }
-
 }
 
 #[derive(Debug, Clone)]

@@ -11,7 +11,7 @@ use crossterm::{
     execute,
 };
 use parking_lot::Mutex;
-use tokio::sync::broadcast::Receiver;
+use tokio::{sync::broadcast::Receiver, task::JoinHandle};
 use tui::layout::Rect;
 
 mod message;
@@ -31,6 +31,7 @@ pub struct InputHandler {
     is_running: Arc<AtomicBool>,
     rec: Receiver<InputMessages>,
     mouse_capture: bool,
+    info_sleep: Option<JoinHandle<()>>,
 }
 
 impl InputHandler {
@@ -49,6 +50,7 @@ impl InputHandler {
             is_running,
             rec,
             mouse_capture: true,
+            info_sleep: None,
         };
         inner.start().await;
     }
@@ -112,7 +114,7 @@ impl InputHandler {
                             Ok(_) => self
                                 .gui_state
                                 .lock()
-                                .set_info_box("Mouse capture disabled".to_owned()),
+                                .set_info_box("✖ mouse capture disabled".to_owned()),
                             Err(_) => self
                                 .app_data
                                 .lock()
@@ -123,12 +125,21 @@ impl InputHandler {
                             Ok(_) => self
                                 .gui_state
                                 .lock()
-                                .set_info_box("Mouse capture enabled".to_owned()),
+                                .set_info_box("✓ mouse capture enabled".to_owned()),
                             Err(_) => self.app_data.lock().set_error(AppError::MouseCapture(true)),
                         }
-						todo!("tokio spawn for x seconds and then reset, probably need to take in an arc clone for self.gui_state")
-                        // execute!(stdout, EnableMouseCapture).unwrap();
                     };
+
+                    let gui_state = Arc::clone(&self.gui_state);
+
+                    if self.info_sleep.is_some() {
+                        self.info_sleep.as_ref().unwrap().abort()
+                    }
+                    self.info_sleep = Some(tokio::spawn(async move {
+                        tokio::time::sleep(std::time::Duration::from_millis(4000)).await;
+                        gui_state.lock().reset_info_box()
+                    }));
+
                     self.mouse_capture = !self.mouse_capture;
                 }
                 KeyCode::Tab => self.gui_state.lock().next_panel(),

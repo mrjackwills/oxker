@@ -192,7 +192,7 @@ fn ui<B: Backend>(
         &selected_panel,
     );
 
-    draw_info_bar(
+    draw_heading_bar(
         whole_layout[0],
         &column_widths,
         f,
@@ -200,14 +200,12 @@ fn ui<B: Backend>(
         show_help,
     );
 
- 
-
     // only draw charts if there are containers
     if has_containers {
         draw_chart(f, lower_main[1], app_data, log_index);
     }
 
-	if let Some(info) = info_text {
+    if let Some(info) = info_text {
         draw_info(f, info);
     }
 

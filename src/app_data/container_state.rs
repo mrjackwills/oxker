@@ -398,12 +398,13 @@ impl ContainerItem {
 /// Container information panel headings + widths, for nice pretty formatting
 #[derive(Debug)]
 pub struct Columns {
-    pub cpu: (String, usize),
-    pub image: (String, usize),
-    pub name: (String, usize),
     pub state: (String, usize),
     pub status: (String, usize),
+    pub cpu: (String, usize),
     pub mem: (String, usize),
+	pub id: (String, usize),
+    pub name: (String, usize),
+    pub image: (String, usize),
     pub net_rx: (String, usize),
     pub net_tx: (String, usize),
 }
@@ -411,13 +412,14 @@ pub struct Columns {
 impl Columns {
     pub fn new() -> Self {
         Self {
-            // 7 to allow for 100.00%
-            cpu: (String::from("cpu"), 7),
-            image: (String::from("image"), 5),
-            name: (String::from("name"), 4),
             state: (String::from("state"), 11),
             status: (String::from("status"), 16),
+            // 7 to allow for "100.00%"
+            cpu: (String::from("cpu"), 7),
             mem: (String::from("memory/limit"), 12),
+			id: (String::from("id"), 8),
+            name: (String::from("name"), 4),
+            image: (String::from("image"), 5),
             net_rx: (String::from("↓ rx"), 5),
             net_tx: (String::from("↑ tx"), 5),
         }

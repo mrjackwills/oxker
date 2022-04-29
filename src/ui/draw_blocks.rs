@@ -45,7 +45,7 @@ fn generate_block<'a>(
     app_data: &Arc<Mutex<AppData>>,
     selected_panel: &SelectablePanel,
 ) -> Block<'a> {
-    let mut block = Block::default().borders(Borders::ALL);
+    let mut block = Block::default().borders(Borders::ALL).border_type(BorderType::Rounded);
 
     if let Some(panel) = selectable_panel {
         let title = match panel {
@@ -63,11 +63,12 @@ fn generate_block<'a>(
         };
         block = block.title(title);
         if selected_panel == &panel {
-            let selected_style = Style::default().fg(Color::LightCyan);
-            let selected_border = BorderType::Plain;
+            // let selected_style = Style::default().fg(Color::LightCyan);
+            // let selected_border = BorderType::Plain;
+			// let selected_border = BorderType::Rounded;
             block = block
-                .border_style(selected_style)
-                .border_type(selected_border);
+                .border_style(Style::default().fg(Color::LightCyan));
+                // .border_type(BorderType::Rounded);
         }
     }
     block
@@ -170,6 +171,10 @@ pub fn draw_containers<B: Backend>(
                 Span::styled(
                     format!("{}{:>width$}", MARGIN, mems, width = widths.mem.1),
                     state_style,
+                ),
+				Span::styled(
+                    format!("{}{:>width$}", MARGIN, i.id.chars().take(8).collect::<String>(), width = widths.id.1),
+                    blue,
                 ),
                 Span::styled(
                     format!("{}{:>width$}", MARGIN, i.name, width = widths.name.1),
@@ -331,7 +336,8 @@ fn make_chart<T: Stats + Display>(
                         .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
-                .border_type(BorderType::Plain),
+                // .border_type(BorderType::Plain),
+				.border_type(BorderType::Rounded),
         )
         .x_axis(
             Axis::default()
@@ -355,7 +361,7 @@ fn make_chart<T: Stats + Display>(
 }
 
 /// Show error popup over whole screen
-pub fn draw_info_bar<B: Backend>(
+pub fn draw_heading_bar<B: Backend>(
     area: Rect,
     columns: &Columns,
     f: &mut Frame<'_, B>,
@@ -380,6 +386,15 @@ pub fn draw_info_bar<B: Backend>(
         .push_str(format!("{}{:>width$}", MARGIN, columns.cpu.0, width = columns.cpu.1).as_str());
     column_headings
         .push_str(format!("{}{:>width$}", MARGIN, columns.mem.0, width = columns.mem.1).as_str());
+		column_headings.push_str(
+			format!(
+				"{}{:>width$}",
+				MARGIN,
+				columns.id.0,
+				width = columns.id.1
+			)
+			.as_str(),
+		);
     column_headings.push_str(
         format!(
             "{}{:>width$}",
@@ -498,7 +513,12 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Black));
 
-    let area = draw_popup(lines as u16, max_line_width as u16, f.size(), BoxLocation::MiddleCentre);
+    let area = draw_popup(
+        lines as u16,
+        max_line_width as u16,
+        f.size(),
+        BoxLocation::MiddleCentre,
+    );
 
     let split_popup = Layout::default()
         .direction(Direction::Vertical)
@@ -561,7 +581,12 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = draw_popup(lines as u16, max_line_width as u16, f.size(), BoxLocation::MiddleCentre);
+    let area = draw_popup(
+        lines as u16,
+        max_line_width as u16,
+        f.size(),
+        BoxLocation::MiddleCentre,
+    );
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
@@ -573,7 +598,7 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
         .title_alignment(Alignment::Center)
         .borders(Borders::NONE);
 
-	// Add a blank line, so that the text is verticall centered
+    // Add a blank line, so that the text is verticall centered
     let text = format!("\n{}", text);
 
     let mut max_line_width = 0;
@@ -595,33 +620,35 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = draw_popup(lines as u16, max_line_width as u16, f.size(), BoxLocation::BottomRight);
+    let area = draw_popup(
+        lines as u16,
+        max_line_width as u16,
+        f.size(),
+        BoxLocation::BottomRight,
+    );
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
 
 /// draw a box in the center of the screen, based on max line width + number of lines
-fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location:BoxLocation) -> Rect {
+fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocation) -> Rect {
     // This can panic if number_lines or max_line_width is larger than r.height or r.width
     let blank_vertical = (r.height - text_lines) / 2;
     let blank_horizontal = (r.width - text_width) / 2;
 
-	let vertical_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
-	let horizontal_constraints = box_location.get_horizontal_constraints(blank_horizontal, text_width);
+    let vertical_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
+    let horizontal_constraints =
+        box_location.get_horizontal_constraints(blank_horizontal, text_width);
 
-	let indexes = box_location.get_indexes();
+    let indexes = box_location.get_indexes();
 
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-			vertical_constraints
-        )
+        .constraints(vertical_constraints)
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(
-			horizontal_constraints
-        )
+        .constraints(horizontal_constraints)
         .split(popup_layout[indexes.0])[indexes.1]
 }
