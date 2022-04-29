@@ -474,10 +474,10 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let description_text = format!("\n{}", DESCRIPTION);
 
     let mut help_text = String::from("\n  ( tab )  or ( alt+tab ) to change panels");
-    help_text.push_str("\n  ( ↑ ↓ ← → ) mto change selected line");
+    help_text.push_str("\n  ( ↑ ↓ ← → ) to change selected line");
     help_text.push_str("\n  ( enter ) to send docker container commands");
     help_text.push_str("\n  ( h ) to toggle this help information");
-    help_text.push_str("\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied, but mouse clicks get disabled");
+    help_text.push_str("\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied");
     help_text.push_str("\n  ( q ) to quit at any time");
     help_text.push_str("\n  mouse scrolling & clicking also available");
     help_text.push_str("\n\n  currenty an early work in progress, all and any input appreciated");
