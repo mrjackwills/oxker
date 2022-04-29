@@ -608,8 +608,6 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
         .title_alignment(Alignment::Center)
         .borders(Borders::NONE);
 
-    // Add a blank line, so that the text is verticall centered
-    let text = format!("\n{}", text);
 
     let mut max_line_width = 0;
     text.lines().into_iter().for_each(|line| {
@@ -623,7 +621,7 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
 
     // Add some horizontal & vertical margins
     max_line_width += 8;
-    lines += 3;
+    lines += 2;
 
     let paragraph = Paragraph::new(text)
         .style(Style::default().bg(Color::Blue).fg(Color::White))
