@@ -223,6 +223,7 @@ pub fn draw_logs<B: Backend>(
     f: &mut Frame<'_, B>,
     gui_state: &Arc<Mutex<GuiState>>,
     index: Option<usize>,
+	loading_icon: String,
     selected_panel: &SelectablePanel,
 ) {
     let panel = SelectablePanel::Logs;
@@ -233,8 +234,8 @@ pub fn draw_logs<B: Backend>(
 
     let init = app_data.lock().init;
     if !init {
-        let icon = gui_state.lock().get_loading();
-        let parsing_logs = format!("parsing logs {}", icon);
+        // let icon = gui_state.lock().get_loading();
+        let parsing_logs = format!("parsing logs {}", loading_icon);
         let paragraph = Paragraph::new(parsing_logs)
             .style(Style::default())
             .block(block)
@@ -367,16 +368,22 @@ pub fn draw_heading_bar<B: Backend>(
     columns: &Columns,
     f: &mut Frame<'_, B>,
     has_containers: bool,
+	loading_icon: String,
     info_visible: bool,
 ) {
     let block = || Block::default().style(Style::default().bg(Color::Magenta).fg(Color::Black));
 
     f.render_widget(block(), area);
 
-    let mut column_headings = format!(" {:>width$}", columns.state.0, width = columns.state.1);
+    let mut column_headings = format!(
+        " {}{:>width$}",
+        loading_icon,
+        columns.state.0,
+        width = columns.state.1
+    );
     column_headings.push_str(
         format!(
-            "{}   {:>width$}",
+            "{}  {:>width$}",
             MARGIN,
             columns.status.0,
             width = columns.status.1
@@ -471,7 +478,9 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     help_text.push_str("\n  ( ↑ ↓ ← → ) to change selected line");
     help_text.push_str("\n  ( enter ) to send docker container commands");
     help_text.push_str("\n  ( h ) to toggle this help information");
-    help_text.push_str("\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied");
+    help_text.push_str(
+        "\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied",
+    );
     help_text.push_str("\n  ( q ) to quit at any time");
     help_text.push_str("\n  mouse scrolling & clicking also available");
     help_text.push_str("\n\n  currenty an early work in progress, all and any input appreciated");
@@ -601,7 +610,6 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
         .title("")
         .title_alignment(Alignment::Center)
         .borders(Borders::NONE);
-
 
     let mut max_line_width = 0;
     text.lines().into_iter().for_each(|line| {
