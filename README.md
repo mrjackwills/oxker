@@ -28,9 +28,8 @@ See <a href="https://github.com/mrjackwills/oxker/releases" target='_blank' rel=
 install
 
 ```bash
-INSTALL_DIR="${HOME}/.local/bin"
 tar xzvf oxker_linux_x86_64.tar.gz oxker
-install -Dm 755 oxker -t "$INSTALL_DIR"
+install -Dm 755 oxker -t "${HOME}/.local/bin"
 rm oxker_linux_x86_64.tar.gz oxker
 ```
 ## Run
@@ -88,6 +87,13 @@ As of yet untested, needs work
 ```cargo test -- --test-threads=1```
 
 Run some example docker images
+
+using docker-compose.yml;
+
+```docker compose -f docker-compose.yml up -d```
+
+or individually
+
 
 ```docker run --name redis -d redis:alpine3.15```
 

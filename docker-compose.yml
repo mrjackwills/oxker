@@ -1,0 +1,43 @@
+version: "3.8"
+networks:
+  oxker-example-net:
+    name: oxker-examaple-net
+services:
+  postgres:
+    image: postgres:alpine
+    container_name: postgres
+    environment: 
+     - POSTGRES_PASSWORD=never_use_this_password_in_production
+    ipc: private
+    restart: always
+    shm_size: 256MB
+    networks:
+      - oxker-example-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ipc: private
+    restart: always
+    networks:
+      - oxker-example-net
+    deploy:
+      resources:
+        limits:
+          memory: 16M
+  rabbitmq:
+    image: rabbitmq:3
+    container_name: rabbitmq
+    ipc: private
+    restart: always
+    networks:
+      - oxker-example-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+
