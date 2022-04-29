@@ -8,6 +8,7 @@ pub enum SelectablePanel {
     Logs,
 }
 
+#[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum BoxLocation {
     TopLeft,
@@ -165,10 +166,12 @@ pub struct GuiState {
     // Is an issue if two panels are in the same space, sush as a smaller panel embedded, yet infront of, a larger panel
     // If a BMapTree think it would mean have to implement ordering for SelectablePanel
     area_map: HashMap<SelectablePanel, Rect>,
-    loading: Loading,
+    loading_icon: Loading,
+    // Should be a vec, each time loading add a new to the vec, and reset remove from vec
+    // for for if is_loading just check if vec is empty or not
+    is_loading: bool,
     pub selected_panel: SelectablePanel,
     pub show_help: bool,
-    // show_info_panel: bool,
     pub info_box_text: Option<String>,
 }
 
@@ -177,10 +180,10 @@ impl GuiState {
     pub fn default() -> Self {
         Self {
             area_map: HashMap::new(),
-            loading: Loading::One,
+            loading_icon: Loading::One,
             selected_panel: SelectablePanel::Containers,
             show_help: false,
-            // show_info_panel: false,
+            is_loading: false,
             info_box_text: None,
         }
     }
@@ -218,29 +221,33 @@ impl GuiState {
         self.selected_panel = self.selected_panel.prev();
     }
 
+    /// Advance loading animation
     pub fn next_loading(&mut self) {
-        self.loading = self.loading.next()
+        self.loading_icon = self.loading_icon.next();
+        self.is_loading = true;
     }
 
+    /// if is_loading, return loading animation frame, else single space
     pub fn get_loading(&mut self) -> String {
-        self.loading.to_string()
+        if self.is_loading {
+            self.loading_icon.to_string()
+        } else {
+            String::from(" ")
+        }
     }
 
+    /// set is_loading to false, but keep animation frame at same state
     pub fn reset_loading(&mut self) {
-        self.loading = Loading::One;
+        self.is_loading = false;
     }
 
+    /// Set info box content
     pub fn set_info_box(&mut self, text: String) {
         self.info_box_text = Some(text);
-        // self.show_info_panel = true;
-
-        // Should spawn and after 10 seconds close?
-        // Need to copy whatever we're doing with parsing logs icon
     }
 
+    /// Remove info box content
     pub fn reset_info_box(&mut self) {
-        // self.loading = Loading::One;
         self.info_box_text = None;
-        // self.show_info_panel = false;
     }
 }

@@ -3,7 +3,6 @@ use std::sync::{
     Arc,
 };
 
-use bollard::{container::StartContainerOptions, Docker};
 use crossterm::{
     event::{
         DisableMouseCapture, EnableMouseCapture, KeyCode, MouseButton, MouseEvent, MouseEventKind,
@@ -11,13 +10,17 @@ use crossterm::{
     execute,
 };
 use parking_lot::Mutex;
-use tokio::{sync::broadcast::Receiver, task::JoinHandle};
+use tokio::{
+    sync::mpsc::{Receiver, Sender},
+    task::JoinHandle,
+};
 use tui::layout::Rect;
 
 mod message;
 use crate::{
     app_data::{AppData, DockerControls},
     app_error::AppError,
+    docker_data::DockerMessage,
     ui::{GuiState, SelectablePanel},
 };
 pub use message::InputMessages;
@@ -26,12 +29,12 @@ pub use message::InputMessages;
 #[derive(Debug)]
 pub struct InputHandler {
     app_data: Arc<Mutex<AppData>>,
-    docker: Arc<Docker>,
+    docker_sender: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
-    is_running: Arc<AtomicBool>,
-    rec: Receiver<InputMessages>,
-    mouse_capture: bool,
     info_sleep: Option<JoinHandle<()>>,
+    is_running: Arc<AtomicBool>,
+    mouse_capture: bool,
+    rec: Receiver<InputMessages>,
 }
 
 impl InputHandler {
@@ -39,13 +42,13 @@ impl InputHandler {
     pub async fn init(
         app_data: Arc<Mutex<AppData>>,
         rec: Receiver<InputMessages>,
-        docker: Arc<Docker>,
+        docker_sender: Sender<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
         is_running: Arc<AtomicBool>,
     ) {
         let mut inner = Self {
             app_data,
-            docker,
+            docker_sender,
             gui_state,
             is_running,
             rec,
@@ -57,7 +60,7 @@ impl InputHandler {
 
     /// check for incoming messages
     async fn start(&mut self) {
-        while let Ok(message) = self.rec.recv().await {
+        while let Some(message) = self.rec.recv().await {
             match message {
                 InputMessages::ButtonPress(key_code) => self.button_press(key_code).await,
                 InputMessages::MouseEvent(mouse_event) => {
@@ -168,90 +171,44 @@ impl InputHandler {
                     }
                 }
                 KeyCode::Enter => {
-                    // Does is matter though?
                     // This isn't great, just means you can't send docker commands before full initialization of the program
                     // could change to to if loading = true, although at the moment don't have a loading bool
+                    // Does is matter though?
                     let panel = self.gui_state.lock().selected_panel;
                     if panel == SelectablePanel::Commands {
                         let command = self.app_data.lock().get_docker_command();
 
                         if command.is_some() {
                             let id = self.app_data.lock().get_selected_container_id();
-                            let app_data = Arc::clone(&self.app_data);
-                            let docker = Arc::clone(&self.docker);
                             if id.is_some() {
                                 let id = id.unwrap();
                                 match command.unwrap() {
-                                    DockerControls::Pause => {
-                                        tokio::spawn(async move {
-                                            docker.pause_container(&id).await.unwrap_or_else(
-                                                |_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Pause,
-                                                        ),
-                                                    )
-                                                },
-                                            );
-                                        });
-                                    }
-                                    DockerControls::Unpause => {
-                                        tokio::spawn(async move {
-                                            docker.unpause_container(&id).await.unwrap_or_else(
-                                                |_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Unpause,
-                                                        ),
-                                                    )
-                                                },
-                                            );
-                                        });
-                                    }
-                                    DockerControls::Start => {
-                                        tokio::spawn(async move {
-                                            docker
-                                                .start_container(
-                                                    &id,
-                                                    None::<StartContainerOptions<String>>,
-                                                )
-                                                .await
-                                                .unwrap_or_else(|_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Start,
-                                                        ),
-                                                    )
-                                                });
-                                        });
-                                    }
-                                    DockerControls::Stop => {
-                                        tokio::spawn(async move {
-                                            docker.stop_container(&id, None).await.unwrap_or_else(
-                                                |_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Stop,
-                                                        ),
-                                                    )
-                                                },
-                                            );
-                                        });
-                                    }
-                                    DockerControls::Restart => {
-                                        tokio::spawn(async move {
-                                            docker
-                                                .restart_container(&id, None)
-                                                .await
-                                                .unwrap_or_else(|_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Restart,
-                                                        ),
-                                                    )
-                                                });
-                                        });
-                                    }
+                                    // TODO handle theses errors?
+                                    DockerControls::Pause => self
+                                        .docker_sender
+                                        .send(DockerMessage::Pause(id))
+                                        .await
+                                        .unwrap(),
+                                    DockerControls::Unpause => self
+                                        .docker_sender
+                                        .send(DockerMessage::Unpause(id))
+                                        .await
+                                        .unwrap(),
+                                    DockerControls::Start => self
+                                        .docker_sender
+                                        .send(DockerMessage::Start(id))
+                                        .await
+                                        .unwrap(),
+                                    DockerControls::Stop => self
+                                        .docker_sender
+                                        .send(DockerMessage::Stop(id))
+                                        .await
+                                        .unwrap(),
+                                    DockerControls::Restart => self
+                                        .docker_sender
+                                        .send(DockerMessage::Restart(id))
+                                        .await
+                                        .unwrap(),
                                 }
                             }
                         }
