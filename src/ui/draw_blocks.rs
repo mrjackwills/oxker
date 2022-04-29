@@ -471,22 +471,24 @@ pub fn draw_heading_bar<B: Backend>(
 pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 
-    let mut description_text = String::new();
-        // String::from("\n  A basic docker container information viewer and controller.");
-    description_text.push_str("\n  ( tab )  or ( alt+tab ) to change panels");
-	description_text.push_str("\n  ( ↑ ↓ ← → ) mto change selected line");
-	description_text.push_str("\n  ( enter ) to send docker container commands");
-	description_text.push_str("\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied, but mouse clicks get disabled");
-    description_text.push_str("\n  ( h ) to toggle this help information");
-	description_text.push_str("\n  ( q ) to quit at any time");
-    description_text.push_str("\n  mouse scrolling & clicking also available");
-    description_text
+	let description_text =  String::from("\n  A basic docker container information viewer and controller");
+
+    let mut help_text = String::from("\n  ( tab )  or ( alt+tab ) to change panels");
+	help_text.push_str("\n  ( ↑ ↓ ← → ) mto change selected line");
+	help_text.push_str("\n  ( enter ) to send docker container commands");
+    help_text.push_str("\n  ( h ) to toggle this help information");
+	help_text.push_str("\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied, but mouse clicks get disabled");
+	help_text.push_str("\n  ( q ) to quit at any time");
+    help_text.push_str("\n  mouse scrolling & clicking also available");
+    help_text
         .push_str("\n\n  currenty an early work in progress, all and any input appreciated");
-    description_text.push_str(format!("\n  {}", REPO.trim()).as_str());
+    help_text.push_str(format!("\n  {}", REPO.trim()).as_str());
 
     let mut max_line_width = 0;
 
-    let all_text = format!("{}{}", NAME_TEXT, description_text);
+
+
+    let all_text = format!("{}{}{}", NAME_TEXT, description_text, help_text);
 
     all_text.lines().into_iter().for_each(|line| {
         let width = line.chars().count();
@@ -506,7 +508,13 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .block(Block::default())
         .alignment(Alignment::Center);
 
-    let description_paragraph = Paragraph::new(description_text.as_str())
+
+		let description_paragrpah = Paragraph::new(description_text.as_str())
+        .style(Style::default().bg(Color::Magenta).fg(Color::Black))
+        .block(Block::default())
+        .alignment(Alignment::Center);
+
+    let help_paragraph = Paragraph::new(help_text.as_str())
         .style(Style::default().bg(Color::Magenta).fg(Color::Black))
         .block(Block::default())
         .alignment(Alignment::Left);
@@ -529,7 +537,8 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .constraints(
             [
                 Constraint::Max(NAME_TEXT.lines().count() as u16),
-                Constraint::Max(description_text.lines().count() as u16),
+				Constraint::Max(description_text.lines().count() as u16),
+                Constraint::Max(help_text.lines().count() as u16),
             ]
             .as_ref(),
         )
@@ -538,7 +547,8 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     // Order is important here
     f.render_widget(Clear, area);
     f.render_widget(name_paragraph, split_popup[0]);
-    f.render_widget(description_paragraph, split_popup[1]);
+	f.render_widget(description_paragrpah, split_popup[1]);
+    f.render_widget(help_paragraph, split_popup[2]);
     f.render_widget(block, area);
 }
 
