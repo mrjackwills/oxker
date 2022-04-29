@@ -1,7 +1,5 @@
-use core::fmt;
-use tracing::error;
-
 use crate::app_data::DockerControls;
+use core::fmt;
 
 /// app errors to set in global state
 #[allow(unused)]
@@ -11,23 +9,8 @@ pub enum AppError {
     DockerInterval,
     InputPoll,
     DockerCommand(DockerControls),
+    MouseCapture(bool),
     Terminal,
-}
-
-impl AppError {
-    /// for handling errors from terminal
-    pub fn disp(&self) {
-        match self {
-            Self::DockerConnect => error!("Unable to access docker daemon"),
-            Self::DockerInterval => error!("Docker update interval needs to be greater than 0"),
-            Self::InputPoll => error!("Unable to poll user input"),
-            Self::Terminal => error!("Unable to draw to terminal"),
-            Self::DockerCommand(s) => {
-                let error = format!("Unable to {} container", s);
-                error!(%error);
-            }
-        }
-    }
 }
 
 /// Convert errors into strings to display
@@ -39,6 +22,10 @@ impl fmt::Display for AppError {
             Self::InputPoll => "Unable to poll user input".to_owned(),
             Self::Terminal => "Unable to draw to terminal".to_owned(),
             Self::DockerCommand(s) => format!("Unable to {} container", s),
+            Self::MouseCapture(x) => {
+                let reason = if *x { "en" } else { "dis" };
+                format!("Unable to {}able mouse capture", reason)
+            }
         };
         write!(f, "{}", disp)
     }

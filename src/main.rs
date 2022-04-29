@@ -31,13 +31,21 @@ async fn main() {
     let docker_app_data = Arc::clone(&app_data);
     let docker_gui_state = Arc::clone(&gui_state);
 
+    let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(16);
     // Create docker daemon handler, and only spawn up the docker data handler if ping returns non-error
     let docker = Arc::new(Docker::connect_with_socket_defaults().unwrap());
     match docker.ping().await {
         Ok(_) => {
             let docker = Arc::clone(&docker);
             tokio::spawn(async move {
-                DockerData::init(docker_args, docker_app_data, docker, docker_gui_state).await;
+                DockerData::init(
+                    docker_args,
+                    docker_app_data,
+                    docker,
+                    docker_gui_state,
+                    docker_rx,
+                )
+                .await;
             });
         }
         Err(_) => app_data.lock().set_error(AppError::DockerConnect),
@@ -45,19 +53,20 @@ async fn main() {
 
     let input_app_data = Arc::clone(&app_data);
 
-    let (s, r) = tokio::sync::broadcast::channel(16);
+    let (input_sx, input_rx) = tokio::sync::mpsc::channel(16);
 
-    let input_docker = Arc::clone(&docker);
+    // let input_docker = Arc::clone(&docker);
     let is_running = Arc::new(AtomicBool::new(true));
     let input_is_running = Arc::clone(&is_running);
     let input_gui_state = Arc::clone(&gui_state);
+    let input_docker_sender = docker_sx.clone();
 
     // Spawn input handling into own tokio thread
     tokio::spawn(async {
         input_handler::InputHandler::init(
             input_app_data,
-            r,
-            input_docker,
+            input_rx,
+            input_docker_sender,
             input_gui_state,
             input_is_running,
         )
@@ -71,6 +80,16 @@ async fn main() {
             tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
         }
     } else {
-        create_ui(app_data, s, is_running, gui_state).await.unwrap();
+        let update_duration = std::time::Duration::from_millis(args.docker_interval as u64);
+        create_ui(
+            app_data,
+            input_sx,
+            is_running,
+            gui_state,
+            docker_sx,
+            update_duration,
+        )
+        .await
+        .unwrap();
     }
 }

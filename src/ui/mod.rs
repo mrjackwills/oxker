@@ -5,12 +5,15 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use parking_lot::Mutex;
-use std::sync::atomic::AtomicBool;
 use std::{
     io,
     sync::{atomic::Ordering, Arc},
 };
-use tokio::sync::broadcast::Sender;
+use std::{
+    sync::atomic::AtomicBool,
+    time::{Duration, Instant},
+};
+use tokio::sync::mpsc::Sender;
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout},
@@ -23,7 +26,10 @@ mod gui_state;
 
 pub use self::color_match::*;
 pub use self::gui_state::{GuiState, SelectablePanel};
-use crate::{app_data::AppData, app_error::AppError, input_handler::InputMessages};
+use crate::{
+    app_data::AppData, app_error::AppError, docker_data::DockerMessage,
+    input_handler::InputMessages,
+};
 use draw_blocks::*;
 
 /// Take control of the terminal in order to draw gui
@@ -32,6 +38,8 @@ pub async fn create_ui(
     sender: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
     gui_state: Arc<Mutex<GuiState>>,
+    docker_sx: Sender<DockerMessage>,
+    update_duration: Duration,
 ) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -39,7 +47,16 @@ pub async fn create_ui(
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let res = run_app(&mut terminal, app_data, sender, is_running, gui_state).await;
+    let res = run_app(
+        &mut terminal,
+        app_data,
+        sender,
+        is_running,
+        gui_state,
+        docker_sx,
+        update_duration,
+    )
+    .await;
 
     disable_raw_mode().unwrap();
     execute!(
@@ -50,7 +67,7 @@ pub async fn create_ui(
     terminal.show_cursor().unwrap();
 
     if let Err(err) = res {
-        err.disp()
+        println!("{}", err);
     }
     Ok(())
 }
@@ -62,6 +79,8 @@ async fn run_app<B: Backend>(
     sender: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
     gui_state: Arc<Mutex<GuiState>>,
+    docker_sx: Sender<DockerMessage>,
+    update_duration: Duration,
 ) -> Result<(), AppError> {
     let input_poll_rate = std::time::Duration::from_millis(75);
 
@@ -83,6 +102,7 @@ async fn run_app<B: Backend>(
             }
         }
     } else {
+        let mut now = Instant::now();
         loop {
             terminal.draw(|f| ui(f, &app_data, &gui_state)).unwrap();
             if crossterm::event::poll(input_poll_rate).unwrap() {
@@ -90,13 +110,22 @@ async fn run_app<B: Backend>(
                 if let Event::Key(key) = event {
                     sender
                         .send(InputMessages::ButtonPress(key.code))
-                        .unwrap_or(0);
+                        .await
+                        .unwrap_or(());
                 } else if let Event::Mouse(m) = event {
-                    sender.send(InputMessages::MouseEvent(m)).unwrap_or(0);
+                    sender
+                        .send(InputMessages::MouseEvent(m))
+                        .await
+                        .unwrap_or(());
                 } else if let Event::Resize(_, _) = event {
                     gui_state.lock().clear_area_map();
                     terminal.autoresize().unwrap_or(());
                 }
+            }
+
+            if now.elapsed() >= update_duration {
+                docker_sx.send(DockerMessage::Update).await.unwrap();
+                now = Instant::now();
             }
 
             if !is_running.load(Ordering::SeqCst) {
@@ -126,6 +155,8 @@ fn ui<B: Backend>(
     let log_index = app_data.lock().get_selected_log_index();
     let selected_panel = gui_state.lock().selected_panel;
     let show_help = gui_state.lock().show_help;
+    let info_text = gui_state.lock().info_box_text.clone();
+    let loading_icon = gui_state.lock().get_loading();
 
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -187,20 +218,26 @@ fn ui<B: Backend>(
         f,
         gui_state,
         log_index,
+        loading_icon.to_owned(),
         &selected_panel,
     );
 
-    draw_info_bar(
+    draw_heading_bar(
         whole_layout[0],
         &column_widths,
         f,
         has_containers,
+        loading_icon,
         show_help,
     );
 
     // only draw charts if there are containers
     if has_containers {
         draw_chart(f, lower_main[1], app_data, log_index);
+    }
+
+    if let Some(info) = info_text {
+        draw_info(f, info);
     }
 
     // Check if error, and show popup if so

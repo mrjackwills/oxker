@@ -1,22 +1,27 @@
 use bollard::{
-    container::{ListContainersOptions, LogsOptions, Stats, StatsOptions},
+    container::{ListContainersOptions, LogsOptions, StartContainerOptions, Stats, StatsOptions},
     Docker,
 };
 use futures_util::{future::join_all, StreamExt};
 use parking_lot::Mutex;
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::sync::Arc;
+use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 
-use crate::{app_data::AppData, parse_args::CliArgs, ui::GuiState};
+use crate::{
+    app_data::{AppData, DockerControls},
+    app_error::AppError,
+    parse_args::CliArgs,
+    ui::GuiState,
+};
+mod message;
+pub use message::DockerMessage;
 
 pub struct DockerData {
     app_data: Arc<Mutex<AppData>>,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
     initialised: bool,
-    sleep_duration: Duration,
+    receiver: Receiver<DockerMessage>,
     timestamps: bool,
 }
 
@@ -178,8 +183,7 @@ impl DockerData {
     }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
-    // rename init all logs, as only gets run once
-    async fn update_all_logs(&mut self, all_ids: &[(bool, String)]) {
+    async fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {
         let mut handles = vec![];
 
         for (_, id) in all_ids.iter() {
@@ -207,43 +211,32 @@ impl DockerData {
         self.update_all_container_stats(&all_ids).await;
     }
 
-    /// Initialise self, and start the updated loop
-    pub async fn init(
-        args: CliArgs,
-        app_data: Arc<Mutex<AppData>>,
-        docker: Arc<Docker>,
-        gui_state: Arc<Mutex<GuiState>>,
-    ) {
-        if app_data.lock().get_error().is_none() {
-            let mut inner = Self {
-                app_data,
-                docker,
-                gui_state,
-                initialised: false,
-                sleep_duration: Duration::from_millis(args.docker as u64),
-                timestamps: args.timestamp,
-            };
-            inner.initialise_container_data().await;
-            inner.update_loop().await;
-        }
-    }
-
-    async fn initialise_container_data(&mut self) {
+    /// Animate the loading icon
+    async fn loading_spin(&mut self) -> JoinHandle<()> {
         let gui_state = Arc::clone(&self.gui_state);
-        // could also just loop while init is false, would need to move an arc mutex into here
-        // so instead just abort at end of function
-        let loading_spin = tokio::spawn(async move {
+        tokio::spawn(async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 gui_state.lock().next_loading();
             }
-        });
+        })
+    }
+
+    /// Stop the loading_spin fn, and reset gui loading status
+    fn stop_loading_spin(&mut self, handle: JoinHandle<()>) {
+        handle.abort();
+        self.gui_state.lock().reset_loading();
+    }
+
+    // Initialize docker container data, before any messages are received
+    async fn initialise_container_data(&mut self) {
+        let loading_spin = self.loading_spin().await;
 
         let all_ids = self.update_all_containers().await;
         self.update_all_container_stats(&all_ids).await;
 
         // Maybe only do a single one at first?
-        self.update_all_logs(&all_ids).await;
+        self.init_all_logs(&all_ids).await;
 
         if all_ids.is_empty() {
             self.initialised = true;
@@ -255,21 +248,92 @@ impl DockerData {
             self.initialised = self.app_data.lock().initialised(&all_ids);
         }
         self.app_data.lock().init = true;
-        loading_spin.abort();
-        self.gui_state.lock().reset_loading();
+        self.stop_loading_spin(loading_spin);
     }
 
-    /// Update all items, wait until all complete
-    /// sleep for CliArgs.docker ms before updating next
-    async fn update_loop(&mut self) {
-        loop {
-            let start = Instant::now();
-            self.update_everything().await;
-
-            let elapsed = start.elapsed();
-            if elapsed < self.sleep_duration {
-                tokio::time::sleep(self.sleep_duration - elapsed).await;
+    /// Handle incoming messages, container controls & all container information update
+    async fn message_handler(&mut self) {
+        while let Some(message) = self.receiver.recv().await {
+            let docker = Arc::clone(&self.docker);
+            let app_data = Arc::clone(&self.app_data);
+            match message {
+                DockerMessage::Pause(id) => {
+                    let loading_spin = self.loading_spin().await;
+                    docker.pause_container(&id).await.unwrap_or_else(|_| {
+                        app_data
+                            .lock()
+                            .set_error(AppError::DockerCommand(DockerControls::Pause))
+                    });
+                    self.stop_loading_spin(loading_spin);
+                }
+                DockerMessage::Restart(id) => {
+                    let loading_spin = self.loading_spin().await;
+                    docker
+                        .restart_container(&id, None)
+                        .await
+                        .unwrap_or_else(|_| {
+                            app_data
+                                .lock()
+                                .set_error(AppError::DockerCommand(DockerControls::Restart))
+                        });
+                    self.stop_loading_spin(loading_spin);
+                }
+                DockerMessage::Start(id) => {
+                    let loading_spin = self.loading_spin().await;
+                    docker
+                        .start_container(&id, None::<StartContainerOptions<String>>)
+                        .await
+                        .unwrap_or_else(|_| {
+                            app_data
+                                .lock()
+                                .set_error(AppError::DockerCommand(DockerControls::Start))
+                        });
+                    self.stop_loading_spin(loading_spin);
+                }
+                DockerMessage::Stop(id) => {
+                    let loading_spin = self.loading_spin().await;
+                    docker.stop_container(&id, None).await.unwrap_or_else(|_| {
+                        app_data
+                            .lock()
+                            .set_error(AppError::DockerCommand(DockerControls::Stop))
+                    });
+                    self.stop_loading_spin(loading_spin);
+                }
+                DockerMessage::Unpause(id) => {
+                    let loading_spin = self.loading_spin().await;
+                    docker.unpause_container(&id).await.unwrap_or_else(|_| {
+                        app_data
+                            .lock()
+                            .set_error(AppError::DockerCommand(DockerControls::Unpause))
+                    });
+                    self.stop_loading_spin(loading_spin);
+                    self.update_everything().await
+                }
+                DockerMessage::Update => self.update_everything().await,
             }
+        }
+    }
+
+    /// Initialise self, and start the message receiving loop
+    pub async fn init(
+        args: CliArgs,
+        app_data: Arc<Mutex<AppData>>,
+        docker: Arc<Docker>,
+        gui_state: Arc<Mutex<GuiState>>,
+        receiver: Receiver<DockerMessage>,
+    ) {
+        if app_data.lock().get_error().is_none() {
+            let mut inner = Self {
+                app_data,
+                docker,
+                gui_state,
+                initialised: false,
+                receiver,
+                timestamps: args.timestamp,
+            };
+            inner.initialise_container_data().await;
+
+            inner.message_handler().await;
         }
     }
 }

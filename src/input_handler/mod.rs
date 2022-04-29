@@ -3,16 +3,24 @@ use std::sync::{
     Arc,
 };
 
-use bollard::{container::StartContainerOptions, Docker};
-use crossterm::event::{KeyCode, MouseButton, MouseEvent, MouseEventKind};
+use crossterm::{
+    event::{
+        DisableMouseCapture, EnableMouseCapture, KeyCode, MouseButton, MouseEvent, MouseEventKind,
+    },
+    execute,
+};
 use parking_lot::Mutex;
-use tokio::sync::broadcast::Receiver;
+use tokio::{
+    sync::mpsc::{Receiver, Sender},
+    task::JoinHandle,
+};
 use tui::layout::Rect;
 
 mod message;
 use crate::{
     app_data::{AppData, DockerControls},
     app_error::AppError,
+    docker_data::DockerMessage,
     ui::{GuiState, SelectablePanel},
 };
 pub use message::InputMessages;
@@ -21,9 +29,11 @@ pub use message::InputMessages;
 #[derive(Debug)]
 pub struct InputHandler {
     app_data: Arc<Mutex<AppData>>,
-    docker: Arc<Docker>,
+    docker_sender: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
+    info_sleep: Option<JoinHandle<()>>,
     is_running: Arc<AtomicBool>,
+    mouse_capture: bool,
     rec: Receiver<InputMessages>,
 }
 
@@ -32,23 +42,25 @@ impl InputHandler {
     pub async fn init(
         app_data: Arc<Mutex<AppData>>,
         rec: Receiver<InputMessages>,
-        docker: Arc<Docker>,
+        docker_sender: Sender<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
         is_running: Arc<AtomicBool>,
     ) {
         let mut inner = Self {
             app_data,
-            docker,
+            docker_sender,
             gui_state,
             is_running,
             rec,
+            mouse_capture: true,
+            info_sleep: None,
         };
         inner.start().await;
     }
 
     /// check for incoming messages
     async fn start(&mut self) {
-        while let Ok(message) = self.rec.recv().await {
+        while let Some(message) = self.rec.recv().await {
             match message {
                 InputMessages::ButtonPress(key_code) => self.button_press(key_code).await,
                 InputMessages::MouseEvent(mouse_event) => {
@@ -65,10 +77,46 @@ impl InputHandler {
         }
     }
 
+    fn m_button(&mut self) {
+        if self.mouse_capture {
+            match execute!(std::io::stdout(), DisableMouseCapture) {
+                Ok(_) => self
+                    .gui_state
+                    .lock()
+                    .set_info_box("✖ mouse capture disabled".to_owned()),
+                Err(_) => self
+                    .app_data
+                    .lock()
+                    .set_error(AppError::MouseCapture(false)),
+            }
+        } else {
+            match execute!(std::io::stdout(), EnableMouseCapture) {
+                Ok(_) => self
+                    .gui_state
+                    .lock()
+                    .set_info_box("✓ mouse capture enabled".to_owned()),
+                Err(_) => self.app_data.lock().set_error(AppError::MouseCapture(true)),
+            }
+        };
+
+        let gui_state = Arc::clone(&self.gui_state);
+
+        if self.info_sleep.is_some() {
+            self.info_sleep.as_ref().unwrap().abort()
+        }
+        self.info_sleep = Some(tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(4000)).await;
+            gui_state.lock().reset_info_box()
+        }));
+
+        self.mouse_capture = !self.mouse_capture;
+    }
+
     /// Handle any keyboard button events
     async fn button_press(&mut self, key_code: KeyCode) {
         let show_error = self.app_data.lock().show_error;
         let show_info = self.gui_state.lock().show_help;
+
         if show_error {
             match key_code {
                 KeyCode::Char('q') => {
@@ -82,22 +130,16 @@ impl InputHandler {
             }
         } else if show_info {
             match key_code {
-                KeyCode::Char('q') => {
-                    self.is_running.store(false, Ordering::SeqCst);
-                }
-                KeyCode::Char('h') => {
-                    self.gui_state.lock().show_help = false;
-                }
+                KeyCode::Char('q') => self.is_running.store(false, Ordering::SeqCst),
+                KeyCode::Char('h') => self.gui_state.lock().show_help = false,
+                KeyCode::Char('m') => self.m_button(),
                 _ => (),
             }
         } else {
             match key_code {
-                KeyCode::Char('q') => {
-                    self.is_running.store(false, Ordering::SeqCst);
-                }
-                KeyCode::Char('h') => {
-                    self.gui_state.lock().show_help = true;
-                }
+                KeyCode::Char('q') => self.is_running.store(false, Ordering::SeqCst),
+                KeyCode::Char('h') => self.gui_state.lock().show_help = true,
+                KeyCode::Char('m') => self.m_button(),
                 KeyCode::Tab => self.gui_state.lock().next_panel(),
                 KeyCode::BackTab => self.gui_state.lock().previous_panel(),
                 KeyCode::Home => {
@@ -129,90 +171,44 @@ impl InputHandler {
                     }
                 }
                 KeyCode::Enter => {
-                    // Does is matter though?
                     // This isn't great, just means you can't send docker commands before full initialization of the program
                     // could change to to if loading = true, although at the moment don't have a loading bool
+                    // Does is matter though?
                     let panel = self.gui_state.lock().selected_panel;
                     if panel == SelectablePanel::Commands {
                         let command = self.app_data.lock().get_docker_command();
 
                         if command.is_some() {
                             let id = self.app_data.lock().get_selected_container_id();
-                            let app_data = Arc::clone(&self.app_data);
-                            let docker = Arc::clone(&self.docker);
                             if id.is_some() {
                                 let id = id.unwrap();
                                 match command.unwrap() {
-                                    DockerControls::Pause => {
-                                        tokio::spawn(async move {
-                                            docker.pause_container(&id).await.unwrap_or_else(
-                                                |_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Pause,
-                                                        ),
-                                                    )
-                                                },
-                                            );
-                                        });
-                                    }
-                                    DockerControls::Unpause => {
-                                        tokio::spawn(async move {
-                                            docker.unpause_container(&id).await.unwrap_or_else(
-                                                |_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Unpause,
-                                                        ),
-                                                    )
-                                                },
-                                            );
-                                        });
-                                    }
-                                    DockerControls::Start => {
-                                        tokio::spawn(async move {
-                                            docker
-                                                .start_container(
-                                                    &id,
-                                                    None::<StartContainerOptions<String>>,
-                                                )
-                                                .await
-                                                .unwrap_or_else(|_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Start,
-                                                        ),
-                                                    )
-                                                });
-                                        });
-                                    }
-                                    DockerControls::Stop => {
-                                        tokio::spawn(async move {
-                                            docker.stop_container(&id, None).await.unwrap_or_else(
-                                                |_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Stop,
-                                                        ),
-                                                    )
-                                                },
-                                            );
-                                        });
-                                    }
-                                    DockerControls::Restart => {
-                                        tokio::spawn(async move {
-                                            docker
-                                                .restart_container(&id, None)
-                                                .await
-                                                .unwrap_or_else(|_| {
-                                                    app_data.lock().set_error(
-                                                        AppError::DockerCommand(
-                                                            DockerControls::Restart,
-                                                        ),
-                                                    )
-                                                });
-                                        });
-                                    }
+                                    // TODO handle theses errors?
+                                    DockerControls::Pause => self
+                                        .docker_sender
+                                        .send(DockerMessage::Pause(id))
+                                        .await
+                                        .unwrap(),
+                                    DockerControls::Unpause => self
+                                        .docker_sender
+                                        .send(DockerMessage::Unpause(id))
+                                        .await
+                                        .unwrap(),
+                                    DockerControls::Start => self
+                                        .docker_sender
+                                        .send(DockerMessage::Start(id))
+                                        .await
+                                        .unwrap(),
+                                    DockerControls::Stop => self
+                                        .docker_sender
+                                        .send(DockerMessage::Stop(id))
+                                        .await
+                                        .unwrap(),
+                                    DockerControls::Restart => self
+                                        .docker_sender
+                                        .send(DockerMessage::Restart(id))
+                                        .await
+                                        .unwrap(),
                                 }
                             }
                         }
