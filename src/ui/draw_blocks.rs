@@ -476,6 +476,7 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     description_text.push_str("\n  Tab or Alt+Tab to change panels, arrows to change lines, enter to send docker container commands.");
     description_text.push_str("\n  Mouse input also available.");
     description_text.push_str("\n  ( q ) to quit at any time.");
+	description_text.push_str("\n  ( m ) to toggle mouse capture. When disabled, text on screen can be selected & copied, but mouse clicks get disabled");
     description_text
         .push_str("\n\n  currenty an early work in progress, all and any input appreciated");
     description_text.push_str(format!("\n  {}", REPO.trim()).as_str());
