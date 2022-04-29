@@ -220,7 +220,7 @@ impl DockerData {
                 docker,
                 gui_state,
                 initialised: false,
-                sleep_duration: Duration::from_millis(args.docker as u64),
+                sleep_duration: Duration::from_millis(args.docker_interval as u64),
                 timestamps: args.timestamp,
             };
             inner.initialise_container_data().await;

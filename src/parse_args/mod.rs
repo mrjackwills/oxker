@@ -8,12 +8,16 @@ use tracing::error;
 
 pub struct CliArgs {
     /// Docker update interval in ms, minimum 1, reccomended 500+
-    #[clap(short = 'd', default_value_t = 1000)]
-    pub docker: u32,
+    #[clap(short = 'd', value_name = "ms", default_value_t = 1000)]
+    pub docker_interval: u32,
 
     /// Don't draw gui - for debugging - mostly pointless
     #[clap(short = 'g')]
     pub gui: bool,
+
+	 /// Install to ./local/bin
+	 #[clap(short = 'i')]
+	 pub install: bool,
 
     /// Remove timestamps from Docker logs
     #[clap(short = 't')]
@@ -35,15 +39,16 @@ impl CliArgs {
 
         // Quit the program if the docker update argument is 0
         // Should maybe change it to check if less than 100
-        if args.docker == 0 {
+        if args.docker_interval == 0 {
             error!("docker args needs to be greater than 0");
             process::exit(1)
         }
         Self {
             color: args.color,
-            docker: args.docker,
+            docker_interval: args.docker_interval,
             gui: !args.gui,
             raw: args.raw,
+			install: args.install,
             timestamp: !args.timestamp,
         }
     }
