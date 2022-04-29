@@ -223,7 +223,7 @@ pub fn draw_logs<B: Backend>(
     f: &mut Frame<'_, B>,
     gui_state: &Arc<Mutex<GuiState>>,
     index: Option<usize>,
-	loading_icon: String,
+    loading_icon: String,
     selected_panel: &SelectablePanel,
 ) {
     let panel = SelectablePanel::Logs;
@@ -368,7 +368,7 @@ pub fn draw_heading_bar<B: Backend>(
     columns: &Columns,
     f: &mut Frame<'_, B>,
     has_containers: bool,
-	loading_icon: String,
+    loading_icon: String,
     info_visible: bool,
 ) {
     let block = || Block::default().style(Style::default().bg(Color::Magenta).fg(Color::Black));

@@ -167,8 +167,8 @@ pub struct GuiState {
     // If a BMapTree think it would mean have to implement ordering for SelectablePanel
     area_map: HashMap<SelectablePanel, Rect>,
     loading_icon: Loading,
-	// Should be a vec, each time loading add a new to the vec, and reset remove from vec
-	// for for if is_loading just check if vec is empty or not
+    // Should be a vec, each time loading add a new to the vec, and reset remove from vec
+    // for for if is_loading just check if vec is empty or not
     is_loading: bool,
     pub selected_panel: SelectablePanel,
     pub show_help: bool,

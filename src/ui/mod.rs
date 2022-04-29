@@ -14,7 +14,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::sync::mpsc::Sender;
-use tracing::error;
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout},
@@ -68,7 +67,7 @@ pub async fn create_ui(
     terminal.show_cursor().unwrap();
 
     if let Err(err) = res {
-        error!(%err);
+		println!("{}", err);
     }
     Ok(())
 }
@@ -157,7 +156,7 @@ fn ui<B: Backend>(
     let selected_panel = gui_state.lock().selected_panel;
     let show_help = gui_state.lock().show_help;
     let info_text = gui_state.lock().info_box_text.clone();
-	let loading_icon = gui_state.lock().get_loading();
+    let loading_icon = gui_state.lock().get_loading();
 
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -219,7 +218,7 @@ fn ui<B: Backend>(
         f,
         gui_state,
         log_index,
-		loading_icon.to_owned(),
+        loading_icon.to_owned(),
         &selected_panel,
     );
 
@@ -228,7 +227,7 @@ fn ui<B: Backend>(
         &column_widths,
         f,
         has_containers,
-		loading_icon,
+        loading_icon,
         show_help,
     );
 

@@ -183,8 +183,7 @@ impl DockerData {
     }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
-    // rename init all logs, as only gets run once
-    async fn update_all_logs(&mut self, all_ids: &[(bool, String)]) {
+    async fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {
         let mut handles = vec![];
 
         for (_, id) in all_ids.iter() {
@@ -212,7 +211,9 @@ impl DockerData {
         self.update_all_container_stats(&all_ids).await;
     }
 
-    async fn loading_spin(gui_state: Arc<Mutex<GuiState>>) -> JoinHandle<()> {
+    /// Animate the loading icon
+    async fn loading_spin(&mut self ) -> JoinHandle<()> {
+		let gui_state = Arc::clone(&self.gui_state);
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -221,20 +222,22 @@ impl DockerData {
         })
     }
 
-    fn stop_loading_spin(handle: JoinHandle<()>, gui_state: &Arc<Mutex<GuiState>>) {
+    /// Stop the loading_spin fn, and reset gui loading status
+    fn stop_loading_spin(&mut self, handle: JoinHandle<()>) {
         handle.abort();
-        gui_state.lock().reset_loading();
+        self.gui_state.lock().reset_loading();
     }
 
+
+	// Initialize docker container data, before any messages are received
     async fn initialise_container_data(&mut self) {
-        let gui_state = Arc::clone(&self.gui_state);
-        let loading_spin = Self::loading_spin(gui_state).await;
+        let loading_spin = self.loading_spin().await;
 
         let all_ids = self.update_all_containers().await;
         self.update_all_container_stats(&all_ids).await;
 
         // Maybe only do a single one at first?
-        self.update_all_logs(&all_ids).await;
+        self.init_all_logs(&all_ids).await;
 
         if all_ids.is_empty() {
             self.initialised = true;
@@ -246,7 +249,7 @@ impl DockerData {
             self.initialised = self.app_data.lock().initialised(&all_ids);
         }
         self.app_data.lock().init = true;
-        Self::stop_loading_spin(loading_spin, &self.gui_state);
+        self.stop_loading_spin(loading_spin);
     }
 
     /// Handle incoming messages, container controls & all container information update
@@ -254,80 +257,65 @@ impl DockerData {
         while let Some(message) = self.receiver.recv().await {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
-            let gui_state = Arc::clone(&self.gui_state);
             match message {
                 DockerMessage::Pause(id) => {
-                    let spin_gui = Arc::clone(&gui_state);
-                    let loading_spin = Self::loading_spin(gui_state).await;
-                    tokio::spawn(async move {
-                        docker.pause_container(&id).await.unwrap_or_else(|_| {
-                            app_data
-                                .lock()
-                                .set_error(AppError::DockerCommand(DockerControls::Pause))
-                        });
-                        Self::stop_loading_spin(loading_spin, &spin_gui);
+                    let loading_spin =self.loading_spin().await;
+                    docker.pause_container(&id).await.unwrap_or_else(|_| {
+                        app_data
+                            .lock()
+                            .set_error(AppError::DockerCommand(DockerControls::Pause))
                     });
+                    self.stop_loading_spin(loading_spin);
                 }
                 DockerMessage::Restart(id) => {
-                    let spin_gui = Arc::clone(&gui_state);
-                    let loading_spin = Self::loading_spin(gui_state).await;
-                    tokio::spawn(async move {
-                        docker
-                            .restart_container(&id, None)
-                            .await
-                            .unwrap_or_else(|_| {
-                                app_data
-                                    .lock()
-                                    .set_error(AppError::DockerCommand(DockerControls::Restart))
-                            });
-                        Self::stop_loading_spin(loading_spin, &spin_gui);
-                    });
+                    let loading_spin =self.loading_spin().await;
+                    docker
+                        .restart_container(&id, None)
+                        .await
+                        .unwrap_or_else(|_| {
+                            app_data
+                                .lock()
+                                .set_error(AppError::DockerCommand(DockerControls::Restart))
+                        });
+                    self.stop_loading_spin(loading_spin);
                 }
                 DockerMessage::Start(id) => {
-                    let spin_gui = Arc::clone(&gui_state);
-                    let loading_spin = Self::loading_spin(gui_state).await;
-                    tokio::spawn(async move {
-                        docker
-                            .start_container(&id, None::<StartContainerOptions<String>>)
-                            .await
-                            .unwrap_or_else(|_| {
-                                app_data
-                                    .lock()
-                                    .set_error(AppError::DockerCommand(DockerControls::Start))
-                            });
-                        Self::stop_loading_spin(loading_spin, &spin_gui);
-                    });
+                    let loading_spin =self.loading_spin().await;
+                    docker
+                        .start_container(&id, None::<StartContainerOptions<String>>)
+                        .await
+                        .unwrap_or_else(|_| {
+                            app_data
+                                .lock()
+                                .set_error(AppError::DockerCommand(DockerControls::Start))
+                        });
+                    self.stop_loading_spin(loading_spin);
                 }
                 DockerMessage::Stop(id) => {
-                    let spin_gui = Arc::clone(&gui_state);
-                    let loading_spin = Self::loading_spin(gui_state).await;
-                    tokio::spawn(async move {
-                        docker.stop_container(&id, None).await.unwrap_or_else(|_| {
-                            app_data
-                                .lock()
-                                .set_error(AppError::DockerCommand(DockerControls::Stop))
-                        });
-                        Self::stop_loading_spin(loading_spin, &spin_gui);
+                    let loading_spin =self.loading_spin().await;
+                    docker.stop_container(&id, None).await.unwrap_or_else(|_| {
+                        app_data
+                            .lock()
+                            .set_error(AppError::DockerCommand(DockerControls::Stop))
                     });
+                    self.stop_loading_spin(loading_spin);
                 }
                 DockerMessage::Unpause(id) => {
-                    let spin_gui = Arc::clone(&gui_state);
-                    let loading_spin = Self::loading_spin(gui_state).await;
-                    tokio::spawn(async move {
-                        docker.unpause_container(&id).await.unwrap_or_else(|_| {
-                            app_data
-                                .lock()
-                                .set_error(AppError::DockerCommand(DockerControls::Unpause))
-                        });
-                        Self::stop_loading_spin(loading_spin, &spin_gui);
+                    let loading_spin =self.loading_spin().await;
+                    docker.unpause_container(&id).await.unwrap_or_else(|_| {
+                        app_data
+                            .lock()
+                            .set_error(AppError::DockerCommand(DockerControls::Unpause))
                     });
+                    self.stop_loading_spin(loading_spin);
+					self.update_everything().await
                 }
                 DockerMessage::Update => self.update_everything().await,
             }
         }
     }
 
-    /// Initialise self, and start the updated loop
+    /// Initialise self, and start the message receiving loop
     pub async fn init(
         args: CliArgs,
         app_data: Arc<Mutex<AppData>>,
@@ -346,8 +334,6 @@ impl DockerData {
             };
             inner.initialise_container_data().await;
 
-            // todo!(" change this to recv.next()");
-            // inner.update_loop().await;
             inner.message_handler().await;
         }
     }
