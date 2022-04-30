@@ -42,32 +42,32 @@ const MARGIN: &str = "   ";
 /// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
 fn generate_block<'a>(
-    selectable_panel: Option<SelectablePanel>,
     app_data: &Arc<Mutex<AppData>>,
-    selected_panel: &SelectablePanel,
+    area: Rect,
+    gui_state: &Arc<Mutex<GuiState>>,
+    panel: SelectablePanel,
 ) -> Block<'a> {
+	gui_state.lock().insert_into_area_map(panel, area);
     let mut block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
-
-    if let Some(panel) = selectable_panel {
-        let title = match panel {
-            SelectablePanel::Containers => {
-                format!(
-                    " {} {} ",
-                    panel.title(),
-                    app_data.lock().containers.get_state_title()
-                )
-            }
-            SelectablePanel::Logs => {
-                format!(" {} {} ", panel.title(), app_data.lock().get_log_title())
-            }
-            _ => String::from(""),
-        };
-        block = block.title(title);
-        if selected_panel == &panel {
-            block = block.border_style(Style::default().fg(Color::LightCyan));
+    let current_selected_panel = gui_state.lock().selected_panel;
+    let title = match panel {
+        SelectablePanel::Containers => {
+            format!(
+                " {} {} ",
+                panel.title(),
+                app_data.lock().containers.get_state_title()
+            )
         }
+        SelectablePanel::Logs => {
+            format!(" {} {} ", panel.title(), app_data.lock().get_log_title())
+        }
+        _ => String::from(""),
+    };
+    block = block.title(title);
+    if current_selected_panel == panel {
+        block = block.border_style(Style::default().fg(Color::LightCyan));
     }
     block
 }
@@ -79,13 +79,8 @@ pub fn draw_commands<B: Backend>(
     f: &mut Frame<'_, B>,
     gui_state: &Arc<Mutex<GuiState>>,
     index: Option<usize>,
-    selected_panel: &SelectablePanel,
 ) {
-    let panel = SelectablePanel::Commands;
-    let block = generate_block(Some(panel), app_data, selected_panel);
-
-    gui_state.lock().insert_into_area_map(panel, area);
-
+    let block = generate_block(app_data, area, gui_state, SelectablePanel::Commands);
     if let Some(i) = index {
         let items = app_data.lock().containers.items[i]
             .docker_controls
@@ -125,13 +120,14 @@ pub fn draw_containers<B: Backend>(
     area: Rect,
     f: &mut Frame<'_, B>,
     gui_state: &Arc<Mutex<GuiState>>,
-    selected_panel: &SelectablePanel,
     widths: &Columns,
 ) {
-    let panel = SelectablePanel::Containers;
-    let block = generate_block(Some(panel), app_data, selected_panel);
-
-    gui_state.lock().insert_into_area_map(panel, area);
+    let block = generate_block(
+        app_data,
+        area,
+        gui_state,
+        SelectablePanel::Containers,
+    );
 
     let items = app_data
         .lock()
@@ -216,7 +212,7 @@ pub fn draw_containers<B: Backend>(
     }
 }
 
-/// Draw the selectable panels
+/// Draw the logs panels
 pub fn draw_logs<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
@@ -224,17 +220,16 @@ pub fn draw_logs<B: Backend>(
     gui_state: &Arc<Mutex<GuiState>>,
     index: Option<usize>,
     loading_icon: String,
-    selected_panel: &SelectablePanel,
 ) {
-    let panel = SelectablePanel::Logs;
-
-    gui_state.lock().insert_into_area_map(panel, area);
-
-    let block = generate_block(Some(panel), app_data, selected_panel);
+    let block = generate_block(
+        app_data,
+        area,
+        gui_state,
+        SelectablePanel::Logs,
+    );
 
     let init = app_data.lock().init;
     if !init {
-        // let icon = gui_state.lock().get_loading();
         let parsing_logs = format!("parsing logs {}", loading_icon);
         let paragraph = Paragraph::new(parsing_logs)
             .style(Style::default())
