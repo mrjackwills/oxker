@@ -105,7 +105,12 @@ update_release_body_and_changelog () {
 	RELEASE_BODY_ADDITION="${DATE_SUBHEADING}$1"
 	echo -e "${RELEASE_BODY_ADDITION}\n\nsee <a href='${GIT_REPO_URL}/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details" > .github/release-body.md
 	echo -e "# <a href='${GIT_REPO_URL}/releases/tag/${NEW_TAG_VERSION}'>${NEW_TAG_VERSION}</a>\n${DATE_SUBHEADING}${CHANGELOG_ADDITION}$(cat CHANGELOG.md)" > CHANGELOG.md
+
+	# Update changelog to add links to commits [hex x40]
 	sed -i -E "s=(\s)\[([0-9a-f]{40})\](\n|\s|\,|\r)= [\2](${GIT_REPO_URL}/commit/\2),=g" ./CHANGELOG.md
+
+	# Update changelog to add links to closed issues
+	sed -i -r -E "s=closes \[#([0-9]+)\],=[#\1](${GIT_REPO_URL}/issues/\1),=g" ./CHANGELOG.md
 }
 
 # update version in cargo.toml, to match selected current version/tag
