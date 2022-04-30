@@ -2,7 +2,7 @@
 + create_release.sh correctly link to closed issues, [5820d0a9b68ead71d031377c5d22138675d7dfa8]
 
 ### Refactors
-+ generate_block reduce params, insert into area hashmap from inside said function, [32705a60c4f865eb829cc460b2ac82db79107c1a]
++ generate_block reduce params, insert into area hashmap from inside generate_block function, [32705a60c4f865eb829cc460b2ac82db79107c1a]
 
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.0.2'>v0.0.2</a>
