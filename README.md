@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
- A simple tui to view and control docker containers
+ A simple tui to view & control docker containers
 </p>
 
 <p align="center">
@@ -54,7 +54,6 @@ available command line arguments
 ### Raspberry pi
 
 requires docker & <a href='https://github.com/cross-rs/cross' target='_blank' rel='noopener noreferrer'>cross-rs</a>
-
 
 #### 64bit pi (pi 4, pi zero w 2)
 
