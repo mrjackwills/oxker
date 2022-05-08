@@ -191,22 +191,10 @@ fn ui<B: Backend>(
         .constraints(lower_split.as_ref())
         .split(upper_main[1]);
 
-    draw_containers(
-        app_data,
-        top_panel[0],
-        f,
-        gui_state,
-        &column_widths,
-    );
+    draw_containers(app_data, top_panel[0], f, gui_state, &column_widths);
 
     if has_containers {
-        draw_commands(
-            app_data,
-            top_panel[1],
-            f,
-            gui_state,
-            log_index,
-        );
+        draw_commands(app_data, top_panel[1], f, gui_state, log_index);
     }
 
     draw_logs(

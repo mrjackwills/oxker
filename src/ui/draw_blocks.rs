@@ -23,14 +23,15 @@ use super::gui_state::BoxLocation;
 use super::{GuiState, SelectablePanel};
 
 const NAME_TEXT: &str = r#"
-                          88                               
-                          88                               
-                          88                               
+                          88
+                          88
+                          88
  ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,
 a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8
-8b       d8     )888(     8888[      8PP"""""""  88        
-"8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88        
+8b       d8     )888(     8888[      8PP"""""""  88
+"8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88
  `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88        "#;
+
 
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -47,7 +48,7 @@ fn generate_block<'a>(
     gui_state: &Arc<Mutex<GuiState>>,
     panel: SelectablePanel,
 ) -> Block<'a> {
-	gui_state.lock().insert_into_area_map(panel, area);
+    gui_state.lock().insert_into_area_map(panel, area);
     let mut block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
@@ -122,12 +123,7 @@ pub fn draw_containers<B: Backend>(
     gui_state: &Arc<Mutex<GuiState>>,
     widths: &Columns,
 ) {
-    let block = generate_block(
-        app_data,
-        area,
-        gui_state,
-        SelectablePanel::Containers,
-    );
+    let block = generate_block(app_data, area, gui_state, SelectablePanel::Containers);
 
     let items = app_data
         .lock()
@@ -221,12 +217,7 @@ pub fn draw_logs<B: Backend>(
     index: Option<usize>,
     loading_icon: String,
 ) {
-    let block = generate_block(
-        app_data,
-        area,
-        gui_state,
-        SelectablePanel::Logs,
-    );
+    let block = generate_block(app_data, area, gui_state, SelectablePanel::Logs);
 
     let init = app_data.lock().init;
     if !init {
