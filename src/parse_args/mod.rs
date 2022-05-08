@@ -15,10 +15,7 @@ pub struct CliArgs {
     #[clap(short = 'g')]
     pub gui: bool,
 
-    //  /// Install to ./local/bin
-    //  #[clap(short = 'i')]
-    //  pub install: bool,
-    /// Remove timestamps from Docker logs
+	/// Remove timestamps from Docker logs
     #[clap(short = 't')]
     pub timestamp: bool,
 
