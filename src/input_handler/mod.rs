@@ -158,13 +158,13 @@ impl InputHandler {
                         SelectablePanel::Commands => locked_data.docker_command_end(),
                     }
                 }
-                KeyCode::Up => self.previous(),
+                KeyCode::Up | KeyCode::Char('k') => self.previous(),
                 KeyCode::PageUp => {
                     for _ in 0..=6 {
                         self.previous()
                     }
                 }
-                KeyCode::Down => self.next(),
+                KeyCode::Down | KeyCode::Char('j') => self.next(),
                 KeyCode::PageDown => {
                     for _ in 0..=6 {
                         self.next()

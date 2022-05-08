@@ -153,7 +153,6 @@ fn ui<B: Backend>(
     let has_containers = !app_data.lock().containers.items.is_empty();
     let has_error = app_data.lock().get_error();
     let log_index = app_data.lock().get_selected_log_index();
-    let selected_panel = gui_state.lock().selected_panel;
     let show_help = gui_state.lock().show_help;
     let info_text = gui_state.lock().info_box_text.clone();
     let loading_icon = gui_state.lock().get_loading();
@@ -192,24 +191,10 @@ fn ui<B: Backend>(
         .constraints(lower_split.as_ref())
         .split(upper_main[1]);
 
-    draw_containers(
-        app_data,
-        top_panel[0],
-        f,
-        gui_state,
-        &selected_panel,
-        &column_widths,
-    );
+    draw_containers(app_data, top_panel[0], f, gui_state, &column_widths);
 
     if has_containers {
-        draw_commands(
-            app_data,
-            top_panel[1],
-            f,
-            gui_state,
-            log_index,
-            &selected_panel,
-        );
+        draw_commands(app_data, top_panel[1], f, gui_state, log_index);
     }
 
     draw_logs(
@@ -219,7 +204,6 @@ fn ui<B: Backend>(
         gui_state,
         log_index,
         loading_icon.to_owned(),
-        &selected_panel,
     );
 
     draw_heading_bar(

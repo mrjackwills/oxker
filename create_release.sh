@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # rust create_release
-# v0.0.14
+# v0.0.15
 
 PACKAGE_NAME='oxker'
 STAR_LINE='****************************************'
@@ -19,7 +19,6 @@ error_close() {
 	echo -e "\n${RED}ERROR - EXITED: ${YELLOW}$1${RESET}\n";
 	exit 1
 }
-
 
 if [ -z "$PACKAGE_NAME" ]
 then
@@ -96,25 +95,37 @@ ask_changelog_update() {
 	fi
 }
 
-# Edit the release-body to include new liens from changelog
+# Edit the release-body to include new lines from changelog
 # add commit urls to changelog
 # $1 RELEASE_BODY 
 update_release_body_and_changelog () {
 	echo -e
 	DATE_SUBHEADING="### $(date +'%Y-%m-%d')\n\n"
 	RELEASE_BODY_ADDITION="${DATE_SUBHEADING}$1"
+
+	# Put new changelog entries into release-body, add link to changelog
 	echo -e "${RELEASE_BODY_ADDITION}\n\nsee <a href='${GIT_REPO_URL}/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details" > .github/release-body.md
-	echo -e "# <a href='${GIT_REPO_URL}/releases/tag/${NEW_TAG_VERSION}'>${NEW_TAG_VERSION}</a>\n${DATE_SUBHEADING}${CHANGELOG_ADDITION}$(cat CHANGELOG.md)" > CHANGELOG.md
-	sed -i -E "s=(\s)\[([0-9a-f]{40})\](\n|\s|\,|\r)= [\2](${GIT_REPO_URL}/commit/\2),=g" ./CHANGELOG.md
+
+	# Add subheading with release version and date of release
+	echo -e "# <a href='${GIT_REPO_URL}/releases/tag/${NEW_TAG_WITH_V}'>${NEW_TAG_WITH_V}</a>\n${DATE_SUBHEADING}${CHANGELOG_ADDITION}$(cat CHANGELOG.md)" > CHANGELOG.md
+
+	# Update changelog to add links to commits [hex:8](url_with_full_commit)
+	# "[aaaaaaaaaabbbbbbbbbbccccccccccddddddddd]" -> "[aaaaaaaa](https:/www.../commit/aaaaaaaaaabbbbbbbbbbccccccccccddddddddd),"
+	sed -i -E "s=(\s)\[([0-9a-f]{8})([0-9a-f]{32})\]= [\2](${GIT_REPO_URL}/commit/\2\3),=g" ./CHANGELOG.md
+
+	# Update changelog to add links to closed issues - comma included!
+	# "closes [#1]," -> "closes [#1](https:/www.../issues/1),""
+	sed -i -r -E "s=closes \[#([0-9]+)\],=closes [#\1](${GIT_REPO_URL}/issues/\1),=g" ./CHANGELOG.md
 }
 
-# update version in cargo.toml, to match selected current version/tag
-update_cargo_toml () {
-	sed -i "s|^version = .*|version = \"${NEW_TAG_VERSION:1}\"|" Cargo.toml
+# update version in cargo.toml, to match selected current version
+update_version_number_in_files () {
+	sed -i "s|^version = .*|version = \"${MAJOR}.${MINOR}.${PATCH}\"|" Cargo.toml
 }
 
 # Work out the current version, based on git tags
 # create new semver version based on user input
+# Set MAJOR MINOR PATCH
 check_tag () {
 	LATEST_TAG=$(git describe --tags --abbrev=0 --always)
 	echo -e "\nCurrent tag: ${PURPLE}${LATEST_TAG}${RESET}\n"
@@ -127,24 +138,24 @@ check_tag () {
 		MINOR="0"
 		PATCH="0"
 	fi
-	MAJOR_TAG=v$(update_major)
-	MINOR_TAG=v$(update_minor)
-	PATCH_TAG=v$(update_patch)
-	OP_MAJOR="major___$MAJOR_TAG"
-	OP_MINOR="minor___$MINOR_TAG"
-	OP_PATCH="patch___$PATCH_TAG"
+	OP_MAJOR="major___v$(update_major)"
+	OP_MINOR="minor___v$(update_minor)"
+	OP_PATCH="patch___v$(update_patch)"
 	OPTIONS=("$OP_MAJOR" "$OP_MINOR" "$OP_PATCH")
 	select choice in "${OPTIONS[@]}"
 	do
 		case $choice in
 			"$OP_MAJOR" )
-				NEW_TAG_VERSION="$MAJOR_TAG"
+				MAJOR=$((MAJOR + 1))
+				MINOR=0
+				PATCH=0
 				break;;
 			"$OP_MINOR")
-				NEW_TAG_VERSION="$MINOR_TAG"
+				MINOR=$((MINOR + 1))
+				PATCH=0
 				break;;
 			"$OP_PATCH")
-				NEW_TAG_VERSION="$PATCH_TAG"
+				PATCH=$((PATCH + 1))
 				break;;
 			*)
 				error_close "invalid option $REPLY"
@@ -168,39 +179,30 @@ cargo_test () {
 	ask_continue
 }
 
-# Build for linux, pi 32, pi 64, and windows
-cargo_build_all() {
-	cargo build --release
-	cross build --target aarch64-unknown-linux-musl --release
-	cross build --target arm-unknown-linux-musleabihf --release
-	cross build --target x86_64-pc-windows-gnu --release
-	tar -C target/arm-unknown-linux-musleabihf/release -czf ./releases/oxker_linux_armv6.tar.gz oxker
-	tar -C target/aarch64-unknown-linux-musl/release -czf ./releases/oxker_linux_aarch64.tar.gz oxker
-	zip -j ./releases/oxker_windows_x86_64.zip target/x86_64-pc-windows-gnu/release/oxker.exe 
-	tar -C target/release -czf ./releases/oxker_linux_x86_64.tar.gz oxker
-}
-
 # Full flow to create a new release
 release_flow() {
 	check_git
 	get_git_remote_url
+	cargo fmt
 	cargo_test
 	cd "${CWD}" || error_close "Can't find ${CWD}"
 	check_tag
-	printf "\nnew tag chosen: %s\n\n" "${NEW_TAG_VERSION}"
-	RELEASE_BRANCH=release-$NEW_TAG_VERSION
+	
+	NEW_TAG_WITH_V="v${MAJOR}.${MINOR}.${PATCH}"
+	printf "\nnew tag chosen: %s\n\n" "${NEW_TAG_WITH_V}"
+	RELEASE_BRANCH=release-$NEW_TAG_WITH_V
 	echo -e
 	ask_changelog_update
 	git checkout -b "$RELEASE_BRANCH"
-	update_cargo_toml
-	cargo fmt
+	update_version_number_in_files
 	git add .
-	git commit -m "chore: release $NEW_TAG_VERSION"
+	git commit -m "chore: release $NEW_TAG_WITH_V"
+
 	git checkout main
 	git merge --no-ff "$RELEASE_BRANCH" -m "chore: merge ${RELEASE_BRANCH} into main"
-	git tag -am "${RELEASE_BRANCH}" "$NEW_TAG_VERSION"
-	echo "git tag -am \"${RELEASE_BRANCH}\" \"$NEW_TAG_VERSION\""
-	git push --atomic origin main "$NEW_TAG_VERSION"
+	git tag -am "${RELEASE_BRANCH}" "$NEW_TAG_WITH_V"
+	echo "git tag -am \"${RELEASE_BRANCH}\" \"$NEW_TAG_WITH_V\""
+	git push --atomic origin main "$NEW_TAG_WITH_V"
 	git checkout dev
 	git merge --no-ff main -m 'chore: merge main into dev'
 	git branch -d "$RELEASE_BRANCH"
@@ -210,10 +212,9 @@ release_flow() {
 main() {
 	cmd=(dialog --backtitle "Choose build option" --radiolist "choose" 14 80 16)
 	options=(
-		1 "fmt" off
-		2 "build" off
-		3 "test" off
-		4 "release" off
+		1 "build" off
+		2 "test" off
+		3 "release" off
 	)
 	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 	exitStatus=$?
@@ -228,18 +229,14 @@ main() {
 				exit
 				break;;
 			1)
-				cargo fmt
-				main
-				break;;
-			2)
 				cargo_build_all
 				main
 				break;;
-			3)
-				npm_test
+			2)
+				cargo_test
 				main
 				break;;
-			4)
+			3)
 				release_flow
 				break;;
 		esac
