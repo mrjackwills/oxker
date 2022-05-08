@@ -1,3 +1,6 @@
+### Features
++ vim movement keys, 'j' & 'k', to move through menus, thanks [siph](https://github.com/siph), [77eb33c008e36965d84d1eafbbc3733af19fd262]
+
 ### Fixes
 + create_release.sh correctly link to closed issues, [5820d0a9b68ead71d031377c5d22138675d7dfa8]
 
