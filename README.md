@@ -39,7 +39,7 @@ rm oxker_linux_x86_64.tar.gz oxker
 available command line arguments
 | argument|result|
 |--|--|
-|```-d [number > 0]```| set the update interval for docker information, in ms |
+|```-d [number > 0]```| set the update interval for docker information, in ms, defaults to 1000 (1 second) |
 |```-r```| Show raw logs, by default oxker will remove ANSI formatting (conflicts with -c) |
 |```-c```| Attempt to color the logs (conflicts with -r) |
 |```-t```| Remove timestamps from each log entry |
@@ -70,12 +70,6 @@ If no memory information available, try appending ```/boot/cmdline.txt``` with
 ```cgroup_enable=cpuset cgroup_enable=memory```
 
 see <a href="https://forums.raspberrypi.com/viewtopic.php?t=203128" target='_blank' rel='noopener noreferrer'>https://forums.raspberrypi.com/viewtopic.php?t=203128</a> and <a href="https://github.com/docker/for-linux/issues/1112" target='_blank' rel='noopener noreferrer'>https://github.com/docker/for-linux/issues/1112</a> 
-
-### Compress executable
-
-compress output from \~3mb to ~1mb
-
-```upx --best --lzma target/release/oxker -o ./oxker```
 
 ### Untested on other platforms
 
