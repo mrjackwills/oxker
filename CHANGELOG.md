@@ -1,16 +1,19 @@
+# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.0.3'>v0.0.3</a>
+### 2022-05-08
+
 ### Docs
-+ slight readme tweaks, [eb9184a1aee64be1c20fabd482bfcbe676bed049]
++ slight readme tweaks, [eb9184a1](https://github.com/mrjackwills/oxker/commit/eb9184a1aee64be1c20fabd482bfcbe676bed049),
 
 ### Features
-+ vim movement keys, 'j' & 'k', to move through menus, thanks [siph](https://github.com/siph), [77eb33c008e36965d84d1eafbbc3733af19fd262]
++ vim movement keys, 'j' & 'k', to move through menus, thanks [siph](https://github.com/siph), [77eb33c0](https://github.com/mrjackwills/oxker/commit/77eb33c008e36965d84d1eafbbc3733af19fd262),
 
 ### Fixes
-+ create_release.sh correctly link to closed issues, [5820d0a9b68ead71d031377c5d22138675d7dfa8]
++ create_release.sh correctly link to closed issues, [5820d0a9](https://github.com/mrjackwills/oxker/commit/5820d0a9b68ead71d031377c5d22138675d7dfa8),
 
 ### Refactors
-+ generate_block reduce params, insert into area hashmap from inside generate_block function, [32705a60c4f865eb829cc460b2ac82db79107c1a]
-+ dead code removed, [d20e1bcd47965859a04f8e080509a5afb2de36d9]
-+ create_release.sh improved flow & comments, [4283a285e2e60907e432294e3b97a759ec06a23d]
++ generate_block reduce params, insert into area hashmap from inside generate_block function, [32705a60](https://github.com/mrjackwills/oxker/commit/32705a60c4f865eb829cc460b2ac82db79107c1a),
++ dead code removed, [d20e1bcd](https://github.com/mrjackwills/oxker/commit/d20e1bcd47965859a04f8e080509a5afb2de36d9),
++ create_release.sh improved flow & comments, [4283a285](https://github.com/mrjackwills/oxker/commit/4283a285e2e60907e432294e3b97a759ec06a23d),
 
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.0.2'>v0.0.2</a>

@@ -164,7 +164,7 @@ impl InputHandler {
                         self.previous()
                     }
                 }
-                KeyCode::Down | KeyCode::Char('j')=> self.next(),
+                KeyCode::Down | KeyCode::Char('j') => self.next(),
                 KeyCode::PageDown => {
                     for _ in 0..=6 {
                         self.next()
