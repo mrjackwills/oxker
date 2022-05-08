@@ -179,7 +179,6 @@ cargo_test () {
 	ask_continue
 }
 
-# COPY adsbdb
 # Full flow to create a new release
 release_flow() {
 	check_git
