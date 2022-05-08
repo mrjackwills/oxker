@@ -15,7 +15,7 @@ pub struct CliArgs {
     #[clap(short = 'g')]
     pub gui: bool,
 
-	/// Remove timestamps from Docker logs
+    /// Remove timestamps from Docker logs
     #[clap(short = 't')]
     pub timestamp: bool,
 
