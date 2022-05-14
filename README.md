@@ -25,13 +25,15 @@
 
 See <a href="https://github.com/mrjackwills/oxker/releases" target='_blank' rel='noopener noreferrer'>releases</a>
 
-install
+download & install (x86_64 one liner)
 
 ```bash
-tar xzvf oxker_linux_x86_64.tar.gz oxker
-install -Dm 755 oxker -t "${HOME}/.local/bin"
+wget https://www.github.com/mrjackwills/oxker/releases/latest/download/oxker_linux_x86_64.tar.gz &&
+tar xzvf oxker_linux_x86_64.tar.gz oxker &&
+install -Dm 755 oxker -t "${HOME}/.local/bin" &&
 rm oxker_linux_x86_64.tar.gz oxker
 ```
+
 ## Run
 
 ```oxker```

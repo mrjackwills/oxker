@@ -1,3 +1,6 @@
+### Docs
++ Readme one-liner to download & install latest version, []
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.0.4'>v0.0.4</a>
 ### 2022-05-08
 
