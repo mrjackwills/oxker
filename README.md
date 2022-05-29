@@ -90,7 +90,7 @@ using docker-compose.yml;
 or individually
 
 
-```docker run --name redis -d redis:alpine3.15```
+```docker run --name redis -d redis:alpine3.16```
 
 ```docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine```
 
