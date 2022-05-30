@@ -265,36 +265,40 @@ pub fn draw_chart<B: Backend>(
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(area);
-        let (cpu, mem) = app_data.lock().containers.items[index].get_chart_data();
 
-        let cpu_dataset = vec![Dataset::default()
-            .marker(symbols::Marker::Dot)
-            .style(Style::default().fg(Color::Magenta))
-            .graph_type(GraphType::Line)
-            .data(&cpu.0)];
+        // Check is some, else can cause out of bounds error, if containers get removed before a docker update
+        if let Some(data) = app_data.lock().containers.items.get(index) {
+            let (cpu, mem) = data.get_chart_data();
 
-        let mem_dataset = vec![Dataset::default()
-            .marker(symbols::Marker::Dot)
-            .style(Style::default().fg(Color::Cyan))
-            .graph_type(GraphType::Line)
-            .data(&mem.0)];
-        let cpu_chart = make_chart(
-            cpu.2,
-            String::from("cpu"),
-            cpu_dataset,
-            CpuStats::new(cpu.0.last().unwrap_or(&(0.00, 0.00)).1),
-            cpu.1,
-        );
-        let mem_chart = make_chart(
-            mem.2,
-            String::from("memory"),
-            mem_dataset,
-            ByteStats::new(mem.0.last().unwrap_or(&(0.0, 0.0)).1 as u64),
-            mem.1,
-        );
+            let cpu_dataset = vec![Dataset::default()
+                .marker(symbols::Marker::Dot)
+                .style(Style::default().fg(Color::Magenta))
+                .graph_type(GraphType::Line)
+                .data(&cpu.0)];
 
-        f.render_widget(cpu_chart, area[0]);
-        f.render_widget(mem_chart, area[1]);
+            let mem_dataset = vec![Dataset::default()
+                .marker(symbols::Marker::Dot)
+                .style(Style::default().fg(Color::Cyan))
+                .graph_type(GraphType::Line)
+                .data(&mem.0)];
+            let cpu_chart = make_chart(
+                cpu.2,
+                String::from("cpu"),
+                cpu_dataset,
+                CpuStats::new(cpu.0.last().unwrap_or(&(0.00, 0.00)).1),
+                cpu.1,
+            );
+            let mem_chart = make_chart(
+                mem.2,
+                String::from("memory"),
+                mem_dataset,
+                ByteStats::new(mem.0.last().unwrap_or(&(0.0, 0.0)).1 as u64),
+                mem.1,
+            );
+
+            f.render_widget(cpu_chart, area[0]);
+            f.render_widget(mem_chart, area[1]);
+        }
     }
 }
 
@@ -460,7 +464,8 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let description_text = format!("\n{}", DESCRIPTION);
 
     let mut help_text = String::from("\n  ( tab )  or ( alt+tab ) to change panels");
-    help_text.push_str("\n  ( ↑ ↓ ← → ) or ( j k ) to change selected line");
+    help_text
+        .push_str("\n  ( ↑ ↓ ) or ( j k ) or (PgUp PgDown) or (Home End) to change selected line");
     help_text.push_str("\n  ( enter ) to send docker container commands");
     help_text.push_str("\n  ( h ) to toggle this help information");
     help_text.push_str(

@@ -4,7 +4,7 @@ networks:
     name: oxker-examaple-net
 services:
   postgres:
-    image: postgres:alpine
+    image: postgres:alpine3.16
     container_name: postgres
     environment: 
      - POSTGRES_PASSWORD=never_use_this_password_in_production
@@ -18,7 +18,7 @@ services:
         limits:
           memory: 128M
   redis:
-    image: redis:alpine
+    image: redis:alpine3.16
     container_name: redis
     ipc: private
     restart: always

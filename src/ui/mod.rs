@@ -58,13 +58,13 @@ pub async fn create_ui(
     )
     .await;
 
-    disable_raw_mode().unwrap();
+    disable_raw_mode().unwrap_or(());
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
-    terminal.show_cursor().unwrap();
+    terminal.show_cursor().unwrap_or(());
 
     if let Err(err) = res {
         println!("{}", err);
@@ -105,26 +105,27 @@ async fn run_app<B: Backend>(
         let mut now = Instant::now();
         loop {
             terminal.draw(|f| ui(f, &app_data, &gui_state)).unwrap();
-            if crossterm::event::poll(input_poll_rate).unwrap() {
-                let event = event::read().unwrap();
-                if let Event::Key(key) = event {
-                    sender
-                        .send(InputMessages::ButtonPress(key.code))
-                        .await
-                        .unwrap_or(());
-                } else if let Event::Mouse(m) = event {
-                    sender
-                        .send(InputMessages::MouseEvent(m))
-                        .await
-                        .unwrap_or(());
-                } else if let Event::Resize(_, _) = event {
-                    gui_state.lock().clear_area_map();
-                    terminal.autoresize().unwrap_or(());
+            if crossterm::event::poll(input_poll_rate).unwrap_or_default() {
+                if let Ok(event) = event::read() {
+                    if let Event::Key(key) = event {
+                        sender
+                            .send(InputMessages::ButtonPress(key.code))
+                            .await
+                            .unwrap_or(());
+                    } else if let Event::Mouse(m) = event {
+                        sender
+                            .send(InputMessages::MouseEvent(m))
+                            .await
+                            .unwrap_or(());
+                    } else if let Event::Resize(_, _) = event {
+                        gui_state.lock().clear_area_map();
+                        terminal.autoresize().unwrap_or(());
+                    }
                 }
             }
 
             if now.elapsed() >= update_duration {
-                docker_sx.send(DockerMessage::Update).await.unwrap();
+                docker_sx.send(DockerMessage::Update).await.unwrap_or(());
                 now = Instant::now();
             }
 

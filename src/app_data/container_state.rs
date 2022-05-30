@@ -160,6 +160,7 @@ impl DockerControls {
         match state {
             State::Dead | State::Exited => vec![Self::Start, Self::Restart],
             State::Paused => vec![Self::Unpause, Self::Stop],
+            State::Restarting => vec![Self::Stop],
             State::Running => vec![Self::Pause, Self::Restart, Self::Stop],
             _ => vec![],
         }
@@ -276,7 +277,7 @@ impl Stats for ByteStats {
     }
 }
 
-// convert from bytes to kb, mb, gb etc
+// convert from bytes to kB, MB, GB etc
 impl fmt::Display for ByteStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let one_kb = 1000.0;

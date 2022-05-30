@@ -25,13 +25,15 @@
 
 See <a href="https://github.com/mrjackwills/oxker/releases" target='_blank' rel='noopener noreferrer'>releases</a>
 
-install
+download & install (x86_64 one liner)
 
 ```bash
-tar xzvf oxker_linux_x86_64.tar.gz oxker
-install -Dm 755 oxker -t "${HOME}/.local/bin"
+wget https://www.github.com/mrjackwills/oxker/releases/latest/download/oxker_linux_x86_64.tar.gz &&
+tar xzvf oxker_linux_x86_64.tar.gz oxker &&
+install -Dm 755 oxker -t "${HOME}/.local/bin" &&
 rm oxker_linux_x86_64.tar.gz oxker
 ```
+
 ## Run
 
 ```oxker```
@@ -88,7 +90,7 @@ using docker-compose.yml;
 or individually
 
 
-```docker run --name redis -d redis:alpine3.15```
+```docker run --name redis -d redis:alpine3.16```
 
 ```docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine```
 

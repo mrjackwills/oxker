@@ -99,9 +99,9 @@ impl AppData {
         self.error = Some(error);
     }
 
-    /// Find the if of the currently selected container
-    /// If any containers on system, will always return
-    /// Only returns None when no containers found
+    /// Find the if of the currently selected container.
+    /// If any containers on system, will always return a string.
+    /// Only returns None when no containers found.
     pub fn get_selected_container_id(&self) -> Option<String> {
         let mut output = None;
         if let Some(index) = self.containers.state.selected() {
@@ -296,7 +296,7 @@ impl AppData {
         for (index, id) in all_ids.iter().enumerate() {
             if !containers
                 .iter()
-                .map(|i| i.id.as_ref().unwrap())
+                .filter_map(|i| i.id.as_ref())
                 .any(|x| x == id)
             {
                 // If removed container is currently selected, then change selected to previous
@@ -304,60 +304,64 @@ impl AppData {
                 if self.containers.state.selected().is_some() {
                     self.containers.previous();
                 }
-                // docker rm -f $(docker ps -aq) will cause this to crash
-                self.containers.items.remove(index);
+                // Check is some, else can cause out of bounds error, if containers get removed before a docker update
+                if self.containers.items.get(index).is_some() {
+                    self.containers.items.remove(index);
+                }
             }
         }
 
         for i in containers.iter() {
-            let id = i.id.as_ref().unwrap().to_owned();
-            let mut name = i
-                .names
-                .as_ref()
-                .unwrap_or(&vec!["".to_owned()])
-                .get(0)
-                .unwrap()
-                .to_owned();
-            if let Some(c) = name.chars().next() {
-                if c == '/' {
-                    name.remove(0);
+            if let Some(id) = i.id.as_ref() {
+                let mut name = i
+                    .names
+                    .as_ref()
+                    .unwrap_or(&vec!["".to_owned()])
+                    .get(0)
+                    .unwrap()
+                    .to_owned();
+                if let Some(c) = name.chars().next() {
+                    if c == '/' {
+                        name.remove(0);
+                    }
                 }
-            }
 
-            let state = State::from(i.state.as_ref().unwrap_or(&"dead".to_owned()).trim());
-            let status = i
-                .status
-                .as_ref()
-                .unwrap_or(&"".to_owned())
-                .trim()
-                .to_owned();
-            let image = i.image.as_ref().unwrap_or(&"".to_owned()).trim().to_owned();
-            if let Some(current_container) = self.get_container_by_id(&id) {
-                if current_container.name != name {
-                    current_container.name = name
-                };
-                if current_container.status != status {
-                    current_container.status = status
-                };
-                if current_container.state != state {
-                    current_container.docker_controls.items = DockerControls::gen_vec(&state);
-
-                    // Update the list state, needs to be None if the gen_vec returns an empty vec
-                    match state {
-                        State::Removing | State::Restarting | State::Unknown => {
-                            current_container.docker_controls.state.select(None)
-                        }
-                        _ => current_container.docker_controls.start(),
+                let state = State::from(i.state.as_ref().unwrap_or(&"dead".to_owned()).trim());
+                let status = i
+                    .status
+                    .as_ref()
+                    .unwrap_or(&"".to_owned())
+                    .trim()
+                    .to_owned();
+                let image = i.image.as_ref().unwrap_or(&"".to_owned()).trim().to_owned();
+                if let Some(current_container) = self.get_container_by_id(id) {
+                    if current_container.name != name {
+                        current_container.name = name
                     };
-                    current_container.state = state;
-                };
-                if current_container.image != image {
-                    current_container.image = image
-                };
-            } else {
-                let mut container = ContainerItem::new(id, status, image, state, name);
-                container.logs.end();
-                self.containers.items.push(container);
+                    if current_container.status != status {
+                        current_container.status = status
+                    };
+                    if current_container.state != state {
+                        current_container.docker_controls.items = DockerControls::gen_vec(&state);
+
+                        // Update the list state, needs to be None if the gen_vec returns an empty vec
+                        match state {
+                            State::Removing | State::Restarting | State::Unknown => {
+                                current_container.docker_controls.state.select(None)
+                            }
+                            _ => current_container.docker_controls.start(),
+                        };
+                        current_container.state = state;
+                    };
+                    if current_container.image != image {
+                        current_container.image = image
+                    };
+                } else {
+                    let mut container =
+                        ContainerItem::new(id.to_owned(), status, image, state, name);
+                    container.logs.end();
+                    self.containers.items.push(container);
+                }
             }
         }
     }
@@ -379,7 +383,7 @@ impl AppData {
                 container.logs.items.push(ListItem::new(lines));
             });
             if container.logs.state.selected().is_none()
-                || container.logs.state.selected().unwrap() + 1 == current_len
+                || container.logs.state.selected().unwrap_or_default() + 1 == current_len
             {
                 container.logs.end();
             }
