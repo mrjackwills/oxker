@@ -345,7 +345,7 @@ fn make_chart<T: Stats + Display>(
                             .fg(label_color),
                     ),
                 ])
-				// Add 0.01, so that max point is always visible?
+                // Add 0.01, so that max point is always visible?
                 .bounds([0.0, max.get_value() + 0.01]),
         )
 }
@@ -456,15 +456,16 @@ pub fn draw_heading_bar<B: Backend>(
     f.render_widget(paragraph, split_bar[index]);
 }
 
+/// From a given &String, return the maximum number of chars on a single line
 fn max_line_width(text: &str) -> usize {
-	let mut max_line_width = 0;
-	text.lines().into_iter().for_each(|line| {
+    let mut max_line_width = 0;
+    text.lines().into_iter().for_each(|line| {
         let width = line.chars().count();
         if width > max_line_width {
             max_line_width = width;
         }
     });
-	max_line_width
+    max_line_width
 }
 
 /// Draw the help box in the centre of the screen
@@ -486,10 +487,10 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     help_text.push_str("\n\n  currenty an early work in progress, all and any input appreciated");
     help_text.push_str(format!("\n  {}", REPO.trim()).as_str());
 
-	// Find the maximum line widths & height
+    // Find the maximum line widths & height
     let all_text = format!("{}{}{}", NAME_TEXT, description_text, help_text);
-	let mut max_line_width = max_line_width(&all_text);
-	let mut lines = all_text.lines().count();
+    let mut max_line_width = max_line_width(&all_text);
+    let mut lines = all_text.lines().count();
 
     // Add some vertical and horizontal padding to the info box
     lines += 3;
@@ -567,8 +568,8 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
 
     text.push_str(to_push.as_str());
 
-	// Find the maximum line width & height
-	let mut max_line_width = max_line_width(&text);
+    // Find the maximum line width & height
+    let mut max_line_width = max_line_width(&text);
     let mut lines = text.lines().count();
 
     // Add some horizontal & vertical margins
@@ -590,21 +591,14 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
     f.render_widget(paragraph, area);
 }
 
-/// Show info box in bottom right corner
+/// Draw info box in one of the 9 BoxLocations
 pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
     let block = Block::default()
         .title("")
         .title_alignment(Alignment::Center)
         .borders(Borders::NONE);
 
-    let mut max_line_width = 0;
-    text.lines().into_iter().for_each(|line| {
-        let width = line.chars().count();
-        if width > max_line_width {
-            max_line_width = width;
-        }
-    });
-
+    let mut max_line_width = max_line_width(&text);
     let mut lines = text.lines().count();
 
     // Add some horizontal & vertical margins
@@ -626,7 +620,7 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
     f.render_widget(paragraph, area);
 }
 
-/// draw a box in the center of the screen, based on max line width + number of lines
+/// draw a box in the one of the BoxLocations, based on max line width + number of lines
 fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocation) -> Rect {
     // Make sure blank_space can't be an negative, as will crash
     let blank_vertical = if r.height > text_lines {
@@ -640,19 +634,18 @@ fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocati
         1
     };
 
-    let vertical_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
-    let horizontal_constraints =
-        box_location.get_horizontal_constraints(blank_horizontal, text_width);
+    let v_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
+    let h_constraints = box_location.get_horizontal_constraints(blank_horizontal, text_width);
 
     let indexes = box_location.get_indexes();
 
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(vertical_constraints)
+        .constraints(v_constraints)
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(horizontal_constraints)
+        .constraints(h_constraints)
         .split(popup_layout[indexes.0])[indexes.1]
 }
