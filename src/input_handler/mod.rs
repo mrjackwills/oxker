@@ -99,11 +99,14 @@ impl InputHandler {
             }
         };
 
-        let gui_state = Arc::clone(&self.gui_state);
-
-        if self.info_sleep.is_some() {
-            self.info_sleep.as_ref().unwrap().abort()
+        // If the info box sleep handle is currently being executed, as in m is pressed twice within a 4000ms window
+        // then cancel the first handle, as a new handle will be invoked
+        if let Some(info_sleep_timer) = self.info_sleep.as_ref() {
+            info_sleep_timer.abort();
         }
+
+        let gui_state = Arc::clone(&self.gui_state);
+        // Show the info box - with "mouse capture enabled / disabled", for 4000 ms
         self.info_sleep = Some(tokio::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_millis(4000)).await;
             gui_state.lock().reset_info_box()
@@ -176,39 +179,37 @@ impl InputHandler {
                     // Does is matter though?
                     let panel = self.gui_state.lock().selected_panel;
                     if panel == SelectablePanel::Commands {
-                        let command = self.app_data.lock().get_docker_command();
+                        let option_command = self.app_data.lock().get_docker_command();
 
-                        if command.is_some() {
-                            let id = self.app_data.lock().get_selected_container_id();
-                            if id.is_some() {
-                                let id = id.unwrap();
-                                match command.unwrap() {
-                                    // TODO handle theses errors?
+                        if let Some(command) = option_command {
+                            let option_id = self.app_data.lock().get_selected_container_id();
+                            if let Some(id) = option_id {
+                                match command {
                                     DockerControls::Pause => self
                                         .docker_sender
                                         .send(DockerMessage::Pause(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                     DockerControls::Unpause => self
                                         .docker_sender
                                         .send(DockerMessage::Unpause(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                     DockerControls::Start => self
                                         .docker_sender
                                         .send(DockerMessage::Start(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                     DockerControls::Stop => self
                                         .docker_sender
                                         .send(DockerMessage::Stop(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                     DockerControls::Restart => self
                                         .docker_sender
                                         .send(DockerMessage::Restart(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                 }
                             }
                         }

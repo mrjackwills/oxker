@@ -160,6 +160,7 @@ impl DockerControls {
         match state {
             State::Dead | State::Exited => vec![Self::Start, Self::Restart],
             State::Paused => vec![Self::Unpause, Self::Stop],
+			State::Restarting => vec![Self::Stop],
             State::Running => vec![Self::Pause, Self::Restart, Self::Stop],
             _ => vec![],
         }

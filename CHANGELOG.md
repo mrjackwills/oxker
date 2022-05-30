@@ -1,5 +1,8 @@
 ### Docs
-+ Readme one-liner to download & install latest version, []
++ Readme one-liner to download & install latest version, [11d5ba361ee4c11d080f1c3c14d8bb677cbfd1fc]
+
+### Fixes
++ Help panel typo, [e497f3f2d9e1dca99469860c2e728c99e29353ad]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.0.4'>v0.0.4</a>
 ### 2022-05-08
