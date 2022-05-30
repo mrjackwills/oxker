@@ -266,7 +266,7 @@ pub fn draw_chart<B: Backend>(
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(area);
 
-		// Check is some, else can cause out of bounds error, if containers get removed before a docker update
+        // Check is some, else can cause out of bounds error, if containers get removed before a docker update
         if let Some(data) = app_data.lock().containers.items.get(index) {
             let (cpu, mem) = data.get_chart_data();
 

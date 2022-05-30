@@ -277,7 +277,7 @@ impl Stats for ByteStats {
     }
 }
 
-// convert from bytes to kb, mb, gb etc
+// convert from bytes to kB, MB, GB etc
 impl fmt::Display for ByteStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let one_kb = 1000.0;
