@@ -310,54 +310,56 @@ impl AppData {
         }
 
         for i in containers.iter() {
-            let id = i.id.as_ref().unwrap().to_owned();
-            let mut name = i
-                .names
-                .as_ref()
-                .unwrap_or(&vec!["".to_owned()])
-                .get(0)
-                .unwrap()
-                .to_owned();
-            if let Some(c) = name.chars().next() {
-                if c == '/' {
-                    name.remove(0);
+            if let Some(id) = i.id.as_ref() {
+                let mut name = i
+                    .names
+                    .as_ref()
+                    .unwrap_or(&vec!["".to_owned()])
+                    .get(0)
+                    .unwrap()
+                    .to_owned();
+                if let Some(c) = name.chars().next() {
+                    if c == '/' {
+                        name.remove(0);
+                    }
                 }
-            }
 
-            let state = State::from(i.state.as_ref().unwrap_or(&"dead".to_owned()).trim());
-            let status = i
-                .status
-                .as_ref()
-                .unwrap_or(&"".to_owned())
-                .trim()
-                .to_owned();
-            let image = i.image.as_ref().unwrap_or(&"".to_owned()).trim().to_owned();
-            if let Some(current_container) = self.get_container_by_id(&id) {
-                if current_container.name != name {
-                    current_container.name = name
-                };
-                if current_container.status != status {
-                    current_container.status = status
-                };
-                if current_container.state != state {
-                    current_container.docker_controls.items = DockerControls::gen_vec(&state);
-
-                    // Update the list state, needs to be None if the gen_vec returns an empty vec
-                    match state {
-                        State::Removing | State::Restarting | State::Unknown => {
-                            current_container.docker_controls.state.select(None)
-                        }
-                        _ => current_container.docker_controls.start(),
+                let state = State::from(i.state.as_ref().unwrap_or(&"dead".to_owned()).trim());
+                let status = i
+                    .status
+                    .as_ref()
+                    .unwrap_or(&"".to_owned())
+                    .trim()
+                    .to_owned();
+                let image = i.image.as_ref().unwrap_or(&"".to_owned()).trim().to_owned();
+                if let Some(current_container) = self.get_container_by_id(id) {
+                    if current_container.name != name {
+                        current_container.name = name
                     };
-                    current_container.state = state;
-                };
-                if current_container.image != image {
-                    current_container.image = image
-                };
-            } else {
-                let mut container = ContainerItem::new(id, status, image, state, name);
-                container.logs.end();
-                self.containers.items.push(container);
+                    if current_container.status != status {
+                        current_container.status = status
+                    };
+                    if current_container.state != state {
+                        current_container.docker_controls.items = DockerControls::gen_vec(&state);
+
+                        // Update the list state, needs to be None if the gen_vec returns an empty vec
+                        match state {
+                            State::Removing | State::Restarting | State::Unknown => {
+                                current_container.docker_controls.state.select(None)
+                            }
+                            _ => current_container.docker_controls.start(),
+                        };
+                        current_container.state = state;
+                    };
+                    if current_container.image != image {
+                        current_container.image = image
+                    };
+                } else {
+                    let mut container =
+                        ContainerItem::new(id.to_owned(), status, image, state, name);
+                    container.logs.end();
+                    self.containers.items.push(container);
+                }
             }
         }
     }
