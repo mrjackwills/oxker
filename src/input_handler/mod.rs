@@ -101,9 +101,14 @@ impl InputHandler {
 
         let gui_state = Arc::clone(&self.gui_state);
 
-        if self.info_sleep.is_some() {
-            self.info_sleep.as_ref().unwrap().abort()
+		// If the info box sleep handle is currently being executed, as in m is pressed twice within a 4000ms window
+		// then cancel the first handle, as a new handle will be invoked
+		if let Some(info_sleep_timer) = self.info_sleep.as_ref() {
+			info_sleep_timer.abort();
         }
+
+		// Some(self.info_sleep).as_ref().unwrap().ab
+
         self.info_sleep = Some(tokio::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_millis(4000)).await;
             gui_state.lock().reset_info_box()
