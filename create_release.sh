@@ -205,6 +205,7 @@ release_flow() {
 	git push --atomic origin main "$NEW_TAG_WITH_V"
 	git checkout dev
 	git merge --no-ff main -m 'chore: merge main into dev'
+	git push origin dev
 	git branch -d "$RELEASE_BRANCH"
 }
 
