@@ -72,7 +72,7 @@ fn generate_block<'a>(
     block
 }
 
-/// Draw the selectable panels
+/// Draw the command panel
 pub fn draw_commands<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
@@ -114,7 +114,7 @@ pub fn draw_commands<B: Backend>(
     }
 }
 
-/// Draw the selectable panels
+/// Draw the containers panel
 pub fn draw_containers<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
@@ -207,7 +207,7 @@ pub fn draw_containers<B: Backend>(
     }
 }
 
-/// Draw the logs panels
+/// Draw the logs panel
 pub fn draw_logs<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
@@ -269,13 +269,11 @@ pub fn draw_chart<B: Backend>(
         // Check is some, else can cause out of bounds error, if containers get removed before a docker update
         if let Some(data) = app_data.lock().containers.items.get(index) {
             let (cpu, mem) = data.get_chart_data();
-
             let cpu_dataset = vec![Dataset::default()
                 .marker(symbols::Marker::Dot)
                 .style(Style::default().fg(Color::Magenta))
                 .graph_type(GraphType::Line)
                 .data(&cpu.0)];
-
             let mem_dataset = vec![Dataset::default()
                 .marker(symbols::Marker::Dot)
                 .style(Style::default().fg(Color::Cyan))
@@ -347,11 +345,12 @@ fn make_chart<T: Stats + Display>(
                             .fg(label_color),
                     ),
                 ])
+				// Add 0.01, so that max point is always visible?
                 .bounds([0.0, max.get_value() + 0.01]),
         )
 }
 
-/// Show error popup over whole screen
+/// Draw heading bar at top  of program, always visible
 pub fn draw_heading_bar<B: Backend>(
     area: Rect,
     columns: &Columns,
@@ -457,7 +456,18 @@ pub fn draw_heading_bar<B: Backend>(
     f.render_widget(paragraph, split_bar[index]);
 }
 
-/// Show error popup over whole screen
+fn max_line_width(text: &str) -> usize {
+	let mut max_line_width = 0;
+	text.lines().into_iter().for_each(|line| {
+        let width = line.chars().count();
+        if width > max_line_width {
+            max_line_width = width;
+        }
+    });
+	max_line_width
+}
+
+/// Draw the help box in the centre of the screen
 pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 
@@ -476,18 +486,10 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     help_text.push_str("\n\n  currenty an early work in progress, all and any input appreciated");
     help_text.push_str(format!("\n  {}", REPO.trim()).as_str());
 
-    let mut max_line_width = 0;
-
+	// Find the maximum line widths & height
     let all_text = format!("{}{}{}", NAME_TEXT, description_text, help_text);
-
-    all_text.lines().into_iter().for_each(|line| {
-        let width = line.chars().count();
-        if width > max_line_width {
-            max_line_width = width;
-        }
-    });
-
-    let mut lines = all_text.lines().count();
+	let mut max_line_width = max_line_width(&all_text);
+	let mut lines = all_text.lines().count();
 
     // Add some vertical and horizontal padding to the info box
     lines += 3;
@@ -541,7 +543,7 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     f.render_widget(block, area);
 }
 
-/// Show error popup over whole screen
+/// Draw an error popup over whole screen
 pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<u8>) {
     let block = Block::default()
         .title(" Error ")
@@ -565,14 +567,8 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
 
     text.push_str(to_push.as_str());
 
-    let mut max_line_width = 0;
-    text.lines().into_iter().for_each(|line| {
-        let width = line.chars().count();
-        if width > max_line_width {
-            max_line_width = width;
-        }
-    });
-
+	// Find the maximum line width & height
+	let mut max_line_width = max_line_width(&text);
     let mut lines = text.lines().count();
 
     // Add some horizontal & vertical margins
