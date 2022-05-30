@@ -2,6 +2,7 @@
 + Readme one-liner to download & install latest version, [11d5ba361ee4c11d080f1c3c14d8bb677cbfd1fc]
 
 ### Fixes
++ use Some() checks to make sure that container item indexes are still valid, else can create out-of-bounds errors, closes [#8], [4cf02e3f04426ef44ec5a7421687f2104ac5102f]
 + Remove + replace as many unwrap()'s as possible, [d8e22d7444965f1874d7367259310440a889432b]
 + Help panel typo, [e497f3f2d9e1dca99469860c2e728c99e29353ad]
 
