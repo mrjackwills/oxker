@@ -304,8 +304,10 @@ impl AppData {
                 if self.containers.state.selected().is_some() {
                     self.containers.previous();
                 }
-                // docker rm -f $(docker ps -aq) will cause this to crash
-                self.containers.items.remove(index);
+				// Check is some, else can cause out of bounds error, if containers get removed before a docker update
+                if self.containers.items.get(index).is_some() {
+                    self.containers.items.remove(index);
+                }
             }
         }
 
