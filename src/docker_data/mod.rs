@@ -34,8 +34,8 @@ impl DockerData {
         if stats.cpu_stats.system_cpu_usage.is_some()
             && stats.precpu_stats.system_cpu_usage.is_some()
         {
-            let system_delta = (stats.cpu_stats.system_cpu_usage.unwrap()
-                - stats.precpu_stats.system_cpu_usage.unwrap())
+            let system_delta = (stats.cpu_stats.system_cpu_usage.unwrap_or(0)
+                - stats.precpu_stats.system_cpu_usage.unwrap_or(0))
                 as f64;
             let online_cpus = stats.cpu_stats.online_cpus.unwrap_or_else(|| {
                 stats
@@ -75,7 +75,7 @@ impl DockerData {
             let mem_stat = stats.memory_stats.usage.unwrap_or(0);
             let mem_limit = stats.memory_stats.limit.unwrap_or(0);
 
-            let key = if let Some(networks) = &stats.networks {
+            let some_key = if let Some(networks) = &stats.networks {
                 networks.keys().next().map(|x| x.to_owned())
             } else {
                 None
@@ -83,12 +83,14 @@ impl DockerData {
 
             let cpu_stats = Self::calculate_usage(&stats);
 
-            let (rx, tx) = if let Some(k) = key {
-                let ii = stats.networks.unwrap();
-                let v = ii.get(&k).unwrap();
-                (v.rx_bytes.to_owned(), v.tx_bytes.to_owned())
+            let no_bytes = (0, 0);
+            let (rx, tx) = if let Some(key) = some_key {
+                match stats.networks.unwrap_or_default().get(&key) {
+                    Some(data) => (data.rx_bytes.to_owned(), data.tx_bytes.to_owned()),
+                    None => no_bytes,
+                }
             } else {
-                (0, 0)
+                no_bytes
             };
 
             if is_running {
