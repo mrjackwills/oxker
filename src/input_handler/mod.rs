@@ -179,39 +179,37 @@ impl InputHandler {
                     // Does is matter though?
                     let panel = self.gui_state.lock().selected_panel;
                     if panel == SelectablePanel::Commands {
-                        let command = self.app_data.lock().get_docker_command();
+                        let option_command = self.app_data.lock().get_docker_command();
 
-                        if command.is_some() {
-                            let id = self.app_data.lock().get_selected_container_id();
-                            if id.is_some() {
-                                let id = id.unwrap();
-                                match command.unwrap() {
-                                    // TODO handle theses errors?
+                        if let Some(command) = option_command {
+                            let option_id = self.app_data.lock().get_selected_container_id();
+                            if let Some(id) = option_id {
+                                match command {
                                     DockerControls::Pause => self
                                         .docker_sender
                                         .send(DockerMessage::Pause(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                     DockerControls::Unpause => self
                                         .docker_sender
                                         .send(DockerMessage::Unpause(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                     DockerControls::Start => self
                                         .docker_sender
                                         .send(DockerMessage::Start(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                     DockerControls::Stop => self
                                         .docker_sender
                                         .send(DockerMessage::Stop(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                     DockerControls::Restart => self
                                         .docker_sender
                                         .send(DockerMessage::Restart(id))
                                         .await
-                                        .unwrap(),
+                                        .unwrap_or(()),
                                 }
                             }
                         }
