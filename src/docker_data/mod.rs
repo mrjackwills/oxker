@@ -146,12 +146,12 @@ impl DockerData {
         output
             .iter()
             .filter_map(|i| {
-				i.id.as_ref().map(|id| (
-						i.state.as_ref().unwrap_or(&String::new()) == "running",
-						id.to_owned(),
-					))
-
-             
+                i.id.as_ref().map(|id| {
+                    (
+                        i.state.as_ref().unwrap_or(&String::new()) == "running",
+                        id.to_owned(),
+                    )
+                })
             })
             .collect::<Vec<_>>()
     }
