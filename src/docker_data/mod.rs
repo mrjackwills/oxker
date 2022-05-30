@@ -31,12 +31,12 @@ impl DockerData {
         let mut cpu_percentage = 0.0;
         let previous_cpu = stats.precpu_stats.cpu_usage.total_usage;
         let cpu_delta = stats.cpu_stats.cpu_usage.total_usage as f64 - previous_cpu as f64;
-        if stats.cpu_stats.system_cpu_usage.is_some()
-            && stats.precpu_stats.system_cpu_usage.is_some()
-        {
-            let system_delta = (stats.cpu_stats.system_cpu_usage.unwrap_or(0)
-                - stats.precpu_stats.system_cpu_usage.unwrap_or(0))
-                as f64;
+
+        if let (Some(cpu_stats_usage), Some(precpu_stats_usage)) = (
+            stats.cpu_stats.system_cpu_usage,
+            stats.precpu_stats.system_cpu_usage,
+        ) {
+            let system_delta = (cpu_stats_usage - precpu_stats_usage) as f64;
             let online_cpus = stats.cpu_stats.online_cpus.unwrap_or_else(|| {
                 stats
                     .cpu_stats
@@ -54,7 +54,7 @@ impl DockerData {
     }
 
     /// Get a single docker stat in order to update mem and cpu usage
-    /// don't take &self, so that can tokio::spawn into it's on thread
+    /// don't take &self, so that can tokio::spawn into it's own thread
     async fn update_container_stat(
         docker: Arc<Docker>,
         id: String,
@@ -117,14 +117,15 @@ impl DockerData {
             let app_data = Arc::clone(&self.app_data);
             let is_running = *is_running;
             let id = id.to_owned();
-            tokio::spawn(async move {
-                Self::update_container_stat(docker, id, app_data, is_running).await
-            });
+            tokio::spawn(Self::update_container_stat(
+                docker, id, app_data, is_running,
+            ));
         }
     }
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
+    /// return Vec<(is_running, id)>
     pub async fn update_all_containers(&mut self) -> Vec<(bool, String)> {
         let containers = self
             .docker
@@ -136,11 +137,11 @@ impl DockerData {
             .unwrap_or_default();
 
         let mut output = vec![];
-        // iter over containers, to only send ones which have an id, as use ID for extensivley!
-        // alternative is to create my own container struct, and will out with details
-        containers.iter().filter(|i| i.id.is_some()).for_each(|c| {
-            output.push(c.to_owned());
-        });
+        // iter over containers, to only send ones which have an id, as use id for identification throughout!
+        containers
+            .iter()
+            .filter(|i| i.id.is_some())
+            .for_each(|c| output.push(c.to_owned()));
 
         self.app_data.lock().update_containers(&output);
         output
@@ -157,7 +158,7 @@ impl DockerData {
     }
 
     /// Update single container logs
-    /// don't take &self, so that can tokio::spawn into it's on thread
+    /// don't take &self, so that can tokio::spawn into it's own thread
     async fn update_log(
         docker: Arc<Docker>,
         id: String,
@@ -202,12 +203,12 @@ impl DockerData {
 
     async fn update_everything(&mut self) {
         let all_ids = self.update_all_containers().await;
-        let op_index = self.app_data.lock().get_selected_log_index();
-        if let Some(index) = op_index {
-            let docker = Arc::clone(&self.docker);
-            let since = self.app_data.lock().containers.items[index].last_updated as i64;
-            let timestamps = self.timestamps;
+        let optional_index = self.app_data.lock().get_selected_log_index();
+        if let Some(index) = optional_index {
             let id = self.app_data.lock().containers.items[index].id.to_owned();
+            let since = self.app_data.lock().containers.items[index].last_updated as i64;
+            let docker = Arc::clone(&self.docker);
+            let timestamps = self.timestamps;
             let logs = Self::update_log(docker, id, timestamps, since).await;
             self.app_data.lock().update_log_by_index(logs, index);
         };
@@ -226,7 +227,7 @@ impl DockerData {
         })
     }
 
-    /// Stop the loading_spin fn, and reset gui loading status
+    /// Stop the loading_spin function, and reset gui loading status
     fn stop_loading_spin(&mut self, handle: JoinHandle<()>) {
         handle.abort();
         self.gui_state.lock().reset_loading();
