@@ -133,7 +133,7 @@ impl DockerData {
                 ..Default::default()
             }))
             .await
-            .unwrap();
+            .unwrap_or_default();
 
         let mut output = vec![];
         // iter over containers, to only send ones which have an id, as use ID for extensivley!
