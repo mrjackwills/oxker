@@ -379,7 +379,7 @@ impl AppData {
                 container.logs.items.push(ListItem::new(lines));
             });
             if container.logs.state.selected().is_none()
-                || container.logs.state.selected().unwrap() + 1 == current_len
+                || container.logs.state.selected().unwrap_or_default() + 1 == current_len
             {
                 container.logs.end();
             }
