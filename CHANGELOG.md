@@ -1,5 +1,6 @@
 ### Docs
 + Readme one-liner to download & install latest version, [11d5ba361ee4c11d080f1c3c14d8bb677cbfd1fc]
++ Example docker-compose.yml bump alpine version to 3.16, [98c83f2f68f59e78f0c78270c59886630d98913c]
 
 ### Fixes
 + use Some() checks to make sure that container item indexes are still valid, else can create out-of-bounds errors, closes [#8], [4cf02e3f04426ef44ec5a7421687f2104ac5102f]
