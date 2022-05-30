@@ -32,12 +32,13 @@ async fn main() {
     let docker_gui_state = Arc::clone(&gui_state);
 
     let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(16);
+	
     // Create docker daemon handler, and only spawn up the docker data handler if ping returns non-error
     let docker = Arc::new(Docker::connect_with_socket_defaults().unwrap());
     match docker.ping().await {
         Ok(_) => {
             let docker = Arc::clone(&docker);
-            tokio::spawn(async move {
+            tokio::spawn(
                 DockerData::init(
                     docker_args,
                     docker_app_data,
@@ -45,8 +46,7 @@ async fn main() {
                     docker_gui_state,
                     docker_rx,
                 )
-                .await;
-            });
+            );
         }
         Err(_) => app_data.lock().set_error(AppError::DockerConnect),
     }
@@ -55,14 +55,13 @@ async fn main() {
 
     let (input_sx, input_rx) = tokio::sync::mpsc::channel(16);
 
-    // let input_docker = Arc::clone(&docker);
     let is_running = Arc::new(AtomicBool::new(true));
     let input_is_running = Arc::clone(&is_running);
     let input_gui_state = Arc::clone(&gui_state);
     let input_docker_sender = docker_sx.clone();
 
     // Spawn input handling into own tokio thread
-    tokio::spawn(async {
+    tokio::spawn(
         input_handler::InputHandler::init(
             input_app_data,
             input_rx,
@@ -70,8 +69,7 @@ async fn main() {
             input_gui_state,
             input_is_running,
         )
-        .await;
-    });
+    );
 
     // Debug mode for testing, mostly pointless, doesn't take terminal nor draw gui
     if !args.gui {
