@@ -90,6 +90,6 @@ async fn main() {
             update_duration,
         )
         .await
-        .unwrap();
+        .unwrap_or(())
     }
 }
