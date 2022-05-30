@@ -145,11 +145,13 @@ impl DockerData {
         self.app_data.lock().update_containers(&output);
         output
             .iter()
-            .map(|i| {
-                (
-                    i.state.as_ref().unwrap() == "running",
-                    i.id.as_ref().unwrap().to_owned(),
-                )
+            .filter_map(|i| {
+				i.id.as_ref().map(|id| (
+						i.state.as_ref().unwrap_or(&String::new()) == "running",
+						id.to_owned(),
+					))
+
+             
             })
             .collect::<Vec<_>>()
     }
