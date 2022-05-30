@@ -99,9 +99,9 @@ impl AppData {
         self.error = Some(error);
     }
 
-    /// Find the if of the currently selected container
-    /// If any containers on system, will always return
-    /// Only returns None when no containers found
+    /// Find the if of the currently selected container.
+    /// If any containers on system, will always return a string.
+    /// Only returns None when no containers found.
     pub fn get_selected_container_id(&self) -> Option<String> {
         let mut output = None;
         if let Some(index) = self.containers.state.selected() {
@@ -296,7 +296,7 @@ impl AppData {
         for (index, id) in all_ids.iter().enumerate() {
             if !containers
                 .iter()
-                .map(|i| i.id.as_ref().unwrap())
+                .filter_map(|i| i.id.as_ref())
                 .any(|x| x == id)
             {
                 // If removed container is currently selected, then change selected to previous
