@@ -474,7 +474,7 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
 
     let description_text = format!("\n{}", DESCRIPTION);
 
-    let mut help_text = String::from("\n  ( tab )  or ( alt+tab ) to change panels");
+    let mut help_text = String::from("\n  ( tab )  or ( shift+tab ) to change panels");
     help_text
         .push_str("\n  ( ↑ ↓ ) or ( j k ) or (PgUp PgDown) or (Home End) to change selected line");
     help_text.push_str("\n  ( enter ) to send docker container commands");
