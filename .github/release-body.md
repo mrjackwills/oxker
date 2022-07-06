@@ -1,13 +1,19 @@
-### 2022-05-30
+### 2022-07-06
 
 ### Docs
-+ Readme one-liner to download & install latest version, [11d5ba361ee4c11d080f1c3c14d8bb677cbfd1fc]
-+ Example docker-compose.yml bump alpine version to 3.16, [98c83f2f68f59e78f0c78270c59886630d98913c]
++ readme update, [f29e29ad151ddf424ba630e6d33edf19acfd7636]
++ comments improved, [1674db8a20aafa447732deb2e44ac8b97cf0471b]
++ readme logo size, [a733efa65865e04d9ec86c7ca8785dfbae635695]
 
 ### Fixes
-+ use Some() checks to make sure that container item indexes are still valid, else can create out-of-bounds errors, closes [#8], [4cf02e3f04426ef44ec5a7421687f2104ac5102f]
-+ Remove + replace as many unwrap()'s as possible, [d8e22d7444965f1874d7367259310440a889432b]
-+ Help panel typo, [e497f3f2d9e1dca99469860c2e728c99e29353ad]
++ Remove unwraps(), [61db81ecfe5684ddb8a360715f43357a042162c0]
++ Help menu alt+tab > shift+tab typo, thanks [siph](https://github.com/siph), [04466803481b75feb7d7f275248279fdb8729862]
+
+### Refactors
++ tokio spawns, [1fd230f2f3cf4e376058359515e76f4fa6e425c2]
++ max_line_width(), [a5d7dabbd68dc15a081df33352ce3b55d9a9891c]
++ create_release dead code removed, [297979c197c2defd409053d8da724f922b0bba1b]
+
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details
