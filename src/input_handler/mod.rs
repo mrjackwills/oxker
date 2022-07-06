@@ -175,8 +175,6 @@ impl InputHandler {
                 }
                 KeyCode::Enter => {
                     // This isn't great, just means you can't send docker commands before full initialization of the program
-                    // could change to to if loading = true, although at the moment don't have a loading bool
-                    // Does is matter though?
                     let panel = self.gui_state.lock().selected_panel;
                     if panel == SelectablePanel::Commands {
                         let option_command = self.app_data.lock().get_docker_command();

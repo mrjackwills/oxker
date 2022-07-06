@@ -134,8 +134,6 @@ impl fmt::Display for State {
 }
 
 /// Items for the container control list
-/// Should probably have a vec for each container
-/// so that can remove Pause if container currently Paused etc
 #[derive(Debug, Clone)]
 pub enum DockerControls {
     Pause,
@@ -411,6 +409,7 @@ pub struct Columns {
 }
 
 impl Columns {
+    //. (Column titles, minimum header string length)
     pub fn new() -> Self {
         Self {
             state: (String::from("state"), 11),

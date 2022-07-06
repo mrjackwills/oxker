@@ -44,7 +44,6 @@ impl CliArgs {
             docker_interval: args.docker_interval,
             gui: !args.gui,
             raw: args.raw,
-            // install: args.install,
             timestamp: !args.timestamp,
         }
     }

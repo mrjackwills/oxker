@@ -1,5 +1,5 @@
 <p align="center">
- <img src='./.github/logo.svg' width='200px'/>
+ <img src='./.github/logo.svg' width='125px'/>
 </p>
 
 <p align="center">
@@ -92,7 +92,7 @@ or individually
 
 ```docker run --name redis -d redis:alpine3.16```
 
-```docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine```
+```docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine3.16```
 
 ```docker run -d --hostname my-rabbit --name rabbitmq rabbitmq:3```
 

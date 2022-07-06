@@ -72,7 +72,7 @@ fn generate_block<'a>(
     block
 }
 
-/// Draw the selectable panels
+/// Draw the command panel
 pub fn draw_commands<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
@@ -114,7 +114,7 @@ pub fn draw_commands<B: Backend>(
     }
 }
 
-/// Draw the selectable panels
+/// Draw the containers panel
 pub fn draw_containers<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
@@ -207,7 +207,7 @@ pub fn draw_containers<B: Backend>(
     }
 }
 
-/// Draw the logs panels
+/// Draw the logs panel
 pub fn draw_logs<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
@@ -269,13 +269,11 @@ pub fn draw_chart<B: Backend>(
         // Check is some, else can cause out of bounds error, if containers get removed before a docker update
         if let Some(data) = app_data.lock().containers.items.get(index) {
             let (cpu, mem) = data.get_chart_data();
-
             let cpu_dataset = vec![Dataset::default()
                 .marker(symbols::Marker::Dot)
                 .style(Style::default().fg(Color::Magenta))
                 .graph_type(GraphType::Line)
                 .data(&cpu.0)];
-
             let mem_dataset = vec![Dataset::default()
                 .marker(symbols::Marker::Dot)
                 .style(Style::default().fg(Color::Cyan))
@@ -347,11 +345,12 @@ fn make_chart<T: Stats + Display>(
                             .fg(label_color),
                     ),
                 ])
+                // Add 0.01, so that max point is always visible?
                 .bounds([0.0, max.get_value() + 0.01]),
         )
 }
 
-/// Show error popup over whole screen
+/// Draw heading bar at top  of program, always visible
 pub fn draw_heading_bar<B: Backend>(
     area: Rect,
     columns: &Columns,
@@ -457,13 +456,25 @@ pub fn draw_heading_bar<B: Backend>(
     f.render_widget(paragraph, split_bar[index]);
 }
 
-/// Show error popup over whole screen
+/// From a given &String, return the maximum number of chars on a single line
+fn max_line_width(text: &str) -> usize {
+    let mut max_line_width = 0;
+    text.lines().into_iter().for_each(|line| {
+        let width = line.chars().count();
+        if width > max_line_width {
+            max_line_width = width;
+        }
+    });
+    max_line_width
+}
+
+/// Draw the help box in the centre of the screen
 pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 
     let description_text = format!("\n{}", DESCRIPTION);
 
-    let mut help_text = String::from("\n  ( tab )  or ( alt+tab ) to change panels");
+    let mut help_text = String::from("\n  ( tab )  or ( shift+tab ) to change panels");
     help_text
         .push_str("\n  ( ↑ ↓ ) or ( j k ) or (PgUp PgDown) or (Home End) to change selected line");
     help_text.push_str("\n  ( enter ) to send docker container commands");
@@ -476,17 +487,9 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     help_text.push_str("\n\n  currenty an early work in progress, all and any input appreciated");
     help_text.push_str(format!("\n  {}", REPO.trim()).as_str());
 
-    let mut max_line_width = 0;
-
+    // Find the maximum line widths & height
     let all_text = format!("{}{}{}", NAME_TEXT, description_text, help_text);
-
-    all_text.lines().into_iter().for_each(|line| {
-        let width = line.chars().count();
-        if width > max_line_width {
-            max_line_width = width;
-        }
-    });
-
+    let mut max_line_width = max_line_width(&all_text);
     let mut lines = all_text.lines().count();
 
     // Add some vertical and horizontal padding to the info box
@@ -541,7 +544,7 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
     f.render_widget(block, area);
 }
 
-/// Show error popup over whole screen
+/// Draw an error popup over whole screen
 pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<u8>) {
     let block = Block::default()
         .title(" Error ")
@@ -565,14 +568,8 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
 
     text.push_str(to_push.as_str());
 
-    let mut max_line_width = 0;
-    text.lines().into_iter().for_each(|line| {
-        let width = line.chars().count();
-        if width > max_line_width {
-            max_line_width = width;
-        }
-    });
-
+    // Find the maximum line width & height
+    let mut max_line_width = max_line_width(&text);
     let mut lines = text.lines().count();
 
     // Add some horizontal & vertical margins
@@ -594,21 +591,14 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
     f.render_widget(paragraph, area);
 }
 
-/// Show info box in bottom right corner
+/// Draw info box in one of the 9 BoxLocations
 pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
     let block = Block::default()
         .title("")
         .title_alignment(Alignment::Center)
         .borders(Borders::NONE);
 
-    let mut max_line_width = 0;
-    text.lines().into_iter().for_each(|line| {
-        let width = line.chars().count();
-        if width > max_line_width {
-            max_line_width = width;
-        }
-    });
-
+    let mut max_line_width = max_line_width(&text);
     let mut lines = text.lines().count();
 
     // Add some horizontal & vertical margins
@@ -630,7 +620,7 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
     f.render_widget(paragraph, area);
 }
 
-/// draw a box in the center of the screen, based on max line width + number of lines
+/// draw a box in the one of the BoxLocations, based on max line width + number of lines
 fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocation) -> Rect {
     // Make sure blank_space can't be an negative, as will crash
     let blank_vertical = if r.height > text_lines {
@@ -644,19 +634,18 @@ fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocati
         1
     };
 
-    let vertical_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
-    let horizontal_constraints =
-        box_location.get_horizontal_constraints(blank_horizontal, text_width);
+    let v_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
+    let h_constraints = box_location.get_horizontal_constraints(blank_horizontal, text_width);
 
     let indexes = box_location.get_indexes();
 
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(vertical_constraints)
+        .constraints(v_constraints)
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(horizontal_constraints)
+        .constraints(h_constraints)
         .split(popup_layout[indexes.0])[indexes.1]
 }

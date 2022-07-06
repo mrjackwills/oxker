@@ -99,7 +99,7 @@ impl AppData {
         self.error = Some(error);
     }
 
-    /// Find the if of the currently selected container.
+    /// Find the id of the currently selected container.
     /// If any containers on system, will always return a string.
     /// Only returns None when no containers found.
     pub fn get_selected_container_id(&self) -> Option<String> {
@@ -183,7 +183,7 @@ impl AppData {
         self.containers.items.len()
     }
 
-    /// Find the widths for the strings in the containers panel
+    /// Find the widths for the strings in the containers panel.
     /// So can display nicely and evenly
     pub fn get_width(&self) -> Columns {
         let mut output = Columns::new();
@@ -228,11 +228,9 @@ impl AppData {
             if status_count > output.status.1 {
                 output.status.1 = status_count;
             };
-
             if net_rx_count > output.net_rx.1 {
                 output.net_rx.1 = net_rx_count;
             };
-
             if net_tx_count > output.net_tx.1 {
                 output.net_tx.1 = net_tx_count;
             };
@@ -254,7 +252,7 @@ impl AppData {
         self.containers.items.iter_mut().find(|i| i.id == id)
     }
 
-    /// Update container mem + cpu stats, in single function so only need to call .lock() once
+    /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
     pub fn update_stats(
         &mut self,
         id: String,
@@ -318,7 +316,7 @@ impl AppData {
                     .as_ref()
                     .unwrap_or(&vec!["".to_owned()])
                     .get(0)
-                    .unwrap()
+                    .unwrap_or(&String::from(""))
                     .to_owned();
                 if let Some(c) = name.chars().next() {
                     if c == '/' {
@@ -391,6 +389,7 @@ impl AppData {
         self.logs_parsed = true;
     }
 
+    /// Update all containers logs, should only be used on first initialisation
     pub fn update_all_logs(&mut self, all_logs: Vec<Vec<String>>) {
         for (index, output) in all_logs.into_iter().enumerate() {
             self.update_log_by_index(output, index);
