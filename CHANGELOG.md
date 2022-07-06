@@ -5,11 +5,7 @@
 
 ### Fixes
 + Remove unwraps(), [61db81ecfe5684ddb8a360715f43357a042162c0]
-<<<<<<< HEAD
 + Help menu alt+tab > shift+tab typo, thanks [siph](https://github.com/siph), [04466803481b75feb7d7f275248279fdb8729862]
-=======
-+ Help manu alt+tab > shift+tab type, thanks [siph](https://github.com/siph), [04466803481b75feb7d7f275248279fdb8729862]
->>>>>>> 5762676647f7462f4a2594510aa2433d8de37d41
 
 ### Refactors
 + tokio spawns, [1fd230f2f3cf4e376058359515e76f4fa6e425c2]
