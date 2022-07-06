@@ -211,11 +211,10 @@ release_flow() {
 
 
 main() {
-	cmd=(dialog --backtitle "Choose build option" --radiolist "choose" 14 80 16)
+	cmd=(dialog --backtitle "Choose option" --radiolist "choose" 14 80 16)
 	options=(
-		1 "build" off
-		2 "test" off
-		3 "release" off
+		1 "test" off
+		2 "release" off
 	)
 	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 	exitStatus=$?
@@ -230,14 +229,10 @@ main() {
 				exit
 				break;;
 			1)
-				cargo_build_all
-				main
-				break;;
-			2)
 				cargo_test
 				main
 				break;;
-			3)
+			2)
 				release_flow
 				break;;
 		esac
