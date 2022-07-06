@@ -10,6 +10,7 @@
 ### Refactors
 + tokio spawns, [1fd230f2f3cf4e376058359515e76f4fa6e425c2]
 + max_line_width(), [a5d7dabbd68dc15a081df33352ce3b55d9a9891c]
++ create_release dead code removed, [297979c197c2defd409053d8da724f922b0bba1b]
 
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.0.5'>v0.0.5</a>
