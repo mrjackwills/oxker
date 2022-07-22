@@ -86,7 +86,7 @@ impl AppData {
             init: false,
             logs_parsed: false,
             show_error: false,
-            sorted_by: Some((Header::State, SortedOrder::Asc))
+			sorted_by: None,
         }
     }
 
