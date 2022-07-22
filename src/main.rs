@@ -1,4 +1,3 @@
-#![allow(unused)]
 use app_data::AppData;
 use app_error::AppError;
 use bollard::Docker;

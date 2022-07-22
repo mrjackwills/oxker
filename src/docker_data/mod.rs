@@ -1,6 +1,5 @@
 use bollard::{
     container::{ListContainersOptions, LogsOptions, StartContainerOptions, Stats, StatsOptions},
-    models::ContainerSummary,
     Docker,
 };
 use futures_util::{future::join_all, StreamExt};
@@ -9,7 +8,7 @@ use std::sync::Arc;
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 
 use crate::{
-    app_data::{AppData, DockerControls, Header, SortedOrder},
+    app_data::{AppData, DockerControls},
     app_error::AppError,
     parse_args::CliArgs,
     ui::GuiState,
@@ -214,6 +213,11 @@ impl DockerData {
         }
         output
     }
+
+	// async fn stop(&self) {
+	// 	self.docker.
+
+	// }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
     async fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {

@@ -259,7 +259,7 @@ impl InputHandler {
                     1,
                 ));
 
-                /// Don't like this
+                // Don't like this
                 let order = if let Some((_, or)) = self.app_data.lock().get_sorted() {
                     match or {
                         SortedOrder::Asc => SortedOrder::Desc,

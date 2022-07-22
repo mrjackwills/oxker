@@ -1,10 +1,9 @@
 use bollard::models::ContainerSummary;
 use core::fmt;
 use std::{
-    collections::HashMap,
     time::{SystemTime, UNIX_EPOCH},
 };
-use tui::{layout::Rect, widgets::ListItem};
+use tui::widgets::ListItem;
 
 mod container_state;
 
@@ -205,16 +204,6 @@ impl AppData {
                         .containers
                         .items
                         .sort_by(|a, b| b.state.as_text().cmp(a.state.as_text())),
-                },
-                Header::Status => match so {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.status.cmp(&b.status)),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.status.cmp(&a.status)),
                 },
                 Header::Status => match so {
                     SortedOrder::Asc => self

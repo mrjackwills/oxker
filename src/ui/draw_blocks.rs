@@ -125,27 +125,6 @@ pub fn draw_containers<B: Backend>(
 ) {
     let block = generate_block(app_data, area, gui_state, SelectablePanel::Containers);
 
-    let sorted = app_data.lock().get_sorted();
-
-    // if containers sorted, increase width to match headers
-    // let sorted_width = if app_data.lock().get_sorted().is_some() {
-    // 	2
-    // }else {
-    // 	0
-    // };
-
-    // Check if need to alter column width to watch the heading widths
-    let sorted_width = |(x, s): &(Header, usize)| {
-        let mut output = 0;
-        if let Some((h, _)) = &sorted {
-            if h == x {
-                output = 2;
-            }
-        }
-        // s + output
-        s.to_owned()
-    };
-
     let items = app_data
         .lock()
         .containers
@@ -166,7 +145,7 @@ pub fn draw_containers<B: Backend>(
                     format!(
                         "{:<width$}",
                         i.state.to_string(),
-                        width = sorted_width(&widths.state)
+                        width = widths.state.1
                     ),
                     state_style,
                 ),
@@ -175,7 +154,7 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.status,
-                        width = sorted_width(&widths.status)
+                        width =&widths.status.1
                     ),
                     state_style,
                 ),
@@ -184,7 +163,7 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.cpu_stats.back().unwrap_or(&CpuStats::new(0.0)),
-                        width = sorted_width(&widths.cpu)
+                        width = &widths.cpu.1
                     ),
                     state_style,
                 ),
@@ -193,7 +172,7 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         mems,
-                        width = sorted_width(&widths.mem)
+                        width = &widths.mem.1
                     ),
                     state_style,
                 ),
@@ -202,7 +181,7 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.id.chars().take(8).collect::<String>(),
-                        width = sorted_width(&widths.id),
+                        width = &widths.id.1
                     ),
                     blue,
                 ),
@@ -211,7 +190,7 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.name,
-                        width = sorted_width(&widths.name)
+                        width = widths.name.1
                     ),
                     blue,
                 ),
@@ -220,7 +199,7 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.image,
-                        width = sorted_width(&widths.image)
+                        width = widths.image.1
                     ),
                     blue,
                 ),
@@ -229,7 +208,7 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.net_rx,
-                        width = sorted_width(&widths.net_rx)
+                        width = widths.net_rx.1
                     ),
                     Style::default().fg(Color::Rgb(255, 233, 193)),
                 ),
@@ -238,7 +217,7 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.net_tx,
-                        width = sorted_width(&widths.net_tx)
+                        width = widths.net_tx.1
                     ),
                     Style::default().fg(Color::Rgb(205, 140, 140)),
                 ),
@@ -246,74 +225,6 @@ pub fn draw_containers<B: Backend>(
             ListItem::new(lines)
         })
         .collect::<Vec<_>>();
-
-    // let items = app_data
-    // .lock()
-    // .containers
-    // .items
-    // .iter()
-    // .map(|i| {
-    // 	let state_style = Style::default().fg(i.state.get_color());
-    // 	let blue = Style::default().fg(Color::Blue);
-
-    // 	let mems = format!(
-    // 		"{:>1} / {:>1}",
-    // 		i.mem_stats.back().unwrap_or(&ByteStats::new(0)),
-    // 		i.mem_limit
-    // 	);
-
-    // 	let lines = Spans::from(vec![
-    // 		Span::styled(
-    // 			format!("{:<width$}", i.state.to_string(), width = widths.state.1),
-    // 			state_style,
-    // 		),
-    // 		Span::styled(
-    // 			format!("{}{:>width$}", MARGIN, i.status, width = widths.status.1),
-    // 			state_style,
-    // 		),
-    // 		Span::styled(
-    // 			format!(
-    // 				"{}{:>width$}",
-    // 				MARGIN,
-    // 				i.cpu_stats.back().unwrap_or(&CpuStats::new(0.0)),
-    // 				width = widths.cpu.1
-    // 			),
-    // 			state_style,
-    // 		),
-    // 		Span::styled(
-    // 			format!("{}{:>width$}", MARGIN, mems, width = widths.mem.1),
-    // 			state_style,
-    // 		),
-    // 		Span::styled(
-    // 			format!(
-    // 				"{}{:>width$}",
-    // 				MARGIN,
-    // 				i.id.chars().take(8).collect::<String>(),
-    // 				width = widths.id.1
-    // 			),
-    // 			blue,
-    // 		),
-    // 		Span::styled(
-    // 			format!("{}{:>width$}", MARGIN, i.name, width = widths.name.1),
-    // 			blue,
-    // 		),
-    // 		Span::styled(
-    // 			format!("{}{:>width$}", MARGIN, i.image, width = widths.image.1),
-    // 			blue,
-    // 		),
-    // 		Span::styled(
-    // 			format!("{}{:>width$}", MARGIN, i.net_rx, width = widths.net_rx.1),
-    // 			Style::default().fg(Color::Rgb(255, 233, 193)),
-    // 		),
-    // 		Span::styled(
-    // 			format!("{}{:>width$}", MARGIN, i.net_tx, width = widths.net_tx.1),
-    // 			Style::default().fg(Color::Rgb(205, 140, 140)),
-    // 		),
-    // 	]);
-    // 	ListItem::new(lines)
-    // })
-    // .collect::<Vec<_>>();
-
     if items.is_empty() {
         let debug_text = String::from("no containers running");
         let paragraph = Paragraph::new(debug_text)
@@ -488,7 +399,7 @@ pub fn draw_heading_bar<B: Backend>(
 
     f.render_widget(block(), area);
 
-    /// Generate a bloack for the header, if the header is currently being used to sort a column, then highlight it white
+    // Generate a bloack for the header, if the header is currently being used to sort a column, then highlight it white
     let header_block = |x: &Header| {
         let mut color = Color::Black;
         let mut suffix = "";
