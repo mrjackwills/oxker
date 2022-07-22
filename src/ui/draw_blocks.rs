@@ -407,8 +407,8 @@ pub fn draw_heading_bar<B: Backend>(
         if let Some((a, b)) = sorted_by.as_ref() {
             if x == a {
                 match b {
-                    SortedOrder::Asc => suffix = " ⌄",
-                    SortedOrder::Desc => suffix = " ⌃",
+					SortedOrder::Asc => suffix = " ⌃",
+                    SortedOrder::Desc => suffix = " ⌄",
                 }
                 suffix_margin = 2;
                 color = Color::White

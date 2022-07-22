@@ -123,7 +123,7 @@ impl InputHandler {
                 _ => locked_data.set_sorted(Some((header, SortedOrder::Asc))),
             }
         } else {
-            locked_data.set_sorted(Some((header, SortedOrder::Asc)))
+            locked_data.set_sorted(Some((header, SortedOrder::Desc)))
         }
     }
 
@@ -252,25 +252,15 @@ impl InputHandler {
             MouseEventKind::ScrollUp => self.previous(),
             MouseEventKind::ScrollDown => self.next(),
             MouseEventKind::Down(MouseButton::Left) => {
-                let header_int = self.gui_state.lock().header_intersect(Rect::new(
+                let header_intersects = self.gui_state.lock().header_intersect(Rect::new(
                     mouse_event.column,
                     mouse_event.row,
                     1,
                     1,
                 ));
 
-                // Don't like this
-                let order = if let Some((_, or)) = self.app_data.lock().get_sorted() {
-                    match or {
-                        SortedOrder::Asc => SortedOrder::Desc,
-                        SortedOrder::Desc => SortedOrder::Asc,
-                    }
-                } else {
-                    SortedOrder::Asc
-                };
-
-                if let Some(header) = header_int {
-                    self.app_data.lock().set_sorted(Some((header, order)))
+                if let Some(header) = header_intersects {
+					self.sort(header);
                 }
 
                 self.gui_state.lock().panel_intersect(Rect::new(

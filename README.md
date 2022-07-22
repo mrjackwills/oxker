@@ -15,8 +15,8 @@
 </p>
 
 <p align="center">
-	<a href="https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_02.jpg" target='_blank' rel='noopener noreferrer'>
-		<img src='./.github/screenshot_02.jpg' width='100%'/>
+	<a href="https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.jpg" target='_blank' rel='noopener noreferrer'>
+		<img src='./.github/screenshot_01.jpg' width='100%'/>
 	</a>
 </p>
 
