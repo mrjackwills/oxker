@@ -152,7 +152,7 @@ impl InputHandler {
             }
         } else {
             match key_code {
-				KeyCode::Char('0') => self.app_data.lock().set_sorted(None),
+                KeyCode::Char('0') => self.app_data.lock().set_sorted(None),
                 KeyCode::Char('1') => self.sort(Header::State),
                 KeyCode::Char('2') => self.sort(Header::Status),
                 KeyCode::Char('3') => self.sort(Header::Cpu),
@@ -165,8 +165,14 @@ impl InputHandler {
                 KeyCode::Char('q') => self.is_running.store(false, Ordering::SeqCst),
                 KeyCode::Char('h') => self.gui_state.lock().show_help = true,
                 KeyCode::Char('m') => self.m_button(),
-                KeyCode::Tab => self.gui_state.lock().next_panel(),
-                KeyCode::BackTab => self.gui_state.lock().previous_panel(),
+                KeyCode::Tab => {
+                    // TODO if no containers, skip controls panel
+                    self.gui_state.lock().next_panel();
+                }
+                KeyCode::BackTab => {
+                    // TODO if no containers, skip controls panel
+                    self.gui_state.lock().previous_panel();
+                }
                 KeyCode::Home => {
                     let mut locked_data = self.app_data.lock();
                     match self.gui_state.lock().selected_panel {

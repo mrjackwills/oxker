@@ -215,9 +215,8 @@ fn ui<B: Backend>(
         f,
         has_containers,
         loading_icon,
-		sorted_by,
+        sorted_by,
         gui_state,
-
     );
 
     // only draw charts if there are containers

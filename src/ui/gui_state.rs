@@ -221,16 +221,16 @@ impl GuiState {
     }
 
     /// Insert selectable gui panel into area map
-	/// Remove each time, as terminal may have been resized!
+    /// Remove each time, as terminal may have been resized!
     pub fn insert_into_panel_map(&mut self, panel: SelectablePanel, area: Rect) {
-		self.panel_map.remove(&panel);
+        self.panel_map.remove(&panel);
         self.panel_map.insert(panel, area);
     }
 
     /// Insert selectable gui panel into area map
-	/// Remove each time, as terminal may have been resized!
+    /// Remove each time, as terminal may have been resized!
     pub fn insert_into_header_map(&mut self, header: Header, area: Rect) {
-		self.heading_map.remove(&header);
+        self.heading_map.remove(&header);
         self.heading_map.insert(header, area);
     }
 
