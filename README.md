@@ -41,13 +41,13 @@ rm oxker_linux_x86_64.tar.gz oxker
 In application controls
 | button| result|
 |--|--|
-| ```( tab )``` or ```( shift+tab )``` | Change panel (containers > controls > logs). Clicking panels also changed the selected panel|
+| ```( tab )``` or ```( shift+tab )``` | Change panel, clicking on a panel also changes the selected panel|
 | ```( ↑ ↓ )``` or ```( j k )``` or ```(PgUp PgDown)``` or ```(Home End)```| Change selected line in selected panel, mouse scroll also changes selected line |
 | ```( enter )```| execute selected docker commands|
 | ```( 1-9 )``` | sort containers by heading. Clicking on headings also sorts selected column |
 | ```( 0 )``` | stop sorting |
 | ```( h )``` | Show help menu - displays these options|
-| ```( m )``` | toggle mouse capture - if disabled, text on screen can be selected, to be copied etc|
+| ```( m )``` | toggle mouse capture - if disabled, text on screen can be selected|
 | ```( q )``` | to quit at any time |
 
 
