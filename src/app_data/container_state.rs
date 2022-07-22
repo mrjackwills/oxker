@@ -117,15 +117,16 @@ impl State {
             _ => Color::Red,
         }
     }
-    pub fn as_text(&self) -> &'static str {
+	// Dirty way to create order for the state, rather than impl Ord
+    pub fn order(&self) -> &'static str {
         match self {
-            Self::Dead => "dead",
-            Self::Exited => "exited",
-            Self::Paused => "paused",
-            Self::Removing => "removing",
-            Self::Restarting => "restarting",
-            Self::Running => "running",
-            Self::Unknown => "unknown",
+            Self::Running => "a",
+            Self::Paused => "b",
+            Self::Restarting => "c",
+            Self::Removing => "d",
+            Self::Exited => "e",
+            Self::Dead => "f",
+            Self::Unknown => "g",
         }
     }
 }

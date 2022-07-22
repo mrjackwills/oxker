@@ -86,23 +86,9 @@ impl AppData {
             init: false,
             logs_parsed: false,
             show_error: false,
-            sorted_by: None,
+            sorted_by: Some((Header::State, SortedOrder::Asc))
         }
     }
-
-    // fn heading_click(&self) {
-    // 	if let Some(data) = self
-    // 	.heading_map
-    // 	.iter()
-    // 	.filter(|i| i.1.intersects(rect))
-    // 	.collect::<Vec<_>>()
-    // 	.get(0)
-    // {
-    // 	// self.selected_panel = *data.0;
-
-    // }
-
-    // }
 
     // Current time as unix timestamp
     fn get_systemtime(&self) -> u64 {
@@ -199,11 +185,11 @@ impl AppData {
                     SortedOrder::Asc => self
                         .containers
                         .items
-                        .sort_by(|a, b| a.state.as_text().cmp(b.state.as_text())),
+                        .sort_by(|a, b| a.state.order().cmp(b.state.order())),
                     SortedOrder::Desc => self
                         .containers
                         .items
-                        .sort_by(|a, b| b.state.as_text().cmp(a.state.as_text())),
+                        .sort_by(|a, b| b.state.order().cmp(a.state.order())),
                 },
                 Header::Status => match so {
                     SortedOrder::Asc => self
