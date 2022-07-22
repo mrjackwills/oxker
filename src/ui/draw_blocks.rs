@@ -48,7 +48,7 @@ fn generate_block<'a>(
     gui_state: &Arc<Mutex<GuiState>>,
     panel: SelectablePanel,
 ) -> Block<'a> {
-    gui_state.lock().insert_into_area_map(panel, area);
+    gui_state.lock().insert_into_panel_map(panel, area);
     let mut block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
@@ -124,72 +124,163 @@ pub fn draw_containers<B: Backend>(
     widths: &Columns,
 ) {
     let block = generate_block(app_data, area, gui_state, SelectablePanel::Containers);
-    let items = app_data
-        .lock()
-        .containers
-        .items
-        .iter()
-        .map(|i| {
-            let state_style = Style::default().fg(i.state.get_color());
-            let blue = Style::default().fg(Color::Blue);
 
-            let mems = format!(
-                "{:>1} / {:>1}",
-                i.mem_stats.back().unwrap_or(&ByteStats::new(0)),
-                i.mem_limit
-            );
+	let sorted = app_data.lock().get_sorted();
 
-            let lines = Spans::from(vec![
-                Span::styled(
-                    format!("{:<width$}", i.state.to_string(), width = widths.state.1),
-                    state_style,
-                ),
-                Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.status, width = widths.status.1),
-                    state_style,
-                ),
-                Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        i.cpu_stats.back().unwrap_or(&CpuStats::new(0.0)),
-                        width = widths.cpu.1
-                    ),
-                    state_style,
-                ),
-                Span::styled(
-                    format!("{}{:>width$}", MARGIN, mems, width = widths.mem.1),
-                    state_style,
-                ),
-                Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        i.id.chars().take(8).collect::<String>(),
-                        width = widths.id.1
-                    ),
-                    blue,
-                ),
-                Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.name, width = widths.name.1),
-                    blue,
-                ),
-                Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.image, width = widths.image.1),
-                    blue,
-                ),
-                Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.net_rx, width = widths.net_rx.1),
-                    Style::default().fg(Color::Rgb(255, 233, 193)),
-                ),
-                Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.net_tx, width = widths.net_tx.1),
-                    Style::default().fg(Color::Rgb(205, 140, 140)),
-                ),
-            ]);
-            ListItem::new(lines)
-        })
-        .collect::<Vec<_>>();
+	// if containers sorted, increase width to match headers
+	// let sorted_width = if app_data.lock().get_sorted().is_some() {
+	// 	2
+	// }else {
+	// 	0
+	// };
+
+
+	// Check if need to alter column width to watch the heading widths
+	let sorted_width = |(x,s): &(Header,usize)| {
+		let mut output = 0;
+		if let Some((h,_)) = &sorted {
+			if h == x {
+				output = 2;
+		}
+		}
+		// s + output
+		s.to_owned()
+
+	};
+
+    // let items = app_data
+    //     .lock()
+    //     .containers
+    //     .items
+    //     .iter()
+    //     .map(|i| {
+    //         let state_style = Style::default().fg(i.state.get_color());
+    //         let blue = Style::default().fg(Color::Blue);
+
+    //         let mems = format!(
+    //             "{:>1} / {:>1}",
+    //             i.mem_stats.back().unwrap_or(&ByteStats::new(0)),
+    //             i.mem_limit
+    //         );
+
+    //         let lines = Spans::from(vec![
+    //             Span::styled(
+    //                 format!("{:<width$}", i.state.to_string(), width = sorted_width(&widths.state)),
+    //                 state_style,
+    //             ),
+    //             Span::styled(
+    //                 format!("{}{:>width$}", MARGIN, i.status, width = sorted_width(&widths.status)),
+    //                 state_style,
+    //             ),
+    //             Span::styled(
+    //                 format!(
+    //                     "{}{:>width$}",
+    //                     MARGIN,
+    //                     i.cpu_stats.back().unwrap_or(&CpuStats::new(0.0)),
+    //                     width = sorted_width(&widths.cpu)
+    //                 ),
+    //                 state_style,
+    //             ),
+    //             Span::styled(
+    //                 format!("{}{:>width$}", MARGIN, mems, width = sorted_width(&widths.mem)),
+    //                 state_style,
+    //             ),
+    //             Span::styled(
+    //                 format!(
+    //                     "{}{:>width$}",
+    //                     MARGIN,
+    //                     i.id.chars().take(8).collect::<String>(),
+    //                     width =sorted_width(&widths.id),
+    //                 ),
+    //                 blue,
+    //             ),
+    //             Span::styled(
+    //                 format!("{}{:>width$}", MARGIN, i.name, width = sorted_width(&widths.name)),
+    //                 blue,
+    //             ),
+    //             Span::styled(
+    //                 format!("{}{:>width$}", MARGIN, i.image, width = sorted_width(&widths.image)),
+    //                 blue,
+    //             ),
+    //             Span::styled(
+    //                 format!("{}{:>width$}", MARGIN, i.net_rx, width = sorted_width(&widths.net_rx)),
+    //                 Style::default().fg(Color::Rgb(255, 233, 193)),
+    //             ),
+    //             Span::styled(
+    //                 format!("{}{:>width$}", MARGIN, i.net_tx, width = sorted_width(&widths.net_tx)),
+    //                 Style::default().fg(Color::Rgb(205, 140, 140)),
+    //             ),
+    //         ]);
+    //         ListItem::new(lines)
+    //     })
+    //     .collect::<Vec<_>>();
+
+	let items = app_data
+	.lock()
+	.containers
+	.items
+	.iter()
+	.map(|i| {
+		let state_style = Style::default().fg(i.state.get_color());
+		let blue = Style::default().fg(Color::Blue);
+
+		let mems = format!(
+			"{:>1} / {:>1}",
+			i.mem_stats.back().unwrap_or(&ByteStats::new(0)),
+			i.mem_limit
+		);
+
+		let lines = Spans::from(vec![
+			Span::styled(
+				format!("{:<width$}", i.state.to_string(), width = widths.state.1),
+				state_style,
+			),
+			Span::styled(
+				format!("{}{:>width$}", MARGIN, i.status, width = widths.status.1),
+				state_style,
+			),
+			Span::styled(
+				format!(
+					"{}{:>width$}",
+					MARGIN,
+					i.cpu_stats.back().unwrap_or(&CpuStats::new(0.0)),
+					width = widths.cpu.1
+				),
+				state_style,
+			),
+			Span::styled(
+				format!("{}{:>width$}", MARGIN, mems, width = widths.mem.1),
+				state_style,
+			),
+			Span::styled(
+				format!(
+					"{}{:>width$}",
+					MARGIN,
+					i.id.chars().take(8).collect::<String>(),
+					width = widths.id.1
+				),
+				blue,
+			),
+			Span::styled(
+				format!("{}{:>width$}", MARGIN, i.name, width = widths.name.1),
+				blue,
+			),
+			Span::styled(
+				format!("{}{:>width$}", MARGIN, i.image, width = widths.image.1),
+				blue,
+			),
+			Span::styled(
+				format!("{}{:>width$}", MARGIN, i.net_rx, width = widths.net_rx.1),
+				Style::default().fg(Color::Rgb(255, 233, 193)),
+			),
+			Span::styled(
+				format!("{}{:>width$}", MARGIN, i.net_tx, width = widths.net_tx.1),
+				Style::default().fg(Color::Rgb(205, 140, 140)),
+			),
+		]);
+		ListItem::new(lines)
+	})
+	.collect::<Vec<_>>();
 
     if items.is_empty() {
         let debug_text = String::from("no containers running");
@@ -357,99 +448,149 @@ pub fn draw_heading_bar<B: Backend>(
     f: &mut Frame<'_, B>,
     has_containers: bool,
     loading_icon: String,
-    info_visible: bool,
     sorted_by: Option<(Header, SortedOrder)>,
+    gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = || Block::default().style(Style::default().bg(Color::Magenta).fg(Color::Black));
+	let info_visible = gui_state.lock().show_help;
 
     f.render_widget(block(), area);
 
-    let aaa = |x: &Header| {
-        let mut output = "";
+
+	/// Generate a bloack for the header, if the header is currently being used to sort a column, then highlight it white
+    let header_block = |x: &Header| {
+        let mut color = Color::Black;
+		let mut s = "";
+		let mut c = 0;
         if let Some((a, b)) = sorted_by.as_ref() {
             if x == a {
-                output = match b {
-                    SortedOrder::Asc => "A",
-                    SortedOrder::Desc => "B",
-                };
+				match  b{
+					SortedOrder::Asc => s=" ⌄",
+					SortedOrder::Desc => s=" ⌃",
+				}
+				c = 2;
+                color = Color::White
             };
         };
-        output
+
+        (Block::default().style(Style::default().bg(Color::Magenta).fg(color)), s, c)
     };
 
-    // need to split this into blocks, and put each block in the split block, and set color to white if is selected
-	// then just put in the split in a horizontal fashion, with a width equal to widtrh, or char count?
-    // let white = "\x1b[37m";
-    // let reset = "\x1b[0m";
-
-    // let mut column_headings = format!(
-    //     " {}{:>width$}{}",
-    //     loading_icon,
-    //     columns.state.0,
-    //     width = columns.state.1,
-    // );
-
-	// Each 
-	let mut column_headings = format!(
-        " {}{:>width$}",
+    // Create blocks for each header, count widths
+	let state_block = header_block(&Header::State);
+    let state_text = format!(
+        " {}{:>width$}{ic}",
         loading_icon,
         columns.state.0,
-        width = columns.state.1
+		ic=state_block.1,
+        width = columns.state.1 - state_block.2
     );
-    column_headings.push_str(
-        format!(
-            "{}  {:>width$}",
-            MARGIN,
-            columns.status.0,
-            width = columns.status.1
-        )
-        .as_str(),
-    );
+    let state_count = state_text.chars().count() as u16;
+    let state = Paragraph::new(state_text)
+        .block(state_block.0)
+        .alignment(Alignment::Left);
 
-    // Get selected and sorted
-    // Maybe each heading needs to be its own boock
-    column_headings
-        .push_str(format!("{}{:>width$}", MARGIN, columns.cpu.0, width = columns.cpu.1).as_str());
-    column_headings
-        .push_str(format!("{}{:>width$}", MARGIN, columns.mem.0, width = columns.mem.1).as_str());
-    column_headings
-        .push_str(format!("{}{:>width$}", MARGIN, columns.id.0, width = columns.id.1).as_str());
-    column_headings.push_str(
-        format!(
-            "{}{:>width$}",
-            MARGIN,
-            columns.name.0,
-            width = columns.name.1
-        )
-        .as_str(),
+
+
+		let gen_header = |x: Header, w: usize| {
+			let status_block = header_block(&x);
+			let status_text = format!(
+				"{}  {:>width$}{ic}",
+				MARGIN,
+				x,
+				ic=status_block.1,
+				width = w - status_block.2
+			);
+
+			let count = status_text.chars().count() as u16;
+			let status = Paragraph::new(status_text)
+				.block(status_block.0)
+				.alignment(Alignment::Left);
+		(status, count)
+		};
+
+		// let (status, status_count) = gen_header(Header::Status,columns.status.1); 
+		// let (cpu, cpu_count) = gen_header(Header::Cpu,columns.cpu.1); 
+		// let (mem, mem_count) = gen_header(Header::Memory,columns.mem.1); 
+		// let (id, id_count) = gen_header(Header::Id,columns.id.1); 
+		// let (name, name_count) = gen_header(Header::Name,columns.name.1); 
+		// let (image, image_count) = gen_header(Header::Image,columns.image.1); 
+		// let (rx, rx_count) = gen_header(Header::Rx,columns.net_rx.1); 
+		// let (tx, tx_count) = gen_header(Header::Tx,columns.net_tx.1); 
+
+		let status_block = header_block(&Header::Status);
+    let status_text = format!(
+        "{}  {:>width$}{ic}",
+        MARGIN,
+        columns.status.0,
+		ic=status_block.1,
+        width = columns.status.1 - status_block.2
     );
-    column_headings.push_str(
-        format!(
-            "{}{:>width$}",
-            MARGIN,
-            columns.image.0,
-            width = columns.image.1
-        )
-        .as_str(),
+    let status_count = status_text.chars().count() as u16;
+    let status = Paragraph::new(status_text)
+        .block(status_block.0)
+        .alignment(Alignment::Left);
+
+    let cpu_text = format!("{}{:>width$}", MARGIN, columns.cpu.0, width = columns.cpu.1);
+    let cpu_count = cpu_text.chars().count() as u16;
+    let cpu = Paragraph::new(cpu_text)
+        .block(header_block(&Header::Cpu).0)
+        .alignment(Alignment::Left);
+
+    // TODO put block into the mouse click hashmap
+    let mem_text = format!("{}{:>width$}", MARGIN, columns.mem.0, width = columns.mem.1);
+    let mem_count = mem_text.chars().count() as u16;
+    let mem = Paragraph::new(mem_text)
+        .block(header_block(&Header::Memory).0)
+        .alignment(Alignment::Left);
+
+    let id_text = format!("{}{:>width$}", MARGIN, columns.id.0, width = columns.id.1);
+    let id_count = id_text.chars().count() as u16;
+    let id = Paragraph::new(id_text)
+        .block(header_block(&Header::Id).0)
+        .alignment(Alignment::Left);
+
+    let name_text = format!(
+        "{}{:>width$}",
+        MARGIN,
+        columns.name.0,
+        width = columns.name.1
     );
-    column_headings.push_str(
-        format!(
-            "{}{:>width$}",
-            MARGIN,
-            columns.net_rx.0,
-            width = columns.net_rx.1
-        )
-        .as_str(),
+    let name_count = name_text.chars().count() as u16;
+    let name = Paragraph::new(name_text)
+        .block(header_block(&Header::Name).0)
+        .alignment(Alignment::Left);
+    let image_text = format!(
+        "{}{:>width$}",
+        MARGIN,
+        columns.image.0,
+        width = columns.image.1
     );
-    column_headings.push_str(
-        format!(
-            "{}{:>width$}",
-            MARGIN,
-            columns.net_tx.0,
-            width = columns.net_tx.1
-        )
-        .as_str(),
+    let image_count = image_text.chars().count() as u16;
+    let image = Paragraph::new(image_text)
+        .block(header_block(&Header::Image).0)
+        .alignment(Alignment::Left);
+
+    let rx_text = format!(
+        "{}{:>width$}",
+        MARGIN,
+        columns.net_rx.0,
+        width = columns.net_rx.1
     );
+    let rx_count = rx_text.chars().count() as u16;
+    let rx = Paragraph::new(rx_text)
+        .block(header_block(&Header::Rx).0)
+        .alignment(Alignment::Left);
+    let tx_text = format!(
+        "{}{:>width$}",
+        MARGIN,
+        columns.net_tx.0,
+        width = columns.net_tx.1
+    );
+    let tx_count = tx_text.chars().count() as u16;
+    let tx = Paragraph::new(tx_text)
+        .block(header_block(&Header::Tx).0)
+        .alignment(Alignment::Left);
 
     let suffix = if info_visible { "exit" } else { "show" };
     let info_text = format!("( h ) {} help {}", suffix, MARGIN);
@@ -467,12 +608,61 @@ pub fn draw_heading_bar<B: Backend>(
         .direction(Direction::Horizontal)
         .constraints(splits.as_ref())
         .split(area);
-
     if has_containers {
-        let paragraph = Paragraph::new(column_headings)
-            .block(block())
-            .alignment(Alignment::Left);
-        f.render_widget(paragraph, split_bar[0]);
+        // let a = state_text.chars().count() as u16;
+        // let b = status_text.chars().count() as u16;
+        let container_splits = vec![
+            Constraint::Max(state_count),
+            Constraint::Max(status_count),
+            Constraint::Max(cpu_count),
+            Constraint::Max(mem_count),
+            Constraint::Max(id_count),
+            Constraint::Max(name_count),
+            Constraint::Max(image_count),
+            Constraint::Max(rx_count),
+            Constraint::Max(tx_count),
+            // Constraint::Min(1)
+        ];
+
+        // insert or update
+
+		let v = [
+			(Header::State,state),
+			(Header::Status,status),
+			(Header::Cpu,cpu),
+			(Header::Memory,mem),
+			(Header::Id,id),
+			(Header::Name,name),
+			(Header::Image,image),
+			(Header::Rx,rx),
+			(Header::Tx,tx)
+			];
+
+        let headers_section = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(container_splits.as_ref())
+            .split(split_bar[0]);
+
+
+
+			for (index, (header, para)) in v.into_iter().enumerate() {
+				gui_state
+				.lock()
+				.insert_into_header_map(header, headers_section[index]);
+				f.render_widget(para, headers_section[index]);
+			}
+     
+        // gui_state.lock()
+
+        // f.render_widget(tx, headers_section[8]);
+        // f.render_widget(rx, headers_section[7]);
+        // f.render_widget(image, headers_section[6]);
+        // f.render_widget(name, headers_section[5]);
+        // f.render_widget(id, headers_section[4]);
+        // f.render_widget(mem, headers_section[3]);
+        // f.render_widget(cpu, headers_section[2]);
+        // f.render_widget(status, headers_section[1]);
+        // f.render_widget(state, headers_section[0]);
     }
 
     let paragraph = Paragraph::new(info_text)
@@ -506,7 +696,8 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .push_str("\n  ( ↑ ↓ ) or ( j k ) or (PgUp PgDown) or (Home End) to change selected line");
     help_text.push_str("\n  ( enter ) to send docker container commands");
     help_text.push_str("\n  ( h ) to toggle this help information");
-    help_text.push_str("\n  ( 1 - 9 ) order headers");
+	help_text.push_str("\n  ( 0 ) stop sort");
+    help_text.push_str("\n  ( 1 - 9 ) sort by matching header - or click header");
     help_text.push_str(
         "\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied",
     );

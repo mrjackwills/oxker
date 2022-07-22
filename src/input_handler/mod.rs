@@ -117,11 +117,9 @@ impl InputHandler {
 
     fn sort(&self, header: Header) {
         let mut locked_data = self.app_data.lock();
-        if let Some((s, h)) = locked_data.get_sorted().as_ref() {
-            match (s, h) {
-                (header, SortedOrder::Asc) => {
-                    locked_data.set_sorted(Some((header.to_owned(), SortedOrder::Desc)))
-                }
+        if let Some((_, order)) = locked_data.get_sorted().as_ref() {
+            match order {
+                SortedOrder::Asc => locked_data.set_sorted(Some((header, SortedOrder::Desc))),
                 _ => locked_data.set_sorted(Some((header, SortedOrder::Asc))),
             }
         } else {
@@ -154,13 +152,14 @@ impl InputHandler {
             }
         } else {
             match key_code {
+				KeyCode::Char('0') => self.app_data.lock().set_sorted(None),
                 KeyCode::Char('1') => self.sort(Header::State),
                 KeyCode::Char('2') => self.sort(Header::Status),
                 KeyCode::Char('3') => self.sort(Header::Cpu),
                 KeyCode::Char('4') => self.sort(Header::Memory),
                 KeyCode::Char('5') => self.sort(Header::Id),
-                KeyCode::Char('6') => self.sort(Header::Image),
-                KeyCode::Char('7') => self.sort(Header::Name),
+                KeyCode::Char('6') => self.sort(Header::Name),
+                KeyCode::Char('7') => self.sort(Header::Image),
                 KeyCode::Char('8') => self.sort(Header::Rx),
                 KeyCode::Char('9') => self.sort(Header::Tx),
                 KeyCode::Char('q') => self.is_running.store(false, Ordering::SeqCst),
@@ -247,7 +246,28 @@ impl InputHandler {
             MouseEventKind::ScrollUp => self.previous(),
             MouseEventKind::ScrollDown => self.next(),
             MouseEventKind::Down(MouseButton::Left) => {
-                self.gui_state.lock().rect_insersects(Rect::new(
+                let header_int = self.gui_state.lock().header_intersect(Rect::new(
+                    mouse_event.column,
+                    mouse_event.row,
+                    1,
+                    1,
+                ));
+
+                /// Don't like this
+                let order = if let Some((_, or)) = self.app_data.lock().get_sorted() {
+                    match or {
+                        SortedOrder::Asc => SortedOrder::Desc,
+                        SortedOrder::Desc => SortedOrder::Asc,
+                    }
+                } else {
+                    SortedOrder::Asc
+                };
+
+                if let Some(header) = header_int {
+                    self.app_data.lock().set_sorted(Some((header, order)))
+                }
+
+                self.gui_state.lock().panel_intersect(Rect::new(
                     mouse_event.column,
                     mouse_event.row,
                     1,

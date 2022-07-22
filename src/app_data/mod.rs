@@ -1,7 +1,10 @@
 use bollard::models::ContainerSummary;
 use core::fmt;
-use std::time::{SystemTime, UNIX_EPOCH};
-use tui::widgets::ListItem;
+use std::{
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
+use tui::{layout::Rect, widgets::ListItem};
 
 mod container_state;
 
@@ -18,6 +21,7 @@ pub struct AppData {
     pub init: bool,
     pub show_error: bool,
     sorted_by: Option<(Header, SortedOrder)>,
+    // heading_map: HashMap<Header, Rect>
 }
 
 #[derive(Debug, Clone)]
@@ -26,7 +30,7 @@ pub enum SortedOrder {
     Desc,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub enum Header {
     State,
     Status,
@@ -62,12 +66,17 @@ impl AppData {
         self.sorted_by.clone()
     }
 
-	/// Change the sorted order, also set the selected pointer!
+    /// Change the sorted order, also set the selected container state to match new order
     pub fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
-		let id = self.get_selected_container_id();
+        let id = self.get_selected_container_id();
         self.sort_containers();
-		self.containers.state.select(self.containers.items.iter().position(|i| Some(i.id.to_owned()) == id));
+        self.containers.state.select(
+            self.containers
+                .items
+                .iter()
+                .position(|i| Some(i.id.to_owned()) == id),
+        );
     }
     /// Generate a default app_state
     pub fn default(args: CliArgs) -> Self {
@@ -78,9 +87,23 @@ impl AppData {
             init: false,
             logs_parsed: false,
             show_error: false,
-            sorted_by: Some((Header::Memory, SortedOrder::Asc)),
+            sorted_by: None,
         }
     }
+
+    // fn heading_click(&self) {
+    // 	if let Some(data) = self
+    // 	.heading_map
+    // 	.iter()
+    // 	.filter(|i| i.1.intersects(rect))
+    // 	.collect::<Vec<_>>()
+    // 	.get(0)
+    // {
+    // 	// self.selected_panel = *data.0;
+
+    // }
+
+    // }
 
     // Current time as unix timestamp
     fn get_systemtime(&self) -> u64 {

@@ -169,7 +169,8 @@ impl DockerData {
 
         self.app_data.lock().update_containers(&output);
 
-        // self.app_data.lock().sort_containers(SortedOrder::Asc, Header::State);
+		let current_sort = self.app_data.lock().get_sorted();
+		self.app_data.lock().set_sorted(current_sort);
 
         output
             .iter()
