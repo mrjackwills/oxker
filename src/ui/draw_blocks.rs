@@ -14,7 +14,7 @@ use tui::{
     Frame,
 };
 
-use crate::app_data::{SortedOrder, Header};
+use crate::app_data::{Header, SortedOrder};
 use crate::{
     app_data::{AppData, ByteStats, Columns, CpuStats, State, Stats},
     app_error::AppError,
@@ -124,9 +124,6 @@ pub fn draw_containers<B: Backend>(
     widths: &Columns,
 ) {
     let block = generate_block(app_data, area, gui_state, SelectablePanel::Containers);
-	app_data.lock().sort_containers(SortedOrder::Asc);
-		
-
     let items = app_data
         .lock()
         .containers
@@ -361,12 +358,39 @@ pub fn draw_heading_bar<B: Backend>(
     has_containers: bool,
     loading_icon: String,
     info_visible: bool,
+    sorted_by: Option<(Header, SortedOrder)>,
 ) {
     let block = || Block::default().style(Style::default().bg(Color::Magenta).fg(Color::Black));
 
     f.render_widget(block(), area);
 
-    let mut column_headings = format!(
+    let aaa = |x: &Header| {
+        let mut output = "";
+        if let Some((a, b)) = sorted_by.as_ref() {
+            if x == a {
+                output = match b {
+                    SortedOrder::Asc => "A",
+                    SortedOrder::Desc => "B",
+                };
+            };
+        };
+        output
+    };
+
+    // need to split this into blocks, and put each block in the split block, and set color to white if is selected
+	// then just put in the split in a horizontal fashion, with a width equal to widtrh, or char count?
+    // let white = "\x1b[37m";
+    // let reset = "\x1b[0m";
+
+    // let mut column_headings = format!(
+    //     " {}{:>width$}{}",
+    //     loading_icon,
+    //     columns.state.0,
+    //     width = columns.state.1,
+    // );
+
+	// Each 
+	let mut column_headings = format!(
         " {}{:>width$}",
         loading_icon,
         columns.state.0,
@@ -381,6 +405,9 @@ pub fn draw_heading_bar<B: Backend>(
         )
         .as_str(),
     );
+
+    // Get selected and sorted
+    // Maybe each heading needs to be its own boock
     column_headings
         .push_str(format!("{}{:>width$}", MARGIN, columns.cpu.0, width = columns.cpu.1).as_str());
     column_headings
@@ -425,16 +452,13 @@ pub fn draw_heading_bar<B: Backend>(
     );
 
     let suffix = if info_visible { "exit" } else { "show" };
-    let info_text = format!("( h ) to {} help {}", suffix, MARGIN);
-    let info_width = info_text.chars().count();
+    let info_text = format!("( h ) {} help {}", suffix, MARGIN);
+    let info_width = info_text.chars().count() as u16;
 
-    let column_width = column_headings.chars().count();
-
+    let x = area.width - info_width;
+    let column_width = if x > 0 { x } else { 1 };
     let splits = if has_containers {
-        vec![
-            Constraint::Min(column_width as u16),
-            Constraint::Min(info_width as u16),
-        ]
+        vec![Constraint::Min(column_width), Constraint::Min(info_width)]
     } else {
         vec![Constraint::Percentage(100)]
     };
@@ -482,6 +506,7 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .push_str("\n  ( ↑ ↓ ) or ( j k ) or (PgUp PgDown) or (Home End) to change selected line");
     help_text.push_str("\n  ( enter ) to send docker container commands");
     help_text.push_str("\n  ( h ) to toggle this help information");
+    help_text.push_str("\n  ( 1 - 9 ) order headers");
     help_text.push_str(
         "\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied",
     );

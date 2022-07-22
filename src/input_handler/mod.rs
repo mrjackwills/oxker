@@ -18,7 +18,7 @@ use tui::layout::Rect;
 
 mod message;
 use crate::{
-    app_data::{AppData, DockerControls},
+    app_data::{AppData, DockerControls, Header, SortedOrder},
     app_error::AppError,
     docker_data::DockerMessage,
     ui::{GuiState, SelectablePanel},
@@ -115,6 +115,20 @@ impl InputHandler {
         self.mouse_capture = !self.mouse_capture;
     }
 
+    fn sort(&self, header: Header) {
+        let mut locked_data = self.app_data.lock();
+        if let Some((s, h)) = locked_data.get_sorted().as_ref() {
+            match (s, h) {
+                (header, SortedOrder::Asc) => {
+                    locked_data.set_sorted(Some((header.to_owned(), SortedOrder::Desc)))
+                }
+                _ => locked_data.set_sorted(Some((header, SortedOrder::Asc))),
+            }
+        } else {
+            locked_data.set_sorted(Some((header, SortedOrder::Asc)))
+        }
+    }
+
     /// Handle any keyboard button events
     async fn button_press(&mut self, key_code: KeyCode) {
         let show_error = self.app_data.lock().show_error;
@@ -140,6 +154,15 @@ impl InputHandler {
             }
         } else {
             match key_code {
+                KeyCode::Char('1') => self.sort(Header::State),
+                KeyCode::Char('2') => self.sort(Header::Status),
+                KeyCode::Char('3') => self.sort(Header::Cpu),
+                KeyCode::Char('4') => self.sort(Header::Memory),
+                KeyCode::Char('5') => self.sort(Header::Id),
+                KeyCode::Char('6') => self.sort(Header::Image),
+                KeyCode::Char('7') => self.sort(Header::Name),
+                KeyCode::Char('8') => self.sort(Header::Rx),
+                KeyCode::Char('9') => self.sort(Header::Tx),
                 KeyCode::Char('q') => self.is_running.store(false, Ordering::SeqCst),
                 KeyCode::Char('h') => self.gui_state.lock().show_help = true,
                 KeyCode::Char('m') => self.m_button(),

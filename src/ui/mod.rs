@@ -157,6 +157,7 @@ fn ui<B: Backend>(
     let show_help = gui_state.lock().show_help;
     let info_text = gui_state.lock().info_box_text.clone();
     let loading_icon = gui_state.lock().get_loading();
+    let sorted_by = app_data.lock().get_sorted();
 
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -214,6 +215,7 @@ fn ui<B: Backend>(
         has_containers,
         loading_icon,
         show_help,
+        sorted_by,
     );
 
     // only draw charts if there are containers
