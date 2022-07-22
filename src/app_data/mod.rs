@@ -16,7 +16,29 @@ pub struct AppData {
     pub containers: StatefulList<ContainerItem>,
     pub init: bool,
     pub show_error: bool,
+	// todo
+	sort_by: Header
 }
+
+#[derive(Debug, Clone)]
+pub enum SortedOrder{
+	Asc,
+	Desc
+}
+
+#[derive(Debug, Clone)]
+pub enum Header{
+	State,
+	Status,
+	Cpu,
+	Memory,
+	Id,
+	Name,
+	Image,
+	Rx,
+	Tx
+}
+
 
 impl AppData {
     /// Generate a default app_state
@@ -28,6 +50,7 @@ impl AppData {
             init: false,
             logs_parsed: false,
             show_error: false,
+			sort_by: Header::Memory,
         }
     }
 
@@ -117,6 +140,86 @@ impl AppData {
         }
         output
     }
+
+
+	pub fn sort_containers(&mut self, so: SortedOrder) {
+
+		// State,
+		// Status,
+		// Cpu,
+		// Memory,
+		// Id,
+		// Name,
+		// Image,
+		// Rx,
+		// Tx
+		match self.sort_by  {
+			Header::State => {
+				match so {
+					SortedOrder::Asc => self.containers.items.sort_by(|a,b|a.state.as_text().cmp(b.state.as_text())),
+					SortedOrder::Desc => self.containers.items.sort_by(|a,b|b.state.as_text().cmp(a.state.as_text())),
+				}
+
+			},
+			Header::Status => {
+				match so {
+					SortedOrder::Asc => self.containers.items.sort_by(|a,b|a.status.cmp(&b.status)),
+					SortedOrder::Desc => self.containers.items.sort_by(|a,b|b.status.cmp(&a.status)),
+				}
+			},
+
+			Header::Status => {
+				match so {
+					SortedOrder::Asc => self.containers.items.sort_by(|a,b|a.status.cmp(&b.status)),
+					SortedOrder::Desc => self.containers.items.sort_by(|a,b|b.status.cmp(&a.status)),
+				}
+			},
+
+			Header::Cpu => {
+				match so {
+					SortedOrder::Desc => 
+						self.containers.items.sort_by(|a,b|a.cpu_stats.back().cmp(&b.cpu_stats.back())),
+					SortedOrder::Asc => self.containers.items.sort_by(|a,b|b.cpu_stats.back().cmp(&a.cpu_stats.back()))
+				}
+			},
+
+			Header::Memory => {
+				match so {
+					SortedOrder::Desc => 
+						self.containers.items.sort_by(|a,b|a.mem_stats.back().cmp(&b.mem_stats.back())),
+					SortedOrder::Asc => self.containers.items.sort_by(|a,b|b.mem_stats.back().cmp(&a.mem_stats.back()))
+				}
+			},
+			Header::Image => {
+				match so {
+					SortedOrder::Asc => self.containers.items.sort_by(|a,b|a.image.cmp(&b.image)),
+					SortedOrder::Desc => self.containers.items.sort_by(|a,b|b.image.cmp(&a.image)),
+				}
+			},
+			Header::Name => {
+				match so {
+					SortedOrder::Asc => self.containers.items.sort_by(|a,b|a.name.cmp(&b.name)),
+					SortedOrder::Desc => self.containers.items.sort_by(|a,b|b.name.cmp(&a.name)),
+				}
+			},
+			_ => ()
+		}
+	}
+
+
+
+	// 	match so {
+	// 		SortedOrder::Asc => self.containers.items.sort_by(|a,b|b.name.cmp(&a.name)),
+	// 		SortedOrder::Desc => self.containers.items.sort_by(|a,b|a.name.cmp(&b.name))
+	// 	}
+	// }
+
+	pub fn sort_by_id(&mut self, so: SortedOrder) {
+		match so {
+			SortedOrder::Asc => self.containers.items.sort_by(|a,b|b.id.cmp(&a.id)),
+			SortedOrder::Desc => self.containers.items.sort_by(|a,b|a.id.cmp(&b.id))
+		}
+	}
 
     /// Find the index of the currently selected single log line
     pub fn get_selected_log_index(&self) -> Option<usize> {

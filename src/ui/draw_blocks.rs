@@ -14,6 +14,7 @@ use tui::{
     Frame,
 };
 
+use crate::app_data::{SortedOrder, Header};
 use crate::{
     app_data::{AppData, ByteStats, Columns, CpuStats, State, Stats},
     app_error::AppError,
@@ -123,6 +124,8 @@ pub fn draw_containers<B: Backend>(
     widths: &Columns,
 ) {
     let block = generate_block(app_data, area, gui_state, SelectablePanel::Containers);
+	app_data.lock().sort_containers(SortedOrder::Asc);
+		
 
     let items = app_data
         .lock()

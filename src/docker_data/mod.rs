@@ -1,6 +1,6 @@
 use bollard::{
     container::{ListContainersOptions, LogsOptions, StartContainerOptions, Stats, StatsOptions},
-    Docker,
+    Docker, models::ContainerSummary,
 };
 use futures_util::{future::join_all, StreamExt};
 use parking_lot::Mutex;
@@ -8,7 +8,7 @@ use std::sync::Arc;
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 
 use crate::{
-    app_data::{AppData, DockerControls},
+    app_data::{AppData, DockerControls, SortedOrder, Header},
     app_error::AppError,
     parse_args::CliArgs,
     ui::GuiState,
@@ -123,6 +123,26 @@ impl DockerData {
         }
     }
 
+	// pub fn sort_containers(i: &mut [ContainerSummary], so: SortedOrder, header: Header) -> &[ContainerSummary] {
+	// 	match header  {
+	// 		Header::State => {
+	// 			match so {
+	// 				SortedOrder::Asc => i.sort_by(|a,b|b.state.cmp(&a.state)),
+	// 				SortedOrder::Desc => i.sort_by(|a,b|a.state.cmp(&b.state)),
+	// 			}
+
+	// 		},
+	// 		Header::Image => {
+	// 			match so {
+	// 				SortedOrder::Asc => i.sort_by(|a,b|b.image.cmp(&a.image)),
+	// 				SortedOrder::Desc => i.sort_by(|a,b|a.image.cmp(&b.image)),
+	// 			}
+	// 		},
+	// 		_ => ()
+	// 	}
+	// 	i
+	// }
+
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
     /// return Vec<(is_running, id)>
@@ -143,7 +163,14 @@ impl DockerData {
             .filter(|i| i.id.is_some())
             .for_each(|c| output.push(c.to_owned()));
 
+
+			// containers.so
+		// let a = Self::sort_containers(&mut output, SortedOrder::Asc, Header::State);
+
         self.app_data.lock().update_containers(&output);
+
+		// self.app_data.lock().sort_containers(SortedOrder::Asc, Header::State);
+
         output
             .iter()
             .filter_map(|i| {
@@ -214,6 +241,7 @@ impl DockerData {
         };
 
         self.update_all_container_stats(&all_ids).await;
+		
     }
 
     /// Animate the loading icon

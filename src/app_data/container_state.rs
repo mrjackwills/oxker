@@ -81,6 +81,7 @@ impl<T> StatefulList<T> {
 }
 
 /// States of the container
+// / impl ord
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum State {
     Dead,
@@ -92,6 +93,17 @@ pub enum State {
     Unknown,
 }
 
+// impl Ord for State {
+//     fn cmp(&self, other: &Self) -> Ordering {
+//         match (self, other) {
+// 			(Self::Dead)
+//             // (_, Foo::B) => Ordering::Less,
+//             // (Foo::A { val: l }, Foo::A { val: r }) => l.cmp(&r),
+//             // (Foo::B, _) => Ordering::Greater,
+//         }
+//     }
+// }
+
 impl State {
     pub fn get_color(&self) -> Color {
         match self {
@@ -102,7 +114,18 @@ impl State {
             _ => Color::Red,
         }
     }
-}
+	pub fn as_text(&self) -> &'static str {
+			match self {
+				Self::Dead => "dead",
+				Self::Exited => "exited",
+				Self::Paused => "paused",
+				Self::Removing => "removing",
+				Self::Restarting => "restarting",
+				Self::Running => "running",
+				Self::Unknown => "unknown",
+			}
+		}
+	}
 
 impl From<&str> for State {
     fn from(input: &str) -> Self {
