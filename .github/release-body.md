@@ -1,11 +1,13 @@
 ### 2022-07-23
 
 ### Chores
-+ dependencies updated, [cf7e02dde94f69832a2e485b99785afc66a5bc15]
++ update Cargo.toml, in preparation for crates.io publishing, [fdc6898e20c41415f03e310d7b84af4b6c39ab62]
 
-### Features
-+ Enable sorting of containers by each, and every, heading. Either via keyboard or mouse, closes [#3], [a6c296f2cde56cf241bcd696cab8bd477270e5f4]
-+ Spawn & track docker information update requests, multiple identical requests cannot be executed, [740c059b276f35acd1cb03f1030134646bf8a07d]
+### Docs
++ added cargo install instructions, [c774b10d557b10885b9d3a0b3612330a8ecb1cd5]
+
+### Fixes
++ use SpawnId for docker hashmap JoinHandle mapping, [1ae95d58c3302a95d5a0a2f0b61b126c72b6e166]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details
