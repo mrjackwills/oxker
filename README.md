@@ -28,7 +28,7 @@ Now published on <a href='https://www.crates.io/crates/oxker' target='_blank' re
 ``` cargo install oxker```
 
 
-else see the <a href="https://github.com/mrjackwills/oxker/releases" target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
+else see the <a href="https://github.com/mrjackwills/oxker/releases/latest" target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
 
 or, download & install (x86_64 one liner)
 
