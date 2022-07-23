@@ -63,6 +63,7 @@ impl DockerData {
 
     /// Get a single docker stat in order to update mem and cpu usage
     /// don't take &self, so that can tokio::spawn into it's own thread
+	/// remove if from spawns hashmap when complete
     async fn update_container_stat(
         docker: Arc<Docker>,
         id: String,
@@ -145,7 +146,6 @@ impl DockerData {
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
-    /// return Vec<(is_running, id)>
     pub async fn update_all_containers(&mut self) -> Vec<(bool, String)> {
         let containers = self
             .docker
@@ -183,6 +183,7 @@ impl DockerData {
 
     /// Update single container logs
     /// don't take &self, so that can tokio::spawn into it's own thread
+	/// remove if from spawns hashmap when complete
     async fn update_log(
         docker: Arc<Docker>,
         id: String,
