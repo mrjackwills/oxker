@@ -1,12 +1,15 @@
 [package]
 name = "oxker"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Jack Wills <email@mrjackwills.com>"]
 description = "a simple tui to view & control docker containers"
 repository = "https://github.com/mrjackwills/oxker"
+homepage = "https://github.com/mrjackwills/oxker"
 license = "MIT"
 readme = "README.md"
+keywords = ["docker", "tui", "tui-rs", "tokio"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0"
@@ -16,6 +19,7 @@ clap={version="3.2", features = ["derive", "unicode"] }
 crossterm = "0.24"
 futures-util = "0.3"
 parking_lot = {version= "0.12"}
+reqwest = "0.11.11"
 tokio = {version = "1.20", features=["full"]}
 tracing = "0.1"
 tracing-subscriber = "0.3"

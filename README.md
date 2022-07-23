@@ -23,9 +23,14 @@
 
 ## Download & install
 
-See <a href="https://github.com/mrjackwills/oxker/releases" target='_blank' rel='noopener noreferrer'>releases</a>
+Now published on <a href='https://www.crates.io/crates/oxker' target='_blank' rel='noopener noreferrer'>crates.io</a>, so if you have cargo installed, simply run
 
-download & install (x86_64 one liner)
+``` cargo install oxker```
+
+
+else see the <a href="https://github.com/mrjackwills/oxker/releases/latest" target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
+
+or, download & install (x86_64 one liner)
 
 ```bash
 wget https://www.github.com/mrjackwills/oxker/releases/latest/download/oxker_linux_x86_64.tar.gz &&
@@ -51,7 +56,7 @@ In application controls
 | ```( q )``` | to quit at any time |
 
 
-available command line arguments
+Available command line arguments
 | argument|result|
 |--|--|
 |```-d [number > 0]```| set the minimum update interval for docker information, in ms, defaults to 1000 (1 second) |
