@@ -6,10 +6,11 @@ use futures_util::StreamExt;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
+    fmt,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
-    }, fmt,
+    },
 };
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 
@@ -23,16 +24,16 @@ mod message;
 pub use message::DockerMessage;
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
-enum SpawnId{
-	Stats(String),
-	Log(String)
+enum SpawnId {
+    Stats(String),
+    Log(String),
 }
 
 impl fmt::Display for SpawnId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = match self {
             Self::Stats(id) => format!("stats::{id}"),
-            Self::Log(id) => format!("logs::{id}")
+            Self::Log(id) => format!("logs::{id}"),
         };
         write!(f, "{}", disp)
     }
@@ -133,7 +134,7 @@ impl DockerData {
                     .lock()
                     .update_stats(id.clone(), None, None, mem_limit, rx, tx);
             }
-			let key = SpawnId::Stats(id.to_owned());
+            let key = SpawnId::Stats(id.to_owned());
             spawns.lock().remove(&key);
         }
     }
@@ -147,7 +148,7 @@ impl DockerData {
             let is_running = *is_running;
             let id = id.to_owned();
 
-			let key = SpawnId::Stats(id.to_owned());
+            let key = SpawnId::Stats(id.to_owned());
             let spawn_contains_id = spawns.lock().contains_key(&key);
             let s = tokio::spawn(Self::update_container_stat(
                 docker,
@@ -229,7 +230,7 @@ impl DockerData {
                 }
             }
         }
-		let key = SpawnId::Log(id.to_owned());
+        let key = SpawnId::Log(id.to_owned());
         spawns.lock().remove(&key);
         app_data.lock().update_log_by_id(output, id.to_owned());
     }
@@ -242,15 +243,12 @@ impl DockerData {
             let id = id.to_owned();
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
-			let key = SpawnId::Log(id.to_owned());
-let s =     tokio::spawn(Self::update_log(
-	docker, id, timestamps, 0, app_data, spawns,
-));
+            let key = SpawnId::Log(id.to_owned());
+            let s = tokio::spawn(Self::update_log(
+                docker, id, timestamps, 0, app_data, spawns,
+            ));
 
-            self.spawns.lock().insert(
-                key,
-				s
-            );
+            self.spawns.lock().insert(key, s);
         }
     }
 
@@ -260,7 +258,7 @@ let s =     tokio::spawn(Self::update_log(
         if let Some(index) = optional_index {
             let id = self.app_data.lock().containers.items[index].id.to_owned();
 
-			let key = SpawnId::Log(id.to_owned());
+            let key = SpawnId::Log(id.to_owned());
             let running = self.spawns.lock().contains_key(&key);
 
             if !running {
@@ -271,12 +269,7 @@ let s =     tokio::spawn(Self::update_log(
                 let app_data = Arc::clone(&self.app_data);
                 let spawns = Arc::clone(&self.spawns);
                 let s = tokio::spawn(Self::update_log(
-                    docker,
-                    id,
-                    timestamps,
-                    since,
-                    app_data,
-                    spawns,
+                    docker, id, timestamps, since, app_data, spawns,
                 ));
                 self.spawns.lock().insert(key, s);
             }
