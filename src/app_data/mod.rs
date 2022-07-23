@@ -490,22 +490,27 @@ impl AppData {
         }
     }
 
-    /// update logs of a given container, based on index not id
-    pub fn update_log_by_index(&mut self, output: Vec<String>, index: usize) {
+    /// update logs of a given container, based on id
+    pub fn update_log_by_id(&mut self, output: Vec<String>, id: String) {
         let tz = self.get_systemtime();
-        if let Some(container) = self.containers.items.get_mut(index) {
+        let color = self.args.color;
+        let raw = self.args.raw;
+
+        if let Some(container) = self.get_container_by_id(&id) {
             container.last_updated = tz;
             let current_len = container.logs.items.len();
+
             output.iter().for_each(|i| {
-                let lines = if self.args.color {
+                let lines = if color {
                     log_sanitizer::colorize_logs(i.to_owned())
-                } else if self.args.raw {
+                } else if raw {
                     log_sanitizer::raw(i.to_owned())
                 } else {
                     log_sanitizer::remove_ansi(i.to_owned())
                 };
                 container.logs.items.push(ListItem::new(lines));
             });
+
             if container.logs.state.selected().is_none()
                 || container.logs.state.selected().unwrap_or_default() + 1 == current_len
             {
@@ -514,11 +519,4 @@ impl AppData {
         }
         self.logs_parsed = true;
     }
-
-    // /// Update all containers logs, should only be used on first initialisation
-    // pub fn update_all_logs(&mut self, all_logs: Vec<Vec<String>>) {
-    //     for (index, output) in all_logs.into_iter().enumerate() {
-    //         self.update_log_by_index(output, index);
-    //     }
-    // }
 }
