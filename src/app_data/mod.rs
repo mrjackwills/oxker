@@ -1,4 +1,5 @@
 use bollard::models::ContainerSummary;
+use core::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tui::widgets::ListItem;
 
@@ -16,9 +17,63 @@ pub struct AppData {
     pub containers: StatefulList<ContainerItem>,
     pub init: bool,
     pub show_error: bool,
+    sorted_by: Option<(Header, SortedOrder)>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SortedOrder {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+pub enum Header {
+    State,
+    Status,
+    Cpu,
+    Memory,
+    Id,
+    Name,
+    Image,
+    Rx,
+    Tx,
+}
+
+/// Convert errors into strings to display
+impl fmt::Display for Header {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let disp = match self {
+            Self::State => "state",
+            Self::Status => "status",
+            Self::Cpu => "cpu",
+            Self::Memory => "memory/limit",
+            Self::Id => "id",
+            Self::Name => "name",
+            Self::Image => "image",
+            Self::Rx => "↓ rx",
+            Self::Tx => "↑ tx",
+        };
+        write!(f, "{:>x$}", disp, x = f.width().unwrap_or(1))
+    }
 }
 
 impl AppData {
+    pub fn get_sorted(&self) -> Option<(Header, SortedOrder)> {
+        self.sorted_by.clone()
+    }
+
+    /// Change the sorted order, also set the selected container state to match new order
+    pub fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
+        self.sorted_by = x;
+        let id = self.get_selected_container_id();
+        self.sort_containers();
+        self.containers.state.select(
+            self.containers
+                .items
+                .iter()
+                .position(|i| Some(i.id.to_owned()) == id),
+        );
+    }
     /// Generate a default app_state
     pub fn default(args: CliArgs) -> Self {
         Self {
@@ -28,6 +83,7 @@ impl AppData {
             init: false,
             logs_parsed: false,
             show_error: false,
+            sorted_by: None,
         }
     }
 
@@ -116,6 +172,88 @@ impl AppData {
             output = Some(id)
         }
         output
+    }
+
+    /// Sort the containers vec, based on a heading, either ascending or descending
+    pub fn sort_containers(&mut self) {
+        if let Some((head, so)) = self.sorted_by.as_ref() {
+            match head {
+                Header::State => match so {
+                    SortedOrder::Desc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| a.state.order().cmp(b.state.order())),
+                    SortedOrder::Asc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| b.state.order().cmp(a.state.order())),
+                },
+                Header::Status => match so {
+                    SortedOrder::Asc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| a.status.cmp(&b.status)),
+                    SortedOrder::Desc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| b.status.cmp(&a.status)),
+                },
+                Header::Cpu => match so {
+                    SortedOrder::Asc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| a.cpu_stats.back().cmp(&b.cpu_stats.back())),
+                    SortedOrder::Desc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| b.cpu_stats.back().cmp(&a.cpu_stats.back())),
+                },
+                Header::Memory => match so {
+                    SortedOrder::Asc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| a.mem_stats.back().cmp(&b.mem_stats.back())),
+                    SortedOrder::Desc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| b.mem_stats.back().cmp(&a.mem_stats.back())),
+                },
+                Header::Id => match so {
+                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.id.cmp(&b.id)),
+                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.id.cmp(&a.id)),
+                },
+                Header::Image => match so {
+                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.image.cmp(&b.image)),
+                    SortedOrder::Desc => {
+                        self.containers.items.sort_by(|a, b| b.image.cmp(&a.image))
+                    }
+                },
+                Header::Name => match so {
+                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.name.cmp(&b.name)),
+                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.name.cmp(&a.name)),
+                },
+                Header::Rx => match so {
+                    SortedOrder::Asc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| a.net_rx.cmp(&b.net_rx)),
+                    SortedOrder::Desc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| b.net_rx.cmp(&a.net_rx)),
+                },
+                Header::Tx => match so {
+                    SortedOrder::Asc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| a.net_tx.cmp(&b.net_tx)),
+                    SortedOrder::Desc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| b.net_tx.cmp(&a.net_tx)),
+                },
+            }
+        }
     }
 
     /// Find the index of the currently selected single log line

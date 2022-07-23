@@ -14,6 +14,7 @@ use tui::{
     Frame,
 };
 
+use crate::app_data::{Header, SortedOrder};
 use crate::{
     app_data::{AppData, ByteStats, Columns, CpuStats, State, Stats},
     app_error::AppError,
@@ -47,7 +48,7 @@ fn generate_block<'a>(
     gui_state: &Arc<Mutex<GuiState>>,
     panel: SelectablePanel,
 ) -> Block<'a> {
-    gui_state.lock().insert_into_area_map(panel, area);
+    gui_state.lock().insert_into_panel_map(panel, area);
     let mut block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
@@ -145,7 +146,7 @@ pub fn draw_containers<B: Backend>(
                     state_style,
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.status, width = widths.status.1),
+                    format!("{}{:>width$}", MARGIN, i.status, width = &widths.status.1),
                     state_style,
                 ),
                 Span::styled(
@@ -153,12 +154,12 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.cpu_stats.back().unwrap_or(&CpuStats::new(0.0)),
-                        width = widths.cpu.1
+                        width = &widths.cpu.1
                     ),
                     state_style,
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, mems, width = widths.mem.1),
+                    format!("{}{:>width$}", MARGIN, mems, width = &widths.mem.1),
                     state_style,
                 ),
                 Span::styled(
@@ -166,7 +167,7 @@ pub fn draw_containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.id.chars().take(8).collect::<String>(),
-                        width = widths.id.1
+                        width = &widths.id.1
                     ),
                     blue,
                 ),
@@ -190,7 +191,6 @@ pub fn draw_containers<B: Backend>(
             ListItem::new(lines)
         })
         .collect::<Vec<_>>();
-
     if items.is_empty() {
         let debug_text = String::from("no containers running");
         let paragraph = Paragraph::new(debug_text)
@@ -357,81 +357,104 @@ pub fn draw_heading_bar<B: Backend>(
     f: &mut Frame<'_, B>,
     has_containers: bool,
     loading_icon: String,
-    info_visible: bool,
+    sorted_by: Option<(Header, SortedOrder)>,
+    gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = || Block::default().style(Style::default().bg(Color::Magenta).fg(Color::Black));
+    let info_visible = gui_state.lock().show_help;
 
     f.render_widget(block(), area);
 
-    let mut column_headings = format!(
-        " {}{:>width$}",
-        loading_icon,
-        columns.state.0,
-        width = columns.state.1
-    );
-    column_headings.push_str(
-        format!(
-            "{}  {:>width$}",
-            MARGIN,
-            columns.status.0,
-            width = columns.status.1
+    // Generate a bloack for the header, if the header is currently being used to sort a column, then highlight it white
+    let header_block = |x: &Header| {
+        let mut color = Color::Black;
+        let mut suffix = "";
+        let mut suffix_margin = 0;
+        if let Some((a, b)) = sorted_by.as_ref() {
+            if x == a {
+                match b {
+                    SortedOrder::Asc => suffix = " ⌃",
+                    SortedOrder::Desc => suffix = " ⌄",
+                }
+                suffix_margin = 2;
+                color = Color::White
+            };
+        };
+        (
+            Block::default().style(Style::default().bg(Color::Magenta).fg(color)),
+            suffix,
+            suffix_margin,
         )
-        .as_str(),
-    );
-    column_headings
-        .push_str(format!("{}{:>width$}", MARGIN, columns.cpu.0, width = columns.cpu.1).as_str());
-    column_headings
-        .push_str(format!("{}{:>width$}", MARGIN, columns.mem.0, width = columns.mem.1).as_str());
-    column_headings
-        .push_str(format!("{}{:>width$}", MARGIN, columns.id.0, width = columns.id.1).as_str());
-    column_headings.push_str(
-        format!(
-            "{}{:>width$}",
-            MARGIN,
-            columns.name.0,
-            width = columns.name.1
-        )
-        .as_str(),
-    );
-    column_headings.push_str(
-        format!(
-            "{}{:>width$}",
-            MARGIN,
-            columns.image.0,
-            width = columns.image.1
-        )
-        .as_str(),
-    );
-    column_headings.push_str(
-        format!(
-            "{}{:>width$}",
-            MARGIN,
-            columns.net_rx.0,
-            width = columns.net_rx.1
-        )
-        .as_str(),
-    );
-    column_headings.push_str(
-        format!(
-            "{}{:>width$}",
-            MARGIN,
-            columns.net_tx.0,
-            width = columns.net_tx.1
-        )
-        .as_str(),
-    );
+    };
+
+    // Generate block for the headers, state and status has a specific layout, others all equal
+    // width is dependant on it that column is selected to sort - or not
+    let gen_header = |header: &Header, width: usize| {
+        let block = header_block(header);
+        let text = match header {
+            Header::State => format!(
+                " {}{:>width$}{ic}",
+                loading_icon,
+                header,
+                ic = block.1,
+                width = width - block.2,
+            ),
+            Header::Status => format!(
+                "{}  {:>width$}{ic}",
+                MARGIN,
+                header,
+                ic = block.1,
+                width = width - block.2
+            ),
+
+            _ => format!(
+                "{}{:>width$}{ic}",
+                MARGIN,
+                header,
+                ic = block.1,
+                width = width - block.2
+            ),
+        };
+        let count = text.chars().count() as u16;
+        let status = Paragraph::new(text)
+            .block(block.0)
+            .alignment(Alignment::Left);
+        (status, count)
+    };
+
+    // Meta data for iterate over to create blocks and correct widths
+    let header_meta = [
+        (Header::State, columns.state.1),
+        (Header::Status, columns.status.1),
+        (Header::Cpu, columns.cpu.1),
+        (Header::Memory, columns.mem.1),
+        (Header::Id, columns.id.1),
+        (Header::Name, columns.name.1),
+        (Header::Image, columns.image.1),
+        (Header::Rx, columns.net_rx.1),
+        (Header::Tx, columns.net_tx.1),
+    ];
+
+    let header_data = header_meta
+        .iter()
+        .map(|i| {
+            let header_block = gen_header(&i.0, i.1);
+            (
+                header_block.0,
+                i.0.to_owned(),
+                Constraint::Max(header_block.1),
+            )
+        })
+        .collect::<Vec<_>>();
 
     let suffix = if info_visible { "exit" } else { "show" };
-    let info_text = format!("( h ) to {} help {}", suffix, MARGIN);
-    let info_width = info_text.chars().count();
+    let info_text = format!("( h ) {} help {}", suffix, MARGIN);
+    let info_width = info_text.chars().count() as u16;
 
-    let column_width = column_headings.chars().count();
-
+    let column_width = area.width - info_width;
+    let column_width = if column_width > 0 { column_width } else { 1 };
     let splits = if has_containers {
-        vec![
-            Constraint::Min(column_width as u16),
-            Constraint::Min(info_width as u16),
-        ]
+        vec![Constraint::Min(column_width), Constraint::Min(info_width)]
     } else {
         vec![Constraint::Percentage(100)]
     };
@@ -440,12 +463,21 @@ pub fn draw_heading_bar<B: Backend>(
         .direction(Direction::Horizontal)
         .constraints(splits.as_ref())
         .split(area);
-
     if has_containers {
-        let paragraph = Paragraph::new(column_headings)
-            .block(block())
-            .alignment(Alignment::Left);
-        f.render_widget(paragraph, split_bar[0]);
+        let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
+
+        let headers_section = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(container_splits.as_ref())
+            .split(split_bar[0]);
+
+        // draw the actual header blocks
+        for (index, (paragraph, header, _)) in header_data.into_iter().enumerate() {
+            gui_state
+                .lock()
+                .insert_into_header_map(header, headers_section[index]);
+            f.render_widget(paragraph, headers_section[index]);
+        }
     }
 
     let paragraph = Paragraph::new(info_text)
@@ -479,6 +511,8 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .push_str("\n  ( ↑ ↓ ) or ( j k ) or (PgUp PgDown) or (Home End) to change selected line");
     help_text.push_str("\n  ( enter ) to send docker container commands");
     help_text.push_str("\n  ( h ) to toggle this help information");
+    help_text.push_str("\n  ( 0 ) stop sort");
+    help_text.push_str("\n  ( 1 - 9 ) sort by header - or click header");
     help_text.push_str(
         "\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied",
     );

@@ -144,6 +144,10 @@ impl DockerData {
             .for_each(|c| output.push(c.to_owned()));
 
         self.app_data.lock().update_containers(&output);
+
+        let current_sort = self.app_data.lock().get_sorted();
+        self.app_data.lock().set_sorted(current_sort);
+
         output
             .iter()
             .filter_map(|i| {
@@ -186,6 +190,11 @@ impl DockerData {
         }
         output
     }
+
+    // async fn stop(&self) {
+    // 	self.docker.
+
+    // }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
     async fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {

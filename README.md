@@ -38,6 +38,19 @@ rm oxker_linux_x86_64.tar.gz oxker
 
 ```oxker```
 
+In application controls
+| button| result|
+|--|--|
+| ```( tab )``` or ```( shift+tab )``` | Change panel, clicking on a panel also changes the selected panel|
+| ```( ↑ ↓ )``` or ```( j k )``` or ```(PgUp PgDown)``` or ```(Home End)```| Change selected line in selected panel, mouse scroll also changes selected line |
+| ```( enter )```| execute selected docker command|
+| ```( 1-9 )``` | sort containers by heading, clicking on headings also sorts the selected column |
+| ```( 0 )``` | stop sorting |
+| ```( h )``` | Show help menu |
+| ```( m )``` | toggle mouse capture - if disabled, text on screen can be selected|
+| ```( q )``` | to quit at any time |
+
+
 available command line arguments
 | argument|result|
 |--|--|
