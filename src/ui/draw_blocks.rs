@@ -473,10 +473,8 @@ pub fn draw_heading_bar<B: Backend>(
 
         // draw the actual header blocks
         for (index, (paragraph, header, _)) in header_data.into_iter().enumerate() {
-			let rect = headers_section[index];
-            gui_state
-                .lock()
-				.update_map(Region::Header(header), rect);
+            let rect = headers_section[index];
+            gui_state.lock().update_map(Region::Header(header), rect);
             f.render_widget(paragraph, rect);
         }
     }

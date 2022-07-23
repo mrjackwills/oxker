@@ -1,19 +1,11 @@
-### 2022-07-06
+### 2022-07-23
 
-### Docs
-+ readme update, [f29e29ad151ddf424ba630e6d33edf19acfd7636]
-+ comments improved, [1674db8a20aafa447732deb2e44ac8b97cf0471b]
-+ readme logo size, [a733efa65865e04d9ec86c7ca8785dfbae635695]
+### Chores
++ dependencies updated, [cf7e02dde94f69832a2e485b99785afc66a5bc15]
 
-### Fixes
-+ Remove unwraps(), [61db81ecfe5684ddb8a360715f43357a042162c0]
-+ Help menu alt+tab > shift+tab typo, thanks [siph](https://github.com/siph), [04466803481b75feb7d7f275248279fdb8729862]
-
-### Refactors
-+ tokio spawns, [1fd230f2f3cf4e376058359515e76f4fa6e425c2]
-+ max_line_width(), [a5d7dabbd68dc15a081df33352ce3b55d9a9891c]
-+ create_release dead code removed, [297979c197c2defd409053d8da724f922b0bba1b]
-
+### Features
++ Enable sorting of containers by each, and every, heading. Either via keyboard or mouse, closes [#3], [a6c296f2cde56cf241bcd696cab8bd477270e5f4]
++ Spawn & track docker information update requests, multiple identical requests cannot be executed, [740c059b276f35acd1cb03f1030134646bf8a07d]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details
