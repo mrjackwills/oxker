@@ -63,7 +63,7 @@ impl DockerData {
 
     /// Get a single docker stat in order to update mem and cpu usage
     /// don't take &self, so that can tokio::spawn into it's own thread
-	/// remove if from spawns hashmap when complete
+    /// remove if from spawns hashmap when complete
     async fn update_container_stat(
         docker: Arc<Docker>,
         id: String,
@@ -183,7 +183,7 @@ impl DockerData {
 
     /// Update single container logs
     /// don't take &self, so that can tokio::spawn into it's own thread
-	/// remove if from spawns hashmap when complete
+    /// remove if from spawns hashmap when complete
     async fn update_log(
         docker: Arc<Docker>,
         id: String,

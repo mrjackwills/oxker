@@ -10,10 +10,9 @@ pub enum SelectablePanel {
     Logs,
 }
 
-
 pub enum Region {
-	Panel(SelectablePanel),
-	Header(Header)
+    Panel(SelectablePanel),
+    Header(Header),
 }
 
 #[allow(unused)]
@@ -225,13 +224,20 @@ impl GuiState {
             .map(|data| data.0.to_owned())
     }
 
-	   /// Insert, or updatem header area panel into heading_map
-	   pub fn update_map(&mut self, region: Region, area: Rect) {
-		match region {
-			Region::Header(header) => 
-				self.heading_map.entry(header).and_modify(|w|*w =area).or_insert(area),
-			Region::Panel(panel) => self.panel_map.entry(panel).and_modify(|w|*w =area).or_insert(area),
-		};
+    /// Insert, or updatem header area panel into heading_map
+    pub fn update_map(&mut self, region: Region, area: Rect) {
+        match region {
+            Region::Header(header) => self
+                .heading_map
+                .entry(header)
+                .and_modify(|w| *w = area)
+                .or_insert(area),
+            Region::Panel(panel) => self
+                .panel_map
+                .entry(panel)
+                .and_modify(|w| *w = area)
+                .or_insert(area),
+        };
     }
 
     /// Change to next selectable panel
