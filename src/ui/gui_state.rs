@@ -10,6 +10,12 @@ pub enum SelectablePanel {
     Logs,
 }
 
+
+pub enum Region {
+	Panel(SelectablePanel),
+	Header(Header)
+}
+
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum BoxLocation {
@@ -39,7 +45,7 @@ impl BoxLocation {
         }
     }
 
-    // Should combine and just return a tupple?
+    // Should combine and just return a tuple?
     pub fn get_horizontal_constraints(
         &self,
         blank_vertical: u16,
@@ -177,7 +183,6 @@ pub struct GuiState {
     pub show_help: bool,
     pub info_box_text: Option<String>,
 }
-
 impl GuiState {
     /// Generate a default gui_state
     pub fn default() -> Self {
@@ -220,18 +225,13 @@ impl GuiState {
             .map(|data| data.0.to_owned())
     }
 
-    /// Insert selectable gui panel into area map
-    /// Remove each time, as terminal may have been resized!
-    pub fn insert_into_panel_map(&mut self, panel: SelectablePanel, area: Rect) {
-        self.panel_map.remove(&panel);
-        self.panel_map.insert(panel, area);
-    }
-
-    /// Insert selectable gui panel into area map
-    /// Remove each time, as terminal may have been resized!
-    pub fn insert_into_header_map(&mut self, header: Header, area: Rect) {
-        self.heading_map.remove(&header);
-        self.heading_map.insert(header, area);
+	   /// Insert, or updatem header area panel into heading_map
+	   pub fn update_map(&mut self, region: Region, area: Rect) {
+		match region {
+			Region::Header(header) => 
+				self.heading_map.entry(header).and_modify(|w|*w =area).or_insert(area),
+			Region::Panel(panel) => self.panel_map.entry(panel).and_modify(|w|*w =area).or_insert(area),
+		};
     }
 
     /// Change to next selectable panel

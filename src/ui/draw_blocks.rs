@@ -20,7 +20,7 @@ use crate::{
     app_error::AppError,
 };
 
-use super::gui_state::BoxLocation;
+use super::gui_state::{BoxLocation, Region};
 use super::{GuiState, SelectablePanel};
 
 const NAME_TEXT: &str = r#"
@@ -48,7 +48,7 @@ fn generate_block<'a>(
     gui_state: &Arc<Mutex<GuiState>>,
     panel: SelectablePanel,
 ) -> Block<'a> {
-    gui_state.lock().insert_into_panel_map(panel, area);
+    gui_state.lock().update_map(Region::Panel(panel), area);
     let mut block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
@@ -473,10 +473,11 @@ pub fn draw_heading_bar<B: Backend>(
 
         // draw the actual header blocks
         for (index, (paragraph, header, _)) in header_data.into_iter().enumerate() {
+			let rect = headers_section[index];
             gui_state
                 .lock()
-                .insert_into_header_map(header, headers_section[index]);
-            f.render_widget(paragraph, headers_section[index]);
+				.update_map(Region::Header(header), rect);
+            f.render_widget(paragraph, rect);
         }
     }
 

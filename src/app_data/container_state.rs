@@ -10,7 +10,6 @@ use super::Header;
 #[derive(Debug, Clone)]
 pub struct StatefulList<T> {
     pub state: ListState,
-    // todo BTreeMap
     pub items: Vec<T>,
 }
 

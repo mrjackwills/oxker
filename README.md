@@ -21,7 +21,7 @@
 </p>
 
 
-## Download & install 
+## Download & install
 
 See <a href="https://github.com/mrjackwills/oxker/releases" target='_blank' rel='noopener noreferrer'>releases</a>
 
@@ -54,7 +54,7 @@ In application controls
 available command line arguments
 | argument|result|
 |--|--|
-|```-d [number > 0]```| set the update interval for docker information, in ms, defaults to 1000 (1 second) |
+|```-d [number > 0]```| set the minimum update interval for docker information, in ms, defaults to 1000 (1 second) |
 |```-r```| Show raw logs, by default oxker will remove ANSI formatting (conflicts with -c) |
 |```-c```| Attempt to color the logs (conflicts with -r) |
 |```-t```| Remove timestamps from each log entry |
