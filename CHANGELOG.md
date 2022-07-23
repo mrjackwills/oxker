@@ -1,5 +1,5 @@
 ### Chores
-+ update Cargo.toml, in prepartion for crates.io publishing, [fdc6898e20c41415f03e310d7b84af4b6c39ab62]
++ update Cargo.toml, in preparation for crates.io publishing, [fdc6898e20c41415f03e310d7b84af4b6c39ab62]
 
 ### Docs
 + added cargo install instructions, [c774b10d557b10885b9d3a0b3612330a8ecb1cd5]
