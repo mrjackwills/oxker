@@ -2,9 +2,15 @@ use bollard::{
     container::{ListContainersOptions, LogsOptions, StartContainerOptions, Stats, StatsOptions},
     Docker,
 };
-use futures_util::{future::join_all, StreamExt};
+use futures_util::StreamExt;
 use parking_lot::Mutex;
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 
 use crate::{
@@ -21,7 +27,9 @@ pub struct DockerData {
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
     initialised: bool,
+    is_running: Arc<AtomicBool>,
     receiver: Receiver<DockerMessage>,
+    spawns: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
     timestamps: bool,
 }
 
@@ -55,11 +63,13 @@ impl DockerData {
 
     /// Get a single docker stat in order to update mem and cpu usage
     /// don't take &self, so that can tokio::spawn into it's own thread
+	/// remove if from spawns hashmap when complete
     async fn update_container_stat(
         docker: Arc<Docker>,
         id: String,
         app_data: Arc<Mutex<AppData>>,
         is_running: bool,
+        spawns: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
     ) {
         let mut stream = docker
             .stats(
@@ -107,6 +117,7 @@ impl DockerData {
                     .lock()
                     .update_stats(id.clone(), None, None, mem_limit, rx, tx);
             }
+            spawns.lock().remove(&id);
         }
     }
 
@@ -115,17 +126,26 @@ impl DockerData {
         for (is_running, id) in all_ids.iter() {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
+            let spawns = Arc::clone(&self.spawns);
             let is_running = *is_running;
             let id = id.to_owned();
-            tokio::spawn(Self::update_container_stat(
-                docker, id, app_data, is_running,
+
+            let spawn_contains_id = spawns.lock().contains_key(&id);
+            let s = tokio::spawn(Self::update_container_stat(
+                docker,
+                id.to_owned(),
+                app_data,
+                is_running,
+                spawns,
             ));
+            if !spawn_contains_id {
+                self.spawns.lock().insert(id, s);
+            }
         }
     }
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
-    /// return Vec<(is_running, id)>
     pub async fn update_all_containers(&mut self) -> Vec<(bool, String)> {
         let containers = self
             .docker
@@ -163,12 +183,15 @@ impl DockerData {
 
     /// Update single container logs
     /// don't take &self, so that can tokio::spawn into it's own thread
+	/// remove if from spawns hashmap when complete
     async fn update_log(
         docker: Arc<Docker>,
         id: String,
         timestamps: bool,
         since: i64,
-    ) -> Vec<String> {
+        app_data: Arc<Mutex<AppData>>,
+        spawns: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
+    ) {
         let options = Some(LogsOptions::<String> {
             stdout: true,
             timestamps,
@@ -188,26 +211,25 @@ impl DockerData {
                 }
             }
         }
-        output
+        spawns.lock().remove(&id);
+        app_data.lock().update_log_by_id(output, id.to_owned());
     }
-
-    // async fn stop(&self) {
-    // 	self.docker.
-
-    // }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
     async fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {
-        let mut handles = vec![];
-
         for (_, id) in all_ids.iter() {
             let docker = Arc::clone(&self.docker);
             let timestamps = self.timestamps;
             let id = id.to_owned();
-            handles.push(Self::update_log(docker, id, timestamps, 0));
+            let app_data = Arc::clone(&self.app_data);
+            let spawns = Arc::clone(&self.spawns);
+            self.spawns.lock().insert(
+                id.to_owned(),
+                tokio::spawn(Self::update_log(
+                    docker, id, timestamps, 0, app_data, spawns,
+                )),
+            );
         }
-        let all_logs = join_all(handles).await;
-        self.app_data.lock().update_all_logs(all_logs);
     }
 
     async fn update_everything(&mut self) {
@@ -215,11 +237,26 @@ impl DockerData {
         let optional_index = self.app_data.lock().get_selected_log_index();
         if let Some(index) = optional_index {
             let id = self.app_data.lock().containers.items[index].id.to_owned();
-            let since = self.app_data.lock().containers.items[index].last_updated as i64;
-            let docker = Arc::clone(&self.docker);
-            let timestamps = self.timestamps;
-            let logs = Self::update_log(docker, id, timestamps, since).await;
-            self.app_data.lock().update_log_by_index(logs, index);
+
+            let running = self.spawns.lock().contains_key(&id);
+
+            if !running {
+                let since = self.app_data.lock().containers.items[index].last_updated as i64;
+                let docker = Arc::clone(&self.docker);
+                let timestamps = self.timestamps;
+
+                let app_data = Arc::clone(&self.app_data);
+                let spawns = Arc::clone(&self.spawns);
+                let s = tokio::spawn(Self::update_log(
+                    docker,
+                    id.to_owned(),
+                    timestamps,
+                    since,
+                    app_data,
+                    spawns,
+                ));
+                self.spawns.lock().insert(id, s);
+            }
         };
 
         self.update_all_container_stats(&all_ids).await;
@@ -324,6 +361,14 @@ impl DockerData {
                     self.update_everything().await
                 }
                 DockerMessage::Update => self.update_everything().await,
+                DockerMessage::Quit => {
+                    self.spawns
+                        .lock()
+                        .values()
+                        .into_iter()
+                        .for_each(|i| i.abort());
+                    self.is_running.store(false, Ordering::SeqCst);
+                }
             }
         }
     }
@@ -335,6 +380,7 @@ impl DockerData {
         docker: Arc<Docker>,
         gui_state: Arc<Mutex<GuiState>>,
         receiver: Receiver<DockerMessage>,
+        is_running: Arc<AtomicBool>,
     ) {
         if app_data.lock().get_error().is_none() {
             let mut inner = Self {
@@ -343,7 +389,9 @@ impl DockerData {
                 gui_state,
                 initialised: false,
                 receiver,
+                spawns: Arc::new(Mutex::new(HashMap::new())),
                 timestamps: args.timestamp,
+                is_running,
             };
             inner.initialise_container_data().await;
 

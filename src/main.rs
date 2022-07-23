@@ -26,6 +26,7 @@ async fn main() {
     let args = CliArgs::new();
     let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
+    let is_running = Arc::new(AtomicBool::new(true));
 
     let docker_args = args.clone();
     let docker_app_data = Arc::clone(&app_data);
@@ -38,12 +39,14 @@ async fn main() {
     match docker.ping().await {
         Ok(_) => {
             let docker = Arc::clone(&docker);
+            let is_running = Arc::clone(&is_running);
             tokio::spawn(DockerData::init(
                 docker_args,
                 docker_app_data,
                 docker,
                 docker_gui_state,
                 docker_rx,
+                is_running,
             ));
         }
         Err(_) => app_data.lock().set_error(AppError::DockerConnect),
@@ -53,7 +56,6 @@ async fn main() {
 
     let (input_sx, input_rx) = tokio::sync::mpsc::channel(16);
 
-    let is_running = Arc::new(AtomicBool::new(true));
     let input_is_running = Arc::clone(&is_running);
     let input_gui_state = Arc::clone(&gui_state);
     let input_docker_sender = docker_sx.clone();

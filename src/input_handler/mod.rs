@@ -77,6 +77,7 @@ impl InputHandler {
         }
     }
 
+    /// Mouse button
     fn m_button(&mut self) {
         if self.mouse_capture {
             match execute!(std::io::stdout(), DisableMouseCapture) {
@@ -120,11 +121,19 @@ impl InputHandler {
         let mut output = Some((header.to_owned(), SortedOrder::Desc));
         let mut locked_data = self.app_data.lock();
         if let Some((h, order)) = locked_data.get_sorted().as_ref() {
-                if &SortedOrder::Desc == order &&  h == &header {
-                    output = Some((header, SortedOrder::Asc))
-                }
+            if &SortedOrder::Desc == order && h == &header {
+                output = Some((header, SortedOrder::Asc))
+            }
         }
         locked_data.set_sorted(output)
+    }
+
+    /// Send a quit message to docker, to abort all spawns, if error, quit here instead
+    async fn quit(&self) {
+        match self.docker_sender.send(DockerMessage::Quit).await {
+            Ok(_) => (),
+            Err(_) => self.is_running.store(false, Ordering::SeqCst),
+        }
     }
 
     /// Handle any keyboard button events
@@ -134,9 +143,7 @@ impl InputHandler {
 
         if show_error {
             match key_code {
-                KeyCode::Char('q') => {
-                    self.is_running.store(false, Ordering::SeqCst);
-                }
+                KeyCode::Char('q') => self.quit().await,
                 KeyCode::Char('c') => {
                     self.app_data.lock().show_error = false;
                     self.app_data.lock().remove_error();
@@ -145,7 +152,7 @@ impl InputHandler {
             }
         } else if show_info {
             match key_code {
-                KeyCode::Char('q') => self.is_running.store(false, Ordering::SeqCst),
+                KeyCode::Char('q') => self.quit().await,
                 KeyCode::Char('h') => self.gui_state.lock().show_help = false,
                 KeyCode::Char('m') => self.m_button(),
                 _ => (),
@@ -162,16 +169,36 @@ impl InputHandler {
                 KeyCode::Char('7') => self.sort(Header::Image),
                 KeyCode::Char('8') => self.sort(Header::Rx),
                 KeyCode::Char('9') => self.sort(Header::Tx),
-                KeyCode::Char('q') => self.is_running.store(false, Ordering::SeqCst),
+                KeyCode::Char('q') => self.quit().await,
                 KeyCode::Char('h') => self.gui_state.lock().show_help = true,
                 KeyCode::Char('m') => self.m_button(),
                 KeyCode::Tab => {
-                    // TODO if no containers, skip controls panel
-                    self.gui_state.lock().next_panel();
+                    // Skip control panel if no containers, could be refactored
+                    let has_containers = self.app_data.lock().get_container_len() == 0;
+                    let is_containers =
+                        self.gui_state.lock().selected_panel == SelectablePanel::Containers;
+                    let count = if has_containers && is_containers {
+                        2
+                    } else {
+                        1
+                    };
+                    for _ in 0..count {
+                        self.gui_state.lock().next_panel();
+                    }
                 }
                 KeyCode::BackTab => {
-                    // TODO if no containers, skip controls panel
-                    self.gui_state.lock().previous_panel();
+                    // Skip control panel if no containers, could be refactored
+                    let has_containers = self.app_data.lock().get_container_len() == 0;
+                    let is_containers =
+                        self.gui_state.lock().selected_panel == SelectablePanel::Logs;
+                    let count = if has_containers && is_containers {
+                        2
+                    } else {
+                        1
+                    };
+                    for _ in 0..count {
+                        self.gui_state.lock().previous_panel();
+                    }
                 }
                 KeyCode::Home => {
                     let mut locked_data = self.app_data.lock();
@@ -274,7 +301,7 @@ impl InputHandler {
         }
     }
 
-    /// Change state of selected container
+    /// Change state to next, depending which panel is currently in focus
     fn next(&mut self) {
         let mut locked_data = self.app_data.lock();
         match self.gui_state.lock().selected_panel {
@@ -284,7 +311,7 @@ impl InputHandler {
         };
     }
 
-    /// Change state of selected container
+    /// Change state to previous, depending which panel is currently in focus
     fn previous(&mut self) {
         let mut locked_data = self.app_data.lock();
         match self.gui_state.lock().selected_panel {

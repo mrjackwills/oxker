@@ -233,24 +233,12 @@ impl AppData {
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.name.cmp(&a.name)),
                 },
                 Header::Rx => match so {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.net_rx.cmp(&b.net_rx)),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.net_rx.cmp(&a.net_rx)),
+                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.rx.cmp(&b.rx)),
+                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.rx.cmp(&a.rx)),
                 },
                 Header::Tx => match so {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.net_tx.cmp(&b.net_tx)),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.net_tx.cmp(&a.net_tx)),
+                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.tx.cmp(&b.tx)),
+                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.tx.cmp(&a.tx)),
                 },
             }
         }
@@ -341,8 +329,8 @@ impl AppData {
                 container.mem_limit
             ));
 
-            let net_rx_count = count(&container.net_rx.to_string());
-            let net_tx_count = count(&container.net_tx.to_string());
+            let net_rx_count = count(&container.rx.to_string());
+            let net_tx_count = count(&container.tx.to_string());
             let image_count = count(&container.image);
             let name_count = count(&container.name);
             let state_count = count(&container.state.to_string());
@@ -415,8 +403,8 @@ impl AppData {
                 container.mem_stats.push_back(ByteStats::new(mem));
             }
 
-            container.net_rx.update(rx);
-            container.net_tx.update(tx);
+            container.rx.update(rx);
+            container.tx.update(tx);
             container.mem_limit.update(mem_limit);
         }
     }
@@ -502,22 +490,27 @@ impl AppData {
         }
     }
 
-    /// update logs of a given container, based on index not id
-    pub fn update_log_by_index(&mut self, output: Vec<String>, index: usize) {
+    /// update logs of a given container, based on id
+    pub fn update_log_by_id(&mut self, output: Vec<String>, id: String) {
         let tz = self.get_systemtime();
-        if let Some(container) = self.containers.items.get_mut(index) {
+        let color = self.args.color;
+        let raw = self.args.raw;
+
+        if let Some(container) = self.get_container_by_id(&id) {
             container.last_updated = tz;
             let current_len = container.logs.items.len();
+
             output.iter().for_each(|i| {
-                let lines = if self.args.color {
+                let lines = if color {
                     log_sanitizer::colorize_logs(i.to_owned())
-                } else if self.args.raw {
+                } else if raw {
                     log_sanitizer::raw(i.to_owned())
                 } else {
                     log_sanitizer::remove_ansi(i.to_owned())
                 };
                 container.logs.items.push(ListItem::new(lines));
             });
+
             if container.logs.state.selected().is_none()
                 || container.logs.state.selected().unwrap_or_default() + 1 == current_len
             {
@@ -525,12 +518,5 @@ impl AppData {
             }
         }
         self.logs_parsed = true;
-    }
-
-    /// Update all containers logs, should only be used on first initialisation
-    pub fn update_all_logs(&mut self, all_logs: Vec<Vec<String>>) {
-        for (index, output) in all_logs.into_iter().enumerate() {
-            self.update_log_by_index(output, index);
-        }
     }
 }
