@@ -10,7 +10,7 @@ use super::Header;
 #[derive(Debug, Clone)]
 pub struct StatefulList<T> {
     pub state: ListState,
-    // HASH MAP!
+    // todo BTreeMap
     pub items: Vec<T>,
 }
 
@@ -84,7 +84,6 @@ impl<T> StatefulList<T> {
 }
 
 /// States of the container
-// / impl ord
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum State {
     Dead,
@@ -95,17 +94,6 @@ pub enum State {
     Running,
     Unknown,
 }
-
-// impl Ord for State {
-//     fn cmp(&self, other: &Self) -> Ordering {
-//         match (self, other) {
-// 			(Self::Dead)
-//             // (_, Foo::B) => Ordering::Less,
-//             // (Foo::A { val: l }, Foo::A { val: r }) => l.cmp(&r),
-//             // (Foo::B, _) => Ordering::Greater,
-//         }
-//     }
-// }
 
 impl State {
     pub fn get_color(&self) -> Color {
@@ -331,8 +319,8 @@ pub struct ContainerItem {
     pub mem_limit: ByteStats,
     pub mem_stats: VecDeque<ByteStats>,
     pub name: String,
-    pub net_rx: ByteStats,
-    pub net_tx: ByteStats,
+    pub rx: ByteStats,
+    pub tx: ByteStats,
     pub state: State,
     pub status: String,
 }
@@ -355,8 +343,8 @@ impl ContainerItem {
             mem_limit: ByteStats::new(0),
             mem_stats: VecDeque::with_capacity(60),
             name,
-            net_rx: ByteStats::new(0),
-            net_tx: ByteStats::new(0),
+            rx: ByteStats::new(0),
+            tx: ByteStats::new(0),
             state,
             status,
         }

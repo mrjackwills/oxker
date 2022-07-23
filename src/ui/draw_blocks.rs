@@ -180,11 +180,11 @@ pub fn draw_containers<B: Backend>(
                     blue,
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.net_rx, width = widths.net_rx.1),
+                    format!("{}{:>width$}", MARGIN, i.rx, width = widths.net_rx.1),
                     Style::default().fg(Color::Rgb(255, 233, 193)),
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.net_tx, width = widths.net_tx.1),
+                    format!("{}{:>width$}", MARGIN, i.tx, width = widths.net_tx.1),
                     Style::default().fg(Color::Rgb(205, 140, 140)),
                 ),
             ]);

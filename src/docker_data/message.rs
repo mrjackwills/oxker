@@ -6,4 +6,5 @@ pub enum DockerMessage {
     Pause(String),
     Unpause(String),
     Stop(String),
+    Quit,
 }
