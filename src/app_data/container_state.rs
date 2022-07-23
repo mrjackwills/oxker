@@ -5,6 +5,8 @@ use tui::{
     widgets::{ListItem, ListState},
 };
 
+use super::Header;
+
 #[derive(Debug, Clone)]
 pub struct StatefulList<T> {
     pub state: ListState,
@@ -100,6 +102,18 @@ impl State {
             Self::Restarting => Color::LightGreen,
             Self::Paused => Color::Yellow,
             _ => Color::Red,
+        }
+    }
+    // Dirty way to create order for the state, rather than impl Ord
+    pub fn order(&self) -> &'static str {
+        match self {
+            Self::Running => "a",
+            Self::Paused => "b",
+            Self::Restarting => "c",
+            Self::Removing => "d",
+            Self::Exited => "e",
+            Self::Dead => "f",
+            Self::Unknown => "g",
         }
     }
 }
@@ -304,8 +318,8 @@ pub struct ContainerItem {
     pub mem_limit: ByteStats,
     pub mem_stats: VecDeque<ByteStats>,
     pub name: String,
-    pub net_rx: ByteStats,
-    pub net_tx: ByteStats,
+    pub rx: ByteStats,
+    pub tx: ByteStats,
     pub state: State,
     pub status: String,
 }
@@ -328,8 +342,8 @@ impl ContainerItem {
             mem_limit: ByteStats::new(0),
             mem_stats: VecDeque::with_capacity(60),
             name,
-            net_rx: ByteStats::new(0),
-            net_tx: ByteStats::new(0),
+            rx: ByteStats::new(0),
+            tx: ByteStats::new(0),
             state,
             status,
         }
@@ -397,31 +411,31 @@ impl ContainerItem {
 /// Container information panel headings + widths, for nice pretty formatting
 #[derive(Debug)]
 pub struct Columns {
-    pub state: (String, usize),
-    pub status: (String, usize),
-    pub cpu: (String, usize),
-    pub mem: (String, usize),
-    pub id: (String, usize),
-    pub name: (String, usize),
-    pub image: (String, usize),
-    pub net_rx: (String, usize),
-    pub net_tx: (String, usize),
+    pub state: (Header, usize),
+    pub status: (Header, usize),
+    pub cpu: (Header, usize),
+    pub mem: (Header, usize),
+    pub id: (Header, usize),
+    pub name: (Header, usize),
+    pub image: (Header, usize),
+    pub net_rx: (Header, usize),
+    pub net_tx: (Header, usize),
 }
 
 impl Columns {
-    //. (Column titles, minimum header string length)
+    // (Column titles, minimum header string length)
     pub fn new() -> Self {
         Self {
-            state: (String::from("state"), 11),
-            status: (String::from("status"), 16),
+            state: (Header::State, 11),
+            status: (Header::Status, 16),
             // 7 to allow for "100.00%"
-            cpu: (String::from("cpu"), 7),
-            mem: (String::from("memory/limit"), 12),
-            id: (String::from("id"), 8),
-            name: (String::from("name"), 4),
-            image: (String::from("image"), 5),
-            net_rx: (String::from("↓ rx"), 5),
-            net_tx: (String::from("↑ tx"), 5),
+            cpu: (Header::Cpu, 7),
+            mem: (Header::Memory, 12),
+            id: (Header::Id, 8),
+            name: (Header::Name, 4),
+            image: (Header::Image, 5),
+            net_rx: (Header::Rx, 5),
+            net_tx: (Header::Tx, 5),
         }
     }
 }

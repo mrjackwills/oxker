@@ -21,7 +21,7 @@
 </p>
 
 
-## Download & install 
+## Download & install
 
 See <a href="https://github.com/mrjackwills/oxker/releases" target='_blank' rel='noopener noreferrer'>releases</a>
 
@@ -38,10 +38,23 @@ rm oxker_linux_x86_64.tar.gz oxker
 
 ```oxker```
 
+In application controls
+| button| result|
+|--|--|
+| ```( tab )``` or ```( shift+tab )``` | Change panel, clicking on a panel also changes the selected panel|
+| ```( ↑ ↓ )``` or ```( j k )``` or ```(PgUp PgDown)``` or ```(Home End)```| Change selected line in selected panel, mouse scroll also changes selected line |
+| ```( enter )```| execute selected docker command|
+| ```( 1-9 )``` | sort containers by heading, clicking on headings also sorts the selected column |
+| ```( 0 )``` | stop sorting |
+| ```( h )``` | Show help menu |
+| ```( m )``` | toggle mouse capture - if disabled, text on screen can be selected|
+| ```( q )``` | to quit at any time |
+
+
 available command line arguments
 | argument|result|
 |--|--|
-|```-d [number > 0]```| set the update interval for docker information, in ms, defaults to 1000 (1 second) |
+|```-d [number > 0]```| set the minimum update interval for docker information, in ms, defaults to 1000 (1 second) |
 |```-r```| Show raw logs, by default oxker will remove ANSI formatting (conflicts with -c) |
 |```-c```| Attempt to color the logs (conflicts with -r) |
 |```-t```| Remove timestamps from each log entry |

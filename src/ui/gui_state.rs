@@ -1,11 +1,18 @@
 use std::{collections::HashMap, fmt};
 use tui::layout::{Constraint, Rect};
 
+use crate::app_data::Header;
+
 #[derive(Debug, PartialEq, std::hash::Hash, std::cmp::Eq, Clone, Copy)]
 pub enum SelectablePanel {
     Containers,
     Commands,
     Logs,
+}
+
+pub enum Region {
+    Panel(SelectablePanel),
+    Header(Header),
 }
 
 #[allow(unused)]
@@ -37,7 +44,7 @@ impl BoxLocation {
         }
     }
 
-    // Should combine and just return a tupple?
+    // Should combine and just return a tuple?
     pub fn get_horizontal_constraints(
         &self,
         blank_vertical: u16,
@@ -165,7 +172,8 @@ pub struct GuiState {
     // Think this should be a BMapTree, so can define order when iterating over potential intersects
     // Is an issue if two panels are in the same space, sush as a smaller panel embedded, yet infront of, a larger panel
     // If a BMapTree think it would mean have to implement ordering for SelectablePanel
-    area_map: HashMap<SelectablePanel, Rect>,
+    panel_map: HashMap<SelectablePanel, Rect>,
+    heading_map: HashMap<Header, Rect>,
     loading_icon: Loading,
     // Should be a vec, each time loading add a new to the vec, and reset remove from vec
     // for for if is_loading just check if vec is empty or not
@@ -174,12 +182,12 @@ pub struct GuiState {
     pub show_help: bool,
     pub info_box_text: Option<String>,
 }
-
 impl GuiState {
     /// Generate a default gui_state
     pub fn default() -> Self {
         Self {
-            area_map: HashMap::new(),
+            panel_map: HashMap::new(),
+            heading_map: HashMap::new(),
             loading_icon: Loading::One,
             selected_panel: SelectablePanel::Containers,
             show_help: false,
@@ -190,13 +198,13 @@ impl GuiState {
 
     /// clear panels hash map, so on resize can fix the sizes for mouse clicks
     pub fn clear_area_map(&mut self) {
-        self.area_map.clear();
+        self.panel_map.clear();
     }
 
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
-    pub fn rect_insersects(&mut self, rect: Rect) {
+    pub fn panel_intersect(&mut self, rect: Rect) {
         if let Some(data) = self
-            .area_map
+            .panel_map
             .iter()
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
@@ -206,9 +214,30 @@ impl GuiState {
         }
     }
 
-    /// Insert selectable gui panel into area map
-    pub fn insert_into_area_map(&mut self, panel: SelectablePanel, area: Rect) {
-        self.area_map.entry(panel).or_insert(area);
+    /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
+    pub fn header_intersect(&mut self, rect: Rect) -> Option<Header> {
+        self.heading_map
+            .iter()
+            .filter(|i| i.1.intersects(rect))
+            .collect::<Vec<_>>()
+            .get(0)
+            .map(|data| data.0.to_owned())
+    }
+
+    /// Insert, or updatem header area panel into heading_map
+    pub fn update_map(&mut self, region: Region, area: Rect) {
+        match region {
+            Region::Header(header) => self
+                .heading_map
+                .entry(header)
+                .and_modify(|w| *w = area)
+                .or_insert(area),
+            Region::Panel(panel) => self
+                .panel_map
+                .entry(panel)
+                .and_modify(|w| *w = area)
+                .or_insert(area),
+        };
     }
 
     /// Change to next selectable panel
