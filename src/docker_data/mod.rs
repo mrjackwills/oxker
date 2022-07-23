@@ -191,10 +191,10 @@ impl DockerData {
         output
     }
 
-	// async fn stop(&self) {
-	// 	self.docker.
+    // async fn stop(&self) {
+    // 	self.docker.
 
-	// }
+    // }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
     async fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {

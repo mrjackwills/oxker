@@ -117,7 +117,7 @@ impl State {
             _ => Color::Red,
         }
     }
-	// Dirty way to create order for the state, rather than impl Ord
+    // Dirty way to create order for the state, rather than impl Ord
     pub fn order(&self) -> &'static str {
         match self {
             Self::Running => "a",

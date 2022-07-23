@@ -115,16 +115,16 @@ impl InputHandler {
         self.mouse_capture = !self.mouse_capture;
     }
 
+    /// Sort containers based on a given header, switch asc to desc if already sorted, else always desc
     fn sort(&self, header: Header) {
+        let mut output = Some((header.to_owned(), SortedOrder::Desc));
         let mut locked_data = self.app_data.lock();
-        if let Some((_, order)) = locked_data.get_sorted().as_ref() {
-            match order {
-                SortedOrder::Asc => locked_data.set_sorted(Some((header, SortedOrder::Desc))),
-                _ => locked_data.set_sorted(Some((header, SortedOrder::Asc))),
-            }
-        } else {
-            locked_data.set_sorted(Some((header, SortedOrder::Desc)))
+        if let Some((h, order)) = locked_data.get_sorted().as_ref() {
+                if &SortedOrder::Desc == order &&  h == &header {
+                    output = Some((header, SortedOrder::Asc))
+                }
         }
+        locked_data.set_sorted(output)
     }
 
     /// Handle any keyboard button events
@@ -260,7 +260,7 @@ impl InputHandler {
                 ));
 
                 if let Some(header) = header_intersects {
-					self.sort(header);
+                    self.sort(header);
                 }
 
                 self.gui_state.lock().panel_intersect(Rect::new(

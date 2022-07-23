@@ -1,8 +1,6 @@
 use bollard::models::ContainerSummary;
 use core::fmt;
-use std::{
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tui::widgets::ListItem;
 
 mod container_state;
@@ -20,10 +18,9 @@ pub struct AppData {
     pub init: bool,
     pub show_error: bool,
     sorted_by: Option<(Header, SortedOrder)>,
-    // heading_map: HashMap<Header, Rect>
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SortedOrder {
     Asc,
     Desc,
@@ -86,7 +83,7 @@ impl AppData {
             init: false,
             logs_parsed: false,
             show_error: false,
-			sorted_by: None,
+            sorted_by: None,
         }
     }
 
@@ -182,11 +179,11 @@ impl AppData {
         if let Some((head, so)) = self.sorted_by.as_ref() {
             match head {
                 Header::State => match so {
-                    SortedOrder::Asc => self
+                    SortedOrder::Desc => self
                         .containers
                         .items
                         .sort_by(|a, b| a.state.order().cmp(b.state.order())),
-                    SortedOrder::Desc => self
+                    SortedOrder::Asc => self
                         .containers
                         .items
                         .sort_by(|a, b| b.state.order().cmp(a.state.order())),
@@ -202,21 +199,21 @@ impl AppData {
                         .sort_by(|a, b| b.status.cmp(&a.status)),
                 },
                 Header::Cpu => match so {
-                    SortedOrder::Desc => self
+                    SortedOrder::Asc => self
                         .containers
                         .items
                         .sort_by(|a, b| a.cpu_stats.back().cmp(&b.cpu_stats.back())),
-                    SortedOrder::Asc => self
+                    SortedOrder::Desc => self
                         .containers
                         .items
                         .sort_by(|a, b| b.cpu_stats.back().cmp(&a.cpu_stats.back())),
                 },
                 Header::Memory => match so {
-                    SortedOrder::Desc => self
+                    SortedOrder::Asc => self
                         .containers
                         .items
                         .sort_by(|a, b| a.mem_stats.back().cmp(&b.mem_stats.back())),
-                    SortedOrder::Asc => self
+                    SortedOrder::Desc => self
                         .containers
                         .items
                         .sort_by(|a, b| b.mem_stats.back().cmp(&a.mem_stats.back())),

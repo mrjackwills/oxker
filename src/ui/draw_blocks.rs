@@ -142,20 +142,11 @@ pub fn draw_containers<B: Backend>(
 
             let lines = Spans::from(vec![
                 Span::styled(
-                    format!(
-                        "{:<width$}",
-                        i.state.to_string(),
-                        width = widths.state.1
-                    ),
+                    format!("{:<width$}", i.state.to_string(), width = widths.state.1),
                     state_style,
                 ),
                 Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        i.status,
-                        width =&widths.status.1
-                    ),
+                    format!("{}{:>width$}", MARGIN, i.status, width = &widths.status.1),
                     state_style,
                 ),
                 Span::styled(
@@ -168,12 +159,7 @@ pub fn draw_containers<B: Backend>(
                     state_style,
                 ),
                 Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        mems,
-                        width = &widths.mem.1
-                    ),
+                    format!("{}{:>width$}", MARGIN, mems, width = &widths.mem.1),
                     state_style,
                 ),
                 Span::styled(
@@ -186,39 +172,19 @@ pub fn draw_containers<B: Backend>(
                     blue,
                 ),
                 Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        i.name,
-                        width = widths.name.1
-                    ),
+                    format!("{}{:>width$}", MARGIN, i.name, width = widths.name.1),
                     blue,
                 ),
                 Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        i.image,
-                        width = widths.image.1
-                    ),
+                    format!("{}{:>width$}", MARGIN, i.image, width = widths.image.1),
                     blue,
                 ),
                 Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        i.net_rx,
-                        width = widths.net_rx.1
-                    ),
+                    format!("{}{:>width$}", MARGIN, i.net_rx, width = widths.net_rx.1),
                     Style::default().fg(Color::Rgb(255, 233, 193)),
                 ),
                 Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        i.net_tx,
-                        width = widths.net_tx.1
-                    ),
+                    format!("{}{:>width$}", MARGIN, i.net_tx, width = widths.net_tx.1),
                     Style::default().fg(Color::Rgb(205, 140, 140)),
                 ),
             ]);
@@ -407,7 +373,7 @@ pub fn draw_heading_bar<B: Backend>(
         if let Some((a, b)) = sorted_by.as_ref() {
             if x == a {
                 match b {
-					SortedOrder::Asc => suffix = " ⌃",
+                    SortedOrder::Asc => suffix = " ⌃",
                     SortedOrder::Desc => suffix = " ⌄",
                 }
                 suffix_margin = 2;
