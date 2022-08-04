@@ -1,3 +1,13 @@
+#![forbid(unsafe_code)]
+#![warn(clippy::unused_async, clippy::unwrap_used, clippy::expect_used)]
+// Wanring - These are indeed pedantic
+// #![warn(clippy::pedantic)]
+// #![warn(clippy::nursery)]
+// #![allow(clippy::module_name_repetitions, clippy::doc_markdown)]
+
+// Only allow when debugging
+// #![allow(unused)]
+
 use app_data::AppData;
 use app_error::AppError;
 use bollard::Docker;
@@ -35,23 +45,28 @@ async fn main() {
     let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(16);
 
     // Create docker daemon handler, and only spawn up the docker data handler if ping returns non-error
-    let docker = Arc::new(Docker::connect_with_socket_defaults().unwrap());
-    match docker.ping().await {
-        Ok(_) => {
-            let docker = Arc::clone(&docker);
-            let is_running = Arc::clone(&is_running);
-            tokio::spawn(DockerData::init(
-                docker_args,
-                docker_app_data,
-                docker,
-                docker_gui_state,
-                docker_rx,
-                is_running,
-            ));
+
+    match Docker::connect_with_socket_defaults() {
+        Ok(docker) => {
+            let docker = Arc::new(docker);
+            match docker.ping().await {
+                Ok(_) => {
+                    let docker = Arc::clone(&docker);
+                    let is_running = Arc::clone(&is_running);
+                    tokio::spawn(DockerData::init(
+                        docker_args,
+                        docker_app_data,
+                        docker,
+                        docker_gui_state,
+                        docker_rx,
+                        is_running,
+                    ));
+                }
+                Err(_) => app_data.lock().set_error(AppError::DockerConnect),
+            }
         }
         Err(_) => app_data.lock().set_error(AppError::DockerConnect),
     }
-
     let input_app_data = Arc::clone(&app_data);
 
     let (input_sx, input_rx) = tokio::sync::mpsc::channel(16);

@@ -94,9 +94,12 @@ async fn run_app<B: Backend>(
                     is_running.store(false, Ordering::SeqCst);
                     break;
                 }
-                terminal
+                if terminal
                     .draw(|f| draw_error(f, AppError::DockerConnect, Some(seconds)))
-                    .unwrap();
+                    .is_err()
+                {
+                    return Err(AppError::Terminal);
+                }
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 seconds -= 1;
             }
@@ -104,7 +107,9 @@ async fn run_app<B: Backend>(
     } else {
         let mut now = Instant::now();
         loop {
-            terminal.draw(|f| ui(f, &app_data, &gui_state)).unwrap();
+            if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
+                return Err(AppError::Terminal);
+            }
             if crossterm::event::poll(input_poll_rate).unwrap_or_default() {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {

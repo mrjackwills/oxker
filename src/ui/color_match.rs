@@ -24,7 +24,7 @@ pub mod log_sanitizer {
                     if i.reversed.is_some() {
                         style.add_modifier(Modifier::REVERSED);
                     }
-                    if  i.intensity == Some(Intensity::Bold) {
+                    if i.intensity == Some(Intensity::Bold) {
                         style.add_modifier(Modifier::BOLD);
                     }
                     if i.hidden.is_some() {

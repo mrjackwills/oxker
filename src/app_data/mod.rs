@@ -87,7 +87,8 @@ impl AppData {
         }
     }
 
-    // Current time as unix timestamp
+    /// Current time as unix timestamp
+    #[allow(clippy::expect_used)]
     fn get_systemtime(&self) -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
