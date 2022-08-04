@@ -329,8 +329,8 @@ impl AppData {
                 container.mem_limit
             ));
 
-            let net_rx_count = count(&container.rx.to_string());
-            let net_tx_count = count(&container.tx.to_string());
+            let rx_count = count(&container.rx.to_string());
+            let tx_count = count(&container.tx.to_string());
             let image_count = count(&container.image);
             let name_count = count(&container.name);
             let state_count = count(&container.state.to_string());
@@ -354,11 +354,11 @@ impl AppData {
             if status_count > output.status.1 {
                 output.status.1 = status_count;
             };
-            if net_rx_count > output.net_rx.1 {
-                output.net_rx.1 = net_rx_count;
+            if rx_count > output.net_rx.1 {
+                output.net_rx.1 = rx_count;
             };
-            if net_tx_count > output.net_tx.1 {
-                output.net_tx.1 = net_tx_count;
+            if tx_count > output.net_tx.1 {
+                output.net_tx.1 = tx_count;
             };
         }
         output

@@ -223,7 +223,7 @@ impl Ord for CpuStats {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.value > other.value {
             Ordering::Greater
-        } else if self.value == other.value {
+        } else if (self.value - other.value).abs() < 0.01 {
             Ordering::Equal
         } else {
             Ordering::Less
