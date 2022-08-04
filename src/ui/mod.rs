@@ -30,7 +30,6 @@ use crate::{
     app_data::AppData, app_error::AppError, docker_data::DockerMessage,
     input_handler::InputMessages,
 };
-use draw_blocks::*;
 
 /// Take control of the terminal in order to draw gui
 pub async fn create_ui(
@@ -73,7 +72,7 @@ pub async fn create_ui(
 }
 
 /// Run a loop to draw the gui
-async fn run_app<B: Backend>(
+async fn run_app<B: Backend + Send>(
     terminal: &mut Terminal<B>,
     app_data: Arc<Mutex<AppData>>,
     sender: Sender<InputMessages>,
@@ -94,9 +93,12 @@ async fn run_app<B: Backend>(
                     is_running.store(false, Ordering::SeqCst);
                     break;
                 }
-                terminal
-                    .draw(|f| draw_error(f, AppError::DockerConnect, Some(seconds)))
-                    .unwrap();
+                if terminal
+                    .draw(|f| draw_blocks::error(f, &AppError::DockerConnect, Some(seconds)))
+                    .is_err()
+                {
+                    return Err(AppError::Terminal);
+                }
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 seconds -= 1;
             }
@@ -104,7 +106,9 @@ async fn run_app<B: Backend>(
     } else {
         let mut now = Instant::now();
         loop {
-            terminal.draw(|f| ui(f, &app_data, &gui_state)).unwrap();
+            if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
+                return Err(AppError::Terminal);
+            }
             if crossterm::event::poll(input_poll_rate).unwrap_or_default() {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
@@ -143,12 +147,12 @@ fn ui<B: Backend>(
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     // set max height for container section, needs +4 to deal with docker commands list and borders
-    let mut height = app_data.lock().get_container_len();
-    if height < 12 {
-        height += 4;
+    let height = app_data.lock().get_container_len();
+    let height  = if height < 12 {
+        (height + 4) as u16
     } else {
-        height = 12
-    }
+        12
+    };
 
     let column_widths = app_data.lock().get_width();
     let has_containers = !app_data.lock().containers.items.is_empty();
@@ -194,47 +198,47 @@ fn ui<B: Backend>(
         .constraints(lower_split.as_ref())
         .split(upper_main[1]);
 
-    draw_containers(app_data, top_panel[0], f, gui_state, &column_widths);
+    draw_blocks::containers(app_data, top_panel[0], f, gui_state, &column_widths);
 
     if has_containers {
-        draw_commands(app_data, top_panel[1], f, gui_state, log_index);
+        draw_blocks::commands(app_data, top_panel[1], f, gui_state, log_index);
     }
 
-    draw_logs(
+    draw_blocks::logs(
         app_data,
         lower_main[0],
         f,
         gui_state,
         log_index,
-        loading_icon.to_owned(),
+        &loading_icon,
     );
 
-    draw_heading_bar(
+    draw_blocks::heading_bar(
         whole_layout[0],
         &column_widths,
         f,
         has_containers,
-        loading_icon,
-        sorted_by,
+        &loading_icon,
+        &sorted_by,
         gui_state,
     );
 
     // only draw charts if there are containers
     if has_containers {
-        draw_chart(f, lower_main[1], app_data, log_index);
+        draw_blocks::chart(f, lower_main[1], app_data, log_index);
     }
 
     if let Some(info) = info_text {
-        draw_info(f, info);
+        draw_blocks::info(f, info);
     }
 
     // Check if error, and show popup if so
     if show_help {
-        draw_help_box(f);
+        draw_blocks::help_box(f);
     }
 
     if let Some(error) = has_error {
         app_data.lock().show_error = true;
-        draw_error(f, error, None);
+        draw_blocks::error(f, &error, None);
     }
 }

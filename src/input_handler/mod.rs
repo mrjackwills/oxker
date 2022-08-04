@@ -110,7 +110,7 @@ impl InputHandler {
         // Show the info box - with "mouse capture enabled / disabled", for 4000 ms
         self.info_sleep = Some(tokio::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_millis(4000)).await;
-            gui_state.lock().reset_info_box()
+            gui_state.lock().reset_info_box();
         }));
 
         self.mouse_capture = !self.mouse_capture;
@@ -118,14 +118,14 @@ impl InputHandler {
 
     /// Sort containers based on a given header, switch asc to desc if already sorted, else always desc
     fn sort(&self, header: Header) {
-        let mut output = Some((header.to_owned(), SortedOrder::Desc));
+        let mut output = Some((header.clone(), SortedOrder::Desc));
         let mut locked_data = self.app_data.lock();
         if let Some((h, order)) = locked_data.get_sorted().as_ref() {
             if &SortedOrder::Desc == order && h == &header {
-                output = Some((header, SortedOrder::Asc))
+                output = Some((header, SortedOrder::Asc));
             }
         }
-        locked_data.set_sorted(output)
+        locked_data.set_sorted(output);
     }
 
     /// Send a quit message to docker, to abort all spawns, if error, quit here instead
@@ -219,13 +219,13 @@ impl InputHandler {
                 KeyCode::Up | KeyCode::Char('k') => self.previous(),
                 KeyCode::PageUp => {
                     for _ in 0..=6 {
-                        self.previous()
+                        self.previous();
                     }
                 }
                 KeyCode::Down | KeyCode::Char('j') => self.next(),
                 KeyCode::PageDown => {
                     for _ in 0..=6 {
-                        self.next()
+                        self.next();
                     }
                 }
                 KeyCode::Enter => {
