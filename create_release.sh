@@ -184,8 +184,11 @@ cargo_test () {
 cargo_build () {
 	cargo install cross
 	cargo build --release
+	ask_continue
 	cross build --target aarch64-unknown-linux-musl --release
+	ask_continue
 	cross build --target arm-unknown-linux-musleabihf --release
+	ask_continue
 	cross build --target x86_64-pc-windows-gnu --release
 	ask_continue
 }
