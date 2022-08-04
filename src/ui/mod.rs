@@ -148,11 +148,7 @@ fn ui<B: Backend>(
 ) {
     // set max height for container section, needs +4 to deal with docker commands list and borders
     let height = app_data.lock().get_container_len();
-    let height  = if height < 12 {
-        (height + 4) as u16
-    } else {
-        12
-    };
+    let height = if height < 12 { (height + 4) as u16 } else { 12 };
 
     let column_widths = app_data.lock().get_width();
     let has_containers = !app_data.lock().containers.items.is_empty();
