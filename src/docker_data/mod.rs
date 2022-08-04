@@ -102,11 +102,7 @@ impl DockerData {
             let mem_stat = stats.memory_stats.usage.unwrap_or(0);
             let mem_limit = stats.memory_stats.limit.unwrap_or(0);
 
-            let some_key = if let Some(networks) = &stats.networks {
-                networks.keys().next().cloned()
-            } else {
-                None
-            };
+            let some_key = stats.networks.as_ref().and_then(|networks| networks.keys().next().cloned());
 
             let cpu_stats = Self::calculate_usage(&stats);
 

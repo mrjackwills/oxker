@@ -72,7 +72,7 @@ pub async fn create_ui(
 }
 
 /// Run a loop to draw the gui
-async fn run_app<B: Backend>(
+async fn run_app<B: Backend + Send>(
     terminal: &mut Terminal<B>,
     app_data: Arc<Mutex<AppData>>,
     sender: Sender<InputMessages>,

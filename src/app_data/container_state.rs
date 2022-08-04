@@ -68,15 +68,11 @@ impl<T> StatefulList<T> {
             String::from("")
         } else {
             let len = self.items.len();
-            let c = if let Some(value) = self.state.selected() {
-                if len > 0 {
+            let c = self.state.selected().map_or(0, |value| if len > 0 {
                     value + 1
                 } else {
                     value
-                }
-            } else {
-                0
-            };
+                });
             format!("{}/{}", c, self.items.len())
         }
     }
@@ -95,7 +91,7 @@ pub enum State {
 }
 
 impl State {
-    pub fn get_color(&self) -> Color {
+    pub const fn get_color(&self) -> Color {
         match self {
             Self::Running => Color::Green,
             Self::Removing => Color::LightRed,
@@ -105,7 +101,7 @@ impl State {
         }
     }
     // Dirty way to create order for the state, rather than impl Ord
-    pub fn order(&self) -> &'static str {
+    pub const fn order(&self) -> &'static str {
         match self {
             Self::Running => "a",
             Self::Paused => "b",
@@ -158,7 +154,7 @@ pub enum DockerControls {
 }
 
 impl DockerControls {
-    pub fn get_color(&self) -> Color {
+    pub const fn get_color(&self) -> Color {
         match self {
             Self::Start => Color::Green,
             Self::Stop => Color::Red,
@@ -205,7 +201,7 @@ pub struct CpuStats {
 }
 
 impl CpuStats {
-    pub fn new(value: f64) -> Self {
+    pub const fn new(value: f64) -> Self {
         Self { value }
     }
 }
@@ -276,7 +272,7 @@ impl Ord for ByteStats {
 }
 
 impl ByteStats {
-    pub fn new(value: u64) -> Self {
+    pub const fn new(value: u64) -> Self {
         Self { value }
     }
     pub fn update(&mut self, value: u64) {
@@ -423,8 +419,8 @@ pub struct Columns {
 }
 
 impl Columns {
-    // (Column titles, minimum header string length)
-    pub fn new() -> Self {
+    /// (Column titles, minimum header string length)
+    pub const fn new() -> Self {
         Self {
             state: (Header::State, 11),
             status: (Header::Status, 16),

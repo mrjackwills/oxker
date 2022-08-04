@@ -54,7 +54,7 @@ pub mod log_sanitizer {
     }
 
     /// Change from ansi to tui colors
-    fn color_ansi_to_tui(color: CansiColor) -> Color {
+    const fn color_ansi_to_tui(color: CansiColor) -> Color {
         match color {
             CansiColor::Black | CansiColor::BrightBlack => Color::Black,
             CansiColor::Red => Color::Red,

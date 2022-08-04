@@ -30,7 +30,7 @@ pub enum BoxLocation {
 }
 
 impl BoxLocation {
-    pub fn get_indexes(self) -> (usize, usize) {
+    pub const fn get_indexes(self) -> (usize, usize) {
         match self {
             Self::TopLeft => (0, 0),
             Self::TopCentre => (0, 1),
@@ -45,7 +45,7 @@ impl BoxLocation {
     }
 
     // Should combine and just return a tuple?
-    pub fn get_horizontal_constraints(
+    pub const fn get_horizontal_constraints(
         self,
         blank_vertical: u16,
         text_width: u16,
@@ -68,7 +68,7 @@ impl BoxLocation {
             ],
         }
     }
-    pub fn get_vertical_constraints(
+    pub const fn get_vertical_constraints(
         self,
         blank_vertical: u16,
         number_lines: u16,
@@ -108,7 +108,7 @@ pub enum Loading {
 }
 
 impl Loading {
-    pub fn next(&self) -> Self {
+    pub const fn next(&self) -> Self {
         match self {
             Self::One => Self::Two,
             Self::Two => Self::Three,
@@ -143,21 +143,21 @@ impl fmt::Display for Loading {
 }
 
 impl SelectablePanel {
-    pub fn title(self) -> &'static str {
+    pub const fn title(self) -> &'static str {
         match self {
             Self::Containers => "Containers",
             Self::Logs => "Logs",
             Self::Commands => "",
         }
     }
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Containers => Self::Commands,
             Self::Commands => Self::Logs,
             Self::Logs => Self::Containers,
         }
     }
-    pub fn prev(self) -> Self {
+    pub const fn prev(self) -> Self {
         match self {
             Self::Containers => Self::Logs,
             Self::Commands => Self::Containers,
