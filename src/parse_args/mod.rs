@@ -31,7 +31,7 @@ pub struct CliArgs {
 impl CliArgs {
     /// Parse cli arguments
     pub fn new() -> Self {
-        let args = CliArgs::parse();
+        let args = Self::parse();
 
         // Quit the program if the docker update argument is 0
         // Should maybe change it to check if less than 100

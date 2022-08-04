@@ -179,11 +179,26 @@ cargo_test () {
 	ask_continue
 }
 
+# Build all releases that GitHub workflow would
+# This will download GB's of docker images
+cargo_build () {
+	cargo install cross
+	cargo build --release
+	ask_continue
+	cross build --target aarch64-unknown-linux-musl --release
+	ask_continue
+	cross build --target arm-unknown-linux-musleabihf --release
+	ask_continue
+	cross build --target x86_64-pc-windows-gnu --release
+	ask_continue
+}
+
 # Full flow to create a new release
 release_flow() {
 	check_git
 	get_git_remote_url
 	cargo_test
+	cargo_build
 	cd "${CWD}" || error_close "Can't find ${CWD}"
 	check_tag
 	

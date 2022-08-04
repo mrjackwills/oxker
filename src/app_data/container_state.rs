@@ -68,15 +68,10 @@ impl<T> StatefulList<T> {
             String::from("")
         } else {
             let len = self.items.len();
-            let c = if let Some(value) = self.state.selected() {
-                if len > 0 {
-                    value + 1
-                } else {
-                    value
-                }
-            } else {
-                0
-            };
+            let c = self
+                .state
+                .selected()
+                .map_or(0, |value| if len > 0 { value + 1 } else { value });
             format!("{}/{}", c, self.items.len())
         }
     }
@@ -95,7 +90,7 @@ pub enum State {
 }
 
 impl State {
-    pub fn get_color(&self) -> Color {
+    pub const fn get_color(&self) -> Color {
         match self {
             Self::Running => Color::Green,
             Self::Removing => Color::LightRed,
@@ -105,7 +100,7 @@ impl State {
         }
     }
     // Dirty way to create order for the state, rather than impl Ord
-    pub fn order(&self) -> &'static str {
+    pub const fn order(&self) -> &'static str {
         match self {
             Self::Running => "a",
             Self::Paused => "b",
@@ -158,7 +153,7 @@ pub enum DockerControls {
 }
 
 impl DockerControls {
-    pub fn get_color(&self) -> Color {
+    pub const fn get_color(&self) -> Color {
         match self {
             Self::Start => Color::Green,
             Self::Stop => Color::Red,
@@ -205,7 +200,7 @@ pub struct CpuStats {
 }
 
 impl CpuStats {
-    pub fn new(value: f64) -> Self {
+    pub const fn new(value: f64) -> Self {
         Self { value }
     }
 }
@@ -228,7 +223,7 @@ impl Ord for CpuStats {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.value > other.value {
             Ordering::Greater
-        } else if self.value == other.value {
+        } else if (self.value - other.value).abs() < 0.01 {
             Ordering::Equal
         } else {
             Ordering::Less
@@ -276,7 +271,7 @@ impl Ord for ByteStats {
 }
 
 impl ByteStats {
-    pub fn new(value: u64) -> Self {
+    pub const fn new(value: u64) -> Self {
         Self { value }
     }
     pub fn update(&mut self, value: u64) {
@@ -352,7 +347,7 @@ impl ContainerItem {
     /// Find the max value in the last 30 items in the cpu stats vec
     fn max_cpu_stats(&self) -> CpuStats {
         match self.cpu_stats.iter().max() {
-            Some(value) => value.to_owned(),
+            Some(value) => value.clone(),
             None => CpuStats::new(0.0),
         }
     }
@@ -360,7 +355,7 @@ impl ContainerItem {
     /// Find the max value in the last 30 items in the mem stats vec
     fn max_mem_stats(&self) -> ByteStats {
         match self.mem_stats.iter().max() {
-            Some(value) => value.to_owned(),
+            Some(value) => value.clone(),
             None => ByteStats::new(0),
         }
     }
@@ -423,8 +418,8 @@ pub struct Columns {
 }
 
 impl Columns {
-    // (Column titles, minimum header string length)
-    pub fn new() -> Self {
+    /// (Column titles, minimum header string length)
+    pub const fn new() -> Self {
         Self {
             state: (Header::State, 11),
             status: (Header::Status, 16),

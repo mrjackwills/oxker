@@ -71,7 +71,7 @@ impl AppData {
             self.containers
                 .items
                 .iter()
-                .position(|i| Some(i.id.to_owned()) == id),
+                .position(|i| Some(i.id.clone()) == id),
         );
     }
     /// Generate a default app_state
@@ -87,8 +87,9 @@ impl AppData {
         }
     }
 
-    // Current time as unix timestamp
-    fn get_systemtime(&self) -> u64 {
+    /// Current time as unix timestamp
+    #[allow(clippy::expect_used)]
+    fn get_systemtime() -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("In our known reality, this error should never occur")
@@ -106,7 +107,7 @@ impl AppData {
                 .selected()
             {
                 output =
-                    Some(self.containers.items[index].docker_controls.items[control_index].clone())
+                    Some(self.containers.items[index].docker_controls.items[control_index].clone());
             }
         }
         output
@@ -115,28 +116,28 @@ impl AppData {
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_next(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.next()
+            self.containers.items[index].docker_controls.next();
         }
     }
 
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_previous(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.previous()
+            self.containers.items[index].docker_controls.previous();
         }
     }
 
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_start(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.start()
+            self.containers.items[index].docker_controls.start();
         }
     }
 
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_end(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.end()
+            self.containers.items[index].docker_controls.end();
         }
     }
 
@@ -167,9 +168,9 @@ impl AppData {
                 .iter()
                 .skip(index)
                 .take(1)
-                .map(|i| i.id.to_owned())
+                .map(|i| i.id.clone())
                 .collect::<String>();
-            output = Some(id)
+            output = Some(id);
         }
         output
     }
@@ -225,7 +226,7 @@ impl AppData {
                 Header::Image => match so {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.image.cmp(&b.image)),
                     SortedOrder::Desc => {
-                        self.containers.items.sort_by(|a, b| b.image.cmp(&a.image))
+                        self.containers.items.sort_by(|a, b| b.image.cmp(&a.image));
                     }
                 },
                 Header::Name => match so {
@@ -258,38 +259,37 @@ impl AppData {
     /// Get the title for log panel for selected container
     /// will be "logs x/x"
     pub fn get_log_title(&self) -> String {
-        if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.get_state_title()
-        } else {
-            String::from("")
-        }
+        self.get_selected_log_index().map_or_else(
+            || String::from(""),
+            |index| self.containers.items[index].logs.get_state_title(),
+        )
     }
 
     /// select next selected log line
     pub fn log_next(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.next()
+            self.containers.items[index].logs.next();
         }
     }
 
     /// select previous selected log line
     pub fn log_previous(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.previous()
+            self.containers.items[index].logs.previous();
         }
     }
 
     /// select last selected log line
     pub fn log_end(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.end()
+            self.containers.items[index].logs.end();
         }
     }
 
     /// select first selected log line
     pub fn log_start(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.start()
+            self.containers.items[index].logs.start();
         }
     }
 
@@ -315,7 +315,7 @@ impl AppData {
         let mut output = Columns::new();
         let count = |x: &String| x.chars().count();
 
-        for container in self.containers.items.iter() {
+        for container in &self.containers.items {
             let cpu_count = count(
                 &container
                     .cpu_stats
@@ -329,8 +329,8 @@ impl AppData {
                 container.mem_limit
             ));
 
-            let net_rx_count = count(&container.rx.to_string());
-            let net_tx_count = count(&container.tx.to_string());
+            let rx_count = count(&container.rx.to_string());
+            let tx_count = count(&container.tx.to_string());
             let image_count = count(&container.image);
             let name_count = count(&container.name);
             let state_count = count(&container.state.to_string());
@@ -354,11 +354,11 @@ impl AppData {
             if status_count > output.status.1 {
                 output.status.1 = status_count;
             };
-            if net_rx_count > output.net_rx.1 {
-                output.net_rx.1 = net_rx_count;
+            if rx_count > output.net_rx.1 {
+                output.net_rx.1 = rx_count;
             };
-            if net_tx_count > output.net_tx.1 {
-                output.net_tx.1 = net_tx_count;
+            if tx_count > output.net_tx.1 {
+                output.net_tx.1 = tx_count;
             };
         }
         output
@@ -369,7 +369,7 @@ impl AppData {
         self.containers
             .items
             .iter()
-            .map(|i| i.id.to_owned())
+            .map(|i| i.id.clone())
             .collect::<Vec<_>>()
     }
 
@@ -381,14 +381,14 @@ impl AppData {
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
     pub fn update_stats(
         &mut self,
-        id: String,
+        id: &str,
         cpu_stat: Option<f64>,
         mem_stat: Option<u64>,
         mem_limit: u64,
         rx: u64,
         tx: u64,
     ) {
-        if let Some(container) = self.get_container_by_id(&id) {
+        if let Some(container) = self.get_container_by_id(id) {
             if container.cpu_stats.len() >= 60 {
                 container.cpu_stats.pop_front();
             }
@@ -443,7 +443,7 @@ impl AppData {
                     .unwrap_or(&vec!["".to_owned()])
                     .get(0)
                     .unwrap_or(&String::from(""))
-                    .to_owned();
+                    .clone();
                 if let Some(c) = name.chars().next() {
                     if c == '/' {
                         name.remove(0);
@@ -460,10 +460,10 @@ impl AppData {
                 let image = i.image.as_ref().unwrap_or(&"".to_owned()).trim().to_owned();
                 if let Some(current_container) = self.get_container_by_id(id) {
                     if current_container.name != name {
-                        current_container.name = name
+                        current_container.name = name;
                     };
                     if current_container.status != status {
-                        current_container.status = status
+                        current_container.status = status;
                     };
                     if current_container.state != state {
                         current_container.docker_controls.items = DockerControls::gen_vec(&state);
@@ -471,18 +471,17 @@ impl AppData {
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
                         match state {
                             State::Removing | State::Restarting | State::Unknown => {
-                                current_container.docker_controls.state.select(None)
+                                current_container.docker_controls.state.select(None);
                             }
                             _ => current_container.docker_controls.start(),
                         };
                         current_container.state = state;
                     };
                     if current_container.image != image {
-                        current_container.image = image
+                        current_container.image = image;
                     };
                 } else {
-                    let mut container =
-                        ContainerItem::new(id.to_owned(), status, image, state, name);
+                    let mut container = ContainerItem::new(id.clone(), status, image, state, name);
                     container.logs.end();
                     self.containers.items.push(container);
                 }
@@ -491,25 +490,25 @@ impl AppData {
     }
 
     /// update logs of a given container, based on id
-    pub fn update_log_by_id(&mut self, output: Vec<String>, id: String) {
-        let tz = self.get_systemtime();
+    pub fn update_log_by_id(&mut self, output: &[String], id: &str) {
+        let tz = Self::get_systemtime();
         let color = self.args.color;
         let raw = self.args.raw;
 
-        if let Some(container) = self.get_container_by_id(&id) {
+        if let Some(container) = self.get_container_by_id(id) {
             container.last_updated = tz;
             let current_len = container.logs.items.len();
 
-            output.iter().for_each(|i| {
+            for i in output.iter() {
                 let lines = if color {
-                    log_sanitizer::colorize_logs(i.to_owned())
+                    log_sanitizer::colorize_logs(i)
                 } else if raw {
-                    log_sanitizer::raw(i.to_owned())
+                    log_sanitizer::raw(i.clone())
                 } else {
-                    log_sanitizer::remove_ansi(i.to_owned())
+                    log_sanitizer::remove_ansi(i)
                 };
                 container.logs.items.push(ListItem::new(lines));
-            });
+            }
 
             if container.logs.state.selected().is_none()
                 || container.logs.state.selected().unwrap_or_default() + 1 == current_len

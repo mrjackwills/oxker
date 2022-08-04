@@ -64,7 +64,7 @@ fn generate_block<'a>(
         SelectablePanel::Logs => {
             format!(" {} {} ", panel.title(), app_data.lock().get_log_title())
         }
-        _ => String::from(""),
+        SelectablePanel::Commands => String::from(""),
     };
     block = block.title(title);
     if current_selected_panel == panel {
@@ -74,7 +74,7 @@ fn generate_block<'a>(
 }
 
 /// Draw the command panel
-pub fn draw_commands<B: Backend>(
+pub fn commands<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
     f: &mut Frame<'_, B>,
@@ -111,12 +111,12 @@ pub fn draw_commands<B: Backend>(
         let paragraph = Paragraph::new(debug_text)
             .block(block)
             .alignment(Alignment::Center);
-        f.render_widget(paragraph, area)
+        f.render_widget(paragraph, area);
     }
 }
 
 /// Draw the containers panel
-pub fn draw_containers<B: Backend>(
+pub fn containers<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
     f: &mut Frame<'_, B>,
@@ -196,7 +196,7 @@ pub fn draw_containers<B: Backend>(
         let paragraph = Paragraph::new(debug_text)
             .block(block)
             .alignment(Alignment::Center);
-        f.render_widget(paragraph, area)
+        f.render_widget(paragraph, area);
     } else {
         let items = List::new(items)
             .block(block)
@@ -208,13 +208,13 @@ pub fn draw_containers<B: Backend>(
 }
 
 /// Draw the logs panel
-pub fn draw_logs<B: Backend>(
+pub fn logs<B: Backend>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
     f: &mut Frame<'_, B>,
     gui_state: &Arc<Mutex<GuiState>>,
     index: Option<usize>,
-    loading_icon: String,
+    loading_icon: &str,
 ) {
     let block = generate_block(app_data, area, gui_state, SelectablePanel::Logs);
 
@@ -225,14 +225,14 @@ pub fn draw_logs<B: Backend>(
             .style(Style::default())
             .block(block)
             .alignment(Alignment::Center);
-        f.render_widget(paragraph, area)
+        f.render_widget(paragraph, area);
     } else if let Some(index) = index {
         let items = app_data.lock().containers.items[index]
             .logs
             .items
             .iter()
             .enumerate()
-            .map(|i| i.1.to_owned())
+            .map(|i| i.1.clone())
             .collect::<Vec<_>>();
 
         let items = List::new(items)
@@ -249,12 +249,12 @@ pub fn draw_logs<B: Backend>(
         let paragraph = Paragraph::new(debug_text)
             .block(block)
             .alignment(Alignment::Center);
-        f.render_widget(paragraph, area)
+        f.render_widget(paragraph, area);
     }
 }
 
 /// Draw the cpu + mem charts
-pub fn draw_chart<B: Backend>(
+pub fn chart<B: Backend>(
     f: &mut Frame<'_, B>,
     area: Rect,
     app_data: &Arc<Mutex<AppData>>,
@@ -279,20 +279,10 @@ pub fn draw_chart<B: Backend>(
                 .style(Style::default().fg(Color::Cyan))
                 .graph_type(GraphType::Line)
                 .data(&mem.0)];
-            let cpu_chart = make_chart(
-                cpu.2,
-                String::from("cpu"),
-                cpu_dataset,
-                CpuStats::new(cpu.0.last().unwrap_or(&(0.00, 0.00)).1),
-                cpu.1,
-            );
-            let mem_chart = make_chart(
-                mem.2,
-                String::from("memory"),
-                mem_dataset,
-                ByteStats::new(mem.0.last().unwrap_or(&(0.0, 0.0)).1 as u64),
-                mem.1,
-            );
+            let cpu_stats = CpuStats::new(cpu.0.last().unwrap_or(&(0.00, 0.00)).1);
+            let mem_stats = ByteStats::new(mem.0.last().unwrap_or(&(0.0, 0.0)).1 as u64);
+            let cpu_chart = make_chart(&cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
+            let mem_chart = make_chart(&mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
 
             f.render_widget(cpu_chart, area[0]);
             f.render_widget(mem_chart, area[1]);
@@ -301,13 +291,13 @@ pub fn draw_chart<B: Backend>(
 }
 
 /// Create charts
-fn make_chart<T: Stats + Display>(
-    state: State,
-    name: String,
-    dataset: Vec<Dataset>,
-    current: T,
-    max: T,
-) -> Chart {
+fn make_chart<'a, T: Stats + Display>(
+    state: &State,
+    name: &'a str,
+    dataset: Vec<Dataset<'a>>,
+    current: &'a T,
+    max: &'a T,
+) -> Chart<'a> {
     let title_color = match state {
         State::Running => Color::Green,
         _ => state.get_color(),
@@ -351,13 +341,13 @@ fn make_chart<T: Stats + Display>(
 }
 
 /// Draw heading bar at top  of program, always visible
-pub fn draw_heading_bar<B: Backend>(
+pub fn heading_bar<B: Backend>(
     area: Rect,
     columns: &Columns,
     f: &mut Frame<'_, B>,
     has_containers: bool,
-    loading_icon: String,
-    sorted_by: Option<(Header, SortedOrder)>,
+    loading_icon: &str,
+    sorted_by: &Option<(Header, SortedOrder)>,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = || Block::default().style(Style::default().bg(Color::Magenta).fg(Color::Black));
@@ -377,7 +367,7 @@ pub fn draw_heading_bar<B: Backend>(
                     SortedOrder::Desc => suffix = " ⌄",
                 }
                 suffix_margin = 2;
-                color = Color::White
+                color = Color::White;
             };
         };
         (
@@ -439,11 +429,7 @@ pub fn draw_heading_bar<B: Backend>(
         .iter()
         .map(|i| {
             let header_block = gen_header(&i.0, i.1);
-            (
-                header_block.0,
-                i.0.to_owned(),
-                Constraint::Max(header_block.1),
-            )
+            (header_block.0, i.0.clone(), Constraint::Max(header_block.1))
         })
         .collect::<Vec<_>>();
 
@@ -500,7 +486,7 @@ fn max_line_width(text: &str) -> usize {
 }
 
 /// Draw the help box in the centre of the screen
-pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
+pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 
     let description_text = format!("\n{}", DESCRIPTION);
@@ -550,7 +536,7 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Black));
 
-    let area = draw_popup(
+    let area = popup(
         lines as u16,
         max_line_width as u16,
         f.size(),
@@ -578,7 +564,7 @@ pub fn draw_help_box<B: Backend>(f: &mut Frame<'_, B>) {
 }
 
 /// Draw an error popup over whole screen
-pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<u8>) {
+pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: &AppError, seconds: Option<u8>) {
     let block = Block::default()
         .title(" Error ")
         .border_type(BorderType::Rounded)
@@ -614,7 +600,7 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = draw_popup(
+    let area = popup(
         lines as u16,
         max_line_width as u16,
         f.size(),
@@ -625,7 +611,7 @@ pub fn draw_error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Op
 }
 
 /// Draw info box in one of the 9 BoxLocations
-pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
+pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
     let block = Block::default()
         .title("")
         .title_alignment(Alignment::Center)
@@ -643,7 +629,7 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = draw_popup(
+    let area = popup(
         lines as u16,
         max_line_width as u16,
         f.size(),
@@ -654,7 +640,7 @@ pub fn draw_info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
 }
 
 /// draw a box in the one of the BoxLocations, based on max line width + number of lines
-fn draw_popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocation) -> Rect {
+fn popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocation) -> Rect {
     // Make sure blank_space can't be an negative, as will crash
     let blank_vertical = if r.height > text_lines {
         (r.height - text_lines) / 2

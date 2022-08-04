@@ -1,6 +1,6 @@
 [package]
 name = "oxker"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["Jack Wills <email@mrjackwills.com>"]
 description = "a simple tui to view & control docker containers"
@@ -8,7 +8,7 @@ repository = "https://github.com/mrjackwills/oxker"
 homepage = "https://github.com/mrjackwills/oxker"
 license = "MIT"
 readme = "README.md"
-keywords = ["docker", "tui", "tui-rs", "tokio"]
+keywords = ["docker", "tui", "tui-rs", "tokio", "terminal", "podman", "container"]
 categories = ["command-line-utilities"]
 
 [dependencies]
