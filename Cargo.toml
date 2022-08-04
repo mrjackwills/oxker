@@ -8,7 +8,7 @@ repository = "https://github.com/mrjackwills/oxker"
 homepage = "https://github.com/mrjackwills/oxker"
 license = "MIT"
 readme = "README.md"
-keywords = ["docker", "tui", "tui-rs", "tokio", "terminal", "podman", "container"]
+keywords = ["docker", "tui", "tokio", "terminal", "podman"]
 categories = ["command-line-utilities"]
 
 [dependencies]
