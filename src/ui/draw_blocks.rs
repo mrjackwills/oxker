@@ -279,22 +279,10 @@ pub fn chart<B: Backend>(
                 .style(Style::default().fg(Color::Cyan))
                 .graph_type(GraphType::Line)
                 .data(&mem.0)];
-				let cpu_stats = CpuStats::new(cpu.0.last().unwrap_or(&(0.00, 0.00)).1);
-				let mem_stats = ByteStats::new(mem.0.last().unwrap_or(&(0.0, 0.0)).1 as u64);
-            let cpu_chart = make_chart(
-                &cpu.2,
-                "cpu",
-                cpu_dataset,
-                &cpu_stats,
-                &cpu.1,
-            );
-            let mem_chart = make_chart(
-                &mem.2,
-                "memory",
-                mem_dataset,
-                &mem_stats,
-                &mem.1,
-            );
+            let cpu_stats = CpuStats::new(cpu.0.last().unwrap_or(&(0.00, 0.00)).1);
+            let mem_stats = ByteStats::new(mem.0.last().unwrap_or(&(0.0, 0.0)).1 as u64);
+            let cpu_chart = make_chart(&cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
+            let mem_chart = make_chart(&mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
 
             f.render_widget(cpu_chart, area[0]);
             f.render_widget(mem_chart, area[1]);
@@ -441,11 +429,7 @@ pub fn heading_bar<B: Backend>(
         .iter()
         .map(|i| {
             let header_block = gen_header(&i.0, i.1);
-            (
-                header_block.0,
-                i.0.clone(),
-                Constraint::Max(header_block.1),
-            )
+            (header_block.0, i.0.clone(), Constraint::Max(header_block.1))
         })
         .collect::<Vec<_>>();
 

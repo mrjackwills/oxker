@@ -68,11 +68,10 @@ impl<T> StatefulList<T> {
             String::from("")
         } else {
             let len = self.items.len();
-            let c = self.state.selected().map_or(0, |value| if len > 0 {
-                    value + 1
-                } else {
-                    value
-                });
+            let c = self
+                .state
+                .selected()
+                .map_or(0, |value| if len > 0 { value + 1 } else { value });
             format!("{}/{}", c, self.items.len())
         }
     }

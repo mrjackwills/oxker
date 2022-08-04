@@ -259,7 +259,10 @@ impl AppData {
     /// Get the title for log panel for selected container
     /// will be "logs x/x"
     pub fn get_log_title(&self) -> String {
-        self.get_selected_log_index().map_or_else(|| String::from(""), |index| self.containers.items[index].logs.get_state_title())
+        self.get_selected_log_index().map_or_else(
+            || String::from(""),
+            |index| self.containers.items[index].logs.get_state_title(),
+        )
     }
 
     /// select next selected log line
