@@ -30,7 +30,7 @@ pub enum BoxLocation {
 }
 
 impl BoxLocation {
-    pub fn get_indexes(&self) -> (usize, usize) {
+    pub fn get_indexes(self) -> (usize, usize) {
         match self {
             Self::TopLeft => (0, 0),
             Self::TopCentre => (0, 1),
@@ -46,7 +46,7 @@ impl BoxLocation {
 
     // Should combine and just return a tuple?
     pub fn get_horizontal_constraints(
-        &self,
+        self,
         blank_vertical: u16,
         text_width: u16,
     ) -> [Constraint; 3] {
@@ -69,7 +69,7 @@ impl BoxLocation {
         }
     }
     pub fn get_vertical_constraints(
-        &self,
+        self,
         blank_vertical: u16,
         number_lines: u16,
     ) -> [Constraint; 3] {
@@ -147,7 +147,7 @@ impl SelectablePanel {
         match self {
             Self::Containers => "Containers",
             Self::Logs => "Logs",
-            _ => "",
+            Self::Commands => "",
         }
     }
     pub fn next(self) -> Self {
@@ -221,7 +221,7 @@ impl GuiState {
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
             .get(0)
-            .map(|data| data.0.to_owned())
+            .map(|data| data.0.clone())
     }
 
     /// Insert, or updatem header area panel into heading_map

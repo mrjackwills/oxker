@@ -352,7 +352,7 @@ impl ContainerItem {
     /// Find the max value in the last 30 items in the cpu stats vec
     fn max_cpu_stats(&self) -> CpuStats {
         match self.cpu_stats.iter().max() {
-            Some(value) => value.to_owned(),
+            Some(value) => value.clone(),
             None => CpuStats::new(0.0),
         }
     }
@@ -360,7 +360,7 @@ impl ContainerItem {
     /// Find the max value in the last 30 items in the mem stats vec
     fn max_mem_stats(&self) -> ByteStats {
         match self.mem_stats.iter().max() {
-            Some(value) => value.to_owned(),
+            Some(value) => value.clone(),
             None => ByteStats::new(0),
         }
     }

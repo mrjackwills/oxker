@@ -1,9 +1,9 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::unused_async, clippy::unwrap_used, clippy::expect_used)]
 // Wanring - These are indeed pedantic
-// #![warn(clippy::pedantic)]
+#![warn(clippy::pedantic)]
 // #![warn(clippy::nursery)]
-// #![allow(clippy::module_name_repetitions, clippy::doc_markdown)]
+#![allow(clippy::module_name_repetitions, clippy::doc_markdown)]
 
 // Only allow when debugging
 // #![allow(unused)]
@@ -85,13 +85,8 @@ async fn main() {
     ));
 
     // Debug mode for testing, mostly pointless, doesn't take terminal nor draw gui
-    if !args.gui {
-        loop {
-            info!("in debug mode");
-            tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
-        }
-    } else {
-        let update_duration = std::time::Duration::from_millis(args.docker_interval as u64);
+    if args.gui {
+        let update_duration = std::time::Duration::from_millis(u64::from(args.docker_interval));
         create_ui(
             app_data,
             input_sx,
@@ -101,6 +96,11 @@ async fn main() {
             update_duration,
         )
         .await
-        .unwrap_or(())
+        .unwrap_or(());
+    } else {
+        loop {
+            info!("in debug mode");
+            tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
+        }
     }
 }

@@ -103,7 +103,7 @@ impl DockerData {
             let mem_limit = stats.memory_stats.limit.unwrap_or(0);
 
             let some_key = if let Some(networks) = &stats.networks {
-                networks.keys().next().map(|x| x.to_owned())
+                networks.keys().next().cloned()
             } else {
                 None
             };
@@ -122,7 +122,7 @@ impl DockerData {
 
             if is_running {
                 app_data.lock().update_stats(
-                    id.clone(),
+                    &id,
                     Some(cpu_stats),
                     Some(mem_stat),
                     mem_limit,
@@ -132,10 +132,9 @@ impl DockerData {
             } else {
                 app_data
                     .lock()
-                    .update_stats(id.clone(), None, None, mem_limit, rx, tx);
+                    .update_stats(&id, None, None, mem_limit, rx, tx);
             }
-            let key = SpawnId::Stats(id.to_owned());
-            spawns.lock().remove(&key);
+            spawns.lock().remove(&SpawnId::Stats(id.clone()));
         }
     }
 
@@ -146,13 +145,13 @@ impl DockerData {
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
             let is_running = *is_running;
-            let id = id.to_owned();
+            let id = id.clone();
 
-            let key = SpawnId::Stats(id.to_owned());
+            let key = SpawnId::Stats(id.clone());
             let spawn_contains_id = spawns.lock().contains_key(&key);
             let s = tokio::spawn(Self::update_container_stat(
                 docker,
-                id.to_owned(),
+                id.clone(),
                 app_data,
                 is_running,
                 spawns,
@@ -180,7 +179,7 @@ impl DockerData {
         containers
             .iter()
             .filter(|i| i.id.is_some())
-            .for_each(|c| output.push(c.to_owned()));
+            .for_each(|c| output.push(c.clone()));
 
         self.app_data.lock().update_containers(&output);
 
@@ -193,7 +192,7 @@ impl DockerData {
                 i.id.as_ref().map(|id| {
                     (
                         i.state.as_ref().unwrap_or(&String::new()) == "running",
-                        id.to_owned(),
+                        id.clone(),
                     )
                 })
             })
@@ -230,9 +229,8 @@ impl DockerData {
                 }
             }
         }
-        let key = SpawnId::Log(id.to_owned());
-        spawns.lock().remove(&key);
-        app_data.lock().update_log_by_id(output, id.to_owned());
+        spawns.lock().remove(&SpawnId::Log(id.clone()));
+        app_data.lock().update_log_by_id(&output, &id);
     }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
@@ -240,10 +238,10 @@ impl DockerData {
         for (_, id) in all_ids.iter() {
             let docker = Arc::clone(&self.docker);
             let timestamps = self.timestamps;
-            let id = id.to_owned();
+            let id = id.clone();
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
-            let key = SpawnId::Log(id.to_owned());
+            let key = SpawnId::Log(id.clone());
             let s = tokio::spawn(Self::update_log(
                 docker, id, timestamps, 0, app_data, spawns,
             ));
@@ -256,9 +254,9 @@ impl DockerData {
         let all_ids = self.update_all_containers().await;
         let optional_index = self.app_data.lock().get_selected_log_index();
         if let Some(index) = optional_index {
-            let id = self.app_data.lock().containers.items[index].id.to_owned();
+            let id = self.app_data.lock().containers.items[index].id.clone();
 
-            let key = SpawnId::Log(id.to_owned());
+            let key = SpawnId::Log(id.clone());
             let running = self.spawns.lock().contains_key(&key);
 
             if !running {
@@ -290,7 +288,7 @@ impl DockerData {
     }
 
     /// Stop the loading_spin function, and reset gui loading status
-    fn stop_loading_spin(&mut self, handle: JoinHandle<()>) {
+    fn stop_loading_spin(&mut self, handle: &JoinHandle<()>) {
         handle.abort();
         self.gui_state.lock().reset_loading();
     }
@@ -315,7 +313,7 @@ impl DockerData {
             self.initialised = self.app_data.lock().initialised(&all_ids);
         }
         self.app_data.lock().init = true;
-        self.stop_loading_spin(loading_spin);
+        self.stop_loading_spin(&loading_spin);
     }
 
     /// Handle incoming messages, container controls & all container information update
@@ -329,9 +327,9 @@ impl DockerData {
                     docker.pause_container(&id).await.unwrap_or_else(|_| {
                         app_data
                             .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Pause))
+                            .set_error(AppError::DockerCommand(DockerControls::Pause));
                     });
-                    self.stop_loading_spin(loading_spin);
+                    self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Restart(id) => {
                     let loading_spin = self.loading_spin().await;
@@ -341,9 +339,9 @@ impl DockerData {
                         .unwrap_or_else(|_| {
                             app_data
                                 .lock()
-                                .set_error(AppError::DockerCommand(DockerControls::Restart))
+                                .set_error(AppError::DockerCommand(DockerControls::Restart));
                         });
-                    self.stop_loading_spin(loading_spin);
+                    self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Start(id) => {
                     let loading_spin = self.loading_spin().await;
@@ -353,28 +351,28 @@ impl DockerData {
                         .unwrap_or_else(|_| {
                             app_data
                                 .lock()
-                                .set_error(AppError::DockerCommand(DockerControls::Start))
+                                .set_error(AppError::DockerCommand(DockerControls::Start));
                         });
-                    self.stop_loading_spin(loading_spin);
+                    self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Stop(id) => {
                     let loading_spin = self.loading_spin().await;
                     docker.stop_container(&id, None).await.unwrap_or_else(|_| {
                         app_data
                             .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Stop))
+                            .set_error(AppError::DockerCommand(DockerControls::Stop));
                     });
-                    self.stop_loading_spin(loading_spin);
+                    self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Unpause(id) => {
                     let loading_spin = self.loading_spin().await;
                     docker.unpause_container(&id).await.unwrap_or_else(|_| {
                         app_data
                             .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Unpause))
+                            .set_error(AppError::DockerCommand(DockerControls::Unpause));
                     });
-                    self.stop_loading_spin(loading_spin);
-                    self.update_everything().await
+                    self.stop_loading_spin(&loading_spin);
+                    self.update_everything().await;
                 }
                 DockerMessage::Update => self.update_everything().await,
                 DockerMessage::Quit => {
@@ -382,7 +380,7 @@ impl DockerData {
                         .lock()
                         .values()
                         .into_iter()
-                        .for_each(|i| i.abort());
+                        .for_each(tokio::task::JoinHandle::abort);
                     self.is_running.store(false, Ordering::SeqCst);
                 }
             }
