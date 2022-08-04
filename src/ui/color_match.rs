@@ -1,6 +1,6 @@
 pub mod log_sanitizer {
 
-    use cansi::{categorise_text, Color as CansiColor, Intensity};
+    use cansi::{v3::categorise_text, Color as CansiColor, Intensity};
     use tui::{
         style::{Color, Modifier, Style},
         text::{Span, Spans},
@@ -12,25 +12,25 @@ pub mod log_sanitizer {
             categorise_text(&input)
                 .into_iter()
                 .map(|i| {
-                    let fg_color = color_ansi_to_tui(i.fg_colour);
-                    let bg_color = color_ansi_to_tui(i.bg_colour);
+                    let fg_color = color_ansi_to_tui(i.fg.unwrap_or(CansiColor::White));
+                    let bg_color = color_ansi_to_tui(i.bg.unwrap_or(CansiColor::Black));
                     let style = Style::default().bg(bg_color).fg(fg_color);
-                    if i.blink {
+                    if i.blink.is_some() {
                         style.add_modifier(Modifier::SLOW_BLINK);
                     }
-                    if i.underline {
+                    if i.underline.is_some() {
                         style.add_modifier(Modifier::UNDERLINED);
                     }
-                    if i.reversed {
+                    if i.reversed.is_some() {
                         style.add_modifier(Modifier::REVERSED);
                     }
-                    if i.intensity == Intensity::Bold {
+                    if  i.intensity == Some(Intensity::Bold) {
                         style.add_modifier(Modifier::BOLD);
                     }
-                    if i.hidden {
+                    if i.hidden.is_some() {
                         style.add_modifier(Modifier::HIDDEN);
                     }
-                    if i.strikethrough {
+                    if i.strikethrough.is_some() {
                         style.add_modifier(Modifier::CROSSED_OUT);
                     }
                     Span::styled(i.text.to_owned(), style)
