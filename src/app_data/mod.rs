@@ -478,10 +478,10 @@ impl AppData {
                         current_container.state = state;
                     };
                     if current_container.image != image {
-                        current_container.image = image;
+                        current_container.image = image.chars().into_iter().take(64).collect();
                     };
                 } else {
-                    let mut container = ContainerItem::new(id.clone(), status, image, state, name);
+                    let mut container = ContainerItem::new(id.clone(), status,  image.chars().into_iter().take(64).collect(), state, name);
                     container.logs.end();
                     self.containers.items.push(container);
                 }
