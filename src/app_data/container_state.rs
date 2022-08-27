@@ -78,7 +78,7 @@ impl<T> StatefulList<T> {
 }
 
 /// States of the container
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd)]
 pub enum State {
     Dead,
     Exited,
