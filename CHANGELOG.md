@@ -1,3 +1,14 @@
+### Chores
++ dependencies updated, [a3168daa3f769a6747dfbe61103073a7e80a1485]
+
+### Fixes
++ limit image name to 64 chars max, [b8f7763dd5ac7d0361dd7bfc1dad40f50ee95ae1]
++ devcontainer updated, [3bde4f5629539cab3dbb57556663ab81685f9d7a]
+
+### Features
++ derive Eq where appropriate, [d7c2601f959bc12a64cd25cef59c837e1e8c2b2a]
+
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.3'>v0.1.3</a>
 ### 2022-08-04
 
