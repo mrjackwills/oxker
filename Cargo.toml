@@ -14,15 +14,15 @@ categories = ["command-line-utilities"]
 [dependencies]
 anyhow = "1.0"
 bollard = "0.13"
-cansi = "2.1"
+cansi = "2.2"
 clap={version="3.2", features = ["derive", "unicode"] }
-crossterm = "0.24"
+crossterm = "0.25"
 futures-util = "0.3"
 parking_lot = {version= "0.12"}
 tokio = {version = "1.20", features=["full"]}
 tracing = "0.1"
 tracing-subscriber = "0.3"
-tui = "0.18"
+tui = "0.19"
 
 [dev-dependencies]
 
