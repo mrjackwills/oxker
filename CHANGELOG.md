@@ -1,5 +1,5 @@
 ### Chores
-+ dependencies updated, [a3168daa3f769a6747dfbe61103073a7e80a1485]
++ dependencies updated, [a3168daa3f769a6747dfbe61103073a7e80a1485], [78e59160bb6a978ee80e3a99eb72f051fb64e737]
 
 ### Fixes
 + limit image name to 64 chars max, [b8f7763dd5ac7d0361dd7bfc1dad40f50ee95ae1]
