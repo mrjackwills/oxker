@@ -169,9 +169,6 @@ impl SelectablePanel {
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 pub struct GuiState {
-    // Think this should be a BMapTree, so can define order when iterating over potential intersects
-    // Is an issue if two panels are in the same space, sush as a smaller panel embedded, yet infront of, a larger panel
-    // If a BMapTree think it would mean have to implement ordering for SelectablePanel
     panel_map: HashMap<SelectablePanel, Rect>,
     heading_map: HashMap<Header, Rect>,
     loading_icon: Loading,

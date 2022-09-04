@@ -313,7 +313,9 @@ impl AppData {
     /// So can display nicely and evenly
     pub fn get_width(&self) -> Columns {
         let mut output = Columns::new();
+		// Think this is causing issues
         let count = |x: &String| x.chars().count();
+		// let count = |_:&String|10;
 
         for container in &self.containers.items {
             let cpu_count = count(
@@ -437,51 +439,47 @@ impl AppData {
 
         for i in containers.iter() {
             if let Some(id) = i.id.as_ref() {
-                let mut name = i
-                    .names
-                    .as_ref()
-                    .unwrap_or(&vec!["".to_owned()])
-                    .get(0)
-                    .unwrap_or(&String::from(""))
-                    .clone();
-                if let Some(c) = name.chars().next() {
-                    if c == '/' {
-                        name.remove(0);
-                    }
-                }
+				// maybe if no name then continue?
+                let name = i.names.as_ref().map_or("".to_owned(), |f|f.get(0).map_or("".to_owned(), |f|f.clone()));
+				// if let Some(c) = name.chars().next() {
+				// 	if c == '/' {
+				// 		name.remove(0);
+                //     }
+                // }
+				
+                let state = State::from(i.state.as_ref().map_or("dead".to_owned(), |f|f.trim().to_owned()));
 
-                let state = State::from(i.state.as_ref().unwrap_or(&"dead".to_owned()).trim());
-                let status = i
-                    .status
-                    .as_ref()
-                    .unwrap_or(&"".to_owned())
-                    .trim()
-                    .to_owned();
-                let image = i.image.as_ref().unwrap_or(&"".to_owned()).trim().to_owned();
+
+
+                let status = i.status.as_ref().map_or("".to_owned(), |f| f.trim().to_owned());
+				let image = i.image.as_ref().map_or("".to_owned(), |f|f.clone());
+				
                 if let Some(current_container) = self.get_container_by_id(id) {
-                    if current_container.name != name {
-                        current_container.name = name;
+					if current_container.name != name {
+						current_container.name = name;
                     };
                     if current_container.status != status {
-                        current_container.status = status;
+						current_container.status = status;
                     };
                     if current_container.state != state {
-                        current_container.docker_controls.items = DockerControls::gen_vec(&state);
-
+						current_container.docker_controls.items = DockerControls::gen_vec(&state);
+						
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
                         match state {
-                            State::Removing | State::Restarting | State::Unknown => {
-                                current_container.docker_controls.state.select(None);
+							State::Removing | State::Restarting | State::Unknown => {
+								current_container.docker_controls.state.select(None);
                             }
                             _ => current_container.docker_controls.start(),
                         };
                         current_container.state = state;
                     };
                     if current_container.image != image {
-                        current_container.image = image.chars().into_iter().take(64).collect();
+                        // current_container.image = image.chars().into_iter().take(64).collect();
+						current_container.image = image;
                     };
                 } else {
-                    let mut container = ContainerItem::new(id.clone(), status,  image.chars().into_iter().take(64).collect(), state, name);
+                    // let mut container = ContainerItem::new(id.clone(), status,  image.chars().into_iter().take(64).collect(), state, name);
+					let mut container = ContainerItem::new(id.clone(), status, image, state, name);
                     container.logs.end();
                     self.containers.items.push(container);
                 }

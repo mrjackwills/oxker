@@ -113,6 +113,20 @@ impl State {
     }
 }
 
+impl From<String> for State {
+    fn from(input: String) -> Self {
+        match input.as_ref() {
+            "dead" => Self::Dead,
+            "exited" => Self::Exited,
+            "paused" => Self::Paused,
+            "removing" => Self::Removing,
+            "restarting" => Self::Restarting,
+            "running" => Self::Running,
+            _ => Self::Unknown,
+        }
+    }
+}
+
 impl From<&str> for State {
     fn from(input: &str) -> Self {
         match input {
