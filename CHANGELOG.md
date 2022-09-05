@@ -7,7 +7,10 @@
 
 ### Features
 + derive Eq where appropriate, [d7c2601f959bc12a64cd25cef59c837e1e8c2b2a]
++ ignore containers 'oxker' containers, [1be9f52ad4a68f93142784e9df630c59cdec0a79]
 
+### Refactors
++ improved way to remove leading '/' of container name, [832e9782d7765872cbb84df6b3703fc08cb353c9]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.3'>v0.1.3</a>
 ### 2022-08-04
