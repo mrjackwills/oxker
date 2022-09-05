@@ -1,6 +1,6 @@
 use bollard::{
     container::{ListContainersOptions, LogsOptions, StartContainerOptions, Stats, StatsOptions},
-    Docker,
+    Docker, service::ContainerSummary,
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;
@@ -163,6 +163,7 @@ impl DockerData {
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
+    /// Will ignore any container that uses `oxker` as an entry point
     pub async fn update_all_containers(&mut self) -> Vec<(bool, String)> {
         let containers = self
             .docker
@@ -173,12 +174,19 @@ impl DockerData {
             .await
             .unwrap_or_default();
 
-        let mut output = vec![];
-        // iter over containers, to only send ones which have an id, as use id for identification throughout!
-        containers
+            let output = containers
             .iter()
-            .filter(|i| i.id.is_some())
-            .for_each(|c| output.push(c.clone()));
+            .filter_map(|f| match f.id {
+                Some(_) => {
+                    if f.command.as_ref().map_or(false, |c|c.contains("oxker")) {
+                        None
+                    } else {
+                        Some(f.clone())
+                    }
+                },
+                None => None,
+            })
+            .collect::<Vec<ContainerSummary>>();
 
         self.app_data.lock().update_containers(&output);
 

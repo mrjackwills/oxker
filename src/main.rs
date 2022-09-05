@@ -28,6 +28,7 @@ use ui::{create_ui, GuiState};
 
 fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+	// TODO write to file?
 }
 
 #[tokio::main]
