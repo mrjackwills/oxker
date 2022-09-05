@@ -440,17 +440,15 @@ impl AppData {
         for i in containers.iter() {
             if let Some(id) = i.id.as_ref() {
 				// maybe if no name then continue?
-                let name = i.names.as_ref().map_or("".to_owned(), |f|f.get(0).map_or("".to_owned(), |f|f.clone()));
-				// if let Some(c) = name.chars().next() {
-				// 	if c == '/' {
-				// 		name.remove(0);
-                //     }
-                // }
+                let name = i.names.as_ref().map_or("".to_owned(), |f|f.get(0).map_or("".to_owned(), |f|{
+					let mut n = f.clone();
+					if n.starts_with('/') {
+						n.remove(0);
+					}
+					n
+			}));
 				
                 let state = State::from(i.state.as_ref().map_or("dead".to_owned(), |f|f.trim().to_owned()));
-
-
-
                 let status = i.status.as_ref().map_or("".to_owned(), |f| f.trim().to_owned());
 				let image = i.image.as_ref().map_or("".to_owned(), |f|f.clone());
 				
