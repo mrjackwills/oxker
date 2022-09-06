@@ -100,6 +100,7 @@ async fn main() {
         .unwrap_or(());
     } else {
         loop {
+			// TODO this needs to be improved to display something useful
             info!("in debug mode");
             tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
         }

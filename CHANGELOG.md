@@ -2,11 +2,11 @@
 + dependencies updated, [a3168daa3f769a6747dfbe61103073a7e80a1485], [78e59160bb6a978ee80e3a99eb72f051fb64e737]
 
 ### Fixes
-+ limit image name to 64 chars max, [b8f7763dd5ac7d0361dd7bfc1dad40f50ee95ae1]
 + devcontainer updated, [3bde4f5629539cab3dbb57556663ab81685f9d7a]
 
 ### Features
 + derive Eq where appropriate, [d7c2601f959bc12a64cd25cef59c837e1e8c2b2a]
++ containerize self, github action to build and push to Docker Hub, []
 + ignore containers 'oxker' containers, [1be9f52ad4a68f93142784e9df630c59cdec0a79]
 
 ### Refactors
