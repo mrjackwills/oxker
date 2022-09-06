@@ -22,7 +22,7 @@ WORKDIR /usr/src
 RUN cargo new oxker
 
 # We want dependencies cached, so copy those first
-COPY Cargo.toml Cargo.lock /usr/src/oxker/
+COPY Cargo.* /usr/src/oxker/
 
 # Set the working directory
 WORKDIR /usr/src/oxker
