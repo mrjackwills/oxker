@@ -1,0 +1,15 @@
+#############
+## Runtime ##
+#############
+
+FROM alpine:latest AS runtime
+
+# Copy application binary from builder image
+COPY ./target/x86_64-unknown-linux-musl/release/oxker /usr/local/bin
+COPY ./containerised/start_oxker.sh ./
+
+# Run the application
+ENTRYPOINT [ "./start_oxker.sh"]
+
+# One liner to build musl program, build docker image, then execute the image
+# cargo build --release --target x86_64-unknown-linux-musl && docker build -t oxker_dev -f containerised/Dockerfile_dev . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
