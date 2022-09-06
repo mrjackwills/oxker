@@ -82,6 +82,12 @@ jobs:
           --push  \
           -f containerised/Dockerfile .
 
+      # Publish to crates.io
+      - name: publish to crates.io
+        uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
