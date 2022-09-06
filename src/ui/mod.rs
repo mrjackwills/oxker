@@ -109,7 +109,7 @@ async fn run_app<B: Backend + Send>(
             if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
                 return Err(AppError::Terminal);
             }
-            if crossterm::event::poll(input_poll_rate).unwrap_or_default() {
+            if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
                         sender
