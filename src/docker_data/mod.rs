@@ -193,12 +193,13 @@ impl DockerData {
         let current_sort = self.app_data.lock().get_sorted();
         self.app_data.lock().set_sorted(current_sort);
 
+		// Just get the containers that are currently running, no point updating info on paused or dead containers
         output
             .iter()
             .filter_map(|i| {
                 i.id.as_ref().map(|id| {
                     (
-                        i.state.as_ref().unwrap_or(&String::new()) == "running",
+						i.state == Some("running".to_owned()),
                         id.clone(),
                     )
                 })
@@ -331,53 +332,53 @@ impl DockerData {
             match message {
                 DockerMessage::Pause(id) => {
                     let loading_spin = self.loading_spin().await;
-                    docker.pause_container(&id).await.unwrap_or_else(|_| {
+                    if docker.pause_container(&id).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Pause));
-                    });
+                    };
                     self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Restart(id) => {
                     let loading_spin = self.loading_spin().await;
-                    docker
+                   if docker
                         .restart_container(&id, None)
                         .await
-                        .unwrap_or_else(|_| {
+                        .is_err() {
                             app_data
                                 .lock()
                                 .set_error(AppError::DockerCommand(DockerControls::Restart));
-                        });
+                        };
                     self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Start(id) => {
                     let loading_spin = self.loading_spin().await;
-                    docker
+                    if docker
                         .start_container(&id, None::<StartContainerOptions<String>>)
                         .await
-                        .unwrap_or_else(|_| {
+                        .is_err() {
                             app_data
                                 .lock()
                                 .set_error(AppError::DockerCommand(DockerControls::Start));
-                        });
+                        };
                     self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Stop(id) => {
                     let loading_spin = self.loading_spin().await;
-                    docker.stop_container(&id, None).await.unwrap_or_else(|_| {
+                    if docker.stop_container(&id, None).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Stop));
-                    });
+                    };
                     self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Unpause(id) => {
                     let loading_spin = self.loading_spin().await;
-                    docker.unpause_container(&id).await.unwrap_or_else(|_| {
+                    if docker.unpause_container(&id).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Unpause));
-                    });
+                    };
                     self.stop_loading_spin(&loading_spin);
                     self.update_everything().await;
                 }
