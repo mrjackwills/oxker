@@ -6,7 +6,7 @@
 
 ### Features
 + derive Eq where appropriate, [d7c2601f959bc12a64cd25cef59c837e1e8c2b2a]
-+ containerize self, github action to build and push to Docker Hub, []
++ containerize self, github action to build and push to [Docker Hub](https://hub.docker.com/r/mrjackwills/oxker), [07f972022a69f22bac57925e6ad84234381f7890]
 + ignore containers 'oxker' containers, [1be9f52ad4a68f93142784e9df630c59cdec0a79]
 
 ### Refactors
