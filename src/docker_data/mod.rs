@@ -5,6 +5,7 @@ use bollard::{
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;
+use uuid::Uuid;
 use std::{
     collections::HashMap,
     sync::{
@@ -295,25 +296,26 @@ impl DockerData {
     }
 
     /// Animate the loading icon
-    async fn loading_spin(&mut self) -> JoinHandle<()> {
+    async fn loading_spin(&mut self, loading_uuid: Uuid) -> JoinHandle<()> {
         let gui_state = Arc::clone(&self.gui_state);
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                gui_state.lock().next_loading();
+                gui_state.lock().next_loading(loading_uuid);
             }
         })
     }
 
     /// Stop the loading_spin function, and reset gui loading status
-    fn stop_loading_spin(&mut self, handle: &JoinHandle<()>) {
+    fn stop_loading_spin(&mut self, handle: &JoinHandle<()>, loading_uuid: Uuid) {
         handle.abort();
-        self.gui_state.lock().reset_loading();
+        self.gui_state.lock().remove_loading(loading_uuid);
     }
 
     // Initialize docker container data, before any messages are received
     async fn initialise_container_data(&mut self) {
-        let loading_spin = self.loading_spin().await;
+		let loading_uuid = Uuid::new_v4();
+        let loading_spin = self.loading_spin(loading_uuid).await;
 
         let all_ids = self.update_all_containers().await;
         self.update_all_container_stats(&all_ids).await;
@@ -331,7 +333,7 @@ impl DockerData {
             self.initialised = self.app_data.lock().initialised(&all_ids);
         }
         self.app_data.lock().init = true;
-        self.stop_loading_spin(&loading_spin);
+        self.stop_loading_spin(&loading_spin, loading_uuid);
     }
 
     /// Handle incoming messages, container controls & all container information update
@@ -339,27 +341,28 @@ impl DockerData {
         while let Some(message) = self.receiver.recv().await {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
+			let loading_uuid = Uuid::new_v4();
             match message {
                 DockerMessage::Pause(id) => {
-                    let loading_spin = self.loading_spin().await;
+                    let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker.pause_container(&id).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Pause));
                     };
-                    self.stop_loading_spin(&loading_spin);
+                    self.stop_loading_spin(&loading_spin, loading_uuid);
                 }
                 DockerMessage::Restart(id) => {
-                    let loading_spin = self.loading_spin().await;
+                    let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker.restart_container(&id, None).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Restart));
                     };
-                    self.stop_loading_spin(&loading_spin);
+                    self.stop_loading_spin(&loading_spin, loading_uuid);
                 }
                 DockerMessage::Start(id) => {
-                    let loading_spin = self.loading_spin().await;
+                    let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker
                         .start_container(&id, None::<StartContainerOptions<String>>)
                         .await
@@ -369,20 +372,19 @@ impl DockerData {
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Start));
                     };
-                    self.stop_loading_spin(&loading_spin);
+                    self.stop_loading_spin(&loading_spin, loading_uuid);
                 }
                 DockerMessage::Stop(id) => {
-                    let loading_spin = self.loading_spin().await;
+                    let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker.stop_container(&id, None).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Stop));
                     };
-                    self.stop_loading_spin(&loading_spin);
+                    self.stop_loading_spin(&loading_spin, loading_uuid);
                 }
                 DockerMessage::Unpause(id) => {
-					// gen uuid, leading_spin(uuid)
-                    let loading_spin = self.loading_spin().await;
+                    let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker.unpause_container(&id).await.is_err() {
                         app_data
                             .lock()
@@ -390,7 +392,7 @@ impl DockerData {
                     };
 					// loading sping take uuid to remove
 					// stop_loading_sping(uuid)
-                    self.stop_loading_spin(&loading_spin);
+                    self.stop_loading_spin(&loading_spin, loading_uuid);
                     self.update_everything().await;
                 }
                 DockerMessage::Update => self.update_everything().await,
