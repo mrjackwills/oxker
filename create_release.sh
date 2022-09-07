@@ -230,6 +230,7 @@ main() {
 	options=(
 		1 "test" off
 		2 "release" off
+		3 "build" off
 	)
 	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 	exitStatus=$?
@@ -249,6 +250,10 @@ main() {
 				break;;
 			2)
 				release_flow
+				break;;
+			3)
+				cargo_build
+				main
 				break;;
 		esac
 	done
