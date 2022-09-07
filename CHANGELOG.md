@@ -3,6 +3,7 @@
 
 ### Features
 + containerize self, github action to build and push to [Docker Hub](https://hub.docker.com/r/mrjackwills/oxker), [07f972022a69f22bac57925e6ad84234381f7890]
++ gui_state is_loading use a HashSet to enable multiple things to be loading, [66583e1b037b7e2f3e47948d70d8a4c6f6a2f2d5]
 + github action publish to crates.io, [90b2e3f6db0d5f63840cd80888a30da6ecc22f20]
 + derive Eq where appropriate, [d7c2601f959bc12a64cd25cef59c837e1e8c2b2a]
 + ignore containers 'oxker' containers, [1be9f52ad4a68f93142784e9df630c59cdec0a79]
