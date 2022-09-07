@@ -63,7 +63,7 @@ pub async fn create_ui(
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
-    terminal.show_cursor().unwrap_or(());
+    terminal.show_cursor()?;
 
     if let Err(err) = res {
         println!("{}", err);

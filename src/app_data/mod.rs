@@ -313,9 +313,7 @@ impl AppData {
     /// So can display nicely and evenly
     pub fn get_width(&self) -> Columns {
         let mut output = Columns::new();
-		// Think this is causing issues
         let count = |x: &String| x.chars().count();
-		// let count = |_:&String|10;
 
         for container in &self.containers.items {
             let cpu_count = count(
@@ -412,7 +410,7 @@ impl AppData {
     }
 
     /// Update, or insert, containers
-    pub fn update_containers(&mut self, containers: &[ContainerSummary]) {
+    pub fn update_containers(&mut self, containers: &mut [ContainerSummary]) {
         let all_ids = self.get_all_ids();
 
         if !containers.is_empty() && self.containers.state.selected().is_none() {
@@ -437,47 +435,58 @@ impl AppData {
             }
         }
 
-        for i in containers.iter() {
+        for i in containers.iter_mut() {
             if let Some(id) = i.id.as_ref() {
-				// maybe if no name then continue?
-                let name = i.names.as_ref().map_or("".to_owned(), |f|f.get(0).map_or("".to_owned(), |f|{
-					let mut n = f.clone();
-					if n.starts_with('/') {
-						n.remove(0);
-					}
-					n
-			}));
-				
-                let state = State::from(i.state.as_ref().map_or("dead".to_owned(), |f|f.trim().to_owned()));
-                let status = i.status.as_ref().map_or("".to_owned(), |f| f.trim().to_owned());
-				let image = i.image.as_ref().map_or("".to_owned(), |f|f.clone());
-				
+                // maybe if no name then continue?
+                let name = i.names.as_mut().map_or("".to_owned(), |n| {
+                    n.get_mut(0).map_or("".to_owned(), |f| {
+                        if f.starts_with('/') {
+                            f.remove(0);
+                        }
+                        f.to_string()
+                    })
+                });
+
+                let state = State::from(
+                    i.state
+                        .as_ref()
+                        .map_or("dead".to_owned(), |f| f.trim().to_owned()),
+                );
+                let status = i
+                    .status
+                    .as_ref()
+                    .map_or("".to_owned(), |f| f.trim().to_owned());
+
+                let image = i.image.as_ref().map_or("".to_owned(), |f| f.clone());
+
                 if let Some(current_container) = self.get_container_by_id(id) {
-					if current_container.name != name {
-						current_container.name = name;
+                    if current_container.name != name {
+                        current_container.name = name;
                     };
                     if current_container.status != status {
-						current_container.status = status;
+                        current_container.status = status;
                     };
                     if current_container.state != state {
-						current_container.docker_controls.items = DockerControls::gen_vec(&state);
-						
+                        current_container.docker_controls.items = DockerControls::gen_vec(&state);
+
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
                         match state {
-							State::Removing | State::Restarting | State::Unknown => {
-								current_container.docker_controls.state.select(None);
+                            State::Removing | State::Restarting | State::Unknown => {
+                                current_container.docker_controls.state.select(None);
                             }
                             _ => current_container.docker_controls.start(),
                         };
                         current_container.state = state;
                     };
                     if current_container.image != image {
+                        // limit image name to 64 chars?
                         // current_container.image = image.chars().into_iter().take(64).collect();
-						current_container.image = image;
+                        current_container.image = image;
                     };
                 } else {
+                    // limit image name to 64 chars?
                     // let mut container = ContainerItem::new(id.clone(), status,  image.chars().into_iter().take(64).collect(), state, name);
-					let mut container = ContainerItem::new(id.clone(), status, image, state, name);
+                    let mut container = ContainerItem::new(id.clone(), status, image, state, name);
                     container.logs.end();
                     self.containers.items.push(container);
                 }
@@ -507,7 +516,7 @@ impl AppData {
             }
 
             if container.logs.state.selected().is_none()
-                || container.logs.state.selected().unwrap_or_default() + 1 == current_len
+                || container.logs.state.selected().map_or(1, |f| f + 1) == current_len
             {
                 container.logs.end();
             }

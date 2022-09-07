@@ -27,6 +27,5 @@ impl fmt::Display for AppError {
                 write!(f, "Unbale to {}able mouse capture", reason)
             }
         }
-        
     }
 }

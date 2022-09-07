@@ -279,8 +279,8 @@ pub fn chart<B: Backend>(
                 .style(Style::default().fg(Color::Cyan))
                 .graph_type(GraphType::Line)
                 .data(&mem.0)];
-            let cpu_stats = CpuStats::new(cpu.0.last().unwrap_or(&(0.00, 0.00)).1);
-            let mem_stats = ByteStats::new(mem.0.last().unwrap_or(&(0.0, 0.0)).1 as u64);
+            let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
+            let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
             let cpu_chart = make_chart(&cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
             let mem_chart = make_chart(&mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
 
