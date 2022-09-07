@@ -1,4 +1,7 @@
-use std::{collections::{HashMap, HashSet}, fmt};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 use tui::layout::{Constraint, Rect};
 use uuid::Uuid;
 
@@ -168,14 +171,13 @@ impl fmt::Display for Loading {
     }
 }
 
-
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 pub struct GuiState {
     panel_map: HashMap<SelectablePanel, Rect>,
     heading_map: HashMap<Header, Rect>,
     loading_icon: Loading,
-	is_loading: HashSet<Uuid>,
+    is_loading: HashSet<Uuid>,
     pub selected_panel: SelectablePanel,
     pub show_help: bool,
     pub info_box_text: Option<String>,
@@ -245,14 +247,14 @@ impl GuiState {
 
     /// Change to previous selectable panel
     pub fn previous_panel(&mut self) {
-		self.selected_panel = self.selected_panel.prev();
+        self.selected_panel = self.selected_panel.prev();
     }
 
     /// Advance loading animation
     pub fn next_loading(&mut self, uuid: Uuid) {
         self.loading_icon = self.loading_icon.next();
         self.is_loading.insert(uuid);
-    }	
+    }
 
     /// if is_loading, return loading animation frame, else single space
     pub fn get_loading(&mut self) -> String {
