@@ -10,7 +10,7 @@
 
 ### Fixes
 + devcontainer updated, [3bde4f5629539cab3dbb57556663ab81685f9d7a]
-+ Use Binate value to enable two cycles of cpu/mem update to be executed (for each container) at the same time, refactor hashmap spawn sinsertions, [7ec58e79a1316ad1f7e50a2781dea0fe8422c588]
++ Use Binate enum to enable two cycles of cpu/mem update to be executed (for each container) at the same time, refactor hashmap spawn insertions, [7ec58e79a1316ad1f7e50a2781dea0fe8422c588]
 
 ### Refactors
 + improved way to remove leading '/' of container name, [832e9782d7765872cbb84df6b3703fc08cb353c9]

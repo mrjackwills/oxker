@@ -22,14 +22,14 @@
 
 ## Run via Docker
 
-Now published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64v8`, and `linux/armv6`
+Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64v8`, and `linux/armv6`
 
 `docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro mrjackwills/oxker:latest`
 
 
 ## Download & install
 
-Now published on <a href='https://www.crates.io/crates/oxker' target='_blank' rel='noopener noreferrer'>crates.io</a>, so if you have cargo installed, simply run
+Published on <a href='https://www.crates.io/crates/oxker' target='_blank' rel='noopener noreferrer'>crates.io</a>, so if you have cargo installed, simply run
 
 ```cargo install oxker```
 
