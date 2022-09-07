@@ -33,18 +33,18 @@ enum SpawnId {
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
 /// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
 /// Binate value is toggled when all join handles have been spawned off
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq, Copy)]
 enum Binate {
     One,
     Two
 }
 
 impl Binate {
-    fn toggle(&mut self) {
-        *self = match self {
+    const fn toggle(self) -> Self {
+        match self {
             Self::One => Self::Two,
             Self::Two => Self::One,
-        };
+        }
     }
 }
 
@@ -155,10 +155,9 @@ impl DockerData {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
-            let is_running = *is_running;
             let id = id.clone();
 
-            let key = SpawnId::Stats((id.clone(), self.binate.clone()));
+            let key = SpawnId::Stats((id.clone(), self.binate));
 
             let spawn_key = key.clone();
             self.spawns.lock().entry(key).or_insert_with(|| {
@@ -166,13 +165,13 @@ impl DockerData {
                     docker,
                     id.clone(),
                     app_data,
-                    is_running,
+                    *is_running,
                     spawns,
                     spawn_key
                 ))
             });
         }
-        self.binate.toggle();
+        self.binate = self.binate.toggle();
     }
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
@@ -382,12 +381,15 @@ impl DockerData {
                     self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Unpause(id) => {
+					// gen uuid, leading_spin(uuid)
                     let loading_spin = self.loading_spin().await;
                     if docker.unpause_container(&id).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Unpause));
                     };
+					// loading sping take uuid to remove
+					// stop_loading_sping(uuid)
                     self.stop_loading_spin(&loading_spin);
                     self.update_everything().await;
                 }

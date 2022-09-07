@@ -10,6 +10,30 @@ pub enum SelectablePanel {
     Logs,
 }
 
+impl SelectablePanel {
+    pub const fn title(self) -> &'static str {
+        match self {
+            Self::Containers => "Containers",
+            Self::Logs => "Logs",
+            Self::Commands => "",
+        }
+    }
+    pub fn next(self) -> Self {
+        match self {
+            Self::Containers => Self::Commands,
+            Self::Commands => Self::Logs,
+            Self::Logs => Self::Containers,
+        }
+    }
+    pub fn prev(self) -> Self {
+        match self {
+            Self::Containers => Self::Logs,
+            Self::Commands => Self::Containers,
+            Self::Logs => Self::Commands,
+        }
+    }
+}
+
 pub enum Region {
     Panel(SelectablePanel),
     Header(Header),
@@ -93,7 +117,8 @@ impl BoxLocation {
     }
 }
 
-#[derive(Debug, Clone)]
+/// State for the loading animation
+#[derive(Debug, Clone, Copy)]
 pub enum Loading {
     One,
     Two,
@@ -108,7 +133,7 @@ pub enum Loading {
 }
 
 impl Loading {
-    pub const fn next(&self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::One => Self::Two,
             Self::Two => Self::Three,
@@ -127,44 +152,21 @@ impl Loading {
 impl fmt::Display for Loading {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = match self {
-            Self::One => "⠋",
-            Self::Two => "⠙",
-            Self::Three => "⠹",
-            Self::Four => "⠸",
-            Self::Five => "⠼",
-            Self::Six => "⠴",
-            Self::Seven => "⠦",
-            Self::Eight => "⠧",
-            Self::Nine => "⠇",
-            Self::Ten => "⠏",
+            Self::One => '⠋',
+            Self::Two => '⠙',
+            Self::Three => '⠹',
+            Self::Four => '⠸',
+            Self::Five => '⠼',
+            Self::Six => '⠴',
+            Self::Seven => '⠦',
+            Self::Eight => '⠧',
+            Self::Nine => '⠇',
+            Self::Ten => '⠏',
         };
         write!(f, "{}", disp)
     }
 }
 
-impl SelectablePanel {
-    pub const fn title(self) -> &'static str {
-        match self {
-            Self::Containers => "Containers",
-            Self::Logs => "Logs",
-            Self::Commands => "",
-        }
-    }
-    pub const fn next(self) -> Self {
-        match self {
-            Self::Containers => Self::Commands,
-            Self::Commands => Self::Logs,
-            Self::Logs => Self::Containers,
-        }
-    }
-    pub const fn prev(self) -> Self {
-        match self {
-            Self::Containers => Self::Logs,
-            Self::Commands => Self::Containers,
-            Self::Logs => Self::Commands,
-        }
-    }
-}
 
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
@@ -244,7 +246,7 @@ impl GuiState {
 
     /// Change to previous selectable panel
     pub fn previous_panel(&mut self) {
-        self.selected_panel = self.selected_panel.prev();
+		self.selected_panel = self.selected_panel.prev();
     }
 
     /// Advance loading animation

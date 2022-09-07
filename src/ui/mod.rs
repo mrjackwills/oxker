@@ -57,7 +57,7 @@ pub async fn create_ui(
     )
     .await;
 
-    disable_raw_mode().unwrap_or(());
+    disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
@@ -85,28 +85,25 @@ async fn run_app<B: Backend + Send>(
 
     // Check for docker connect errors before attempting to draw the gui
     let e = app_data.lock().get_error();
-    if let Some(error) = e {
-        if let AppError::DockerConnect = error {
-            let mut seconds = 5;
-            loop {
-                if seconds < 1 {
-                    is_running.store(false, Ordering::SeqCst);
-                    break;
-                }
-                if terminal
-                    .draw(|f| draw_blocks::error(f, &AppError::DockerConnect, Some(seconds)))
-                    .is_err()
-                {
-                    return Err(AppError::Terminal);
-                }
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                seconds -= 1;
+    if let Some(AppError::DockerConnect) = e {
+        let mut seconds = 5;
+        loop {
+            if seconds < 1 {
+                is_running.store(false, Ordering::SeqCst);
+                break;
             }
+            if terminal
+                .draw(|f| draw_blocks::error(f, &AppError::DockerConnect, Some(seconds)))
+                .is_err()
+            {
+                return Err(AppError::Terminal);
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            seconds -= 1;
         }
     } else {
         let mut now = Instant::now();
         loop {
-		
             if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
                 return Err(AppError::Terminal);
             }
