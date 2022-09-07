@@ -1,6 +1,7 @@
 use bollard::{
     container::{ListContainersOptions, LogsOptions, StartContainerOptions, Stats, StatsOptions},
-    Docker, service::ContainerSummary,
+    service::ContainerSummary,
+    Docker,
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;
@@ -80,7 +81,7 @@ impl DockerData {
 
     /// Get a single docker stat in order to update mem and cpu usage
     /// don't take &self, so that can tokio::spawn into it's own thread
-    /// remove if from spawns hashmap when complete
+    /// remove from spawns hashmap when complete
     async fn update_container_stat(
         docker: Arc<Docker>,
         id: String,
@@ -145,25 +146,23 @@ impl DockerData {
             let spawns = Arc::clone(&self.spawns);
             let is_running = *is_running;
             let id = id.clone();
-
             let key = SpawnId::Stats(id.clone());
-            let spawn_contains_id = spawns.lock().contains_key(&key);
-            let s = tokio::spawn(Self::update_container_stat(
-                docker,
-                id.clone(),
-                app_data,
-                is_running,
-                spawns,
-            ));
-            if !spawn_contains_id {
-                self.spawns.lock().insert(key, s);
-            }
+
+            self.spawns.lock().entry(key).or_insert_with(|| {
+                tokio::spawn(Self::update_container_stat(
+                    docker,
+                    id.clone(),
+                    app_data,
+                    is_running,
+                    spawns,
+                ))
+            });
         }
     }
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
-    /// Will ignore any container that uses `oxker` as an entry point
+    /// Will ignore any container that contains `oxker` as an entry point
     pub async fn update_all_containers(&mut self) -> Vec<(bool, String)> {
         let containers = self
             .docker
@@ -174,32 +173,33 @@ impl DockerData {
             .await
             .unwrap_or_default();
 
-            let output = containers
+        let mut output = containers
             .iter()
             .filter_map(|f| match f.id {
                 Some(_) => {
-                    if f.command.as_ref().map_or(false, |c|c.contains("oxker")) {
+                    if f.command.as_ref().map_or(false, |c| c.contains("oxker")) {
                         None
                     } else {
                         Some(f.clone())
                     }
-                },
+                }
                 None => None,
             })
             .collect::<Vec<ContainerSummary>>();
 
-        self.app_data.lock().update_containers(&output);
+        self.app_data.lock().update_containers(&mut output);
 
         let current_sort = self.app_data.lock().get_sorted();
         self.app_data.lock().set_sorted(current_sort);
 
-		// Just get the containers that are currently running, no point updating info on paused or dead containers
+        // Just get the containers that are currently running, or being restarted, no point updating info on paused or dead containers
         output
             .iter()
             .filter_map(|i| {
                 i.id.as_ref().map(|id| {
                     (
-						i.state == Some("running".to_owned()),
+                        i.state == Some("running".to_owned())
+                            || i.state == Some("restarting".to_owned()),
                         id.clone(),
                     )
                 })
@@ -250,11 +250,12 @@ impl DockerData {
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
             let key = SpawnId::Log(id.clone());
-            let s = tokio::spawn(Self::update_log(
-                docker, id, timestamps, 0, app_data, spawns,
-            ));
-
-            self.spawns.lock().insert(key, s);
+            self.spawns.lock().insert(
+                key,
+                tokio::spawn(Self::update_log(
+                    docker, id, timestamps, 0, app_data, spawns,
+                )),
+            );
         }
     }
 
@@ -341,14 +342,11 @@ impl DockerData {
                 }
                 DockerMessage::Restart(id) => {
                     let loading_spin = self.loading_spin().await;
-                   if docker
-                        .restart_container(&id, None)
-                        .await
-                        .is_err() {
-                            app_data
-                                .lock()
-                                .set_error(AppError::DockerCommand(DockerControls::Restart));
-                        };
+                    if docker.restart_container(&id, None).await.is_err() {
+                        app_data
+                            .lock()
+                            .set_error(AppError::DockerCommand(DockerControls::Restart));
+                    };
                     self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Start(id) => {
@@ -356,11 +354,12 @@ impl DockerData {
                     if docker
                         .start_container(&id, None::<StartContainerOptions<String>>)
                         .await
-                        .is_err() {
-                            app_data
-                                .lock()
-                                .set_error(AppError::DockerCommand(DockerControls::Start));
-                        };
+                        .is_err()
+                    {
+                        app_data
+                            .lock()
+                            .set_error(AppError::DockerCommand(DockerControls::Start));
+                    };
                     self.stop_loading_spin(&loading_spin);
                 }
                 DockerMessage::Stop(id) => {
