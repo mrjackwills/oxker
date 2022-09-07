@@ -5,7 +5,6 @@ use bollard::{
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;
-use uuid::Uuid;
 use std::{
     collections::HashMap,
     sync::{
@@ -14,6 +13,7 @@ use std::{
     },
 };
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
+use uuid::Uuid;
 
 use crate::{
     app_data::{AppData, DockerControls},
@@ -23,7 +23,6 @@ use crate::{
 };
 mod message;
 pub use message::DockerMessage;
-
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 enum SpawnId {
@@ -37,7 +36,7 @@ enum SpawnId {
 #[derive(Debug, Hash, Clone, PartialEq, Eq, Copy)]
 enum Binate {
     One,
-    Two
+    Two,
 }
 
 impl Binate {
@@ -58,7 +57,7 @@ pub struct DockerData {
     receiver: Receiver<DockerMessage>,
     spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
     timestamps: bool,
-    binate: Binate
+    binate: Binate,
 }
 
 impl DockerData {
@@ -168,7 +167,7 @@ impl DockerData {
                     app_data,
                     *is_running,
                     spawns,
-                    spawn_key
+                    spawn_key,
                 ))
             });
         }
@@ -265,9 +264,12 @@ impl DockerData {
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
             let key = SpawnId::Log(id.clone());
-            self.spawns.lock().insert(key, tokio::spawn(Self::update_log(
-                docker, id, timestamps, 0, app_data, spawns,
-            )));
+            self.spawns.lock().insert(
+                key,
+                tokio::spawn(Self::update_log(
+                    docker, id, timestamps, 0, app_data, spawns,
+                )),
+            );
         }
     }
 
@@ -292,7 +294,6 @@ impl DockerData {
             });
         };
         self.update_all_container_stats(&all_ids).await;
-        
     }
 
     /// Animate the loading icon
@@ -314,7 +315,7 @@ impl DockerData {
 
     // Initialize docker container data, before any messages are received
     async fn initialise_container_data(&mut self) {
-		let loading_uuid = Uuid::new_v4();
+        let loading_uuid = Uuid::new_v4();
         let loading_spin = self.loading_spin(loading_uuid).await;
 
         let all_ids = self.update_all_containers().await;
@@ -341,7 +342,7 @@ impl DockerData {
         while let Some(message) = self.receiver.recv().await {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
-			let loading_uuid = Uuid::new_v4();
+            let loading_uuid = Uuid::new_v4();
             match message {
                 DockerMessage::Pause(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
@@ -390,8 +391,8 @@ impl DockerData {
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Unpause));
                     };
-					// loading sping take uuid to remove
-					// stop_loading_sping(uuid)
+                    // loading sping take uuid to remove
+                    // stop_loading_sping(uuid)
                     self.stop_loading_spin(&loading_spin, loading_uuid);
                     self.update_everything().await;
                 }
@@ -427,7 +428,7 @@ impl DockerData {
                 spawns: Arc::new(Mutex::new(HashMap::new())),
                 timestamps: args.timestamp,
                 is_running,
-                binate: Binate::One
+                binate: Binate::One,
             };
             inner.initialise_container_data().await;
 
