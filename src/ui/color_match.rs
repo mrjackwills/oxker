@@ -6,7 +6,7 @@ pub mod log_sanitizer {
         text::{Span, Spans},
     };
 
-    /// Attempt to colorize the given string to tui-rs standars
+    /// Attempt to colorize the given string to tui-rs standards
     pub fn colorize_logs(input: &str) -> Vec<Spans<'static>> {
         vec![Spans::from(
             categorise_text(input)

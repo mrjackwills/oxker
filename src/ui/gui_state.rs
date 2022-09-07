@@ -1,5 +1,9 @@
-use std::{collections::HashMap, fmt};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 use tui::layout::{Constraint, Rect};
+use uuid::Uuid;
 
 use crate::app_data::Header;
 
@@ -8,6 +12,30 @@ pub enum SelectablePanel {
     Containers,
     Commands,
     Logs,
+}
+
+impl SelectablePanel {
+    pub const fn title(self) -> &'static str {
+        match self {
+            Self::Containers => "Containers",
+            Self::Logs => "Logs",
+            Self::Commands => "",
+        }
+    }
+    pub fn next(self) -> Self {
+        match self {
+            Self::Containers => Self::Commands,
+            Self::Commands => Self::Logs,
+            Self::Logs => Self::Containers,
+        }
+    }
+    pub fn prev(self) -> Self {
+        match self {
+            Self::Containers => Self::Logs,
+            Self::Commands => Self::Containers,
+            Self::Logs => Self::Commands,
+        }
+    }
 }
 
 pub enum Region {
@@ -93,7 +121,8 @@ impl BoxLocation {
     }
 }
 
-#[derive(Debug, Clone)]
+/// State for the loading animation
+#[derive(Debug, Clone, Copy)]
 pub enum Loading {
     One,
     Two,
@@ -108,7 +137,7 @@ pub enum Loading {
 }
 
 impl Loading {
-    pub const fn next(&self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::One => Self::Two,
             Self::Two => Self::Three,
@@ -127,57 +156,28 @@ impl Loading {
 impl fmt::Display for Loading {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = match self {
-            Self::One => "⠋",
-            Self::Two => "⠙",
-            Self::Three => "⠹",
-            Self::Four => "⠸",
-            Self::Five => "⠼",
-            Self::Six => "⠴",
-            Self::Seven => "⠦",
-            Self::Eight => "⠧",
-            Self::Nine => "⠇",
-            Self::Ten => "⠏",
+            Self::One => '⠋',
+            Self::Two => '⠙',
+            Self::Three => '⠹',
+            Self::Four => '⠸',
+            Self::Five => '⠼',
+            Self::Six => '⠴',
+            Self::Seven => '⠦',
+            Self::Eight => '⠧',
+            Self::Nine => '⠇',
+            Self::Ten => '⠏',
         };
         write!(f, "{}", disp)
-    }
-}
-
-impl SelectablePanel {
-    pub const fn title(self) -> &'static str {
-        match self {
-            Self::Containers => "Containers",
-            Self::Logs => "Logs",
-            Self::Commands => "",
-        }
-    }
-    pub const fn next(self) -> Self {
-        match self {
-            Self::Containers => Self::Commands,
-            Self::Commands => Self::Logs,
-            Self::Logs => Self::Containers,
-        }
-    }
-    pub const fn prev(self) -> Self {
-        match self {
-            Self::Containers => Self::Logs,
-            Self::Commands => Self::Containers,
-            Self::Logs => Self::Commands,
-        }
     }
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 pub struct GuiState {
-    // Think this should be a BMapTree, so can define order when iterating over potential intersects
-    // Is an issue if two panels are in the same space, sush as a smaller panel embedded, yet infront of, a larger panel
-    // If a BMapTree think it would mean have to implement ordering for SelectablePanel
     panel_map: HashMap<SelectablePanel, Rect>,
     heading_map: HashMap<Header, Rect>,
     loading_icon: Loading,
-    // Should be a vec, each time loading add a new to the vec, and reset remove from vec
-    // for for if is_loading just check if vec is empty or not
-    is_loading: bool,
+    is_loading: HashSet<Uuid>,
     pub selected_panel: SelectablePanel,
     pub show_help: bool,
     pub info_box_text: Option<String>,
@@ -191,7 +191,7 @@ impl GuiState {
             loading_icon: Loading::One,
             selected_panel: SelectablePanel::Containers,
             show_help: false,
-            is_loading: false,
+            is_loading: HashSet::new(),
             info_box_text: None,
         }
     }
@@ -251,14 +251,14 @@ impl GuiState {
     }
 
     /// Advance loading animation
-    pub fn next_loading(&mut self) {
+    pub fn next_loading(&mut self, uuid: Uuid) {
         self.loading_icon = self.loading_icon.next();
-        self.is_loading = true;
+        self.is_loading.insert(uuid);
     }
 
     /// if is_loading, return loading animation frame, else single space
     pub fn get_loading(&mut self) -> String {
-        if self.is_loading {
+        if !self.is_loading.is_empty() {
             self.loading_icon.to_string()
         } else {
             String::from(" ")
@@ -266,8 +266,8 @@ impl GuiState {
     }
 
     /// set is_loading to false, but keep animation frame at same state
-    pub fn reset_loading(&mut self) {
-        self.is_loading = false;
+    pub fn remove_loading(&mut self, uuid: Uuid) {
+        self.is_loading.remove(&uuid);
     }
 
     /// Set info box content

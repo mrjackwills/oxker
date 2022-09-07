@@ -20,7 +20,7 @@ pub struct AppData {
     sorted_by: Option<(Header, SortedOrder)>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SortedOrder {
     Asc,
     Desc,
@@ -410,7 +410,7 @@ impl AppData {
     }
 
     /// Update, or insert, containers
-    pub fn update_containers(&mut self, containers: &[ContainerSummary]) {
+    pub fn update_containers(&mut self, containers: &mut [ContainerSummary]) {
         let all_ids = self.get_all_ids();
 
         if !containers.is_empty() && self.containers.state.selected().is_none() {
@@ -435,29 +435,33 @@ impl AppData {
             }
         }
 
-        for i in containers.iter() {
+        for i in containers.iter_mut() {
             if let Some(id) = i.id.as_ref() {
-                let mut name = i
-                    .names
-                    .as_ref()
-                    .unwrap_or(&vec!["".to_owned()])
-                    .get(0)
-                    .unwrap_or(&String::from(""))
-                    .clone();
-                if let Some(c) = name.chars().next() {
-                    if c == '/' {
-                        name.remove(0);
-                    }
-                }
+                // maybe if no name then continue?
+                let name = i.names.as_mut().map_or("".to_owned(), |n| {
+                    n.get_mut(0).map_or("".to_owned(), |f| {
+                        if f.starts_with('/') {
+                            f.remove(0);
+                        }
+                        f.clone()
+                    })
+                });
 
-                let state = State::from(i.state.as_ref().unwrap_or(&"dead".to_owned()).trim());
+                let state = State::from(
+                    i.state
+                        .as_ref()
+                        .map_or("dead".to_owned(), |f| f.trim().to_owned()),
+                );
                 let status = i
                     .status
                     .as_ref()
-                    .unwrap_or(&"".to_owned())
-                    .trim()
-                    .to_owned();
-                let image = i.image.as_ref().unwrap_or(&"".to_owned()).trim().to_owned();
+                    .map_or("".to_owned(), |f| f.trim().to_owned());
+
+                let image = i
+                    .image
+                    .as_ref()
+                    .map_or("".to_owned(), std::clone::Clone::clone);
+
                 if let Some(current_container) = self.get_container_by_id(id) {
                     if current_container.name != name {
                         current_container.name = name;
@@ -478,9 +482,13 @@ impl AppData {
                         current_container.state = state;
                     };
                     if current_container.image != image {
+                        // limit image name to 64 chars?
+                        // current_container.image = image.chars().into_iter().take(64).collect();
                         current_container.image = image;
                     };
                 } else {
+                    // limit image name to 64 chars?
+                    // let mut container = ContainerItem::new(id.clone(), status,  image.chars().into_iter().take(64).collect(), state, name);
                     let mut container = ContainerItem::new(id.clone(), status, image, state, name);
                     container.logs.end();
                     self.containers.items.push(container);
@@ -511,7 +519,7 @@ impl AppData {
             }
 
             if container.logs.state.selected().is_none()
-                || container.logs.state.selected().unwrap_or_default() + 1 == current_len
+                || container.logs.state.selected().map_or(1, |f| f + 1) == current_len
             {
                 container.logs.end();
             }

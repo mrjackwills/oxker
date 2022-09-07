@@ -28,6 +28,7 @@ use ui::{create_ui, GuiState};
 
 fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+    // TODO write to file?
 }
 
 #[tokio::main]
@@ -99,6 +100,7 @@ async fn main() {
         .unwrap_or(());
     } else {
         loop {
+            // TODO this needs to be improved to display something useful
             info!("in debug mode");
             tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
         }

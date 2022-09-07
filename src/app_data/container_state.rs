@@ -78,7 +78,7 @@ impl<T> StatefulList<T> {
 }
 
 /// States of the container
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd)]
 pub enum State {
     Dead,
     Exited,
@@ -109,6 +109,20 @@ impl State {
             Self::Exited => "e",
             Self::Dead => "f",
             Self::Unknown => "g",
+        }
+    }
+}
+
+impl From<String> for State {
+    fn from(input: String) -> Self {
+        match input.as_ref() {
+            "dead" => Self::Dead,
+            "exited" => Self::Exited,
+            "paused" => Self::Paused,
+            "removing" => Self::Removing,
+            "restarting" => Self::Restarting,
+            "running" => Self::Running,
+            _ => Self::Unknown,
         }
     }
 }

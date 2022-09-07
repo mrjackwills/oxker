@@ -1,32 +1,37 @@
 <p align="center">
- <img src='./.github/logo.svg' width='125px'/>
+	<img src='./.github/logo.svg' width='100px'/>
 </p>
 
 <p align="center">
- <h1 align="center">oxker</h1>
+	<h1 align="center">oxker</h1>
 </p>
 
 <p align="center">
- A simple tui to view & control docker containers
+	A simple tui to view & control docker containers
 </p>
 
 <p align="center">
- Built in <a href='https://www.rust-lang.org/' target='_blank' rel='noopener noreferrer'>Rust</a>, making heavy use of <a href='https://github.com/fdehau/tui-rs' target='_blank' rel='noopener noreferrer'>tui-rs</a> & <a href='https://github.com/fussybeaver/bollard' target='_blank' rel='noopener noreferrer'>Bollard</a>
+	Built in <a href='https://www.rust-lang.org/' target='_blank' rel='noopener noreferrer'>Rust</a>, making heavy use of <a href='https://github.com/fdehau/tui-rs' target='_blank' rel='noopener noreferrer'>tui-rs</a> & <a href='https://github.com/fussybeaver/bollard' target='_blank' rel='noopener noreferrer'>Bollard</a>
 </p>
 
 <p align="center">
-	<a href="https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.jpg" target='_blank' rel='noopener noreferrer'>
-		<img src='./.github/screenshot_01.jpg' width='100%'/>
+	<a href="https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.png" target='_blank' rel='noopener noreferrer'>
+		<img src='./.github/screenshot_01.png' width='100%'/>
 	</a>
 </p>
+
+## Run via Docker
+
+Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64v8`, and `linux/armv6`
+
+`docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro mrjackwills/oxker:latest`
 
 
 ## Download & install
 
-Now published on <a href='https://www.crates.io/crates/oxker' target='_blank' rel='noopener noreferrer'>crates.io</a>, so if you have cargo installed, simply run
+Published on <a href='https://www.crates.io/crates/oxker' target='_blank' rel='noopener noreferrer'>crates.io</a>, so if you have cargo installed, simply run
 
-``` cargo install oxker```
-
+```cargo install oxker```
 
 else see the <a href="https://github.com/mrjackwills/oxker/releases/latest" target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
 
@@ -107,11 +112,8 @@ using docker-compose.yml;
 
 or individually
 
-
 ```docker run --name redis -d redis:alpine3.16```
 
 ```docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine3.16```
 
 ```docker run -d --hostname my-rabbit --name rabbitmq rabbitmq:3```
-
-
