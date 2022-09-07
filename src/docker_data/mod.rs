@@ -79,9 +79,9 @@ impl DockerData {
         cpu_percentage
     }
 
-    /// Get a single docker stat in order to update mem and cpu usage
+	/// Get a single docker stat in order to update mem and cpu usage
     /// don't take &self, so that can tokio::spawn into it's own thread
-    /// remove from spawns hashmap when complete
+    /// remove if from spawns hashmap when complete
     async fn update_container_stat(
         docker: Arc<Docker>,
         id: String,
@@ -146,17 +146,19 @@ impl DockerData {
             let spawns = Arc::clone(&self.spawns);
             let is_running = *is_running;
             let id = id.clone();
-            let key = SpawnId::Stats(id.clone());
 
-            self.spawns.lock().entry(key).or_insert_with(|| {
-                tokio::spawn(Self::update_container_stat(
-                    docker,
-                    id.clone(),
-                    app_data,
-                    is_running,
-                    spawns,
-                ))
-            });
+            let key = SpawnId::Stats(id.clone());
+            let spawn_contains_id = spawns.lock().contains_key(&key);
+            let s = tokio::spawn(Self::update_container_stat(
+                docker,
+                id.clone(),
+                app_data,
+                is_running,
+                spawns,
+            ));
+            if !spawn_contains_id {
+                self.spawns.lock().insert(key, s);
+            }
         }
     }
 
@@ -250,12 +252,10 @@ impl DockerData {
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
             let key = SpawnId::Log(id.clone());
-            self.spawns.lock().insert(
-                key,
-                tokio::spawn(Self::update_log(
-                    docker, id, timestamps, 0, app_data, spawns,
-                )),
-            );
+			let join_handle = tokio::spawn(Self::update_log(
+				docker, id, timestamps, 0, app_data, spawns,
+			));
+            self.spawns.lock().insert(key, join_handle);
         }
     }
 

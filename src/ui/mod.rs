@@ -106,6 +106,7 @@ async fn run_app<B: Backend + Send>(
     } else {
         let mut now = Instant::now();
         loop {
+		
             if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
                 return Err(AppError::Terminal);
             }
