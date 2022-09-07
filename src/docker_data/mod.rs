@@ -31,7 +31,7 @@ enum SpawnId {
 }
 
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
-/// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container to be inserted into the hashmap
+/// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
 /// Binate value is toggled when all join handles have been spawned off
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 enum Binate {
@@ -172,7 +172,7 @@ impl DockerData {
                 ))
             });
         }
-        self.binate.toggle()
+        self.binate.toggle();
     }
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
