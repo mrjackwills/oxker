@@ -143,8 +143,8 @@ impl InputHandler {
 
         if show_error {
             match key_code {
-                KeyCode::Char('q') => self.quit().await,
-                KeyCode::Char('c') => {
+                KeyCode::Char('q') | KeyCode::Char('Q') => self.quit().await,
+                KeyCode::Char('c') | KeyCode::Char('C') => {
                     self.app_data.lock().show_error = false;
                     self.app_data.lock().remove_error();
                 }
@@ -152,9 +152,9 @@ impl InputHandler {
             }
         } else if show_info {
             match key_code {
-                KeyCode::Char('q') => self.quit().await,
-                KeyCode::Char('h') => self.gui_state.lock().show_help = false,
-                KeyCode::Char('m') => self.m_button(),
+                KeyCode::Char('q') | KeyCode::Char('Q') => self.quit().await,
+                KeyCode::Char('h') | KeyCode::Char('H') => self.gui_state.lock().show_help = false,
+                KeyCode::Char('m') | KeyCode::Char('M') => self.m_button(),
                 _ => (),
             }
         } else {
@@ -169,9 +169,9 @@ impl InputHandler {
                 KeyCode::Char('7') => self.sort(Header::Image),
                 KeyCode::Char('8') => self.sort(Header::Rx),
                 KeyCode::Char('9') => self.sort(Header::Tx),
-                KeyCode::Char('q') => self.quit().await,
-                KeyCode::Char('h') => self.gui_state.lock().show_help = true,
-                KeyCode::Char('m') => self.m_button(),
+                KeyCode::Char('q') | KeyCode::Char('Q') => self.quit().await,
+                KeyCode::Char('h') | KeyCode::Char('H') => self.gui_state.lock().show_help = true,
+                KeyCode::Char('m') | KeyCode::Char('M') => self.m_button(),
                 KeyCode::Tab => {
                     // Skip control panel if no containers, could be refactored
                     let has_containers = self.app_data.lock().get_container_len() == 0;
@@ -216,13 +216,13 @@ impl InputHandler {
                         SelectablePanel::Commands => locked_data.docker_command_end(),
                     }
                 }
-                KeyCode::Up | KeyCode::Char('k') => self.previous(),
+                KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('K') => self.previous(),
                 KeyCode::PageUp => {
                     for _ in 0..=6 {
                         self.previous();
                     }
                 }
-                KeyCode::Down | KeyCode::Char('j') => self.next(),
+                KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('J') => self.next(),
                 KeyCode::PageDown => {
                     for _ in 0..=6 {
                         self.next();
