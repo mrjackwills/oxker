@@ -19,7 +19,7 @@
 
 Images built for `linux/amd64`, `linux/arm64v8`, and `linux/armv6`
 
-`docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro mrjackwills/oxker:latest`
+`docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker`
 
 ## Help
 
