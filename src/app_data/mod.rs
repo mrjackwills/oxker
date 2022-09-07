@@ -443,7 +443,7 @@ impl AppData {
                         if f.starts_with('/') {
                             f.remove(0);
                         }
-                        f.to_string()
+                        f.clone()
                     })
                 });
 
@@ -457,7 +457,7 @@ impl AppData {
                     .as_ref()
                     .map_or("".to_owned(), |f| f.trim().to_owned());
 
-                let image = i.image.as_ref().map_or("".to_owned(), |f| f.clone());
+                let image = i.image.as_ref().map_or("".to_owned(), std::clone::Clone::clone);
 
                 if let Some(current_container) = self.get_container_by_id(id) {
                     if current_container.name != name {
