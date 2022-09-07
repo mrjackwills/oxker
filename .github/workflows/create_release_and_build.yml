@@ -9,6 +9,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+
+      # Publish to crates.io
+      - name: publish to crates.io
+        uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
       
       # Build for linux x86_64
       - name: build release linux_x86_64
@@ -20,7 +27,7 @@ jobs:
         run: tar -C target/release -czf ./oxker_linux_x86_64.tar.gz oxker
 
       # Build for linux aarch64, aka 64 bit pi 4
-      - name: build release armv7
+      - name: build release arm64v8
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -81,12 +88,6 @@ jobs:
           -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:latest \
           --push  \
           -f containerised/Dockerfile .
-
-      # Publish to crates.io
-      - name: publish to crates.io
-        uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
 
       - name: Release
         uses: softprops/action-gh-release@v1
