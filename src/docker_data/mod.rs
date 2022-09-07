@@ -7,7 +7,6 @@ use futures_util::StreamExt;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
-    fmt,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -24,19 +23,28 @@ use crate::{
 mod message;
 pub use message::DockerMessage;
 
+
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 enum SpawnId {
-    Stats(String),
+    Stats((String, Binate)),
     Log(String),
 }
 
-impl fmt::Display for SpawnId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let disp = match self {
-            Self::Stats(id) => format!("stats::{id}"),
-            Self::Log(id) => format!("logs::{id}"),
+/// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
+/// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
+/// Binate value is toggled when all join handles have been spawned off
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+enum Binate {
+    One,
+    Two
+}
+
+impl Binate {
+    fn toggle(&mut self) {
+        *self = match self {
+            Self::One => Self::Two,
+            Self::Two => Self::One,
         };
-        write!(f, "{}", disp)
     }
 }
 
@@ -49,6 +57,7 @@ pub struct DockerData {
     receiver: Receiver<DockerMessage>,
     spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
     timestamps: bool,
+    binate: Binate
 }
 
 impl DockerData {
@@ -81,13 +90,14 @@ impl DockerData {
 
     /// Get a single docker stat in order to update mem and cpu usage
     /// don't take &self, so that can tokio::spawn into it's own thread
-    /// remove from spawns hashmap when complete
+    /// remove if from spawns hashmap when complete
     async fn update_container_stat(
         docker: Arc<Docker>,
         id: String,
         app_data: Arc<Mutex<AppData>>,
         is_running: bool,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
+        spawn_id: SpawnId,
     ) {
         let mut stream = docker
             .stats(
@@ -110,14 +120,15 @@ impl DockerData {
 
             let cpu_stats = Self::calculate_usage(&stats);
 
-            let no_bytes = (0, 0);
+            let no_bytes = || (0, 0);
+
             let (rx, tx) = if let Some(key) = some_key {
                 match stats.networks.unwrap_or_default().get(&key) {
-                    Some(data) => (data.rx_bytes.to_owned(), data.tx_bytes.to_owned()),
-                    None => no_bytes,
+                    Some(data) => (data.rx_bytes, data.tx_bytes),
+                    None => no_bytes(),
                 }
             } else {
-                no_bytes
+                no_bytes()
             };
 
             if is_running {
@@ -134,7 +145,7 @@ impl DockerData {
                     .lock()
                     .update_stats(&id, None, None, mem_limit, rx, tx);
             }
-            spawns.lock().remove(&SpawnId::Stats(id.clone()));
+            spawns.lock().remove(&spawn_id);
         }
     }
 
@@ -146,8 +157,10 @@ impl DockerData {
             let spawns = Arc::clone(&self.spawns);
             let is_running = *is_running;
             let id = id.clone();
-            let key = SpawnId::Stats(id.clone());
 
+            let key = SpawnId::Stats((id.clone(), self.binate.clone()));
+
+            let spawn_key = key.clone();
             self.spawns.lock().entry(key).or_insert_with(|| {
                 tokio::spawn(Self::update_container_stat(
                     docker,
@@ -155,9 +168,11 @@ impl DockerData {
                     app_data,
                     is_running,
                     spawns,
+                    spawn_key
                 ))
             });
         }
+        self.binate.toggle();
     }
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
@@ -250,39 +265,34 @@ impl DockerData {
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
             let key = SpawnId::Log(id.clone());
-            self.spawns.lock().insert(
-                key,
-                tokio::spawn(Self::update_log(
-                    docker, id, timestamps, 0, app_data, spawns,
-                )),
-            );
+            self.spawns.lock().insert(key, tokio::spawn(Self::update_log(
+                docker, id, timestamps, 0, app_data, spawns,
+            )));
         }
     }
 
+    /// Update all cpu_mem, and selected container log (if a log update join_handle isn't currently being executed)
     async fn update_everything(&mut self) {
         let all_ids = self.update_all_containers().await;
         let optional_index = self.app_data.lock().get_selected_log_index();
         if let Some(index) = optional_index {
+            // this could be neater
             let id = self.app_data.lock().containers.items[index].id.clone();
-
             let key = SpawnId::Log(id.clone());
-            let running = self.spawns.lock().contains_key(&key);
 
-            if !running {
+            self.spawns.lock().entry(key).or_insert_with(|| {
                 let since = self.app_data.lock().containers.items[index].last_updated as i64;
                 let docker = Arc::clone(&self.docker);
                 let timestamps = self.timestamps;
-
                 let app_data = Arc::clone(&self.app_data);
                 let spawns = Arc::clone(&self.spawns);
-                let s = tokio::spawn(Self::update_log(
+                tokio::spawn(Self::update_log(
                     docker, id, timestamps, since, app_data, spawns,
-                ));
-                self.spawns.lock().insert(key, s);
-            }
+                ))
+            });
         };
-
         self.update_all_container_stats(&all_ids).await;
+        
     }
 
     /// Animate the loading icon
@@ -413,6 +423,7 @@ impl DockerData {
                 spawns: Arc::new(Mutex::new(HashMap::new())),
                 timestamps: args.timestamp,
                 is_running,
+                binate: Binate::One
             };
             inner.initialise_container_data().await;
 
