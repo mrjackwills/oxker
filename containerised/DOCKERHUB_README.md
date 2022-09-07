@@ -10,8 +10,8 @@
 </p>
 
 <p align="center">
-	<a href="https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.jpg" target='_blank' rel='noopener noreferrer'>
-		<img src='https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.jpg' width='60%'/>
+	<a href="https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.png" target='_blank' rel='noopener noreferrer'>
+		<img src='https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.png' width='60%'/>
 	</a>
 </p>
 
