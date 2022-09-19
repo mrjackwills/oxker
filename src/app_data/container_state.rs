@@ -7,6 +7,11 @@ use tui::{
 
 use super::Header;
 
+
+const ONE_KB: f64 = 1000.0;
+const ONE_MB: f64 = ONE_KB * 1000.0;
+const ONE_GB: f64 = ONE_MB * 1000.0;
+
 #[derive(Debug, Clone)]
 pub struct StatefulList<T> {
     pub state: ListState,
@@ -301,14 +306,12 @@ impl Stats for ByteStats {
 // convert from bytes to kB, MB, GB etc
 impl fmt::Display for ByteStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let one_kb = 1000.0;
-        let one_mb = one_kb * one_kb;
-        let one_gb = one_mb * 1000.0;
+		// TODO these can be consts outside of this definition
         let as_f64 = self.value as f64;
         let p = match as_f64 {
-            x if x >= one_gb => format!("{y:.2} GB", y = as_f64 / one_gb),
-            x if x >= one_kb => format!("{y:.2} MB", y = as_f64 / one_mb),
-            x if x >= one_mb => format!("{y:.2} kB", y = as_f64 / one_kb),
+            x if x >= ONE_GB => format!("{y:.2} GB", y = as_f64 / ONE_GB),
+            x if x >= ONE_MB => format!("{y:.2} MB", y = as_f64 / ONE_MB),
+            x if x >= ONE_KB => format!("{y:.2} kB", y = as_f64 / ONE_KB),
             _ => format!("{} B", self.value),
         };
         write!(f, "{:>x$}", p, x = f.width().unwrap_or(1))
