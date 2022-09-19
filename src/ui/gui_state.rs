@@ -22,14 +22,14 @@ impl SelectablePanel {
             Self::Commands => "",
         }
     }
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Containers => Self::Commands,
             Self::Commands => Self::Logs,
             Self::Logs => Self::Containers,
         }
     }
-    pub fn prev(self) -> Self {
+    pub const fn prev(self) -> Self {
         match self {
             Self::Containers => Self::Logs,
             Self::Commands => Self::Containers,
@@ -196,7 +196,7 @@ impl GuiState {
         }
     }
 
-    /// clear panels hash map, so on resize can fix the sizes for mouse clicks
+    /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
     pub fn clear_area_map(&mut self) {
         self.panel_map.clear();
     }
@@ -224,7 +224,7 @@ impl GuiState {
             .map(|data| data.0.clone())
     }
 
-    /// Insert, or updatem header area panel into heading_map
+    /// Insert, or updates header area panel into heading_map
     pub fn update_map(&mut self, region: Region, area: Rect) {
         match region {
             Region::Header(header) => self
@@ -258,10 +258,10 @@ impl GuiState {
 
     /// if is_loading, return loading animation frame, else single space
     pub fn get_loading(&mut self) -> String {
-        if !self.is_loading.is_empty() {
-            self.loading_icon.to_string()
-        } else {
+        if self.is_loading.is_empty() {
             String::from(" ")
+         } else {
+            self.loading_icon.to_string()
         }
     }
 
