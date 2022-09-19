@@ -1,13 +1,9 @@
 <p align="center">
 	<img src='./.github/logo.svg' width='100px'/>
-</p>
-
-<p align="center">
 	<h1 align="center">oxker</h1>
+	<div align="center">A simple tui to view & control docker containers</dive>
 </p>
 
-<p align="center">
-	A simple tui to view & control docker containers
 </p>
 
 <p align="center">
@@ -22,7 +18,7 @@
 
 ## Run via Docker
 
-Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64v8`, and `linux/armv6`
+Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
 
 `docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker`
 
@@ -51,12 +47,12 @@ rm oxker_linux_x86_64.tar.gz oxker
 In application controls
 | button| result|
 |--|--|
-| ```( tab )``` or ```( shift+tab )``` | Change panel, clicking on a panel also changes the selected panel|
-| ```( ↑ ↓ )``` or ```( j k )``` or ```(PgUp PgDown)``` or ```(Home End)```| Change selected line in selected panel, mouse scroll also changes selected line |
+| ```( tab )``` or ```( shift+tab )``` | change panel, clicking on a panel also changes the selected panel|
+| ```( ↑ ↓ )``` or ```( j k )``` or ```(PgUp PgDown)``` or ```(Home End)```| change selected line in selected panel, mouse scroll also changes selected line |
 | ```( enter )```| execute selected docker command|
 | ```( 1-9 )``` | sort containers by heading, clicking on headings also sorts the selected column |
 | ```( 0 )``` | stop sorting |
-| ```( h )``` | Show help menu |
+| ```( h )``` | toggle help menu |
 | ```( m )``` | toggle mouse capture - if disabled, text on screen can be selected|
 | ```( q )``` | to quit at any time |
 
@@ -65,10 +61,10 @@ Available command line arguments
 | argument|result|
 |--|--|
 |```-d [number > 0]```| set the minimum update interval for docker information, in ms, defaults to 1000 (1 second) |
-|```-r```| Show raw logs, by default oxker will remove ANSI formatting (conflicts with -c) |
-|```-c```| Attempt to color the logs (conflicts with -r) |
-|```-t```| Remove timestamps from each log entry |
-|```-g```| No tui, basically a pointless debugging mode, for now |
+|```-r```| show raw logs, by default oxker will remove ANSI formatting (conflicts with -c) |
+|```-c```| attempt to color the logs (conflicts with -r) |
+|```-t```| remove timestamps from each log entry |
+|```-g```| no tui, basically a pointless debugging mode, for now |
 
 ## Build step
 
