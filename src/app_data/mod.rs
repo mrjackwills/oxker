@@ -39,7 +39,7 @@ pub enum Header {
     Tx,
 }
 
-/// Convert errors into strings to display
+/// Convert Header enum into strings to display
 impl fmt::Display for Header {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = match self {
