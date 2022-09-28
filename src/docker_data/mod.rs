@@ -150,7 +150,7 @@ impl DockerData {
     }
 
     /// Update all stats, spawn each container into own tokio::spawn thread
-    async fn update_all_container_stats(&mut self, all_ids: &[(bool, String)]) {
+    fn update_all_container_stats(&mut self, all_ids: &[(bool, String)]) {
         for (is_running, id) in all_ids.iter() {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
@@ -256,7 +256,7 @@ impl DockerData {
     }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
-    async fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {
+    fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {
         for (_, id) in all_ids.iter() {
             let docker = Arc::clone(&self.docker);
             let timestamps = self.timestamps;
@@ -293,7 +293,7 @@ impl DockerData {
                 ))
             });
         };
-        self.update_all_container_stats(&all_ids).await;
+        self.update_all_container_stats(&all_ids);
     }
 
     /// Animate the loading icon
@@ -319,10 +319,10 @@ impl DockerData {
         let loading_spin = self.loading_spin(loading_uuid).await;
 
         let all_ids = self.update_all_containers().await;
-        self.update_all_container_stats(&all_ids).await;
+        self.update_all_container_stats(&all_ids);
 
         // Maybe only do a single one at first?
-        self.init_all_logs(&all_ids).await;
+        self.init_all_logs(&all_ids);
 
         if all_ids.is_empty() {
             self.initialised = true;
