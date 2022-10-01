@@ -168,7 +168,7 @@ pub fn containers<B: Backend>(
                     format!(
                         "{}{:>width$}",
                         MARGIN,
-                        i.id.chars().take(8).collect::<String>(),
+                        i.id.get().chars().take(8).collect::<String>(),
                         width = &widths.id.1
                     ),
                     blue,
@@ -343,6 +343,7 @@ fn make_chart<'a, T: Stats + Display>(
 }
 
 /// Draw heading bar at top of program, always visible
+#[allow(clippy::too_many_lines)]
 pub fn heading_bar<B: Backend>(
     area: Rect,
     columns: &Columns,
@@ -407,7 +408,7 @@ pub fn heading_bar<B: Backend>(
                 width = width - block.2
             ),
         };
-        let count = text.chars().count() as u16;
+        let count = u16::try_from(text.chars().count()).unwrap_or_default();
         let status = Paragraph::new(text)
             .block(block.0)
             .alignment(Alignment::Left);
@@ -437,12 +438,12 @@ pub fn heading_bar<B: Backend>(
 
     let suffix = if info_visible { "exit" } else { "show" };
     let info_text = format!("( h ) {} help {}", suffix, MARGIN);
-    let info_width = info_text.chars().count() as u16;
+    let info_width = info_text.chars().count();
 
-    let column_width = area.width - info_width;
+    let column_width = usize::from(area.width) - info_width;
     let column_width = if column_width > 0 { column_width } else { 1 };
     let splits = if has_containers {
-        vec![Constraint::Min(column_width), Constraint::Min(info_width)]
+        vec![Constraint::Min(column_width.try_into().unwrap_or_default()), Constraint::Min(info_width.try_into().unwrap_or_default())]
     } else {
         vec![Constraint::Percentage(100)]
     };
@@ -541,8 +542,8 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .border_style(Style::default().fg(Color::Black));
 
     let area = popup(
-        lines as u16,
-        max_line_width as u16,
+        lines,
+        max_line_width,
         f.size(),
         BoxLocation::MiddleCentre,
     );
@@ -551,9 +552,9 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .direction(Direction::Vertical)
         .constraints(
             [
-                Constraint::Max(NAME_TEXT.lines().count() as u16),
-                Constraint::Max(description_text.lines().count() as u16),
-                Constraint::Max(help_text.lines().count() as u16),
+                Constraint::Max(NAME_TEXT.lines().count().try_into().unwrap_or_default()),
+                Constraint::Max(description_text.lines().count().try_into().unwrap_or_default()),
+                Constraint::Max(help_text.lines().count().try_into().unwrap_or_default()),
             ]
             .as_ref(),
         )
@@ -605,8 +606,8 @@ pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<
         .alignment(Alignment::Center);
 
     let area = popup(
-        lines as u16,
-        max_line_width as u16,
+        lines,
+        max_line_width,
         f.size(),
         BoxLocation::MiddleCentre,
     );
@@ -634,8 +635,8 @@ pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
         .alignment(Alignment::Center);
 
     let area = popup(
-        lines as u16,
-        max_line_width as u16,
+        lines,
+        max_line_width,
         f.size(),
         BoxLocation::BottomRight,
     );
@@ -644,21 +645,21 @@ pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
 }
 
 /// draw a box in the one of the BoxLocations, based on max line width + number of lines
-fn popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocation) -> Rect {
+fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocation) -> Rect {
     // Make sure blank_space can't be an negative, as will crash
-    let blank_vertical = if r.height > text_lines {
-        (r.height - text_lines) / 2
+    let blank_vertical = if usize::from(r.height) > text_lines {
+        (usize::from(r.height) - text_lines) / 2
     } else {
         1
     };
-    let blank_horizontal = if r.width > text_width {
-        (r.width - text_width) / 2
+    let blank_horizontal = if usize::from(r.width) > text_width {
+        (usize::from(r.width) - text_width) / 2
     } else {
         1
     };
 
-    let v_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
-    let h_constraints = box_location.get_horizontal_constraints(blank_horizontal, text_width);
+    let v_constraints = box_location.get_vertical_constraints(blank_vertical.try_into().unwrap_or_default(), text_lines.try_into().unwrap_or_default());
+    let h_constraints = box_location.get_horizontal_constraints(blank_horizontal.try_into().unwrap_or_default(), text_width.try_into().unwrap_or_default());
 
     let indexes = box_location.get_indexes();
 

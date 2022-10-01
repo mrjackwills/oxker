@@ -4,6 +4,7 @@ use clap::Parser;
 use tracing::error;
 
 #[derive(Parser, Debug, Clone, Copy)]
+#[allow(clippy::struct_excessive_bools)]
 // #[command(help_template = FULL_TEMPLATE)]
 #[command(version, about)]
 pub struct CliArgs {
