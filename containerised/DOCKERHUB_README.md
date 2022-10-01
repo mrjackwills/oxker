@@ -2,7 +2,7 @@
 <p align="center">
 	<img src='https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/logo.svg' width='100px'/>
 	<h1 align="center">oxker</h1>
-	<div  align="center">
+	<div align="center">
 		A simple tui to view & control docker containers
 	</div>
 </p>

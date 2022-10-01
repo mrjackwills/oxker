@@ -24,7 +24,7 @@ use crate::{
 mod message;
 pub use message::DockerMessage;
 
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 enum SpawnId {
     Stats((String, Binate)),
     Log(String),
@@ -33,7 +33,7 @@ enum SpawnId {
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
 /// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
 /// Binate value is toggled when all join handles have been spawned off
-#[derive(Debug, Hash, Clone, PartialEq, Eq, Copy)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 enum Binate {
     One,
     Two,
@@ -61,7 +61,7 @@ pub struct DockerData {
 }
 
 impl DockerData {
-    /// Use docker stats for work out current cpu usage
+    /// Use docker stats to caluclate current cpu usage
     fn calculate_usage(stats: &Stats) -> f64 {
         let mut cpu_percentage = 0.0;
         let previous_cpu = stats.precpu_stats.cpu_usage.total_usage;

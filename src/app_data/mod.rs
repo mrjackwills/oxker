@@ -9,7 +9,7 @@ use crate::{app_error::AppError, parse_args::CliArgs, ui::log_sanitizer};
 pub use container_state::*;
 
 /// Global app_state, stored in an Arc<Mutex>
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AppData {
     args: CliArgs,
     error: Option<AppError>,
@@ -20,13 +20,13 @@ pub struct AppData {
     sorted_by: Option<(Header, SortedOrder)>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum SortedOrder {
     Asc,
     Desc,
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum Header {
     State,
     Status,
@@ -58,20 +58,19 @@ impl fmt::Display for Header {
 }
 
 impl AppData {
-    pub fn get_sorted(&self) -> Option<(Header, SortedOrder)> {
-        self.sorted_by.clone()
+    pub const fn get_sorted(&self) -> Option<(Header, SortedOrder)> {
+        self.sorted_by
     }
 
     /// Change the sorted order, also set the selected container state to match new order
     pub fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
-        let id = self.get_selected_container_id();
         self.sort_containers();
         self.containers.state.select(
             self.containers
                 .items
                 .iter()
-                .position(|i| Some(i.id.clone()) == id),
+                .position(|i| Some(i.id.clone()) == self.get_selected_container_id()),
         );
     }
     /// Generate a default app_state
@@ -106,8 +105,7 @@ impl AppData {
                 .state
                 .selected()
             {
-                output =
-                    Some(self.containers.items[index].docker_controls.items[control_index].clone());
+                output = Some(self.containers.items[index].docker_controls.items[control_index]);
             }
         }
         output
@@ -116,34 +114,42 @@ impl AppData {
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_next(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.next();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.docker_controls.next();
+            }
         }
     }
 
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_previous(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.previous();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.docker_controls.previous();
+            }
         }
     }
 
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_start(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.start();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.docker_controls.start();
+            }
         }
     }
 
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_end(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.end();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.docker_controls.end();
+            }
         }
     }
 
     /// return single app_state error
-    pub fn get_error(&self) -> Option<AppError> {
-        self.error.clone()
+    pub const fn get_error(&self) -> Option<AppError> {
+        self.error
     }
 
     /// remove single app_state error
@@ -177,19 +183,19 @@ impl AppData {
 
     /// Sort the containers vec, based on a heading, either ascending or descending
     pub fn sort_containers(&mut self) {
-        if let Some((head, so)) = self.sorted_by.as_ref() {
+        if let Some((head, ord)) = self.sorted_by.as_ref() {
             match head {
-                Header::State => match so {
+                Header::State => match ord {
                     SortedOrder::Desc => self
                         .containers
                         .items
-                        .sort_by(|a, b| a.state.order().cmp(b.state.order())),
+                        .sort_by(|a, b| a.state.order().cmp(&b.state.order())),
                     SortedOrder::Asc => self
                         .containers
                         .items
-                        .sort_by(|a, b| b.state.order().cmp(a.state.order())),
+                        .sort_by(|a, b| b.state.order().cmp(&a.state.order())),
                 },
-                Header::Status => match so {
+                Header::Status => match ord {
                     SortedOrder::Asc => self
                         .containers
                         .items
@@ -199,7 +205,7 @@ impl AppData {
                         .items
                         .sort_by(|a, b| b.status.cmp(&a.status)),
                 },
-                Header::Cpu => match so {
+                Header::Cpu => match ord {
                     SortedOrder::Asc => self
                         .containers
                         .items
@@ -209,7 +215,7 @@ impl AppData {
                         .items
                         .sort_by(|a, b| b.cpu_stats.back().cmp(&a.cpu_stats.back())),
                 },
-                Header::Memory => match so {
+                Header::Memory => match ord {
                     SortedOrder::Asc => self
                         .containers
                         .items
@@ -219,25 +225,25 @@ impl AppData {
                         .items
                         .sort_by(|a, b| b.mem_stats.back().cmp(&a.mem_stats.back())),
                 },
-                Header::Id => match so {
+                Header::Id => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.id.cmp(&b.id)),
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.id.cmp(&a.id)),
                 },
-                Header::Image => match so {
+                Header::Image => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.image.cmp(&b.image)),
                     SortedOrder::Desc => {
                         self.containers.items.sort_by(|a, b| b.image.cmp(&a.image));
                     }
                 },
-                Header::Name => match so {
+                Header::Name => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.name.cmp(&b.name)),
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.name.cmp(&a.name)),
                 },
-                Header::Rx => match so {
+                Header::Rx => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.rx.cmp(&b.rx)),
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.rx.cmp(&a.rx)),
                 },
-                Header::Tx => match so {
+                Header::Tx => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.tx.cmp(&b.tx)),
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.tx.cmp(&a.tx)),
                 },
@@ -268,28 +274,36 @@ impl AppData {
     /// select next selected log line
     pub fn log_next(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.next();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.logs.next();
+            }
         }
     }
 
     /// select previous selected log line
     pub fn log_previous(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.previous();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.logs.previous();
+            }
         }
     }
 
     /// select last selected log line
     pub fn log_end(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.end();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.logs.end();
+            }
         }
     }
 
     /// select first selected log line
     pub fn log_start(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.start();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.logs.start();
+            }
         }
     }
 
@@ -470,7 +484,7 @@ impl AppData {
                         current_container.status = status;
                     };
                     if current_container.state != state {
-                        current_container.docker_controls.items = DockerControls::gen_vec(&state);
+                        current_container.docker_controls.items = DockerControls::gen_vec(state);
 
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
                         match state {
@@ -488,7 +502,7 @@ impl AppData {
                     };
                 } else {
                     // limit image name to 64 chars?
-                    // let mut container = ContainerItem::new(id.clone(), status,  image.chars().into_iter().take(64).collect(), state, name);
+                    // let mut container = ContainerItem::new(id.clone(), status, image.chars().into_iter().take(64).collect(), state, name);
                     let mut container = ContainerItem::new(id.clone(), status, image, state, name);
                     container.logs.end();
                     self.containers.items.push(container);
@@ -511,7 +525,7 @@ impl AppData {
                 let lines = if color {
                     log_sanitizer::colorize_logs(i)
                 } else if raw {
-                    log_sanitizer::raw(i.clone())
+                    log_sanitizer::raw(i)
                 } else {
                     log_sanitizer::remove_ansi(i)
                 };

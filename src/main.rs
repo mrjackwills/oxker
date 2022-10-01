@@ -35,27 +35,24 @@ fn setup_tracing() {
 async fn main() {
     setup_tracing();
     let args = CliArgs::new();
-    let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
+    let app_data = Arc::new(Mutex::new(AppData::default(args)));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
 
-    let docker_args = args.clone();
     let docker_app_data = Arc::clone(&app_data);
     let docker_gui_state = Arc::clone(&gui_state);
 
     let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(16);
 
     // Create docker daemon handler, and only spawn up the docker data handler if ping returns non-error
-
     match Docker::connect_with_socket_defaults() {
         Ok(docker) => {
-            let docker = Arc::new(docker);
-            match docker.ping().await {
-                Ok(_) => {
-                    let docker = Arc::clone(&docker);
+			match docker.ping().await {
+				Ok(_) => {
+					let docker = Arc::new(docker);
                     let is_running = Arc::clone(&is_running);
                     tokio::spawn(DockerData::init(
-                        docker_args,
+                        args,
                         docker_app_data,
                         docker,
                         docker_gui_state,
@@ -85,7 +82,7 @@ async fn main() {
         input_is_running,
     ));
 
-    // Debug mode for testing, mostly pointless, doesn't take terminal nor draw gui
+    
     if args.gui {
         let update_duration = std::time::Duration::from_millis(u64::from(args.docker_interval));
         create_ui(
@@ -99,8 +96,9 @@ async fn main() {
         .await
         .unwrap_or(());
     } else {
+		// Debug mode for testing, mostly pointless, doesn't take terminal nor draw gui
+		// TODO this needs to be improved to display something actually useful
         loop {
-            // TODO this needs to be improved to display something useful
             info!("in debug mode");
             tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
         }

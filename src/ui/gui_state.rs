@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::app_data::Header;
 
-#[derive(Debug, PartialEq, std::hash::Hash, std::cmp::Eq, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SelectablePanel {
     Containers,
     Commands,
@@ -38,6 +38,7 @@ impl SelectablePanel {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum Region {
     Panel(SelectablePanel),
     Header(Header),
@@ -72,7 +73,7 @@ impl BoxLocation {
         }
     }
 
-    // Should combine and just return a tuple?
+    // Should combine with get_vertical_constraints and just return a tuple of (vc, hc)?
     pub const fn get_horizontal_constraints(
         self,
         blank_vertical: u16,
@@ -221,7 +222,7 @@ impl GuiState {
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
             .get(0)
-            .map(|data| data.0.clone())
+            .map(|data| *data.0)
     }
 
     /// Insert, or updates header area panel into heading_map
@@ -260,7 +261,7 @@ impl GuiState {
     pub fn get_loading(&mut self) -> String {
         if self.is_loading.is_empty() {
             String::from(" ")
-         } else {
+        } else {
             self.loading_icon.to_string()
         }
     }

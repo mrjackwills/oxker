@@ -39,6 +39,8 @@ const REPO: &str = env!("CARGO_PKG_REPOSITORY");
 const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 const ORANGE: Color = Color::Rgb(255, 178, 36);
 const MARGIN: &str = "   ";
+const ARROW: &str = "▶ ";
+const CIRCLE: &str ="⚪ ";
 
 /// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
@@ -99,7 +101,7 @@ pub fn commands<B: Backend>(
         let items = List::new(items)
             .block(block)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-            .highlight_symbol("▶ ");
+            .highlight_symbol(ARROW);
 
         f.render_stateful_widget(
             items,
@@ -201,7 +203,7 @@ pub fn containers<B: Backend>(
         let items = List::new(items)
             .block(block)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-            .highlight_symbol("⚪ ");
+            .highlight_symbol(CIRCLE);
 
         f.render_stateful_widget(items, area, &mut app_data.lock().containers.state);
     }
@@ -237,7 +239,7 @@ pub fn logs<B: Backend>(
 
         let items = List::new(items)
             .block(block)
-            .highlight_symbol("▶ ")
+            .highlight_symbol(ARROW)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD));
         f.render_stateful_widget(
             items,
@@ -281,8 +283,8 @@ pub fn chart<B: Backend>(
                 .data(&mem.0)];
             let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
             let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
-            let cpu_chart = make_chart(&cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
-            let mem_chart = make_chart(&mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
+            let cpu_chart = make_chart(cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
+            let mem_chart = make_chart(mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
 
             f.render_widget(cpu_chart, area[0]);
             f.render_widget(mem_chart, area[1]);
@@ -292,7 +294,7 @@ pub fn chart<B: Backend>(
 
 /// Create charts
 fn make_chart<'a, T: Stats + Display>(
-    state: &State,
+    state: State,
     name: &'a str,
     dataset: Vec<Dataset<'a>>,
     current: &'a T,
@@ -340,14 +342,14 @@ fn make_chart<'a, T: Stats + Display>(
         )
 }
 
-/// Draw heading bar at top  of program, always visible
+/// Draw heading bar at top of program, always visible
 pub fn heading_bar<B: Backend>(
     area: Rect,
     columns: &Columns,
     f: &mut Frame<'_, B>,
     has_containers: bool,
     loading_icon: &str,
-    sorted_by: &Option<(Header, SortedOrder)>,
+    sorted_by: Option<(Header, SortedOrder)>,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = || Block::default().style(Style::default().bg(Color::Magenta).fg(Color::Black));
@@ -412,7 +414,7 @@ pub fn heading_bar<B: Backend>(
         (status, count)
     };
 
-    // Meta data for iterate over to create blocks and correct widths
+    // Meta data to iterate over to create blocks with correct widths
     let header_meta = [
         (Header::State, columns.state.1),
         (Header::Status, columns.status.1),
@@ -429,7 +431,7 @@ pub fn heading_bar<B: Backend>(
         .iter()
         .map(|i| {
             let header_block = gen_header(&i.0, i.1);
-            (header_block.0, i.0.clone(), Constraint::Max(header_block.1))
+            (header_block.0, i.0, Constraint::Max(header_block.1))
         })
         .collect::<Vec<_>>();
 
@@ -469,11 +471,12 @@ pub fn heading_bar<B: Backend>(
         .block(block())
         .alignment(Alignment::Right);
 
+	// If no containers, don't display the headers, could maybe do this first?
     let index = if has_containers { 1 } else { 0 };
     f.render_widget(paragraph, split_bar[index]);
 }
 
-/// From a given &String, return the maximum number of chars on a single line
+/// From a given &str, return the maximum number of chars on a single line
 fn max_line_width(text: &str) -> usize {
     let mut max_line_width = 0;
     text.lines().into_iter().for_each(|line| {
@@ -486,6 +489,7 @@ fn max_line_width(text: &str) -> usize {
 }
 
 /// Draw the help box in the centre of the screen
+/// TODO this is message, should make every line it's own renderable span
 pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 
@@ -564,7 +568,7 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
 }
 
 /// Draw an error popup over whole screen
-pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: &AppError, seconds: Option<u8>) {
+pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<u8>) {
     let block = Block::default()
         .title(" Error ")
         .border_type(BorderType::Rounded)

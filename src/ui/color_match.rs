@@ -7,7 +7,7 @@ pub mod log_sanitizer {
     };
 
     /// Attempt to colorize the given string to tui-rs standards
-    pub fn colorize_logs(input: &str) -> Vec<Spans<'static>> {
+    pub fn colorize_logs<'a>(input: &str) -> Vec<Spans<'a>> {
         vec![Spans::from(
             categorise_text(input)
                 .into_iter()
@@ -40,17 +40,17 @@ pub mod log_sanitizer {
     }
 
     /// Remove all ansi formatting from a given string and create tui-rs spans
-    pub fn remove_ansi(input: &str) -> Vec<Spans<'static>> {
+    pub fn remove_ansi<'a>(input: &str) -> Vec<Spans<'a>> {
         let mut output = String::from("");
         for i in categorise_text(input) {
             output.push_str(i.text);
         }
-        raw(output)
+        raw(&output)
     }
 
     /// create tui-rs spans that exactly match the given strings
-    pub fn raw(input: String) -> Vec<Spans<'static>> {
-        vec![Spans::from(Span::raw(input))]
+    pub fn raw<'a>(input: &str) -> Vec<Spans<'a>> {
+        vec![Spans::from(Span::raw(input.to_owned()))]
     }
 
     /// Change from ansi to tui colors

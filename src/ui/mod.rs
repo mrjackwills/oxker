@@ -93,7 +93,7 @@ async fn run_app<B: Backend + Send>(
                 break;
             }
             if terminal
-                .draw(|f| draw_blocks::error(f, &AppError::DockerConnect, Some(seconds)))
+                .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
                 .is_err()
             {
                 return Err(AppError::Terminal);
@@ -104,9 +104,11 @@ async fn run_app<B: Backend + Send>(
     } else {
         let mut now = Instant::now();
         loop {
-            if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
-                return Err(AppError::Terminal);
+			if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
+				return Err(AppError::Terminal);
             }
+			// TODO could only draw if in gui mode, that way all inputs & docker commands will run, and can just trace!("{event"}) all over the place
+			// refactor this into own function, so can be called without drawing to the terminal
             if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
@@ -213,7 +215,7 @@ fn ui<B: Backend>(
         f,
         has_containers,
         &loading_icon,
-        &sorted_by,
+        sorted_by,
         gui_state,
     );
 
@@ -233,6 +235,6 @@ fn ui<B: Backend>(
 
     if let Some(error) = has_error {
         app_data.lock().show_error = true;
-        draw_blocks::error(f, &error, None);
+        draw_blocks::error(f, error, None);
     }
 }

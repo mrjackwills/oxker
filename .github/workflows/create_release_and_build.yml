@@ -46,7 +46,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target:  arm-unknown-linux-musleabihf
+          target: arm-unknown-linux-musleabihf
           override: true
       - uses: actions-rs/cargo@v1
         with:
@@ -61,7 +61,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target:  x86_64-pc-windows-gnu 
+          target: x86_64-pc-windows-gnu 
           override: true
       - uses: actions-rs/cargo@v1
         with:
@@ -86,7 +86,7 @@ jobs:
         run: |
           docker build --platform linux/arm/v6,linux/arm64,linux/amd64 \
           -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:latest \
-          --push  \
+          --push \
           -f containerised/Dockerfile .
 
       - name: Release

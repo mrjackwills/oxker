@@ -3,7 +3,7 @@ use std::fmt;
 
 /// app errors to set in global state
 #[allow(unused)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum AppError {
     DockerConnect,
     DockerInterval,

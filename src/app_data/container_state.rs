@@ -7,7 +7,6 @@ use tui::{
 
 use super::Header;
 
-
 const ONE_KB: f64 = 1000.0;
 const ONE_MB: f64 = ONE_KB * 1000.0;
 const ONE_GB: f64 = ONE_MB * 1000.0;
@@ -25,6 +24,7 @@ impl<T> StatefulList<T> {
             items,
         }
     }
+
     pub fn end(&mut self) {
         let len = self.items.len();
         if len > 0 {
@@ -83,7 +83,7 @@ impl<T> StatefulList<T> {
 }
 
 /// States of the container
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd)]
 pub enum State {
     Dead,
     Exited,
@@ -95,7 +95,7 @@ pub enum State {
 }
 
 impl State {
-    pub const fn get_color(&self) -> Color {
+    pub const fn get_color(self) -> Color {
         match self {
             Self::Running => Color::Green,
             Self::Removing => Color::LightRed,
@@ -105,15 +105,15 @@ impl State {
         }
     }
     // Dirty way to create order for the state, rather than impl Ord
-    pub const fn order(&self) -> &'static str {
+    pub const fn order(self) -> u8 {
         match self {
-            Self::Running => "a",
-            Self::Paused => "b",
-            Self::Restarting => "c",
-            Self::Removing => "d",
-            Self::Exited => "e",
-            Self::Dead => "f",
-            Self::Unknown => "g",
+            Self::Running => 0,
+            Self::Paused => 1,
+            Self::Restarting => 2,
+            Self::Removing => 3,
+            Self::Exited => 4,
+            Self::Dead => 5,
+            Self::Unknown => 6,
         }
     }
 }
@@ -162,7 +162,7 @@ impl fmt::Display for State {
 }
 
 /// Items for the container control list
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum DockerControls {
     Pause,
     Unpause,
@@ -172,7 +172,7 @@ pub enum DockerControls {
 }
 
 impl DockerControls {
-    pub const fn get_color(&self) -> Color {
+    pub const fn get_color(self) -> Color {
         match self {
             Self::Start => Color::Green,
             Self::Stop => Color::Red,
@@ -182,7 +182,8 @@ impl DockerControls {
         }
     }
 
-    pub fn gen_vec(state: &State) -> Vec<Self> {
+	/// Docker commands available depending on the containers state
+    pub fn gen_vec(state: State) -> Vec<Self> {
         match state {
             State::Dead | State::Exited => vec![Self::Start, Self::Restart],
             State::Paused => vec![Self::Unpause, Self::Stop],
@@ -213,7 +214,7 @@ pub trait Stats {
 /// Struct for frequently updated CPU stats
 /// So can use custom display formatter
 /// Use trait Stats for use as generic in draw_chart function
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct CpuStats {
     value: f64,
 }
@@ -266,7 +267,7 @@ impl fmt::Display for CpuStats {
 /// Struct for frequently updated memory usage stats
 /// So can use custom display formatter
 /// Use trait Stats for use as generic in draw_chart function
-#[derive(Clone, Debug, Eq)]
+#[derive(Debug, Clone, Copy, Eq)]
 pub struct ByteStats {
     value: u64,
 }
@@ -303,10 +304,9 @@ impl Stats for ByteStats {
     }
 }
 
-// convert from bytes to kB, MB, GB etc
+/// convert from bytes to kB, MB, GB etc
 impl fmt::Display for ByteStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		// TODO these can be consts outside of this definition
         let as_f64 = self.value as f64;
         let p = match as_f64 {
             x if x >= ONE_GB => format!("{y:.2} GB", y = as_f64 / ONE_GB),
@@ -317,6 +317,10 @@ impl fmt::Display for ByteStats {
         write!(f, "{:>x$}", p, x = f.width().unwrap_or(1))
     }
 }
+
+
+pub type MemTuple = (Vec<(f64, f64)>, ByteStats, State);
+pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
 
 /// Info for each container
 #[derive(Debug, Clone)]
@@ -336,13 +340,10 @@ pub struct ContainerItem {
     pub status: String,
 }
 
-pub type MemTuple = (Vec<(f64, f64)>, ByteStats, State);
-pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
-
 impl ContainerItem {
     /// Create a new container item
     pub fn new(id: String, status: String, image: String, state: State, name: String) -> Self {
-        let mut docker_controls = StatefulList::new(DockerControls::gen_vec(&state));
+        let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
         Self {
             cpu_stats: VecDeque::with_capacity(60),
@@ -361,18 +362,18 @@ impl ContainerItem {
         }
     }
 
-    /// Find the max value in the last 30 items in the cpu stats vec
+    /// Find the max value in the cpu stats VecDeque
     fn max_cpu_stats(&self) -> CpuStats {
         match self.cpu_stats.iter().max() {
-            Some(value) => value.clone(),
+            Some(value) => *value,
             None => CpuStats::new(0.0),
         }
     }
 
-    /// Find the max value in the last 30 items in the mem stats vec
+    /// Find the max value in the mem stats VecDeque
     fn max_mem_stats(&self) -> ByteStats {
         match self.mem_stats.iter().max() {
-            Some(value) => value.clone(),
+            Some(value) => *value,
             None => ByteStats::new(0),
         }
     }
@@ -382,11 +383,11 @@ impl ContainerItem {
         self.cpu_stats
             .iter()
             .enumerate()
-            .map(|i| (i.0 as f64, i.1.value))
+            .map(|i| (i.0 as f64, i.1.value as f64))
             .collect::<Vec<_>>()
     }
 
-    /// Convert mem stats into a vec for the charts function
+    /// Convert mem stats into a Vec for the charts function
     fn get_mem_dataset(&self) -> Vec<(f64, f64)> {
         self.mem_stats
             .iter()
@@ -400,7 +401,7 @@ impl ContainerItem {
         (
             self.get_cpu_dataset(),
             self.max_cpu_stats(),
-            self.state.clone(),
+            self.state,
         )
     }
 
@@ -409,7 +410,7 @@ impl ContainerItem {
         (
             self.get_mem_dataset(),
             self.max_mem_stats(),
-            self.state.clone(),
+            self.state,
         )
     }
 
@@ -421,7 +422,7 @@ impl ContainerItem {
 }
 
 /// Container information panel headings + widths, for nice pretty formatting
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Columns {
     pub state: (Header, usize),
     pub status: (Header, usize),
