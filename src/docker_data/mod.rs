@@ -16,7 +16,7 @@ use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 use uuid::Uuid;
 
 use crate::{
-    app_data::{AppData, DockerControls},
+    app_data::{AppData, ContainerId, DockerControls},
     app_error::AppError,
     parse_args::CliArgs,
     ui::GuiState,
@@ -26,8 +26,8 @@ pub use message::DockerMessage;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 enum SpawnId {
-    Stats((String, Binate)),
-    Log(String),
+    Stats((ContainerId, Binate)),
+    Log(ContainerId),
 }
 
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
@@ -94,7 +94,7 @@ impl DockerData {
     /// remove if from spawns hashmap when complete
     async fn update_container_stat(
         docker: Arc<Docker>,
-        id: String,
+        id: ContainerId,
         app_data: Arc<Mutex<AppData>>,
         is_running: bool,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
@@ -102,7 +102,7 @@ impl DockerData {
     ) {
         let mut stream = docker
             .stats(
-                &id,
+                id.get(),
                 Some(StatsOptions {
                     stream: false,
                     one_shot: !is_running,
@@ -149,7 +149,7 @@ impl DockerData {
     }
 
     /// Update all stats, spawn each container into own tokio::spawn thread
-    fn update_all_container_stats(&mut self, all_ids: &[(bool, String)]) {
+    fn update_all_container_stats(&mut self, all_ids: &[(bool, ContainerId)]) {
         for (is_running, id) in all_ids.iter() {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
@@ -174,7 +174,7 @@ impl DockerData {
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
     /// Will ignore any container that contains `oxker` as an entry point
-    pub async fn update_all_containers(&mut self) -> Vec<(bool, String)> {
+    pub async fn update_all_containers(&mut self) -> Vec<(bool, ContainerId)> {
         let containers = self
             .docker
             .list_containers(Some(ListContainersOptions::<String> {
@@ -211,7 +211,7 @@ impl DockerData {
                     (
                         i.state == Some("running".to_owned())
                             || i.state == Some("restarting".to_owned()),
-                        id.clone(),
+                        ContainerId::from(id.as_str()),
                     )
                 })
             })
@@ -223,7 +223,7 @@ impl DockerData {
     /// remove if from spawns hashmap when complete
     async fn update_log(
         docker: Arc<Docker>,
-        id: String,
+        id: ContainerId,
         timestamps: bool,
         since: u64,
         app_data: Arc<Mutex<AppData>>,
@@ -232,11 +232,11 @@ impl DockerData {
         let options = Some(LogsOptions::<String> {
             stdout: true,
             timestamps,
-            since: since as i64,
+            since: i64::try_from(since).unwrap_or_default(),
             ..Default::default()
         });
 
-        let mut logs = docker.logs(&id, options);
+        let mut logs = docker.logs(id.get(), options);
         let mut output = vec![];
 
         while let Some(value) = logs.next().await {
@@ -252,7 +252,7 @@ impl DockerData {
     }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
-    fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {
+    fn init_all_logs(&mut self, all_ids: &[(bool, ContainerId)]) {
         for (_, id) in all_ids.iter() {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
@@ -349,7 +349,7 @@ impl DockerData {
             match message {
                 DockerMessage::Pause(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.pause_container(&id).await.is_err() {
+                    if docker.pause_container(id.get()).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Pause));
@@ -358,7 +358,7 @@ impl DockerData {
                 }
                 DockerMessage::Restart(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.restart_container(&id, None).await.is_err() {
+                    if docker.restart_container(id.get(), None).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Restart));
@@ -368,7 +368,7 @@ impl DockerData {
                 DockerMessage::Start(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker
-                        .start_container(&id, None::<StartContainerOptions<String>>)
+                        .start_container(id.get(), None::<StartContainerOptions<String>>)
                         .await
                         .is_err()
                     {
@@ -380,7 +380,7 @@ impl DockerData {
                 }
                 DockerMessage::Stop(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.stop_container(&id, None).await.is_err() {
+                    if docker.stop_container(id.get(), None).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Stop));
@@ -389,7 +389,7 @@ impl DockerData {
                 }
                 DockerMessage::Unpause(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.unpause_container(&id).await.is_err() {
+                    if docker.unpause_container(id.get()).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Unpause));

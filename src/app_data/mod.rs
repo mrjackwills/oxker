@@ -163,20 +163,14 @@ impl AppData {
     }
 
     /// Find the id of the currently selected container.
-    /// If any containers on system, will always return a string.
+    /// If any containers on system, will always return a container id
     /// Only returns None when no containers found.
-    pub fn get_selected_container_id(&self) -> Option<String> {
+    pub fn get_selected_container_id(&self) -> Option<ContainerId> {
         let mut output = None;
         if let Some(index) = self.containers.state.selected() {
-            let id = self
-                .containers
-                .items
-                .iter()
-                .skip(index)
-                .take(1)
-                .map(|i| i.id.clone())
-                .collect::<String>();
-            output = Some(id);
+            if let Some(x) = self.containers.items.get(index) {
+                output = Some(x.id.clone());
+            }
         }
         output
     }
@@ -307,7 +301,7 @@ impl AppData {
         }
     }
 
-    pub fn initialised(&mut self, all_ids: &[(bool, String)]) -> bool {
+    pub fn initialised(&mut self, all_ids: &[(bool, ContainerId)]) -> bool {
         let count_is_running = all_ids.iter().filter(|i| i.0).count();
         let number_with_cpu_status = self
             .containers
@@ -379,7 +373,7 @@ impl AppData {
     }
 
     /// Get all containers ids
-    pub fn get_all_ids(&self) -> Vec<String> {
+    pub fn get_all_ids(&self) -> Vec<ContainerId> {
         self.containers
             .items
             .iter()
@@ -388,14 +382,14 @@ impl AppData {
     }
 
     /// find container given id
-    fn get_container_by_id(&mut self, id: &str) -> Option<&mut ContainerItem> {
-        self.containers.items.iter_mut().find(|i| i.id == id)
+    fn get_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
+        self.containers.items.iter_mut().find(|i| &i.id == id)
     }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
     pub fn update_stats(
         &mut self,
-        id: &str,
+        id: &ContainerId,
         cpu_stat: Option<f64>,
         mem_stat: Option<u64>,
         mem_limit: u64,
@@ -435,7 +429,7 @@ impl AppData {
             if !containers
                 .iter()
                 .filter_map(|i| i.id.as_ref())
-                .any(|x| x == id)
+                .any(|x| ContainerId::from(x) == id.clone())
             {
                 // If removed container is currently selected, then change selected to previous
                 // This will default to 0 in any edge cases
@@ -476,7 +470,8 @@ impl AppData {
                     .as_ref()
                     .map_or("".to_owned(), std::clone::Clone::clone);
 
-                if let Some(current_container) = self.get_container_by_id(id) {
+                let id = ContainerId::from(id.as_str());
+                if let Some(current_container) = self.get_container_by_id(&id) {
                     if current_container.name != name {
                         current_container.name = name;
                     };
@@ -512,7 +507,7 @@ impl AppData {
     }
 
     /// update logs of a given container, based on id
-    pub fn update_log_by_id(&mut self, output: &[String], id: &str) {
+    pub fn update_log_by_id(&mut self, output: &[String], id: &ContainerId) {
         let tz = Self::get_systemtime();
         let color = self.args.color;
         let raw = self.args.raw;

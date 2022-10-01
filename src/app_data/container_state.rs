@@ -11,6 +11,45 @@ const ONE_KB: f64 = 1000.0;
 const ONE_MB: f64 = ONE_KB * 1000.0;
 const ONE_GB: f64 = ONE_MB * 1000.0;
 
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct ContainerId(String);
+
+impl From<String> for ContainerId {
+    fn from(x: String) -> Self {
+        Self(x)
+    }
+}
+
+impl From<&String> for ContainerId {
+    fn from(x: &String) -> Self {
+        Self(x.clone())
+    }
+}
+
+impl From<&str> for ContainerId {
+    fn from(x: &str) -> Self {
+        Self(x.to_owned())
+    }
+}
+
+impl ContainerId {
+    pub fn get(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl Ord for ContainerId {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl PartialOrd for ContainerId {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct StatefulList<T> {
     pub state: ListState,
@@ -326,7 +365,7 @@ pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
 pub struct ContainerItem {
     pub cpu_stats: VecDeque<CpuStats>,
     pub docker_controls: StatefulList<DockerControls>,
-    pub id: String,
+    pub id: ContainerId,
     pub image: String,
     pub last_updated: u64,
     pub logs: StatefulList<ListItem<'static>>,
@@ -341,7 +380,7 @@ pub struct ContainerItem {
 
 impl ContainerItem {
     /// Create a new container item
-    pub fn new(id: String, status: String, image: String, state: State, name: String) -> Self {
+    pub fn new(id: ContainerId, status: String, image: String, state: State, name: String) -> Self {
         let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
         Self {
