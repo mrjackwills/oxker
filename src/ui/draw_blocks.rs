@@ -40,7 +40,7 @@ const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 const ORANGE: Color = Color::Rgb(255, 178, 36);
 const MARGIN: &str = "   ";
 const ARROW: &str = "▶ ";
-const CIRCLE: &str ="⚪ ";
+const CIRCLE: &str = "⚪ ";
 
 /// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
@@ -471,7 +471,7 @@ pub fn heading_bar<B: Backend>(
         .block(block())
         .alignment(Alignment::Right);
 
-	// If no containers, don't display the headers, could maybe do this first?
+    // If no containers, don't display the headers, could maybe do this first?
     let index = if has_containers { 1 } else { 0 };
     f.render_widget(paragraph, split_bar[index]);
 }

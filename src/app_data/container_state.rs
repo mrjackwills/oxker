@@ -182,7 +182,7 @@ impl DockerControls {
         }
     }
 
-	/// Docker commands available depending on the containers state
+    /// Docker commands available depending on the containers state
     pub fn gen_vec(state: State) -> Vec<Self> {
         match state {
             State::Dead | State::Exited => vec![Self::Start, Self::Restart],
@@ -318,7 +318,6 @@ impl fmt::Display for ByteStats {
     }
 }
 
-
 pub type MemTuple = (Vec<(f64, f64)>, ByteStats, State);
 pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
 
@@ -398,20 +397,12 @@ impl ContainerItem {
 
     /// Get all cpu chart data
     fn get_cpu_chart_data(&self) -> CpuTuple {
-        (
-            self.get_cpu_dataset(),
-            self.max_cpu_stats(),
-            self.state,
-        )
+        (self.get_cpu_dataset(), self.max_cpu_stats(), self.state)
     }
 
     /// Get all mem chart data
     fn get_mem_chart_data(&self) -> MemTuple {
-        (
-            self.get_mem_dataset(),
-            self.max_mem_stats(),
-            self.state,
-        )
+        (self.get_mem_dataset(), self.max_mem_stats(), self.state)
     }
 
     /// Get chart info for cpu & memory in one function

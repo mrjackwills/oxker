@@ -46,23 +46,21 @@ async fn main() {
 
     // Create docker daemon handler, and only spawn up the docker data handler if ping returns non-error
     match Docker::connect_with_socket_defaults() {
-        Ok(docker) => {
-			match docker.ping().await {
-				Ok(_) => {
-					let docker = Arc::new(docker);
-                    let is_running = Arc::clone(&is_running);
-                    tokio::spawn(DockerData::init(
-                        args,
-                        docker_app_data,
-                        docker,
-                        docker_gui_state,
-                        docker_rx,
-                        is_running,
-                    ));
-                }
-                Err(_) => app_data.lock().set_error(AppError::DockerConnect),
+        Ok(docker) => match docker.ping().await {
+            Ok(_) => {
+                let docker = Arc::new(docker);
+                let is_running = Arc::clone(&is_running);
+                tokio::spawn(DockerData::init(
+                    args,
+                    docker_app_data,
+                    docker,
+                    docker_gui_state,
+                    docker_rx,
+                    is_running,
+                ));
             }
-        }
+            Err(_) => app_data.lock().set_error(AppError::DockerConnect),
+        },
         Err(_) => app_data.lock().set_error(AppError::DockerConnect),
     }
     let input_app_data = Arc::clone(&app_data);
@@ -82,7 +80,6 @@ async fn main() {
         input_is_running,
     ));
 
-    
     if args.gui {
         let update_duration = std::time::Duration::from_millis(u64::from(args.docker_interval));
         create_ui(
@@ -96,8 +93,8 @@ async fn main() {
         .await
         .unwrap_or(());
     } else {
-		// Debug mode for testing, mostly pointless, doesn't take terminal nor draw gui
-		// TODO this needs to be improved to display something actually useful
+        // Debug mode for testing, mostly pointless, doesn't take terminal nor draw gui
+        // TODO this needs to be improved to display something actually useful
         loop {
             info!("in debug mode");
             tokio::time::sleep(std::time::Duration::from_millis(5000)).await;

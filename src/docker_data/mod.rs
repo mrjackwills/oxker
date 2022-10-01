@@ -33,6 +33,7 @@ enum SpawnId {
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
 /// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
 /// Binate value is toggled when all join handles have been spawned off
+/// Also effectively means that if the docker_update interval minimum will be 1000ms
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 enum Binate {
     One,
@@ -113,22 +114,20 @@ impl DockerData {
             let mem_stat = stats.memory_stats.usage.unwrap_or(0);
             let mem_limit = stats.memory_stats.limit.unwrap_or(0);
 
-            let some_key = stats
+            let op_key = stats
                 .networks
                 .as_ref()
                 .and_then(|networks| networks.keys().next().cloned());
 
             let cpu_stats = Self::calculate_usage(&stats);
 
-            let no_bytes = || (0, 0);
-
-            let (rx, tx) = if let Some(key) = some_key {
+            let (rx, tx) = if let Some(key) = op_key {
                 match stats.networks.unwrap_or_default().get(&key) {
                     Some(data) => (data.rx_bytes, data.tx_bytes),
-                    None => no_bytes(),
+                    None => (0, 0),
                 }
             } else {
-                no_bytes()
+                (0, 0)
             };
 
             if is_running {
@@ -155,8 +154,6 @@ impl DockerData {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
-            let id = id.clone();
-
             let key = SpawnId::Stats((id.clone(), self.binate));
 
             let spawn_key = key.clone();
@@ -228,19 +225,18 @@ impl DockerData {
         docker: Arc<Docker>,
         id: String,
         timestamps: bool,
-        since: i64,
+        since: u64,
         app_data: Arc<Mutex<AppData>>,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
     ) {
         let options = Some(LogsOptions::<String> {
             stdout: true,
             timestamps,
-            since,
+            since: since as i64,
             ..Default::default()
         });
 
         let mut logs = docker.logs(&id, options);
-
         let mut output = vec![];
 
         while let Some(value) = logs.next().await {
@@ -259,15 +255,18 @@ impl DockerData {
     fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {
         for (_, id) in all_ids.iter() {
             let docker = Arc::clone(&self.docker);
-            let timestamps = self.timestamps;
-            let id = id.clone();
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
             let key = SpawnId::Log(id.clone());
             self.spawns.lock().insert(
                 key,
                 tokio::spawn(Self::update_log(
-                    docker, id, timestamps, 0, app_data, spawns,
+                    docker,
+                    id.clone(),
+                    self.timestamps,
+                    0,
+                    app_data,
+                    spawns,
                 )),
             );
         }
@@ -278,20 +277,24 @@ impl DockerData {
         let all_ids = self.update_all_containers().await;
         let optional_index = self.app_data.lock().get_selected_log_index();
         if let Some(index) = optional_index {
-            // this could be neater
-            let id = self.app_data.lock().containers.items[index].id.clone();
-            let key = SpawnId::Log(id.clone());
-
-            self.spawns.lock().entry(key).or_insert_with(|| {
-                let since = self.app_data.lock().containers.items[index].last_updated as i64;
-                let docker = Arc::clone(&self.docker);
-                let timestamps = self.timestamps;
-                let app_data = Arc::clone(&self.app_data);
-                let spawns = Arc::clone(&self.spawns);
-                tokio::spawn(Self::update_log(
-                    docker, id, timestamps, since, app_data, spawns,
-                ))
-            });
+            if let Some(container) = self.app_data.lock().containers.items.get(index) {
+                self.spawns
+                    .lock()
+                    .entry(SpawnId::Log(container.id.clone()))
+                    .or_insert_with(|| {
+                        let docker = Arc::clone(&self.docker);
+                        let app_data = Arc::clone(&self.app_data);
+                        let spawns = Arc::clone(&self.spawns);
+                        tokio::spawn(Self::update_log(
+                            docker,
+                            container.id.clone(),
+                            self.timestamps,
+                            container.last_updated,
+                            app_data,
+                            spawns,
+                        ))
+                    });
+            }
         };
         self.update_all_container_stats(&all_ids);
     }
@@ -391,8 +394,6 @@ impl DockerData {
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Unpause));
                     };
-                    // loading sping take uuid to remove
-                    // stop_loading_sping(uuid)
                     self.stop_loading_spin(&loading_spin, loading_uuid);
                     self.update_everything().await;
                 }

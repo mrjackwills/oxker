@@ -7,7 +7,7 @@ use tracing::error;
 // #[command(help_template = FULL_TEMPLATE)]
 #[command(version, about)]
 pub struct CliArgs {
-    /// Docker update interval in ms, minimum 1, reccomended 500+
+    /// Docker update interval in ms, minimum effectively 1000
     #[clap(short = 'd', value_name = "ms", default_value_t = 1000)]
     pub docker_interval: u32,
 
