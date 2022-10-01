@@ -253,7 +253,7 @@ pub trait Stats {
 /// Struct for frequently updated CPU stats
 /// So can use custom display formatter
 /// Use trait Stats for use as generic in draw_chart function
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct CpuStats {
     value: f64,
 }
@@ -306,7 +306,7 @@ impl fmt::Display for CpuStats {
 /// Struct for frequently updated memory usage stats
 /// So can use custom display formatter
 /// Use trait Stats for use as generic in draw_chart function
-#[derive(Debug, Clone, Copy, Eq)]
+#[derive(Debug, Default, Clone, Copy, Eq)]
 pub struct ByteStats {
     value: u64,
 }
@@ -390,11 +390,11 @@ impl ContainerItem {
             image,
             last_updated: 0,
             logs: StatefulList::new(vec![]),
-            mem_limit: ByteStats::new(0),
+            mem_limit: ByteStats::default(),
             mem_stats: VecDeque::with_capacity(60),
             name,
-            rx: ByteStats::new(0),
-            tx: ByteStats::new(0),
+            rx: ByteStats::default(),
+            tx: ByteStats::default(),
             state,
             status,
         }
@@ -404,7 +404,7 @@ impl ContainerItem {
     fn max_cpu_stats(&self) -> CpuStats {
         match self.cpu_stats.iter().max() {
             Some(value) => *value,
-            None => CpuStats::new(0.0),
+            None => CpuStats::default(),
         }
     }
 
@@ -412,7 +412,7 @@ impl ContainerItem {
     fn max_mem_stats(&self) -> ByteStats {
         match self.mem_stats.iter().max() {
             Some(value) => *value,
-            None => ByteStats::new(0),
+            None => ByteStats::default(),
         }
     }
 

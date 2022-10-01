@@ -138,7 +138,7 @@ pub fn containers<B: Backend>(
 
             let mems = format!(
                 "{:>1} / {:>1}",
-                i.mem_stats.back().unwrap_or(&ByteStats::new(0)),
+                i.mem_stats.back().unwrap_or(&ByteStats::default()),
                 i.mem_limit
             );
 
@@ -155,7 +155,7 @@ pub fn containers<B: Backend>(
                     format!(
                         "{}{:>width$}",
                         MARGIN,
-                        i.cpu_stats.back().unwrap_or(&CpuStats::new(0.0)),
+                        i.cpu_stats.back().unwrap_or(&CpuStats::default()),
                         width = &widths.cpu.1
                     ),
                     state_style,

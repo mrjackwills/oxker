@@ -328,12 +328,12 @@ impl AppData {
                 &container
                     .cpu_stats
                     .back()
-                    .unwrap_or(&CpuStats::new(0.0))
+                    .unwrap_or(&CpuStats::default())
                     .to_string(),
             );
             let mem_count = count(&format!(
                 "{} / {}",
-                container.mem_stats.back().unwrap_or(&ByteStats::new(0)),
+                container.mem_stats.back().unwrap_or(&ByteStats::default()),
                 container.mem_limit
             ));
 
