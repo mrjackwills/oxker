@@ -1,3 +1,16 @@
+
+### Chores
++ Update clap to v4, [15597dbe6942ec053541398ce0e9dedc10a4d3ea]
+
+### Docs
++ readme.md updated, [a05bf561cc6d96237f683ab0b3c782d6841974d9]
+
+### Refactors
++ Impl Copy where able to, [e76878f424d72b943713ef84e95e25fada77d79e]
++ async fn to just fn, [17dc604befac75cb9dc0311a0e43f9927fe0ca30]
+
+
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.4'>v0.1.4</a>
 ### 2022-09-07
 
