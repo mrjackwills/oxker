@@ -168,7 +168,13 @@ fn ui<B: Backend>(
     // Split into 3, containers+controls, logs, then graphs
     let upper_main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Max(height.try_into().unwrap_or_default()), Constraint::Percentage(50)].as_ref())
+        .constraints(
+            [
+                Constraint::Max(height.try_into().unwrap_or_default()),
+                Constraint::Percentage(50),
+            ]
+            .as_ref(),
+        )
         .split(whole_layout[1]);
 
     let top_split = if has_containers {

@@ -443,7 +443,10 @@ pub fn heading_bar<B: Backend>(
     let column_width = usize::from(area.width) - info_width;
     let column_width = if column_width > 0 { column_width } else { 1 };
     let splits = if has_containers {
-        vec![Constraint::Min(column_width.try_into().unwrap_or_default()), Constraint::Min(info_width.try_into().unwrap_or_default())]
+        vec![
+            Constraint::Min(column_width.try_into().unwrap_or_default()),
+            Constraint::Min(info_width.try_into().unwrap_or_default()),
+        ]
     } else {
         vec![Constraint::Percentage(100)]
     };
@@ -541,19 +544,20 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Black));
 
-    let area = popup(
-        lines,
-        max_line_width,
-        f.size(),
-        BoxLocation::MiddleCentre,
-    );
+    let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
 
     let split_popup = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
             [
                 Constraint::Max(NAME_TEXT.lines().count().try_into().unwrap_or_default()),
-                Constraint::Max(description_text.lines().count().try_into().unwrap_or_default()),
+                Constraint::Max(
+                    description_text
+                        .lines()
+                        .count()
+                        .try_into()
+                        .unwrap_or_default(),
+                ),
                 Constraint::Max(help_text.lines().count().try_into().unwrap_or_default()),
             ]
             .as_ref(),
@@ -605,12 +609,7 @@ pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = popup(
-        lines,
-        max_line_width,
-        f.size(),
-        BoxLocation::MiddleCentre,
-    );
+    let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
@@ -634,12 +633,7 @@ pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = popup(
-        lines,
-        max_line_width,
-        f.size(),
-        BoxLocation::BottomRight,
-    );
+    let area = popup(lines, max_line_width, f.size(), BoxLocation::BottomRight);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
@@ -658,8 +652,14 @@ fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocatio
         1
     };
 
-    let v_constraints = box_location.get_vertical_constraints(blank_vertical.try_into().unwrap_or_default(), text_lines.try_into().unwrap_or_default());
-    let h_constraints = box_location.get_horizontal_constraints(blank_horizontal.try_into().unwrap_or_default(), text_width.try_into().unwrap_or_default());
+    let v_constraints = box_location.get_vertical_constraints(
+        blank_vertical.try_into().unwrap_or_default(),
+        text_lines.try_into().unwrap_or_default(),
+    );
+    let h_constraints = box_location.get_horizontal_constraints(
+        blank_horizontal.try_into().unwrap_or_default(),
+        text_width.try_into().unwrap_or_default(),
+    );
 
     let indexes = box_location.get_indexes();
 

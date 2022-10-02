@@ -66,12 +66,12 @@ impl AppData {
     pub fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
         self.sort_containers();
-        self.containers.state.select(
-            self.containers
-                .items
-                .iter()
-                .position(|i| Some(i.id.clone()) == self.get_selected_container_id()),
-        );
+        self.containers
+            .state
+            .select(self.containers.items.iter().position(|i| {
+                self.get_selected_container_id()
+                    .map_or_else(|| false, |id| i.id == id)
+            }));
     }
     /// Generate a default app_state
     pub fn default(args: CliArgs) -> Self {

@@ -78,9 +78,8 @@ impl DockerData {
                     .cpu_stats
                     .cpu_usage
                     .percpu_usage
-                    .clone()
-                    .unwrap_or_default()
-                    .len() as u64
+                    .as_ref()
+                    .map_or_else(|| 0, |i| i.len()) as u64
             }) as f64;
             if system_delta > 0.0 && cpu_delta > 0.0 {
                 cpu_percentage = (cpu_delta / system_delta) * online_cpus * 100.0;
