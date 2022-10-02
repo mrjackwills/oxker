@@ -63,6 +63,7 @@ pub struct DockerData {
 
 impl DockerData {
     /// Use docker stats to caluclate current cpu usage
+    #[allow(clippy::cast_precision_loss)]
     fn calculate_usage(stats: &Stats) -> f64 {
         let mut cpu_percentage = 0.0;
         let previous_cpu = stats.precpu_stats.cpu_usage.total_usage;
@@ -79,7 +80,7 @@ impl DockerData {
                     .cpu_usage
                     .percpu_usage
                     .as_ref()
-                    .map_or_else(|| 0, |i| i.len()) as u64
+                    .map_or_else(|| 0, std::vec::Vec::len) as u64
             }) as f64;
             if system_delta > 0.0 && cpu_delta > 0.0 {
                 cpu_percentage = (cpu_delta / system_delta) * online_cpus * 100.0;
@@ -154,7 +155,6 @@ impl DockerData {
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
             let key = SpawnId::Stats((id.clone(), self.binate));
-
             let spawn_key = key.clone();
             self.spawns.lock().entry(key).or_insert_with(|| {
                 tokio::spawn(Self::update_container_stat(

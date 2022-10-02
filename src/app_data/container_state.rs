@@ -337,6 +337,8 @@ impl ByteStats {
         self.value = value;
     }
 }
+
+#[allow(clippy::cast_precision_loss)]
 impl Stats for ByteStats {
     fn get_value(&self) -> f64 {
         self.value as f64
@@ -346,7 +348,7 @@ impl Stats for ByteStats {
 /// convert from bytes to kB, MB, GB etc
 impl fmt::Display for ByteStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let as_f64 = self.value as f64;
+        let as_f64 = self.get_value();
         let p = match as_f64 {
             x if x >= ONE_GB => format!("{y:.2} GB", y = as_f64 / ONE_GB),
             x if x >= ONE_MB => format!("{y:.2} MB", y = as_f64 / ONE_MB),
@@ -383,13 +385,15 @@ impl ContainerItem {
     pub fn new(id: ContainerId, status: String, image: String, state: State, name: String) -> Self {
         let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
+        let mut logs = StatefulList::new(vec![]);
+        logs.end();
         Self {
             cpu_stats: VecDeque::with_capacity(60),
             docker_controls,
             id,
             image,
             last_updated: 0,
-            logs: StatefulList::new(vec![]),
+            logs,
             mem_limit: ByteStats::default(),
             mem_stats: VecDeque::with_capacity(60),
             name,
@@ -417,6 +421,7 @@ impl ContainerItem {
     }
 
     /// Convert cpu stats into a vec for the charts function
+    #[allow(clippy::cast_precision_loss)]
     fn get_cpu_dataset(&self) -> Vec<(f64, f64)> {
         self.cpu_stats
             .iter()
@@ -426,6 +431,7 @@ impl ContainerItem {
     }
 
     /// Convert mem stats into a Vec for the charts function
+    #[allow(clippy::cast_precision_loss)]
     fn get_mem_dataset(&self) -> Vec<(f64, f64)> {
         self.mem_stats
             .iter()

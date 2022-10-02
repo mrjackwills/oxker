@@ -10,11 +10,11 @@ pub mod log_sanitizer {
     pub fn colorize_logs<'a>(input: &str) -> Vec<Spans<'a>> {
         vec![Spans::from(
             categorise_text(input)
-                .into_iter()
+                .iter()
                 .map(|i| {
-                    let fg_color = color_ansi_to_tui(i.fg.unwrap_or(CansiColor::White));
-                    let bg_color = color_ansi_to_tui(i.bg.unwrap_or(CansiColor::Black));
-                    let style = Style::default().bg(bg_color).fg(fg_color);
+                    let style = Style::default()
+                        .bg(color_ansi_to_tui(i.fg.unwrap_or(CansiColor::White)))
+                        .fg(color_ansi_to_tui(i.bg.unwrap_or(CansiColor::Black)));
                     if i.blink.is_some() {
                         style.add_modifier(Modifier::SLOW_BLINK);
                     }

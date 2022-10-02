@@ -163,7 +163,7 @@ impl AppData {
     }
 
     /// Find the id of the currently selected container.
-    /// If any containers on system, will always return a container id
+    /// If any containers on system, will always return a ContainerId
     /// Only returns None when no containers found.
     pub fn get_selected_container_id(&self) -> Option<ContainerId> {
         let mut output = None;
@@ -323,6 +323,7 @@ impl AppData {
         let mut output = Columns::new();
         let count = |x: &String| x.chars().count();
 
+        // Should probably find a refactor here somewhere
         for container in &self.containers.items {
             let cpu_count = count(
                 &container
@@ -418,18 +419,18 @@ impl AppData {
     }
 
     /// Update, or insert, containers
-    pub fn update_containers(&mut self, containers: &mut [ContainerSummary]) {
+    pub fn update_containers(&mut self, all_containers: &mut [ContainerSummary]) {
         let all_ids = self.get_all_ids();
 
-        if !containers.is_empty() && self.containers.state.selected().is_none() {
+        if !all_containers.is_empty() && self.containers.state.selected().is_none() {
             self.containers.start();
         }
 
         for (index, id) in all_ids.iter().enumerate() {
-            if !containers
+            if !all_containers
                 .iter()
                 .filter_map(|i| i.id.as_ref())
-                .any(|x| ContainerId::from(x) == id.clone())
+                .any(|x| &ContainerId::from(x) == id)
             {
                 // If removed container is currently selected, then change selected to previous
                 // This will default to 0 in any edge cases
@@ -443,15 +444,14 @@ impl AppData {
             }
         }
 
-        for i in containers.iter_mut() {
+        for i in all_containers.iter_mut() {
             if let Some(id) = i.id.as_ref() {
-                // maybe if no name then continue?
                 let name = i.names.as_mut().map_or("".to_owned(), |n| {
                     n.get_mut(0).map_or("".to_owned(), |f| {
                         if f.starts_with('/') {
                             f.remove(0);
                         }
-                        f.clone()
+                        (*f).to_string()
                     })
                 });
 
@@ -470,36 +470,32 @@ impl AppData {
                     .as_ref()
                     .map_or("".to_owned(), std::clone::Clone::clone);
 
-                let id = ContainerId::from(id.as_str());
-                if let Some(current_container) = self.get_container_by_id(&id) {
-                    if current_container.name != name {
-                        current_container.name = name;
+                let id = ContainerId::from(id);
+                // If container info already in containers Vec, then just update details
+                if let Some(item) = self.get_container_by_id(&id) {
+                    if item.name != name {
+                        item.name = name;
                     };
-                    if current_container.status != status {
-                        current_container.status = status;
+                    if item.status != status {
+                        item.status = status;
                     };
-                    if current_container.state != state {
-                        current_container.docker_controls.items = DockerControls::gen_vec(state);
-
+                    if item.state != state {
+                        item.docker_controls.items = DockerControls::gen_vec(state);
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
                         match state {
                             State::Removing | State::Restarting | State::Unknown => {
-                                current_container.docker_controls.state.select(None);
+                                item.docker_controls.state.select(None);
                             }
-                            _ => current_container.docker_controls.start(),
+                            _ => item.docker_controls.start(),
                         };
-                        current_container.state = state;
+                        item.state = state;
                     };
-                    if current_container.image != image {
-                        // limit image name to 64 chars?
-                        // current_container.image = image.chars().into_iter().take(64).collect();
-                        current_container.image = image;
+                    if item.image != image {
+                        item.image = image;
                     };
+                // else container not known, so make new ContainerItem and push into containers Vec
                 } else {
-                    // limit image name to 64 chars?
-                    // let mut container = ContainerItem::new(id.clone(), status, image.chars().into_iter().take(64).collect(), state, name);
-                    let mut container = ContainerItem::new(id.clone(), status, image, state, name);
-                    container.logs.end();
+                    let container = ContainerItem::new(id, status, image, state, name);
                     self.containers.items.push(container);
                 }
             }
