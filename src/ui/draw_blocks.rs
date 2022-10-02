@@ -109,8 +109,7 @@ pub fn commands<B: Backend>(
             &mut app_data.lock().containers.items[i].docker_controls.state,
         );
     } else {
-        let debug_text = String::from("");
-        let paragraph = Paragraph::new(debug_text)
+        let paragraph = Paragraph::new("")
             .block(block)
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
@@ -194,8 +193,7 @@ pub fn containers<B: Backend>(
         })
         .collect::<Vec<_>>();
     if items.is_empty() {
-        let debug_text = String::from("no containers running");
-        let paragraph = Paragraph::new(debug_text)
+        let paragraph = Paragraph::new("no containers running")
             .block(block)
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
@@ -222,8 +220,7 @@ pub fn logs<B: Backend>(
 
     let init = app_data.lock().init;
     if !init {
-        let parsing_logs = format!("parsing logs {}", loading_icon);
-        let paragraph = Paragraph::new(parsing_logs)
+        let paragraph = Paragraph::new(format!("parsing logs {}", loading_icon))
             .style(Style::default())
             .block(block)
             .alignment(Alignment::Center);
@@ -247,8 +244,7 @@ pub fn logs<B: Backend>(
             &mut app_data.lock().containers.items[index].logs.state,
         );
     } else {
-        let debug_text = String::from("no logs found");
-        let paragraph = Paragraph::new(debug_text)
+        let paragraph = Paragraph::new("no logs found")
             .block(block)
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
