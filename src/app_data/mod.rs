@@ -301,8 +301,7 @@ impl AppData {
         }
     }
 
-
-	/// Check if the initial parsing has been completed, by making sure that all ids given (which are running) have a non empty cpu_stats vecdec
+    /// Check if the initial parsing has been completed, by making sure that all ids given (which are running) have a non empty cpu_stats vecdec
     pub fn initialised(&mut self, all_ids: &[(bool, ContainerId)]) -> bool {
         let count_is_running = all_ids.iter().filter(|i| i.0).count();
         let number_with_cpu_status = self
@@ -445,8 +444,8 @@ impl AppData {
                 }
             }
         }
-		// Trim a &String and return String
-		let trim_owned = |x: &String| x.trim().to_owned();
+        // Trim a &String and return String
+        let trim_owned = |x: &String| x.trim().to_owned();
 
         for i in all_containers {
             if let Some(id) = i.id.as_ref() {
@@ -459,15 +458,8 @@ impl AppData {
                     })
                 });
 
-                let state = State::from(
-                    i.state
-                        .as_ref()
-                        .map_or("dead".to_owned(), trim_owned),
-                );
-                let status = i
-                    .status
-                    .as_ref()
-                    .map_or("".to_owned(), trim_owned);
+                let state = State::from(i.state.as_ref().map_or("dead".to_owned(), trim_owned));
+                let status = i.status.as_ref().map_or("".to_owned(), trim_owned);
 
                 let image = i
                     .image
@@ -527,8 +519,8 @@ impl AppData {
                 container.logs.items.push(ListItem::new(lines));
             }
 
-			// Set the logs selected row for each container
-			// Either when no long currently selected, or currently selected (before updated) is already at end
+            // Set the logs selected row for each container
+            // Either when no long currently selected, or currently selected (before updated) is already at end
             if container.logs.state.selected().is_none()
                 || container.logs.state.selected().map_or(1, |f| f + 1) == current_len
             {
