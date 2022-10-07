@@ -13,8 +13,8 @@ pub mod log_sanitizer {
                 .iter()
                 .map(|i| {
                     let style = Style::default()
-                        .bg(color_ansi_to_tui(i.fg.unwrap_or(CansiColor::White)))
-                        .fg(color_ansi_to_tui(i.bg.unwrap_or(CansiColor::Black)));
+                        .bg(color_ansi_to_tui(i.bg.unwrap_or(CansiColor::Black)))
+                        .fg(color_ansi_to_tui(i.fg.unwrap_or(CansiColor::White)));
                     if i.blink.is_some() {
                         style.add_modifier(Modifier::SLOW_BLINK);
                     }
