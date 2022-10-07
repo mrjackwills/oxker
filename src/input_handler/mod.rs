@@ -77,8 +77,8 @@ impl InputHandler {
         }
     }
 
-    /// Mouse button
-    fn m_button(&mut self) {
+    /// Toggle the mouse capture (via input of the 'm' key)
+    fn m_key(&mut self) {
         if self.mouse_capture {
             match execute!(std::io::stdout(), DisableMouseCapture) {
                 Ok(_) => self
@@ -118,7 +118,7 @@ impl InputHandler {
 
     /// Sort containers based on a given header, switch asc to desc if already sorted, else always desc
     fn sort(&self, header: Header) {
-        let mut output = Some((header.clone(), SortedOrder::Desc));
+        let mut output = Some((header, SortedOrder::Desc));
         let mut locked_data = self.app_data.lock();
         if let Some((h, order)) = locked_data.get_sorted().as_ref() {
             if &SortedOrder::Desc == order && h == &header {
@@ -128,7 +128,7 @@ impl InputHandler {
         locked_data.set_sorted(output);
     }
 
-    /// Send a quit message to docker, to abort all spawns, if error, quit here instead
+    /// Send a quit message to docker, to abort all spawns, if an error is return, set is_running to false here instead
     async fn quit(&self) {
         match self.docker_sender.send(DockerMessage::Quit).await {
             Ok(_) => (),
@@ -137,6 +137,7 @@ impl InputHandler {
     }
 
     /// Handle any keyboard button events
+    #[allow(clippy::too_many_lines)]
     async fn button_press(&mut self, key_code: KeyCode) {
         let show_error = self.app_data.lock().show_error;
         let show_info = self.gui_state.lock().show_help;
@@ -154,7 +155,7 @@ impl InputHandler {
             match key_code {
                 KeyCode::Char('q' | 'Q') => self.quit().await,
                 KeyCode::Char('h' | 'H') => self.gui_state.lock().show_help = false,
-                KeyCode::Char('m' | 'M') => self.m_button(),
+                KeyCode::Char('m' | 'M') => self.m_key(),
                 _ => (),
             }
         } else {
@@ -171,7 +172,7 @@ impl InputHandler {
                 KeyCode::Char('9') => self.sort(Header::Tx),
                 KeyCode::Char('q' | 'Q') => self.quit().await,
                 KeyCode::Char('h' | 'H') => self.gui_state.lock().show_help = true,
-                KeyCode::Char('m' | 'M') => self.m_button(),
+                KeyCode::Char('m' | 'M') => self.m_key(),
                 KeyCode::Tab => {
                     // Skip control panel if no containers, could be refactored
                     let has_containers = self.app_data.lock().get_container_len() == 0;

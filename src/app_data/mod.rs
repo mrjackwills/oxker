@@ -9,7 +9,7 @@ use crate::{app_error::AppError, parse_args::CliArgs, ui::log_sanitizer};
 pub use container_state::*;
 
 /// Global app_state, stored in an Arc<Mutex>
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AppData {
     args: CliArgs,
     error: Option<AppError>,
@@ -20,13 +20,13 @@ pub struct AppData {
     sorted_by: Option<(Header, SortedOrder)>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum SortedOrder {
     Asc,
     Desc,
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum Header {
     State,
     Status,
@@ -58,21 +58,20 @@ impl fmt::Display for Header {
 }
 
 impl AppData {
-    pub fn get_sorted(&self) -> Option<(Header, SortedOrder)> {
-        self.sorted_by.clone()
+    pub const fn get_sorted(&self) -> Option<(Header, SortedOrder)> {
+        self.sorted_by
     }
 
     /// Change the sorted order, also set the selected container state to match new order
     pub fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
-        let id = self.get_selected_container_id();
         self.sort_containers();
-        self.containers.state.select(
-            self.containers
-                .items
-                .iter()
-                .position(|i| Some(i.id.clone()) == id),
-        );
+        self.containers
+            .state
+            .select(self.containers.items.iter().position(|i| {
+                self.get_selected_container_id()
+                    .map_or(false, |id| i.id == id)
+            }));
     }
     /// Generate a default app_state
     pub fn default(args: CliArgs) -> Self {
@@ -106,8 +105,7 @@ impl AppData {
                 .state
                 .selected()
             {
-                output =
-                    Some(self.containers.items[index].docker_controls.items[control_index].clone());
+                output = Some(self.containers.items[index].docker_controls.items[control_index]);
             }
         }
         output
@@ -116,34 +114,42 @@ impl AppData {
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_next(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.next();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.docker_controls.next();
+            }
         }
     }
 
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_previous(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.previous();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.docker_controls.previous();
+            }
         }
     }
 
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_start(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.start();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.docker_controls.start();
+            }
         }
     }
 
     /// Change selected choice of docker commands of selected container
     pub fn docker_command_end(&mut self) {
         if let Some(index) = self.containers.state.selected() {
-            self.containers.items[index].docker_controls.end();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.docker_controls.end();
+            }
         }
     }
 
     /// return single app_state error
-    pub fn get_error(&self) -> Option<AppError> {
-        self.error.clone()
+    pub const fn get_error(&self) -> Option<AppError> {
+        self.error
     }
 
     /// remove single app_state error
@@ -157,39 +163,33 @@ impl AppData {
     }
 
     /// Find the id of the currently selected container.
-    /// If any containers on system, will always return a string.
+    /// If any containers on system, will always return a ContainerId
     /// Only returns None when no containers found.
-    pub fn get_selected_container_id(&self) -> Option<String> {
+    pub fn get_selected_container_id(&self) -> Option<ContainerId> {
         let mut output = None;
         if let Some(index) = self.containers.state.selected() {
-            let id = self
-                .containers
-                .items
-                .iter()
-                .skip(index)
-                .take(1)
-                .map(|i| i.id.clone())
-                .collect::<String>();
-            output = Some(id);
+            if let Some(x) = self.containers.items.get(index) {
+                output = Some(x.id.clone());
+            }
         }
         output
     }
 
     /// Sort the containers vec, based on a heading, either ascending or descending
     pub fn sort_containers(&mut self) {
-        if let Some((head, so)) = self.sorted_by.as_ref() {
+        if let Some((head, ord)) = self.sorted_by.as_ref() {
             match head {
-                Header::State => match so {
+                Header::State => match ord {
                     SortedOrder::Desc => self
                         .containers
                         .items
-                        .sort_by(|a, b| a.state.order().cmp(b.state.order())),
+                        .sort_by(|a, b| a.state.order().cmp(&b.state.order())),
                     SortedOrder::Asc => self
                         .containers
                         .items
-                        .sort_by(|a, b| b.state.order().cmp(a.state.order())),
+                        .sort_by(|a, b| b.state.order().cmp(&a.state.order())),
                 },
-                Header::Status => match so {
+                Header::Status => match ord {
                     SortedOrder::Asc => self
                         .containers
                         .items
@@ -199,7 +199,7 @@ impl AppData {
                         .items
                         .sort_by(|a, b| b.status.cmp(&a.status)),
                 },
-                Header::Cpu => match so {
+                Header::Cpu => match ord {
                     SortedOrder::Asc => self
                         .containers
                         .items
@@ -209,7 +209,7 @@ impl AppData {
                         .items
                         .sort_by(|a, b| b.cpu_stats.back().cmp(&a.cpu_stats.back())),
                 },
-                Header::Memory => match so {
+                Header::Memory => match ord {
                     SortedOrder::Asc => self
                         .containers
                         .items
@@ -219,25 +219,25 @@ impl AppData {
                         .items
                         .sort_by(|a, b| b.mem_stats.back().cmp(&a.mem_stats.back())),
                 },
-                Header::Id => match so {
+                Header::Id => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.id.cmp(&b.id)),
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.id.cmp(&a.id)),
                 },
-                Header::Image => match so {
+                Header::Image => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.image.cmp(&b.image)),
                     SortedOrder::Desc => {
                         self.containers.items.sort_by(|a, b| b.image.cmp(&a.image));
                     }
                 },
-                Header::Name => match so {
+                Header::Name => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.name.cmp(&b.name)),
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.name.cmp(&a.name)),
                 },
-                Header::Rx => match so {
+                Header::Rx => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.rx.cmp(&b.rx)),
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.rx.cmp(&a.rx)),
                 },
-                Header::Tx => match so {
+                Header::Tx => match ord {
                     SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.tx.cmp(&b.tx)),
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.tx.cmp(&a.tx)),
                 },
@@ -259,41 +259,50 @@ impl AppData {
     /// Get the title for log panel for selected container
     /// will be "logs x/x"
     pub fn get_log_title(&self) -> String {
-        self.get_selected_log_index().map_or_else(
-            || String::from(""),
-            |index| self.containers.items[index].logs.get_state_title(),
-        )
+        self.get_selected_log_index()
+            .map_or("".to_owned(), |index| {
+                self.containers.items[index].logs.get_state_title()
+            })
     }
 
     /// select next selected log line
     pub fn log_next(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.next();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.logs.next();
+            }
         }
     }
 
     /// select previous selected log line
     pub fn log_previous(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.previous();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.logs.previous();
+            }
         }
     }
 
     /// select last selected log line
     pub fn log_end(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.end();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.logs.end();
+            }
         }
     }
 
     /// select first selected log line
     pub fn log_start(&mut self) {
         if let Some(index) = self.get_selected_log_index() {
-            self.containers.items[index].logs.start();
+            if let Some(i) = self.containers.items.get_mut(index) {
+                i.logs.start();
+            }
         }
     }
 
-    pub fn initialised(&mut self, all_ids: &[(bool, String)]) -> bool {
+    /// Check if the initial parsing has been completed, by making sure that all ids given (which are running) have a non empty cpu_stats vecdec
+    pub fn initialised(&mut self, all_ids: &[(bool, ContainerId)]) -> bool {
         let count_is_running = all_ids.iter().filter(|i| i.0).count();
         let number_with_cpu_status = self
             .containers
@@ -315,17 +324,18 @@ impl AppData {
         let mut output = Columns::new();
         let count = |x: &String| x.chars().count();
 
+        // Should probably find a refactor here somewhere
         for container in &self.containers.items {
             let cpu_count = count(
                 &container
                     .cpu_stats
                     .back()
-                    .unwrap_or(&CpuStats::new(0.0))
+                    .unwrap_or(&CpuStats::default())
                     .to_string(),
             );
             let mem_count = count(&format!(
                 "{} / {}",
-                container.mem_stats.back().unwrap_or(&ByteStats::new(0)),
+                container.mem_stats.back().unwrap_or(&ByteStats::default()),
                 container.mem_limit
             ));
 
@@ -365,7 +375,7 @@ impl AppData {
     }
 
     /// Get all containers ids
-    pub fn get_all_ids(&self) -> Vec<String> {
+    pub fn get_all_ids(&self) -> Vec<ContainerId> {
         self.containers
             .items
             .iter()
@@ -373,15 +383,15 @@ impl AppData {
             .collect::<Vec<_>>()
     }
 
-    /// find container given id
-    fn get_container_by_id(&mut self, id: &str) -> Option<&mut ContainerItem> {
-        self.containers.items.iter_mut().find(|i| i.id == id)
+    /// return a mutable container by given id
+    fn get_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
+        self.containers.items.iter_mut().find(|i| &i.id == id)
     }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
     pub fn update_stats(
         &mut self,
-        id: &str,
+        id: &ContainerId,
         cpu_stat: Option<f64>,
         mem_stat: Option<u64>,
         mem_limit: u64,
@@ -410,18 +420,18 @@ impl AppData {
     }
 
     /// Update, or insert, containers
-    pub fn update_containers(&mut self, containers: &mut [ContainerSummary]) {
+    pub fn update_containers(&mut self, all_containers: &mut [ContainerSummary]) {
         let all_ids = self.get_all_ids();
 
-        if !containers.is_empty() && self.containers.state.selected().is_none() {
+        if !all_containers.is_empty() && self.containers.state.selected().is_none() {
             self.containers.start();
         }
 
         for (index, id) in all_ids.iter().enumerate() {
-            if !containers
+            if !all_containers
                 .iter()
                 .filter_map(|i| i.id.as_ref())
-                .any(|x| x == id)
+                .any(|x| x == id.get())
             {
                 // If removed container is currently selected, then change selected to previous
                 // This will default to 0 in any edge cases
@@ -434,63 +444,54 @@ impl AppData {
                 }
             }
         }
+        // Trim a &String and return String
+        let trim_owned = |x: &String| x.trim().to_owned();
 
-        for i in containers.iter_mut() {
+        for i in all_containers {
             if let Some(id) = i.id.as_ref() {
-                // maybe if no name then continue?
-                let name = i.names.as_mut().map_or("".to_owned(), |n| {
-                    n.get_mut(0).map_or("".to_owned(), |f| {
+                let name = i.names.as_mut().map_or("".to_owned(), |names| {
+                    names.first_mut().map_or("".to_owned(), |f| {
                         if f.starts_with('/') {
                             f.remove(0);
                         }
-                        f.clone()
+                        (*f).to_string()
                     })
                 });
 
-                let state = State::from(
-                    i.state
-                        .as_ref()
-                        .map_or("dead".to_owned(), |f| f.trim().to_owned()),
-                );
-                let status = i
-                    .status
-                    .as_ref()
-                    .map_or("".to_owned(), |f| f.trim().to_owned());
+                let state = State::from(i.state.as_ref().map_or("dead".to_owned(), trim_owned));
+                let status = i.status.as_ref().map_or("".to_owned(), trim_owned);
 
                 let image = i
                     .image
                     .as_ref()
                     .map_or("".to_owned(), std::clone::Clone::clone);
 
-                if let Some(current_container) = self.get_container_by_id(id) {
-                    if current_container.name != name {
-                        current_container.name = name;
+                let id = ContainerId::from(id);
+                // If container info already in containers Vec, then just update details
+                if let Some(item) = self.get_container_by_id(&id) {
+                    if item.name != name {
+                        item.name = name;
                     };
-                    if current_container.status != status {
-                        current_container.status = status;
+                    if item.status != status {
+                        item.status = status;
                     };
-                    if current_container.state != state {
-                        current_container.docker_controls.items = DockerControls::gen_vec(&state);
-
+                    if item.state != state {
+                        item.docker_controls.items = DockerControls::gen_vec(state);
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
                         match state {
                             State::Removing | State::Restarting | State::Unknown => {
-                                current_container.docker_controls.state.select(None);
+                                item.docker_controls.state.select(None);
                             }
-                            _ => current_container.docker_controls.start(),
+                            _ => item.docker_controls.start(),
                         };
-                        current_container.state = state;
+                        item.state = state;
                     };
-                    if current_container.image != image {
-                        // limit image name to 64 chars?
-                        // current_container.image = image.chars().into_iter().take(64).collect();
-                        current_container.image = image;
+                    if item.image != image {
+                        item.image = image;
                     };
+                // else container not known, so make new ContainerItem and push into containers Vec
                 } else {
-                    // limit image name to 64 chars?
-                    // let mut container = ContainerItem::new(id.clone(), status,  image.chars().into_iter().take(64).collect(), state, name);
-                    let mut container = ContainerItem::new(id.clone(), status, image, state, name);
-                    container.logs.end();
+                    let container = ContainerItem::new(id, status, image, state, name);
                     self.containers.items.push(container);
                 }
             }
@@ -498,7 +499,7 @@ impl AppData {
     }
 
     /// update logs of a given container, based on id
-    pub fn update_log_by_id(&mut self, output: &[String], id: &str) {
+    pub fn update_log_by_id(&mut self, output: &[String], id: &ContainerId) {
         let tz = Self::get_systemtime();
         let color = self.args.color;
         let raw = self.args.raw;
@@ -507,17 +508,19 @@ impl AppData {
             container.last_updated = tz;
             let current_len = container.logs.items.len();
 
-            for i in output.iter() {
+            for i in output {
                 let lines = if color {
                     log_sanitizer::colorize_logs(i)
                 } else if raw {
-                    log_sanitizer::raw(i.clone())
+                    log_sanitizer::raw(i)
                 } else {
                     log_sanitizer::remove_ansi(i)
                 };
                 container.logs.items.push(ListItem::new(lines));
             }
 
+            // Set the logs selected row for each container
+            // Either when no long currently selected, or currently selected (before updated) is already at end
             if container.logs.state.selected().is_none()
                 || container.logs.state.selected().map_or(1, |f| f + 1) == current_len
             {

@@ -93,7 +93,7 @@ async fn run_app<B: Backend + Send>(
                 break;
             }
             if terminal
-                .draw(|f| draw_blocks::error(f, &AppError::DockerConnect, Some(seconds)))
+                .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
                 .is_err()
             {
                 return Err(AppError::Terminal);
@@ -107,6 +107,8 @@ async fn run_app<B: Backend + Send>(
             if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
                 return Err(AppError::Terminal);
             }
+            // TODO could only draw if in gui mode, that way all inputs & docker commands will run, and can just trace!("{event"}) all over the place
+            // refactor this into own function, so can be called without drawing to the terminal
             if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
@@ -146,7 +148,7 @@ fn ui<B: Backend>(
 ) {
     // set max height for container section, needs +4 to deal with docker commands list and borders
     let height = app_data.lock().get_container_len();
-    let height = if height < 12 { (height + 4) as u16 } else { 12 };
+    let height = if height < 12 { height + 4 } else { 12 };
 
     let column_widths = app_data.lock().get_width();
     let has_containers = !app_data.lock().containers.items.is_empty();
@@ -166,7 +168,13 @@ fn ui<B: Backend>(
     // Split into 3, containers+controls, logs, then graphs
     let upper_main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Max(height as u16), Constraint::Percentage(50)].as_ref())
+        .constraints(
+            [
+                Constraint::Max(height.try_into().unwrap_or_default()),
+                Constraint::Percentage(50),
+            ]
+            .as_ref(),
+        )
         .split(whole_layout[1]);
 
     let top_split = if has_containers {
@@ -213,7 +221,7 @@ fn ui<B: Backend>(
         f,
         has_containers,
         &loading_icon,
-        &sorted_by,
+        sorted_by,
         gui_state,
     );
 
@@ -233,6 +241,6 @@ fn ui<B: Backend>(
 
     if let Some(error) = has_error {
         app_data.lock().show_error = true;
-        draw_blocks::error(f, &error, None);
+        draw_blocks::error(f, error, None);
     }
 }

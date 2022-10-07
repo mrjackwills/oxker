@@ -39,6 +39,8 @@ const REPO: &str = env!("CARGO_PKG_REPOSITORY");
 const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 const ORANGE: Color = Color::Rgb(255, 178, 36);
 const MARGIN: &str = "   ";
+const ARROW: &str = "▶ ";
+const CIRCLE: &str = "⚪ ";
 
 /// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
@@ -49,9 +51,6 @@ fn generate_block<'a>(
     panel: SelectablePanel,
 ) -> Block<'a> {
     gui_state.lock().update_map(Region::Panel(panel), area);
-    let mut block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded);
     let current_selected_panel = gui_state.lock().selected_panel;
     let title = match panel {
         SelectablePanel::Containers => {
@@ -64,9 +63,12 @@ fn generate_block<'a>(
         SelectablePanel::Logs => {
             format!(" {} {} ", panel.title(), app_data.lock().get_log_title())
         }
-        SelectablePanel::Commands => String::from(""),
+        SelectablePanel::Commands => String::new(),
     };
-    block = block.title(title);
+    let mut block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .title(title);
     if current_selected_panel == panel {
         block = block.border_style(Style::default().fg(Color::LightCyan));
     }
@@ -99,7 +101,7 @@ pub fn commands<B: Backend>(
         let items = List::new(items)
             .block(block)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-            .highlight_symbol("▶ ");
+            .highlight_symbol(ARROW);
 
         f.render_stateful_widget(
             items,
@@ -107,10 +109,7 @@ pub fn commands<B: Backend>(
             &mut app_data.lock().containers.items[i].docker_controls.state,
         );
     } else {
-        let debug_text = String::from("");
-        let paragraph = Paragraph::new(debug_text)
-            .block(block)
-            .alignment(Alignment::Center);
+        let paragraph = Paragraph::new("").block(block).alignment(Alignment::Center);
         f.render_widget(paragraph, area);
     }
 }
@@ -136,7 +135,7 @@ pub fn containers<B: Backend>(
 
             let mems = format!(
                 "{:>1} / {:>1}",
-                i.mem_stats.back().unwrap_or(&ByteStats::new(0)),
+                i.mem_stats.back().unwrap_or(&ByteStats::default()),
                 i.mem_limit
             );
 
@@ -153,7 +152,7 @@ pub fn containers<B: Backend>(
                     format!(
                         "{}{:>width$}",
                         MARGIN,
-                        i.cpu_stats.back().unwrap_or(&CpuStats::new(0.0)),
+                        i.cpu_stats.back().unwrap_or(&CpuStats::default()),
                         width = &widths.cpu.1
                     ),
                     state_style,
@@ -166,7 +165,7 @@ pub fn containers<B: Backend>(
                     format!(
                         "{}{:>width$}",
                         MARGIN,
-                        i.id.chars().take(8).collect::<String>(),
+                        i.id.get().chars().take(8).collect::<String>(),
                         width = &widths.id.1
                     ),
                     blue,
@@ -192,8 +191,7 @@ pub fn containers<B: Backend>(
         })
         .collect::<Vec<_>>();
     if items.is_empty() {
-        let debug_text = String::from("no containers running");
-        let paragraph = Paragraph::new(debug_text)
+        let paragraph = Paragraph::new("no containers running")
             .block(block)
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
@@ -201,7 +199,7 @@ pub fn containers<B: Backend>(
         let items = List::new(items)
             .block(block)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-            .highlight_symbol("⚪ ");
+            .highlight_symbol(CIRCLE);
 
         f.render_stateful_widget(items, area, &mut app_data.lock().containers.state);
     }
@@ -220,8 +218,7 @@ pub fn logs<B: Backend>(
 
     let init = app_data.lock().init;
     if !init {
-        let parsing_logs = format!("parsing logs {}", loading_icon);
-        let paragraph = Paragraph::new(parsing_logs)
+        let paragraph = Paragraph::new(format!("parsing logs {}", loading_icon))
             .style(Style::default())
             .block(block)
             .alignment(Alignment::Center);
@@ -237,7 +234,7 @@ pub fn logs<B: Backend>(
 
         let items = List::new(items)
             .block(block)
-            .highlight_symbol("▶ ")
+            .highlight_symbol(ARROW)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD));
         f.render_stateful_widget(
             items,
@@ -245,8 +242,7 @@ pub fn logs<B: Backend>(
             &mut app_data.lock().containers.items[index].logs.state,
         );
     } else {
-        let debug_text = String::from("no logs found");
-        let paragraph = Paragraph::new(debug_text)
+        let paragraph = Paragraph::new("no logs found")
             .block(block)
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
@@ -281,8 +277,8 @@ pub fn chart<B: Backend>(
                 .data(&mem.0)];
             let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
             let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
-            let cpu_chart = make_chart(&cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
-            let mem_chart = make_chart(&mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
+            let cpu_chart = make_chart(cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
+            let mem_chart = make_chart(mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
 
             f.render_widget(cpu_chart, area[0]);
             f.render_widget(mem_chart, area[1]);
@@ -292,7 +288,7 @@ pub fn chart<B: Backend>(
 
 /// Create charts
 fn make_chart<'a, T: Stats + Display>(
-    state: &State,
+    state: State,
     name: &'a str,
     dataset: Vec<Dataset<'a>>,
     current: &'a T,
@@ -340,14 +336,15 @@ fn make_chart<'a, T: Stats + Display>(
         )
 }
 
-/// Draw heading bar at top  of program, always visible
+/// Draw heading bar at top of program, always visible
+#[allow(clippy::too_many_lines)]
 pub fn heading_bar<B: Backend>(
     area: Rect,
     columns: &Columns,
     f: &mut Frame<'_, B>,
     has_containers: bool,
     loading_icon: &str,
-    sorted_by: &Option<(Header, SortedOrder)>,
+    sorted_by: Option<(Header, SortedOrder)>,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = || Block::default().style(Style::default().bg(Color::Magenta).fg(Color::Black));
@@ -405,14 +402,14 @@ pub fn heading_bar<B: Backend>(
                 width = width - block.2
             ),
         };
-        let count = text.chars().count() as u16;
+        let count = u16::try_from(text.chars().count()).unwrap_or_default();
         let status = Paragraph::new(text)
             .block(block.0)
             .alignment(Alignment::Left);
         (status, count)
     };
 
-    // Meta data for iterate over to create blocks and correct widths
+    // Meta data to iterate over to create blocks with correct widths
     let header_meta = [
         (Header::State, columns.state.1),
         (Header::Status, columns.status.1),
@@ -429,18 +426,21 @@ pub fn heading_bar<B: Backend>(
         .iter()
         .map(|i| {
             let header_block = gen_header(&i.0, i.1);
-            (header_block.0, i.0.clone(), Constraint::Max(header_block.1))
+            (header_block.0, i.0, Constraint::Max(header_block.1))
         })
         .collect::<Vec<_>>();
 
     let suffix = if info_visible { "exit" } else { "show" };
     let info_text = format!("( h ) {} help {}", suffix, MARGIN);
-    let info_width = info_text.chars().count() as u16;
+    let info_width = info_text.chars().count();
 
-    let column_width = area.width - info_width;
+    let column_width = usize::from(area.width) - info_width;
     let column_width = if column_width > 0 { column_width } else { 1 };
     let splits = if has_containers {
-        vec![Constraint::Min(column_width), Constraint::Min(info_width)]
+        vec![
+            Constraint::Min(column_width.try_into().unwrap_or_default()),
+            Constraint::Min(info_width.try_into().unwrap_or_default()),
+        ]
     } else {
         vec![Constraint::Percentage(100)]
     };
@@ -469,11 +469,12 @@ pub fn heading_bar<B: Backend>(
         .block(block())
         .alignment(Alignment::Right);
 
+    // If no containers, don't display the headers, could maybe do this first?
     let index = if has_containers { 1 } else { 0 };
     f.render_widget(paragraph, split_bar[index]);
 }
 
-/// From a given &String, return the maximum number of chars on a single line
+/// From a given &str, return the maximum number of chars on a single line
 fn max_line_width(text: &str) -> usize {
     let mut max_line_width = 0;
     text.lines().into_iter().for_each(|line| {
@@ -486,6 +487,7 @@ fn max_line_width(text: &str) -> usize {
 }
 
 /// Draw the help box in the centre of the screen
+/// TODO this is message, should make every line it's own renderable span
 pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 
@@ -536,20 +538,21 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Black));
 
-    let area = popup(
-        lines as u16,
-        max_line_width as u16,
-        f.size(),
-        BoxLocation::MiddleCentre,
-    );
+    let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
 
     let split_popup = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
             [
-                Constraint::Max(NAME_TEXT.lines().count() as u16),
-                Constraint::Max(description_text.lines().count() as u16),
-                Constraint::Max(help_text.lines().count() as u16),
+                Constraint::Max(NAME_TEXT.lines().count().try_into().unwrap_or_default()),
+                Constraint::Max(
+                    description_text
+                        .lines()
+                        .count()
+                        .try_into()
+                        .unwrap_or_default(),
+                ),
+                Constraint::Max(help_text.lines().count().try_into().unwrap_or_default()),
             ]
             .as_ref(),
         )
@@ -564,7 +567,7 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
 }
 
 /// Draw an error popup over whole screen
-pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: &AppError, seconds: Option<u8>) {
+pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<u8>) {
     let block = Block::default()
         .title(" Error ")
         .border_type(BorderType::Rounded)
@@ -600,12 +603,7 @@ pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: &AppError, seconds: Option
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = popup(
-        lines as u16,
-        max_line_width as u16,
-        f.size(),
-        BoxLocation::MiddleCentre,
-    );
+    let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
@@ -629,32 +627,33 @@ pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = popup(
-        lines as u16,
-        max_line_width as u16,
-        f.size(),
-        BoxLocation::BottomRight,
-    );
+    let area = popup(lines, max_line_width, f.size(), BoxLocation::BottomRight);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
 
 /// draw a box in the one of the BoxLocations, based on max line width + number of lines
-fn popup(text_lines: u16, text_width: u16, r: Rect, box_location: BoxLocation) -> Rect {
+fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocation) -> Rect {
     // Make sure blank_space can't be an negative, as will crash
-    let blank_vertical = if r.height > text_lines {
-        (r.height - text_lines) / 2
+    let blank_vertical = if usize::from(r.height) > text_lines {
+        (usize::from(r.height) - text_lines) / 2
     } else {
         1
     };
-    let blank_horizontal = if r.width > text_width {
-        (r.width - text_width) / 2
+    let blank_horizontal = if usize::from(r.width) > text_width {
+        (usize::from(r.width) - text_width) / 2
     } else {
         1
     };
 
-    let v_constraints = box_location.get_vertical_constraints(blank_vertical, text_lines);
-    let h_constraints = box_location.get_horizontal_constraints(blank_horizontal, text_width);
+    let v_constraints = box_location.get_vertical_constraints(
+        blank_vertical.try_into().unwrap_or_default(),
+        text_lines.try_into().unwrap_or_default(),
+    );
+    let h_constraints = box_location.get_horizontal_constraints(
+        blank_horizontal.try_into().unwrap_or_default(),
+        text_width.try_into().unwrap_or_default(),
+    );
 
     let indexes = box_location.get_indexes();
 

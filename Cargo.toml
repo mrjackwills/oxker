@@ -1,9 +1,9 @@
 [package]
 name = "oxker"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["Jack Wills <email@mrjackwills.com>"]
-description = "a simple tui to view & control docker containers"
+description = "A simple tui to view & control docker containers"
 repository = "https://github.com/mrjackwills/oxker"
 homepage = "https://github.com/mrjackwills/oxker"
 license = "MIT"
@@ -15,7 +15,7 @@ categories = ["command-line-utilities"]
 anyhow = "1.0"
 bollard = "0.13"
 cansi = "2.2"
-clap={version="3.2", features = ["derive", "unicode"] }
+clap={version="4.0", features = ["derive", "unicode", "color"] }
 crossterm = "0.25"
 futures-util = "0.3"
 parking_lot = {version= "0.12"}

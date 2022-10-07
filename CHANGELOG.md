@@ -1,3 +1,23 @@
+# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.5'>v0.1.5</a>
+### 2022-10-07
+
+
+### Chores
++ Update clap to v4, [15597dbe](https://github.com/mrjackwills/oxker/commit/15597dbe6942ec053541398ce0e9dedc10a4d3ea),
+
+### Docs
++ readme.md updated, [a05bf561](https://github.com/mrjackwills/oxker/commit/a05bf561cc6d96237f683ab0b3c782d6841974d9),
+
+### Features
++ use newtype construct for container id, [41cbb84f](https://github.com/mrjackwills/oxker/commit/41cbb84f2896f8be2c37eba87e390d998aff7382),
+
+### Refactors
++ Impl Copy where able to, [e76878f4](https://github.com/mrjackwills/oxker/commit/e76878f424d72b943713ef84e95e25fada77d79e),
++ replace async fn with just fn, [17dc604b](https://github.com/mrjackwills/oxker/commit/17dc604befac75cb9dc0311a0e43f9927fe0ca30),
++ remove pointless clone()'s & variable declarations, [6731002e](https://github.com/mrjackwills/oxker/commit/6731002ee42c9460042c2c38aff5101b1bcebbe6),
++ replace String::from("") with String::new(), [62fb2247](https://github.com/mrjackwills/oxker/commit/62fb22478697cc9a7ab9fb562a724965b437233a),
++ replace map_or_else with map_or, [3e26f292](https://github.com/mrjackwills/oxker/commit/3e26f292c7dc5e13af4580952767ebe821aa5183),, [5660b34d](https://github.com/mrjackwills/oxker/commit/5660b34d5149dce27706ff6daa90b854e6f84e14),
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.4'>v0.1.4</a>
 ### 2022-09-07
 
@@ -118,7 +138,7 @@
 ### 2022-04-29
 
 ### Features
-+ allow toggling of mouse caputre, to select & copy text with mouse, closes #2,  [aec184ea](https://github.com/mrjackwills/oxker/commit/aec184ea22b289e91942a4c3e6a415685884bc47),
++ allow toggling of mouse caputre, to select & copy text with mouse, closes #2, [aec184ea](https://github.com/mrjackwills/oxker/commit/aec184ea22b289e91942a4c3e6a415685884bc47),
 + show id column, [b10f9274](https://github.com/mrjackwills/oxker/commit/b10f927481c9e38a48c1d4b94e744ec48e8b6ba6),
 + draw_popup, using enum to draw in one of 9 areas, closes #6, [1017850a](https://github.com/mrjackwills/oxker/commit/1017850a6cc91328abc1127bdb117495f5e909d8),
 + use a message rx/sx for all docker commands, remove update loop, wait for update message from gui instead, [9b70fdfa](https://github.com/mrjackwills/oxker/commit/9b70fdfad7b38361ebee301bdc2545d3f0dfcf9e),

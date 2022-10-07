@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::app_data::Header;
 
-#[derive(Debug, PartialEq, std::hash::Hash, std::cmp::Eq, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SelectablePanel {
     Containers,
     Commands,
@@ -38,6 +38,7 @@ impl SelectablePanel {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum Region {
     Panel(SelectablePanel),
     Header(Header),
@@ -72,7 +73,7 @@ impl BoxLocation {
         }
     }
 
-    // Should combine and just return a tuple?
+    // Should combine with get_vertical_constraints and just return a tuple of (vc, hc)?
     pub const fn get_horizontal_constraints(
         self,
         blank_vertical: u16,
@@ -221,7 +222,7 @@ impl GuiState {
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
             .get(0)
-            .map(|data| data.0.clone())
+            .map(|data| *data.0)
     }
 
     /// Insert, or updates header area panel into heading_map
@@ -250,22 +251,22 @@ impl GuiState {
         self.selected_panel = self.selected_panel.prev();
     }
 
-    /// Advance loading animation
+    /// Insert a new loading_uuid into hashset, and advance the animation by one frame
     pub fn next_loading(&mut self, uuid: Uuid) {
         self.loading_icon = self.loading_icon.next();
         self.is_loading.insert(uuid);
     }
 
-    /// if is_loading, return loading animation frame, else single space
+    /// If is_loading has any entries, return the current loading_icon, else an emtpy string
     pub fn get_loading(&mut self) -> String {
         if self.is_loading.is_empty() {
-            String::from(" ")
-         } else {
+            String::new()
+        } else {
             self.loading_icon.to_string()
         }
     }
 
-    /// set is_loading to false, but keep animation frame at same state
+    /// Remove a loading_uuid from the is_loading hashset
     pub fn remove_loading(&mut self, uuid: Uuid) {
         self.is_loading.remove(&uuid);
     }

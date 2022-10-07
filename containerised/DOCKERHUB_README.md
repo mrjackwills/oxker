@@ -2,7 +2,7 @@
 <p align="center">
 	<img src='https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/logo.svg' width='100px'/>
 	<h1 align="center">oxker</h1>
-	<div  align="center">
+	<div align="center">
 		A simple tui to view & control docker containers
 	</div>
 </p>
@@ -17,7 +17,7 @@
 
 Images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
 
-`docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker`
+`docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker`
 
 ## Help
 

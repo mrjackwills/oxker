@@ -16,7 +16,7 @@ use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 use uuid::Uuid;
 
 use crate::{
-    app_data::{AppData, DockerControls},
+    app_data::{AppData, ContainerId, DockerControls},
     app_error::AppError,
     parse_args::CliArgs,
     ui::GuiState,
@@ -24,16 +24,17 @@ use crate::{
 mod message;
 pub use message::DockerMessage;
 
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 enum SpawnId {
-    Stats((String, Binate)),
-    Log(String),
+    Stats((ContainerId, Binate)),
+    Log(ContainerId),
 }
 
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
 /// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
 /// Binate value is toggled when all join handles have been spawned off
-#[derive(Debug, Hash, Clone, PartialEq, Eq, Copy)]
+/// Also effectively means that if the docker_update interval minimum will be 1000ms
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 enum Binate {
     One,
     Two,
@@ -61,7 +62,8 @@ pub struct DockerData {
 }
 
 impl DockerData {
-    /// Use docker stats for work out current cpu usage
+    /// Use docker stats to caluclate current cpu usage
+    #[allow(clippy::cast_precision_loss)]
     fn calculate_usage(stats: &Stats) -> f64 {
         let mut cpu_percentage = 0.0;
         let previous_cpu = stats.precpu_stats.cpu_usage.total_usage;
@@ -77,9 +79,8 @@ impl DockerData {
                     .cpu_stats
                     .cpu_usage
                     .percpu_usage
-                    .clone()
-                    .unwrap_or_default()
-                    .len() as u64
+                    .as_ref()
+                    .map_or(0, std::vec::Vec::len) as u64
             }) as f64;
             if system_delta > 0.0 && cpu_delta > 0.0 {
                 cpu_percentage = (cpu_delta / system_delta) * online_cpus * 100.0;
@@ -93,7 +94,7 @@ impl DockerData {
     /// remove if from spawns hashmap when complete
     async fn update_container_stat(
         docker: Arc<Docker>,
-        id: String,
+        id: ContainerId,
         app_data: Arc<Mutex<AppData>>,
         is_running: bool,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
@@ -101,7 +102,7 @@ impl DockerData {
     ) {
         let mut stream = docker
             .stats(
-                &id,
+                id.get(),
                 Some(StatsOptions {
                     stream: false,
                     one_shot: !is_running,
@@ -113,22 +114,21 @@ impl DockerData {
             let mem_stat = stats.memory_stats.usage.unwrap_or(0);
             let mem_limit = stats.memory_stats.limit.unwrap_or(0);
 
-            let some_key = stats
+            let op_key = stats
                 .networks
                 .as_ref()
                 .and_then(|networks| networks.keys().next().cloned());
 
             let cpu_stats = Self::calculate_usage(&stats);
 
-            let no_bytes = || (0, 0);
-
-            let (rx, tx) = if let Some(key) = some_key {
-                match stats.networks.unwrap_or_default().get(&key) {
-                    Some(data) => (data.rx_bytes, data.tx_bytes),
-                    None => no_bytes(),
-                }
+            let (rx, tx) = if let Some(key) = op_key {
+                stats
+                    .networks
+                    .unwrap_or_default()
+                    .get(&key)
+                    .map_or((0, 0), |f| (f.rx_bytes, f.tx_bytes))
             } else {
-                no_bytes()
+                (0, 0)
             };
 
             if is_running {
@@ -150,15 +150,12 @@ impl DockerData {
     }
 
     /// Update all stats, spawn each container into own tokio::spawn thread
-    async fn update_all_container_stats(&mut self, all_ids: &[(bool, String)]) {
-        for (is_running, id) in all_ids.iter() {
+    fn update_all_container_stats(&mut self, all_ids: &[(bool, ContainerId)]) {
+        for (is_running, id) in all_ids {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
-            let id = id.clone();
-
             let key = SpawnId::Stats((id.clone(), self.binate));
-
             let spawn_key = key.clone();
             self.spawns.lock().entry(key).or_insert_with(|| {
                 tokio::spawn(Self::update_container_stat(
@@ -177,7 +174,7 @@ impl DockerData {
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
     /// Will ignore any container that contains `oxker` as an entry point
-    pub async fn update_all_containers(&mut self) -> Vec<(bool, String)> {
+    pub async fn update_all_containers(&mut self) -> Vec<(bool, ContainerId)> {
         let containers = self
             .docker
             .list_containers(Some(ListContainersOptions::<String> {
@@ -188,13 +185,13 @@ impl DockerData {
             .unwrap_or_default();
 
         let mut output = containers
-            .iter()
+            .into_iter()
             .filter_map(|f| match f.id {
                 Some(_) => {
                     if f.command.as_ref().map_or(false, |c| c.contains("oxker")) {
                         None
                     } else {
-                        Some(f.clone())
+                        Some(f)
                     }
                 }
                 None => None,
@@ -208,13 +205,13 @@ impl DockerData {
 
         // Just get the containers that are currently running, or being restarted, no point updating info on paused or dead containers
         output
-            .iter()
+            .into_iter()
             .filter_map(|i| {
-                i.id.as_ref().map(|id| {
+                i.id.map(|id| {
                     (
                         i.state == Some("running".to_owned())
                             || i.state == Some("restarting".to_owned()),
-                        id.clone(),
+                        ContainerId::from(id),
                     )
                 })
             })
@@ -226,21 +223,20 @@ impl DockerData {
     /// remove if from spawns hashmap when complete
     async fn update_log(
         docker: Arc<Docker>,
-        id: String,
+        id: ContainerId,
         timestamps: bool,
-        since: i64,
+        since: u64,
         app_data: Arc<Mutex<AppData>>,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
     ) {
         let options = Some(LogsOptions::<String> {
             stdout: true,
             timestamps,
-            since,
+            since: i64::try_from(since).unwrap_or_default(),
             ..Default::default()
         });
 
-        let mut logs = docker.logs(&id, options);
-
+        let mut logs = docker.logs(id.get(), options);
         let mut output = vec![];
 
         while let Some(value) = logs.next().await {
@@ -256,18 +252,21 @@ impl DockerData {
     }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
-    async fn init_all_logs(&mut self, all_ids: &[(bool, String)]) {
-        for (_, id) in all_ids.iter() {
+    fn init_all_logs(&mut self, all_ids: &[(bool, ContainerId)]) {
+        for (_, id) in all_ids {
             let docker = Arc::clone(&self.docker);
-            let timestamps = self.timestamps;
-            let id = id.clone();
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
             let key = SpawnId::Log(id.clone());
             self.spawns.lock().insert(
                 key,
                 tokio::spawn(Self::update_log(
-                    docker, id, timestamps, 0, app_data, spawns,
+                    docker,
+                    id.clone(),
+                    self.timestamps,
+                    0,
+                    app_data,
+                    spawns,
                 )),
             );
         }
@@ -278,22 +277,26 @@ impl DockerData {
         let all_ids = self.update_all_containers().await;
         let optional_index = self.app_data.lock().get_selected_log_index();
         if let Some(index) = optional_index {
-            // this could be neater
-            let id = self.app_data.lock().containers.items[index].id.clone();
-            let key = SpawnId::Log(id.clone());
-
-            self.spawns.lock().entry(key).or_insert_with(|| {
-                let since = self.app_data.lock().containers.items[index].last_updated as i64;
-                let docker = Arc::clone(&self.docker);
-                let timestamps = self.timestamps;
-                let app_data = Arc::clone(&self.app_data);
-                let spawns = Arc::clone(&self.spawns);
-                tokio::spawn(Self::update_log(
-                    docker, id, timestamps, since, app_data, spawns,
-                ))
-            });
+            if let Some(container) = self.app_data.lock().containers.items.get(index) {
+                self.spawns
+                    .lock()
+                    .entry(SpawnId::Log(container.id.clone()))
+                    .or_insert_with(|| {
+                        let docker = Arc::clone(&self.docker);
+                        let app_data = Arc::clone(&self.app_data);
+                        let spawns = Arc::clone(&self.spawns);
+                        tokio::spawn(Self::update_log(
+                            docker,
+                            container.id.clone(),
+                            self.timestamps,
+                            container.last_updated,
+                            app_data,
+                            spawns,
+                        ))
+                    });
+            }
         };
-        self.update_all_container_stats(&all_ids).await;
+        self.update_all_container_stats(&all_ids);
     }
 
     /// Animate the loading icon
@@ -319,10 +322,10 @@ impl DockerData {
         let loading_spin = self.loading_spin(loading_uuid).await;
 
         let all_ids = self.update_all_containers().await;
-        self.update_all_container_stats(&all_ids).await;
+        self.update_all_container_stats(&all_ids);
 
         // Maybe only do a single one at first?
-        self.init_all_logs(&all_ids).await;
+        self.init_all_logs(&all_ids);
 
         if all_ids.is_empty() {
             self.initialised = true;
@@ -346,7 +349,7 @@ impl DockerData {
             match message {
                 DockerMessage::Pause(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.pause_container(&id).await.is_err() {
+                    if docker.pause_container(id.get()).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Pause));
@@ -355,7 +358,7 @@ impl DockerData {
                 }
                 DockerMessage::Restart(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.restart_container(&id, None).await.is_err() {
+                    if docker.restart_container(id.get(), None).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Restart));
@@ -365,7 +368,7 @@ impl DockerData {
                 DockerMessage::Start(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker
-                        .start_container(&id, None::<StartContainerOptions<String>>)
+                        .start_container(id.get(), None::<StartContainerOptions<String>>)
                         .await
                         .is_err()
                     {
@@ -377,7 +380,7 @@ impl DockerData {
                 }
                 DockerMessage::Stop(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.stop_container(&id, None).await.is_err() {
+                    if docker.stop_container(id.get(), None).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Stop));
@@ -386,13 +389,11 @@ impl DockerData {
                 }
                 DockerMessage::Unpause(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.unpause_container(&id).await.is_err() {
+                    if docker.unpause_container(id.get()).await.is_err() {
                         app_data
                             .lock()
                             .set_error(AppError::DockerCommand(DockerControls::Unpause));
                     };
-                    // loading sping take uuid to remove
-                    // stop_loading_sping(uuid)
                     self.stop_loading_spin(&loading_spin, loading_uuid);
                     self.update_everything().await;
                 }
