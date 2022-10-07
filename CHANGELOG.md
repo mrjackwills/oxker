@@ -10,9 +10,9 @@
 
 ### Refactors
 + Impl Copy where able to, [e76878f424d72b943713ef84e95e25fada77d79e]
-+ async fn to just fn, [17dc604befac75cb9dc0311a0e43f9927fe0ca30]
++ replace async fn with just fn, [17dc604befac75cb9dc0311a0e43f9927fe0ca30]
 + remove pointless clone()'s & variable declarations, [6731002ee42c9460042c2c38aff5101b1bcebbe6]
-+ replace Strig::from("") with String::new(), [62fb22478697cc9a7ab9fb562a724965b437233a]
++ replace String::from("") with String::new(), [62fb22478697cc9a7ab9fb562a724965b437233a]
 + replace map_or_else with map_or, [3e26f292c7dc5e13af4580952767ebe821aa5183], [5660b34d5149dce27706ff6daa90b854e6f84e14]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.4'>v0.1.4</a>
