@@ -80,7 +80,7 @@ impl DockerData {
                     .cpu_usage
                     .percpu_usage
                     .as_ref()
-                    .map_or_else(|| 0, std::vec::Vec::len) as u64
+                    .map_or(0, std::vec::Vec::len) as u64
             }) as f64;
             if system_delta > 0.0 && cpu_delta > 0.0 {
                 cpu_percentage = (cpu_delta / system_delta) * online_cpus * 100.0;
@@ -122,10 +122,11 @@ impl DockerData {
             let cpu_stats = Self::calculate_usage(&stats);
 
             let (rx, tx) = if let Some(key) = op_key {
-                match stats.networks.unwrap_or_default().get(&key) {
-                    Some(data) => (data.rx_bytes, data.tx_bytes),
-                    None => (0, 0),
-                }
+                stats
+                    .networks
+                    .unwrap_or_default()
+                    .get(&key)
+                    .map_or((0, 0), |f| (f.rx_bytes, f.tx_bytes))
             } else {
                 (0, 0)
             };

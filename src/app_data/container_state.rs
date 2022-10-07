@@ -136,10 +136,10 @@ pub enum State {
 impl State {
     pub const fn get_color(self) -> Color {
         match self {
-            Self::Running => Color::Green,
+            Self::Paused => Color::Yellow,
             Self::Removing => Color::LightRed,
             Self::Restarting => Color::LightGreen,
-            Self::Paused => Color::Yellow,
+            Self::Running => Color::Green,
             _ => Color::Red,
         }
     }
@@ -204,19 +204,19 @@ impl fmt::Display for State {
 #[derive(Debug, Clone, Copy)]
 pub enum DockerControls {
     Pause,
-    Unpause,
     Restart,
-    Stop,
     Start,
+    Stop,
+    Unpause,
 }
 
 impl DockerControls {
     pub const fn get_color(self) -> Color {
         match self {
+            Self::Pause => Color::Yellow,
+            Self::Restart => Color::Magenta,
             Self::Start => Color::Green,
             Self::Stop => Color::Red,
-            Self::Restart => Color::Magenta,
-            Self::Pause => Color::Yellow,
             Self::Unpause => Color::Blue,
         }
     }
@@ -237,10 +237,10 @@ impl fmt::Display for DockerControls {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = match self {
             Self::Pause => "pause",
-            Self::Unpause => "unpause",
             Self::Restart => "restart",
-            Self::Stop => "stop",
             Self::Start => "start",
+            Self::Stop => "stop",
+            Self::Unpause => "unpause",
         };
         write!(f, "{}", disp)
     }
