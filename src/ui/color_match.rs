@@ -41,7 +41,7 @@ pub mod log_sanitizer {
 
     /// Remove all ansi formatting from a given string and create tui-rs spans
     pub fn remove_ansi<'a>(input: &str) -> Vec<Spans<'a>> {
-        let mut output = String::from("");
+        let mut output = String::new();
         for i in categorise_text(input) {
             output.push_str(i.text);
         }

@@ -109,7 +109,7 @@ impl<T> StatefulList<T> {
 
     pub fn get_state_title(&self) -> String {
         if self.items.is_empty() {
-            String::from("")
+            String::new()
         } else {
             let len = self.items.len();
             let c = self

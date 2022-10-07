@@ -251,22 +251,22 @@ impl GuiState {
         self.selected_panel = self.selected_panel.prev();
     }
 
-    /// Advance loading animation
+    /// Insert a new loading_uuid into hashset, and advance the animation by one frame
     pub fn next_loading(&mut self, uuid: Uuid) {
         self.loading_icon = self.loading_icon.next();
         self.is_loading.insert(uuid);
     }
 
-    /// if is_loading, return loading animation frame, else single space
+    /// If is_loading has any entries, return the current loading_icon, else an emtpy string
     pub fn get_loading(&mut self) -> String {
         if self.is_loading.is_empty() {
-            String::from(" ")
+            String::new()
         } else {
             self.loading_icon.to_string()
         }
     }
 
-    /// set is_loading to false, but keep animation frame at same state
+    /// Remove a loading_uuid from the is_loading hashset
     pub fn remove_loading(&mut self, uuid: Uuid) {
         self.is_loading.remove(&uuid);
     }

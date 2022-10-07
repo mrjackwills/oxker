@@ -63,7 +63,7 @@ fn generate_block<'a>(
         SelectablePanel::Logs => {
             format!(" {} {} ", panel.title(), app_data.lock().get_log_title())
         }
-        SelectablePanel::Commands => String::from(""),
+        SelectablePanel::Commands => String::new(),
     };
     let mut block = Block::default()
         .borders(Borders::ALL)
