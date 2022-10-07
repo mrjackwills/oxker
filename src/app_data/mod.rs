@@ -259,10 +259,10 @@ impl AppData {
     /// Get the title for log panel for selected container
     /// will be "logs x/x"
     pub fn get_log_title(&self) -> String {
-        self.get_selected_log_index().map_or(
-            "".to_owned(),
-            |index| self.containers.items[index].logs.get_state_title(),
-        )
+        self.get_selected_log_index()
+            .map_or("".to_owned(), |index| {
+                self.containers.items[index].logs.get_state_title()
+            })
     }
 
     /// select next selected log line
@@ -301,6 +301,8 @@ impl AppData {
         }
     }
 
+
+	/// Check if the initial parsing has been completed, by making sure that all ids given (which are running) have a non empty cpu_stats vecdec
     pub fn initialised(&mut self, all_ids: &[(bool, ContainerId)]) -> bool {
         let count_is_running = all_ids.iter().filter(|i| i.0).count();
         let number_with_cpu_status = self
@@ -382,7 +384,7 @@ impl AppData {
             .collect::<Vec<_>>()
     }
 
-    /// find container given id
+    /// return a mutable container by given id
     fn get_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
         self.containers.items.iter_mut().find(|i| &i.id == id)
     }
@@ -443,8 +445,10 @@ impl AppData {
                 }
             }
         }
+		// Trim a &String and return String
+		let trim_owned = |x: &String| x.trim().to_owned();
 
-        for i in all_containers.iter_mut() {
+        for i in all_containers {
             if let Some(id) = i.id.as_ref() {
                 let name = i.names.as_mut().map_or("".to_owned(), |names| {
                     names.first_mut().map_or("".to_owned(), |f| {
@@ -458,12 +462,12 @@ impl AppData {
                 let state = State::from(
                     i.state
                         .as_ref()
-                        .map_or("dead".to_owned(), |f| f.trim().to_owned()),
+                        .map_or("dead".to_owned(), trim_owned),
                 );
                 let status = i
                     .status
                     .as_ref()
-                    .map_or("".to_owned(), |f| f.trim().to_owned());
+                    .map_or("".to_owned(), trim_owned);
 
                 let image = i
                     .image
@@ -512,7 +516,7 @@ impl AppData {
             container.last_updated = tz;
             let current_len = container.logs.items.len();
 
-            for i in output.iter() {
+            for i in output {
                 let lines = if color {
                     log_sanitizer::colorize_logs(i)
                 } else if raw {
@@ -523,6 +527,8 @@ impl AppData {
                 container.logs.items.push(ListItem::new(lines));
             }
 
+			// Set the logs selected row for each container
+			// Either when no long currently selected, or currently selected (before updated) is already at end
             if container.logs.state.selected().is_none()
                 || container.logs.state.selected().map_or(1, |f| f + 1) == current_len
             {

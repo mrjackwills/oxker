@@ -151,7 +151,7 @@ impl DockerData {
 
     /// Update all stats, spawn each container into own tokio::spawn thread
     fn update_all_container_stats(&mut self, all_ids: &[(bool, ContainerId)]) {
-        for (is_running, id) in all_ids.iter() {
+        for (is_running, id) in all_ids {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
@@ -185,13 +185,13 @@ impl DockerData {
             .unwrap_or_default();
 
         let mut output = containers
-            .iter()
+            .into_iter()
             .filter_map(|f| match f.id {
                 Some(_) => {
                     if f.command.as_ref().map_or(false, |c| c.contains("oxker")) {
                         None
                     } else {
-                        Some(f.clone())
+                        Some(f)
                     }
                 }
                 None => None,
@@ -205,13 +205,13 @@ impl DockerData {
 
         // Just get the containers that are currently running, or being restarted, no point updating info on paused or dead containers
         output
-            .iter()
+            .into_iter()
             .filter_map(|i| {
-                i.id.as_ref().map(|id| {
+                i.id.map(|id| {
                     (
                         i.state == Some("running".to_owned())
                             || i.state == Some("restarting".to_owned()),
-                        ContainerId::from(id.as_str()),
+                        ContainerId::from(id),
                     )
                 })
             })
@@ -253,7 +253,7 @@ impl DockerData {
 
     /// Update all logs, spawn each container into own tokio::spawn thread
     fn init_all_logs(&mut self, all_ids: &[(bool, ContainerId)]) {
-        for (_, id) in all_ids.iter() {
+        for (_, id) in all_ids {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);

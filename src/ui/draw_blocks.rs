@@ -51,7 +51,7 @@ fn generate_block<'a>(
     panel: SelectablePanel,
 ) -> Block<'a> {
     gui_state.lock().update_map(Region::Panel(panel), area);
-   let current_selected_panel = gui_state.lock().selected_panel;
+    let current_selected_panel = gui_state.lock().selected_panel;
     let title = match panel {
         SelectablePanel::Containers => {
             format!(
@@ -65,10 +65,10 @@ fn generate_block<'a>(
         }
         SelectablePanel::Commands => String::from(""),
     };
-	let mut block = Block::default()
-	.borders(Borders::ALL)
-	.border_type(BorderType::Rounded)
-	.title(title);
+    let mut block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .title(title);
     if current_selected_panel == panel {
         block = block.border_style(Style::default().fg(Color::LightCyan));
     }
