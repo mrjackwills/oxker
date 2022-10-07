@@ -10,11 +10,11 @@ pub mod log_sanitizer {
     pub fn colorize_logs<'a>(input: &str) -> Vec<Spans<'a>> {
         vec![Spans::from(
             categorise_text(input)
-                .into_iter()
+                .iter()
                 .map(|i| {
-                    let fg_color = color_ansi_to_tui(i.fg.unwrap_or(CansiColor::White));
-                    let bg_color = color_ansi_to_tui(i.bg.unwrap_or(CansiColor::Black));
-                    let style = Style::default().bg(bg_color).fg(fg_color);
+                    let style = Style::default()
+                        .bg(color_ansi_to_tui(i.bg.unwrap_or(CansiColor::Black)))
+                        .fg(color_ansi_to_tui(i.fg.unwrap_or(CansiColor::White)));
                     if i.blink.is_some() {
                         style.add_modifier(Modifier::SLOW_BLINK);
                     }
@@ -41,7 +41,7 @@ pub mod log_sanitizer {
 
     /// Remove all ansi formatting from a given string and create tui-rs spans
     pub fn remove_ansi<'a>(input: &str) -> Vec<Spans<'a>> {
-        let mut output = String::from("");
+        let mut output = String::new();
         for i in categorise_text(input) {
             output.push_str(i.text);
         }

@@ -11,6 +11,45 @@ const ONE_KB: f64 = 1000.0;
 const ONE_MB: f64 = ONE_KB * 1000.0;
 const ONE_GB: f64 = ONE_MB * 1000.0;
 
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct ContainerId(String);
+
+impl From<String> for ContainerId {
+    fn from(x: String) -> Self {
+        Self(x)
+    }
+}
+
+impl From<&String> for ContainerId {
+    fn from(x: &String) -> Self {
+        Self(x.clone())
+    }
+}
+
+impl From<&str> for ContainerId {
+    fn from(x: &str) -> Self {
+        Self(x.to_owned())
+    }
+}
+
+impl ContainerId {
+    pub fn get(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl Ord for ContainerId {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl PartialOrd for ContainerId {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct StatefulList<T> {
     pub state: ListState,
@@ -70,7 +109,7 @@ impl<T> StatefulList<T> {
 
     pub fn get_state_title(&self) -> String {
         if self.items.is_empty() {
-            String::from("")
+            String::new()
         } else {
             let len = self.items.len();
             let c = self
@@ -97,10 +136,10 @@ pub enum State {
 impl State {
     pub const fn get_color(self) -> Color {
         match self {
-            Self::Running => Color::Green,
+            Self::Paused => Color::Yellow,
             Self::Removing => Color::LightRed,
             Self::Restarting => Color::LightGreen,
-            Self::Paused => Color::Yellow,
+            Self::Running => Color::Green,
             _ => Color::Red,
         }
     }
@@ -165,19 +204,19 @@ impl fmt::Display for State {
 #[derive(Debug, Clone, Copy)]
 pub enum DockerControls {
     Pause,
-    Unpause,
     Restart,
-    Stop,
     Start,
+    Stop,
+    Unpause,
 }
 
 impl DockerControls {
     pub const fn get_color(self) -> Color {
         match self {
+            Self::Pause => Color::Yellow,
+            Self::Restart => Color::Magenta,
             Self::Start => Color::Green,
             Self::Stop => Color::Red,
-            Self::Restart => Color::Magenta,
-            Self::Pause => Color::Yellow,
             Self::Unpause => Color::Blue,
         }
     }
@@ -198,10 +237,10 @@ impl fmt::Display for DockerControls {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = match self {
             Self::Pause => "pause",
-            Self::Unpause => "unpause",
             Self::Restart => "restart",
-            Self::Stop => "stop",
             Self::Start => "start",
+            Self::Stop => "stop",
+            Self::Unpause => "unpause",
         };
         write!(f, "{}", disp)
     }
@@ -214,7 +253,7 @@ pub trait Stats {
 /// Struct for frequently updated CPU stats
 /// So can use custom display formatter
 /// Use trait Stats for use as generic in draw_chart function
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct CpuStats {
     value: f64,
 }
@@ -267,7 +306,7 @@ impl fmt::Display for CpuStats {
 /// Struct for frequently updated memory usage stats
 /// So can use custom display formatter
 /// Use trait Stats for use as generic in draw_chart function
-#[derive(Debug, Clone, Copy, Eq)]
+#[derive(Debug, Default, Clone, Copy, Eq)]
 pub struct ByteStats {
     value: u64,
 }
@@ -298,6 +337,8 @@ impl ByteStats {
         self.value = value;
     }
 }
+
+#[allow(clippy::cast_precision_loss)]
 impl Stats for ByteStats {
     fn get_value(&self) -> f64 {
         self.value as f64
@@ -307,7 +348,7 @@ impl Stats for ByteStats {
 /// convert from bytes to kB, MB, GB etc
 impl fmt::Display for ByteStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let as_f64 = self.value as f64;
+        let as_f64 = self.get_value();
         let p = match as_f64 {
             x if x >= ONE_GB => format!("{y:.2} GB", y = as_f64 / ONE_GB),
             x if x >= ONE_MB => format!("{y:.2} MB", y = as_f64 / ONE_MB),
@@ -326,7 +367,7 @@ pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
 pub struct ContainerItem {
     pub cpu_stats: VecDeque<CpuStats>,
     pub docker_controls: StatefulList<DockerControls>,
-    pub id: String,
+    pub id: ContainerId,
     pub image: String,
     pub last_updated: u64,
     pub logs: StatefulList<ListItem<'static>>,
@@ -341,21 +382,23 @@ pub struct ContainerItem {
 
 impl ContainerItem {
     /// Create a new container item
-    pub fn new(id: String, status: String, image: String, state: State, name: String) -> Self {
+    pub fn new(id: ContainerId, status: String, image: String, state: State, name: String) -> Self {
         let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
+        let mut logs = StatefulList::new(vec![]);
+        logs.end();
         Self {
             cpu_stats: VecDeque::with_capacity(60),
             docker_controls,
             id,
             image,
             last_updated: 0,
-            logs: StatefulList::new(vec![]),
-            mem_limit: ByteStats::new(0),
+            logs,
+            mem_limit: ByteStats::default(),
             mem_stats: VecDeque::with_capacity(60),
             name,
-            rx: ByteStats::new(0),
-            tx: ByteStats::new(0),
+            rx: ByteStats::default(),
+            tx: ByteStats::default(),
             state,
             status,
         }
@@ -365,7 +408,7 @@ impl ContainerItem {
     fn max_cpu_stats(&self) -> CpuStats {
         match self.cpu_stats.iter().max() {
             Some(value) => *value,
-            None => CpuStats::new(0.0),
+            None => CpuStats::default(),
         }
     }
 
@@ -373,11 +416,12 @@ impl ContainerItem {
     fn max_mem_stats(&self) -> ByteStats {
         match self.mem_stats.iter().max() {
             Some(value) => *value,
-            None => ByteStats::new(0),
+            None => ByteStats::default(),
         }
     }
 
     /// Convert cpu stats into a vec for the charts function
+    #[allow(clippy::cast_precision_loss)]
     fn get_cpu_dataset(&self) -> Vec<(f64, f64)> {
         self.cpu_stats
             .iter()
@@ -387,6 +431,7 @@ impl ContainerItem {
     }
 
     /// Convert mem stats into a Vec for the charts function
+    #[allow(clippy::cast_precision_loss)]
     fn get_mem_dataset(&self) -> Vec<(f64, f64)> {
         self.mem_stats
             .iter()

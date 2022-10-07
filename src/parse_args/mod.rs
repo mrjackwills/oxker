@@ -4,7 +4,7 @@ use clap::Parser;
 use tracing::error;
 
 #[derive(Parser, Debug, Clone, Copy)]
-// #[command(help_template = FULL_TEMPLATE)]
+#[allow(clippy::struct_excessive_bools)]
 #[command(version, about)]
 pub struct CliArgs {
     /// Docker update interval in ms, minimum effectively 1000
@@ -15,11 +15,11 @@ pub struct CliArgs {
     #[clap(short = 't')]
     pub timestamp: bool,
 
-    /// Attempt to colorize the logs
+    /// Attempt to colorize the logs, conflicts with "-r"
     #[clap(short = 'c', conflicts_with = "raw")]
     pub color: bool,
 
-    /// Show raw logs, default is to remove ansi formatting
+    /// Show raw logs, default is to remove ansi formatting, conflicts with "-c"
     #[clap(short = 'r', conflicts_with = "color")]
     pub raw: bool,
 

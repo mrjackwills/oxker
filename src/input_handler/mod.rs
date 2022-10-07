@@ -137,6 +137,7 @@ impl InputHandler {
     }
 
     /// Handle any keyboard button events
+    #[allow(clippy::too_many_lines)]
     async fn button_press(&mut self, key_code: KeyCode) {
         let show_error = self.app_data.lock().show_error;
         let show_info = self.gui_state.lock().show_help;

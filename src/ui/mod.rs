@@ -148,7 +148,7 @@ fn ui<B: Backend>(
 ) {
     // set max height for container section, needs +4 to deal with docker commands list and borders
     let height = app_data.lock().get_container_len();
-    let height = if height < 12 { (height + 4) as u16 } else { 12 };
+    let height = if height < 12 { height + 4 } else { 12 };
 
     let column_widths = app_data.lock().get_width();
     let has_containers = !app_data.lock().containers.items.is_empty();
@@ -168,7 +168,13 @@ fn ui<B: Backend>(
     // Split into 3, containers+controls, logs, then graphs
     let upper_main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Max(height as u16), Constraint::Percentage(50)].as_ref())
+        .constraints(
+            [
+                Constraint::Max(height.try_into().unwrap_or_default()),
+                Constraint::Percentage(50),
+            ]
+            .as_ref(),
+        )
         .split(whole_layout[1]);
 
     let top_split = if has_containers {
