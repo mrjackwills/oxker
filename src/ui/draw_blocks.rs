@@ -51,10 +51,7 @@ fn generate_block<'a>(
     panel: SelectablePanel,
 ) -> Block<'a> {
     gui_state.lock().update_map(Region::Panel(panel), area);
-    let mut block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded);
-    let current_selected_panel = gui_state.lock().selected_panel;
+   let current_selected_panel = gui_state.lock().selected_panel;
     let title = match panel {
         SelectablePanel::Containers => {
             format!(
@@ -68,7 +65,10 @@ fn generate_block<'a>(
         }
         SelectablePanel::Commands => String::from(""),
     };
-    block = block.title(title);
+	let mut block = Block::default()
+	.borders(Borders::ALL)
+	.border_type(BorderType::Rounded)
+	.title(title);
     if current_selected_panel == panel {
         block = block.border_style(Style::default().fg(Color::LightCyan));
     }
@@ -109,9 +109,7 @@ pub fn commands<B: Backend>(
             &mut app_data.lock().containers.items[i].docker_controls.state,
         );
     } else {
-        let paragraph = Paragraph::new("")
-            .block(block)
-            .alignment(Alignment::Center);
+        let paragraph = Paragraph::new("").block(block).alignment(Alignment::Center);
         f.render_widget(paragraph, area);
     }
 }
