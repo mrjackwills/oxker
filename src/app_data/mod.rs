@@ -70,7 +70,7 @@ impl AppData {
             .state
             .select(self.containers.items.iter().position(|i| {
                 self.get_selected_container_id()
-                    .map_or_else(|| false, |id| i.id == id)
+                    .map_or(false, |id| i.id == id)
             }));
     }
     /// Generate a default app_state
@@ -259,8 +259,8 @@ impl AppData {
     /// Get the title for log panel for selected container
     /// will be "logs x/x"
     pub fn get_log_title(&self) -> String {
-        self.get_selected_log_index().map_or_else(
-            || String::from(""),
+        self.get_selected_log_index().map_or(
+            "".to_owned(),
             |index| self.containers.items[index].logs.get_state_title(),
         )
     }
@@ -430,7 +430,7 @@ impl AppData {
             if !all_containers
                 .iter()
                 .filter_map(|i| i.id.as_ref())
-                .any(|x| &ContainerId::from(x) == id)
+                .any(|x| x == id.get())
             {
                 // If removed container is currently selected, then change selected to previous
                 // This will default to 0 in any edge cases
@@ -446,8 +446,8 @@ impl AppData {
 
         for i in all_containers.iter_mut() {
             if let Some(id) = i.id.as_ref() {
-                let name = i.names.as_mut().map_or("".to_owned(), |n| {
-                    n.get_mut(0).map_or("".to_owned(), |f| {
+                let name = i.names.as_mut().map_or("".to_owned(), |names| {
+                    names.first_mut().map_or("".to_owned(), |f| {
                         if f.starts_with('/') {
                             f.remove(0);
                         }
