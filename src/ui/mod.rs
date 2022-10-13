@@ -56,6 +56,7 @@ pub async fn create_ui(
         update_duration,
     )
     .await;
+	terminal.clear()?;
 
     disable_raw_mode()?;
     execute!(
