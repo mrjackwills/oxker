@@ -473,7 +473,7 @@ pub fn heading_bar<B: Backend>(
         }
     }
 
-    /// show/hide help
+    // show/hide help
     let color = if info_visible {
         Color::White
     } else {
