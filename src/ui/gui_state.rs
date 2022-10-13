@@ -59,6 +59,7 @@ pub enum BoxLocation {
 }
 
 impl BoxLocation {
+    /// Screen is divided into 3x3 sections
     pub const fn get_indexes(self) -> (usize, usize) {
         match self {
             Self::TopLeft => (0, 0),
@@ -258,9 +259,10 @@ impl GuiState {
     }
 
     /// If is_loading has any entries, return the current loading_icon, else an emtpy string
+    // Option<String>?
     pub fn get_loading(&mut self) -> String {
         if self.is_loading.is_empty() {
-            String::new()
+            String::from(" ")
         } else {
             self.loading_icon.to_string()
         }
