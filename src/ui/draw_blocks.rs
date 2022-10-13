@@ -337,6 +337,7 @@ fn make_chart<'a, T: Stats + Display>(
 }
 
 /// Draw heading bar at top of program, always visible
+/// TODO Should seperate into loading icon/headers/help functions
 #[allow(clippy::too_many_lines)]
 pub fn heading_bar<B: Backend>(
     area: Rect,
@@ -347,10 +348,10 @@ pub fn heading_bar<B: Backend>(
     sorted_by: Option<(Header, SortedOrder)>,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = || Block::default().style(Style::default().bg(Color::Magenta).fg(Color::Black));
+    let block = |fg: Color| Block::default().style(Style::default().bg(Color::Magenta).fg(fg));
     let info_visible = gui_state.lock().show_help;
 
-    f.render_widget(block(), area);
+    f.render_widget(block(Color::Black), area);
 
     // Generate a bloack for the header, if the header is currently being used to sort a column, then highlight it white
     let header_block = |x: &Header| {
@@ -380,8 +381,7 @@ pub fn heading_bar<B: Backend>(
         let block = header_block(header);
         let text = match header {
             Header::State => format!(
-                " {}{:>width$}{ic}",
-                loading_icon,
+                "{:>width$}{ic}",
                 header,
                 ic = block.1,
                 width = width - block.2,
@@ -393,7 +393,6 @@ pub fn heading_bar<B: Backend>(
                 ic = block.1,
                 width = width - block.2
             ),
-
             _ => format!(
                 "{}{:>width$}{ic}",
                 MARGIN,
@@ -438,6 +437,7 @@ pub fn heading_bar<B: Backend>(
     let column_width = if column_width > 0 { column_width } else { 1 };
     let splits = if has_containers {
         vec![
+            Constraint::Min(2),
             Constraint::Min(column_width.try_into().unwrap_or_default()),
             Constraint::Min(info_width.try_into().unwrap_or_default()),
         ]
@@ -450,12 +450,20 @@ pub fn heading_bar<B: Backend>(
         .constraints(splits.as_ref())
         .split(area);
     if has_containers {
-        let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
+        // Draw loading icon, or not, and a prefix with a single space
+        let loading_icon = format!("{:>2}", loading_icon);
+        let loading_paragraph = Paragraph::new(loading_icon)
+            .block(block(Color::White))
+            .alignment(Alignment::Center);
+        f.render_widget(loading_paragraph, split_bar[0]);
 
+
+
+        let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
         let headers_section = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(container_splits.as_ref())
-            .split(split_bar[0]);
+            .split(split_bar[1]);
 
         // draw the actual header blocks
         for (index, (paragraph, header, _)) in header_data.into_iter().enumerate() {
@@ -465,13 +473,21 @@ pub fn heading_bar<B: Backend>(
         }
     }
 
-    let paragraph = Paragraph::new(info_text)
-        .block(block())
+    // show/hide help
+    let color = if info_visible {
+        Color::White
+    } else {
+        Color::Black
+    };
+    let help_paragraph = Paragraph::new(info_text)
+        .block(block(color))
         .alignment(Alignment::Right);
 
     // If no containers, don't display the headers, could maybe do this first?
-    let index = if has_containers { 1 } else { 0 };
-    f.render_widget(paragraph, split_bar[index]);
+    let help_index = if has_containers { 2 } else { 0 };
+    // render help info
+
+    f.render_widget(help_paragraph, split_bar[help_index]);
 }
 
 /// From a given &str, return the maximum number of chars on a single line
