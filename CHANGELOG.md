@@ -16,13 +16,13 @@
 + replace async fn with just fn, [17dc604b](https://github.com/mrjackwills/oxker/commit/17dc604befac75cb9dc0311a0e43f9927fe0ca30),
 + remove pointless clone()'s & variable declarations, [6731002e](https://github.com/mrjackwills/oxker/commit/6731002ee42c9460042c2c38aff5101b1bcebbe6),
 + replace String::from("") with String::new(), [62fb2247](https://github.com/mrjackwills/oxker/commit/62fb22478697cc9a7ab9fb562a724965b437233a),
-+ replace map_or_else with map_or, [3e26f292](https://github.com/mrjackwills/oxker/commit/3e26f292c7dc5e13af4580952767ebe821aa5183),, [5660b34d](https://github.com/mrjackwills/oxker/commit/5660b34d5149dce27706ff6daa90b854e6f84e14),
++ replace map_or_else with map_or, [3e26f292](https://github.com/mrjackwills/oxker/commit/3e26f292c7dc5e13af4580952767ebe821aa5183), [5660b34d](https://github.com/mrjackwills/oxker/commit/5660b34d5149dce27706ff6daa90b854e6f84e14),
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.4'>v0.1.4</a>
 ### 2022-09-07
 
 ### Chores
-+ dependencies updated, [a3168daa](https://github.com/mrjackwills/oxker/commit/a3168daa3f769a6747dfbe61103073a7e80a1485),, [78e59160](https://github.com/mrjackwills/oxker/commit/78e59160bb6a978ee80e3a99eb72f051fb64e737),
++ dependencies updated, [a3168daa](https://github.com/mrjackwills/oxker/commit/a3168daa3f769a6747dfbe61103073a7e80a1485),[78e59160](https://github.com/mrjackwills/oxker/commit/78e59160bb6a978ee80e3a99eb72f051fb64e737),
 
 ### Features
 + containerize self, github action to build and push to [Docker Hub](https://hub.docker.com/r/mrjackwills/oxker), [07f97202](https://github.com/mrjackwills/oxker/commit/07f972022a69f22bac57925e6ad84234381f7890),
