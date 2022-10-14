@@ -173,6 +173,17 @@ impl fmt::Display for Loading {
     }
 }
 
+/// The application can be in these four states
+/// Various functions (e.g input handler), operate differently depending upon current Status
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum Status {
+    Init,
+    Help,
+    DockerConnect,
+    Error,
+    Normal,
+}
+
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 pub struct GuiState {
@@ -180,8 +191,8 @@ pub struct GuiState {
     heading_map: HashMap<Header, Rect>,
     loading_icon: Loading,
     is_loading: HashSet<Uuid>,
+    status: Status,
     pub selected_panel: SelectablePanel,
-    pub show_help: bool,
     pub info_box_text: Option<String>,
 }
 impl GuiState {
@@ -192,9 +203,9 @@ impl GuiState {
             heading_map: HashMap::new(),
             loading_icon: Loading::One,
             selected_panel: SelectablePanel::Containers,
-            show_help: false,
             is_loading: HashSet::new(),
             info_box_text: None,
+            status: Status::Init,
         }
     }
 
@@ -240,6 +251,14 @@ impl GuiState {
                 .and_modify(|w| *w = area)
                 .or_insert(area),
         };
+    }
+
+    pub fn set_status(&mut self, status: Status) {
+        self.status = status
+    }
+
+    pub fn get_status(&self) -> Status {
+        self.status
     }
 
     /// Change to next selectable panel

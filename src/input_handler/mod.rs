@@ -21,7 +21,7 @@ use crate::{
     app_data::{AppData, DockerControls, Header, SortedOrder},
     app_error::AppError,
     docker_data::DockerMessage,
-    ui::{GuiState, SelectablePanel},
+    ui::{GuiState, SelectablePanel, Status},
 };
 pub use message::InputMessages;
 
@@ -64,10 +64,11 @@ impl InputHandler {
             match message {
                 InputMessages::ButtonPress(key_code) => self.button_press(key_code).await,
                 InputMessages::MouseEvent(mouse_event) => {
-                    let show_error = self.app_data.lock().show_error;
-                    let show_info = self.gui_state.lock().show_help;
-                    if !show_error && !show_info {
-                        self.mouse_press(mouse_event);
+                    // let show_error = self.app_data.lock().show_error;
+                    let status = self.gui_state.lock().get_status();
+                    match status {
+                        Status::Error | Status::Help => (),
+                        _ => self.mouse_press(mouse_event),
                     }
                 }
             }
@@ -85,10 +86,11 @@ impl InputHandler {
                     .gui_state
                     .lock()
                     .set_info_box("✖ mouse capture disabled".to_owned()),
-                Err(_) => self
-                    .app_data
-                    .lock()
-                    .set_error(AppError::MouseCapture(false)),
+                Err(_) => {
+                    self.app_data
+                        .lock()
+                        .set_error(AppError::MouseCapture(false));
+                }
             }
         } else {
             match execute!(std::io::stdout(), EnableMouseCapture) {
@@ -96,7 +98,9 @@ impl InputHandler {
                     .gui_state
                     .lock()
                     .set_info_box("✓ mouse capture enabled".to_owned()),
-                Err(_) => self.app_data.lock().set_error(AppError::MouseCapture(true)),
+                Err(_) => {
+                    self.app_data.lock().set_error(AppError::MouseCapture(true));
+                }
             }
         };
 
@@ -129,147 +133,155 @@ impl InputHandler {
     }
 
     /// Send a quit message to docker, to abort all spawns, if an error is return, set is_running to false here instead
-    async fn quit(&self) {
-        match self.docker_sender.send(DockerMessage::Quit).await {
-            Ok(_) => (),
-            Err(_) => self.is_running.store(false, Ordering::SeqCst),
+    async fn quit(&self, status: Status) {
+        match status {
+            Status::Error | Status::Init => self.is_running.store(false, Ordering::SeqCst),
+            _ => {
+                if self.docker_sender.send(DockerMessage::Quit).await.is_err() {
+                    self.is_running.store(false, Ordering::SeqCst)
+                }
+            }
         }
+
+        // match self.docker_sender.send(DockerMessage::Quit).await {
+        //     Ok(_) => (),
+        //     Err(_) => self.is_running.store(false, Ordering::SeqCst),
+        // }
     }
 
     /// Handle any keyboard button events
     #[allow(clippy::too_many_lines)]
     async fn button_press(&mut self, key_code: KeyCode) {
-        let show_error = self.app_data.lock().show_error;
-        let show_info = self.gui_state.lock().show_help;
+        let status = self.gui_state.lock().get_status();
 
-        if show_error {
-            match key_code {
-                KeyCode::Char('q' | 'Q') => self.quit().await,
+        match status {
+            Status::Error => match key_code {
+                KeyCode::Char('q' | 'Q') => self.quit(status).await,
                 KeyCode::Char('c' | 'C') => {
-                    self.app_data.lock().show_error = false;
                     self.app_data.lock().remove_error();
+                    self.gui_state.lock().set_status(Status::Normal);
                 }
                 _ => (),
-            }
-        } else if show_info {
-            match key_code {
-                KeyCode::Char('q' | 'Q') => self.quit().await,
-                KeyCode::Char('h' | 'H') => self.gui_state.lock().show_help = false,
+            },
+            Status::Help => match key_code {
+                KeyCode::Char('q' | 'Q') => self.quit(status).await,
+                KeyCode::Char('h' | 'H') => self.gui_state.lock().set_status(Status::Help),
                 KeyCode::Char('m' | 'M') => self.m_key(),
                 _ => (),
-            }
-        } else {
-            match key_code {
-                KeyCode::Char('0') => self.app_data.lock().set_sorted(None),
-                KeyCode::Char('1') => self.sort(Header::State),
-                KeyCode::Char('2') => self.sort(Header::Status),
-                KeyCode::Char('3') => self.sort(Header::Cpu),
-                KeyCode::Char('4') => self.sort(Header::Memory),
-                KeyCode::Char('5') => self.sort(Header::Id),
-                KeyCode::Char('6') => self.sort(Header::Name),
-                KeyCode::Char('7') => self.sort(Header::Image),
-                KeyCode::Char('8') => self.sort(Header::Rx),
-                KeyCode::Char('9') => self.sort(Header::Tx),
-                KeyCode::Char('q' | 'Q') => self.quit().await,
-                KeyCode::Char('h' | 'H') => self.gui_state.lock().show_help = true,
-                KeyCode::Char('m' | 'M') => self.m_key(),
-                KeyCode::Tab => {
-                    // Skip control panel if no containers, could be refactored
-                    let has_containers = self.app_data.lock().get_container_len() == 0;
-                    let is_containers =
-                        self.gui_state.lock().selected_panel == SelectablePanel::Containers;
-                    let count = if has_containers && is_containers {
-                        2
-                    } else {
-                        1
-                    };
-                    for _ in 0..count {
-                        self.gui_state.lock().next_panel();
+            },
+            _ => {
+                match key_code {
+                    KeyCode::Char('0') => self.app_data.lock().set_sorted(None),
+                    KeyCode::Char('1') => self.sort(Header::State),
+                    KeyCode::Char('2') => self.sort(Header::Status),
+                    KeyCode::Char('3') => self.sort(Header::Cpu),
+                    KeyCode::Char('4') => self.sort(Header::Memory),
+                    KeyCode::Char('5') => self.sort(Header::Id),
+                    KeyCode::Char('6') => self.sort(Header::Name),
+                    KeyCode::Char('7') => self.sort(Header::Image),
+                    KeyCode::Char('8') => self.sort(Header::Rx),
+                    KeyCode::Char('9') => self.sort(Header::Tx),
+                    KeyCode::Char('q' | 'Q') => self.quit(status).await,
+                    KeyCode::Char('h' | 'H') => self.gui_state.lock().set_status(Status::Help),
+                    KeyCode::Char('m' | 'M') => self.m_key(),
+                    KeyCode::Tab => {
+                        // Skip control panel if no containers, could be refactored
+                        let has_containers = self.app_data.lock().get_container_len() == 0;
+                        let is_containers =
+                            self.gui_state.lock().selected_panel == SelectablePanel::Containers;
+                        let count = if has_containers && is_containers {
+                            2
+                        } else {
+                            1
+                        };
+                        for _ in 0..count {
+                            self.gui_state.lock().next_panel();
+                        }
                     }
-                }
-                KeyCode::BackTab => {
-                    // Skip control panel if no containers, could be refactored
-                    let has_containers = self.app_data.lock().get_container_len() == 0;
-                    let is_containers =
-                        self.gui_state.lock().selected_panel == SelectablePanel::Logs;
-                    let count = if has_containers && is_containers {
-                        2
-                    } else {
-                        1
-                    };
-                    for _ in 0..count {
-                        self.gui_state.lock().previous_panel();
+                    KeyCode::BackTab => {
+                        // Skip control panel if no containers, could be refactored
+                        let has_containers = self.app_data.lock().get_container_len() == 0;
+                        let is_containers =
+                            self.gui_state.lock().selected_panel == SelectablePanel::Logs;
+                        let count = if has_containers && is_containers {
+                            2
+                        } else {
+                            1
+                        };
+                        for _ in 0..count {
+                            self.gui_state.lock().previous_panel();
+                        }
                     }
-                }
-                KeyCode::Home => {
-                    let mut locked_data = self.app_data.lock();
-                    match self.gui_state.lock().selected_panel {
-                        SelectablePanel::Containers => locked_data.containers.start(),
-                        SelectablePanel::Logs => locked_data.log_start(),
-                        SelectablePanel::Commands => locked_data.docker_command_start(),
+                    KeyCode::Home => {
+                        let mut locked_data = self.app_data.lock();
+                        match self.gui_state.lock().selected_panel {
+                            SelectablePanel::Containers => locked_data.containers.start(),
+                            SelectablePanel::Logs => locked_data.log_start(),
+                            SelectablePanel::Commands => locked_data.docker_command_start(),
+                        }
                     }
-                }
-                KeyCode::End => {
-                    let mut locked_data = self.app_data.lock();
-                    match self.gui_state.lock().selected_panel {
-                        SelectablePanel::Containers => locked_data.containers.end(),
-                        SelectablePanel::Logs => locked_data.log_end(),
-                        SelectablePanel::Commands => locked_data.docker_command_end(),
+                    KeyCode::End => {
+                        let mut locked_data = self.app_data.lock();
+                        match self.gui_state.lock().selected_panel {
+                            SelectablePanel::Containers => locked_data.containers.end(),
+                            SelectablePanel::Logs => locked_data.log_end(),
+                            SelectablePanel::Commands => locked_data.docker_command_end(),
+                        }
                     }
-                }
-                KeyCode::Up | KeyCode::Char('k' | 'K') => self.previous(),
-                KeyCode::PageUp => {
-                    for _ in 0..=6 {
-                        self.previous();
+                    KeyCode::Up | KeyCode::Char('k' | 'K') => self.previous(),
+                    KeyCode::PageUp => {
+                        for _ in 0..=6 {
+                            self.previous();
+                        }
                     }
-                }
-                KeyCode::Down | KeyCode::Char('j' | 'J') => self.next(),
-                KeyCode::PageDown => {
-                    for _ in 0..=6 {
-                        self.next();
+                    KeyCode::Down | KeyCode::Char('j' | 'J') => self.next(),
+                    KeyCode::PageDown => {
+                        for _ in 0..=6 {
+                            self.next();
+                        }
                     }
-                }
-                KeyCode::Enter => {
-                    // This isn't great, just means you can't send docker commands before full initialization of the program
-                    let panel = self.gui_state.lock().selected_panel;
-                    if panel == SelectablePanel::Commands {
-                        let option_command = self.app_data.lock().get_docker_command();
+                    KeyCode::Enter => {
+                        // This isn't great, just means you can't send docker commands before full initialization of the program
+                        let panel = self.gui_state.lock().selected_panel;
+                        if panel == SelectablePanel::Commands {
+                            let option_command = self.app_data.lock().get_docker_command();
 
-                        if let Some(command) = option_command {
-                            let option_id = self.app_data.lock().get_selected_container_id();
-                            if let Some(id) = option_id {
-                                match command {
-                                    DockerControls::Pause => self
-                                        .docker_sender
-                                        .send(DockerMessage::Pause(id))
-                                        .await
-                                        .unwrap_or(()),
-                                    DockerControls::Unpause => self
-                                        .docker_sender
-                                        .send(DockerMessage::Unpause(id))
-                                        .await
-                                        .unwrap_or(()),
-                                    DockerControls::Start => self
-                                        .docker_sender
-                                        .send(DockerMessage::Start(id))
-                                        .await
-                                        .unwrap_or(()),
-                                    DockerControls::Stop => self
-                                        .docker_sender
-                                        .send(DockerMessage::Stop(id))
-                                        .await
-                                        .unwrap_or(()),
-                                    DockerControls::Restart => self
-                                        .docker_sender
-                                        .send(DockerMessage::Restart(id))
-                                        .await
-                                        .unwrap_or(()),
+                            if let Some(command) = option_command {
+                                let option_id = self.app_data.lock().get_selected_container_id();
+                                if let Some(id) = option_id {
+                                    match command {
+                                        DockerControls::Pause => self
+                                            .docker_sender
+                                            .send(DockerMessage::Pause(id))
+                                            .await
+                                            .unwrap_or(()),
+                                        DockerControls::Unpause => self
+                                            .docker_sender
+                                            .send(DockerMessage::Unpause(id))
+                                            .await
+                                            .unwrap_or(()),
+                                        DockerControls::Start => self
+                                            .docker_sender
+                                            .send(DockerMessage::Start(id))
+                                            .await
+                                            .unwrap_or(()),
+                                        DockerControls::Stop => self
+                                            .docker_sender
+                                            .send(DockerMessage::Stop(id))
+                                            .await
+                                            .unwrap_or(()),
+                                        DockerControls::Restart => self
+                                            .docker_sender
+                                            .send(DockerMessage::Restart(id))
+                                            .await
+                                            .unwrap_or(()),
+                                    }
                                 }
                             }
                         }
                     }
+                    _ => (),
                 }
-                _ => (),
             }
         }
     }

@@ -19,7 +19,7 @@ use crate::{
     app_data::{AppData, ContainerId, DockerControls},
     app_error::AppError,
     parse_args::CliArgs,
-    ui::GuiState,
+    ui::{GuiState, Status},
 };
 mod message;
 pub use message::DockerMessage;
@@ -336,32 +336,40 @@ impl DockerData {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             self.initialised = self.app_data.lock().initialised(&all_ids);
         }
-        self.app_data.lock().init = true;
+        // self.app_data.lock().init = true;
+        self.gui_state.lock().set_status(Status::Normal);
         self.stop_loading_spin(&loading_spin, loading_uuid);
+    }
+
+    /// Set the global error as the dockererror, and set gui_state to errro
+    fn set_error(&mut self, error: DockerControls) {
+        self.app_data
+            .lock()
+            .set_error(AppError::DockerCommand(error));
+        self.gui_state.lock().set_status(Status::Error);
     }
 
     /// Handle incoming messages, container controls & all container information update
     async fn message_handler(&mut self) {
         while let Some(message) = self.receiver.recv().await {
             let docker = Arc::clone(&self.docker);
-            let app_data = Arc::clone(&self.app_data);
             let loading_uuid = Uuid::new_v4();
             match message {
                 DockerMessage::Pause(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker.pause_container(id.get()).await.is_err() {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Pause));
+                        self.set_error(DockerControls::Pause);
                     };
                     self.stop_loading_spin(&loading_spin, loading_uuid);
                 }
                 DockerMessage::Restart(id) => {
+                    // DEBUG	
+                    // self.set_error(DockerControls::Restart);
+                    // DEBUG
+
                     let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker.restart_container(id.get(), None).await.is_err() {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Restart));
+                        self.set_error(DockerControls::Restart);
                     };
                     self.stop_loading_spin(&loading_spin, loading_uuid);
                 }
@@ -372,27 +380,21 @@ impl DockerData {
                         .await
                         .is_err()
                     {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Start));
+                        self.set_error(DockerControls::Start);
                     };
                     self.stop_loading_spin(&loading_spin, loading_uuid);
                 }
                 DockerMessage::Stop(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker.stop_container(id.get(), None).await.is_err() {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Stop));
+                        self.set_error(DockerControls::Stop);
                     };
                     self.stop_loading_spin(&loading_spin, loading_uuid);
                 }
                 DockerMessage::Unpause(id) => {
                     let loading_spin = self.loading_spin(loading_uuid).await;
                     if docker.unpause_container(id.get()).await.is_err() {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Unpause));
+                        self.set_error(DockerControls::Unpause);
                     };
                     self.stop_loading_spin(&loading_spin, loading_uuid);
                     self.update_everything().await;
