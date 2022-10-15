@@ -15,6 +15,7 @@ use tui::{
 };
 
 use crate::app_data::{Header, SortedOrder};
+use crate::ui::Status;
 use crate::{
     app_data::{AppData, ByteStats, Columns, CpuStats, State, Stats},
     app_error::AppError,
@@ -215,9 +216,8 @@ pub fn logs<B: Backend>(
     loading_icon: &str,
 ) {
     let block = generate_block(app_data, area, gui_state, SelectablePanel::Logs);
-
-    let init = app_data.lock().init;
-    if !init {
+    let contains_init = gui_state.lock().status_contains(&[Status::Init]);
+    if contains_init {
         let paragraph = Paragraph::new(format!("parsing logs {}", loading_icon))
             .style(Style::default())
             .block(block)
@@ -349,7 +349,7 @@ pub fn heading_bar<B: Backend>(
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = |fg: Color| Block::default().style(Style::default().bg(Color::Magenta).fg(fg));
-    let info_visible = gui_state.lock().show_help;
+    let help_visible = gui_state.lock().status_contains(&[Status::Help]);
 
     f.render_widget(block(Color::Black), area);
 
@@ -429,8 +429,8 @@ pub fn heading_bar<B: Backend>(
         })
         .collect::<Vec<_>>();
 
-    let suffix = if info_visible { "exit" } else { "show" };
-    let info_text = format!("( h ) {} help {}", suffix, MARGIN);
+    let suffix = if help_visible { "exit" } else { "show" };
+    let info_text = format!("( h ) {} help {}", suffix, MARGIN,);
     let info_width = info_text.chars().count();
 
     let column_width = usize::from(area.width) - info_width;
@@ -457,8 +457,6 @@ pub fn heading_bar<B: Backend>(
             .alignment(Alignment::Center);
         f.render_widget(loading_paragraph, split_bar[0]);
 
-
-
         let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
         let headers_section = Layout::default()
             .direction(Direction::Horizontal)
@@ -474,10 +472,10 @@ pub fn heading_bar<B: Backend>(
     }
 
     // show/hide help
-    let color = if info_visible {
-        Color::White
-    } else {
+    let color = if help_visible {
         Color::Black
+    } else {
+        Color::White
     };
     let help_paragraph = Paragraph::new(info_text)
         .block(block(color))

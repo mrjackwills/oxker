@@ -21,7 +21,7 @@ use crate::{
     app_data::{AppData, DockerControls, Header, SortedOrder},
     app_error::AppError,
     docker_data::DockerMessage,
-    ui::{GuiState, SelectablePanel},
+    ui::{GuiState, SelectablePanel, Status},
 };
 pub use message::InputMessages;
 
@@ -64,10 +64,12 @@ impl InputHandler {
             match message {
                 InputMessages::ButtonPress(key_code) => self.button_press(key_code).await,
                 InputMessages::MouseEvent(mouse_event) => {
-                    let show_error = self.app_data.lock().show_error;
-                    let show_info = self.gui_state.lock().show_help;
-                    if !show_error && !show_info {
-                        self.mouse_press(mouse_event);
+                    let error_or_help = self
+                        .gui_state
+                        .lock()
+                        .status_contains(&[Status::Error, Status::Help]);
+                    if !error_or_help {
+                        self.mouse_press(mouse_event)
                     }
                 }
             }
@@ -85,10 +87,11 @@ impl InputHandler {
                     .gui_state
                     .lock()
                     .set_info_box("✖ mouse capture disabled".to_owned()),
-                Err(_) => self
-                    .app_data
-                    .lock()
-                    .set_error(AppError::MouseCapture(false)),
+                Err(_) => {
+                    self.app_data
+                        .lock()
+                        .set_error(AppError::MouseCapture(false));
+                }
             }
         } else {
             match execute!(std::io::stdout(), EnableMouseCapture) {
@@ -96,7 +99,9 @@ impl InputHandler {
                     .gui_state
                     .lock()
                     .set_info_box("✓ mouse capture enabled".to_owned()),
-                Err(_) => self.app_data.lock().set_error(AppError::MouseCapture(true)),
+                Err(_) => {
+                    self.app_data.lock().set_error(AppError::MouseCapture(true));
+                }
             }
         };
 
@@ -130,31 +135,36 @@ impl InputHandler {
 
     /// Send a quit message to docker, to abort all spawns, if an error is return, set is_running to false here instead
     async fn quit(&self) {
-        match self.docker_sender.send(DockerMessage::Quit).await {
-            Ok(_) => (),
-            Err(_) => self.is_running.store(false, Ordering::SeqCst),
+        let error_init = self
+            .gui_state
+            .lock()
+            .status_contains(&[Status::Error, Status::Init]);
+        if error_init {
+            self.is_running.store(false, Ordering::SeqCst);
+        } else if self.docker_sender.send(DockerMessage::Quit).await.is_err() {
+            self.is_running.store(false, Ordering::SeqCst)
         }
     }
 
     /// Handle any keyboard button events
     #[allow(clippy::too_many_lines)]
     async fn button_press(&mut self, key_code: KeyCode) {
-        let show_error = self.app_data.lock().show_error;
-        let show_info = self.gui_state.lock().show_help;
+        let contains_error = self.gui_state.lock().status_contains(&[Status::Error]);
+        let contains_help = self.gui_state.lock().status_contains(&[Status::Help]);
 
-        if show_error {
+        if contains_error {
             match key_code {
                 KeyCode::Char('q' | 'Q') => self.quit().await,
                 KeyCode::Char('c' | 'C') => {
-                    self.app_data.lock().show_error = false;
                     self.app_data.lock().remove_error();
+                    self.gui_state.lock().status_del(Status::Error);
                 }
                 _ => (),
             }
-        } else if show_info {
+        } else if contains_help {
             match key_code {
                 KeyCode::Char('q' | 'Q') => self.quit().await,
-                KeyCode::Char('h' | 'H') => self.gui_state.lock().show_help = false,
+                KeyCode::Char('h' | 'H') => self.gui_state.lock().status_del(Status::Help),
                 KeyCode::Char('m' | 'M') => self.m_key(),
                 _ => (),
             }
@@ -171,7 +181,7 @@ impl InputHandler {
                 KeyCode::Char('8') => self.sort(Header::Rx),
                 KeyCode::Char('9') => self.sort(Header::Tx),
                 KeyCode::Char('q' | 'Q') => self.quit().await,
-                KeyCode::Char('h' | 'H') => self.gui_state.lock().show_help = true,
+                KeyCode::Char('h' | 'H') => self.gui_state.lock().status_push(Status::Help),
                 KeyCode::Char('m' | 'M') => self.m_key(),
                 KeyCode::Tab => {
                     // Skip control panel if no containers, could be refactored

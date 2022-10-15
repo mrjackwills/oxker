@@ -24,7 +24,7 @@ mod input_handler;
 mod parse_args;
 mod ui;
 
-use ui::{create_ui, GuiState};
+use ui::{create_ui, GuiState, Status};
 
 fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
@@ -59,9 +59,15 @@ async fn main() {
                     is_running,
                 ));
             }
-            Err(_) => app_data.lock().set_error(AppError::DockerConnect),
+            Err(_) => {
+                app_data.lock().set_error(AppError::DockerConnect);
+                docker_gui_state.lock().status_push(Status::DockerConnect)
+            }
         },
-        Err(_) => app_data.lock().set_error(AppError::DockerConnect),
+        Err(_) => {
+            app_data.lock().set_error(AppError::DockerConnect);
+            docker_gui_state.lock().status_push(Status::DockerConnect)
+        }
     }
     let input_app_data = Arc::clone(&app_data);
 

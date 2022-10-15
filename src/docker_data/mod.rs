@@ -3,7 +3,7 @@ use bollard::{
     service::ContainerSummary,
     Docker,
 };
-use futures_util::StreamExt;
+use futures_util::{Future, StreamExt};
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
@@ -19,7 +19,7 @@ use crate::{
     app_data::{AppData, ContainerId, DockerControls},
     app_error::AppError,
     parse_args::CliArgs,
-    ui::GuiState,
+    ui::{GuiState, Status},
 };
 mod message;
 pub use message::DockerMessage;
@@ -318,6 +318,7 @@ impl DockerData {
 
     // Initialize docker container data, before any messages are received
     async fn initialise_container_data(&mut self) {
+        self.gui_state.lock().status_push(Status::Init);
         let loading_uuid = Uuid::new_v4();
         let loading_spin = self.loading_spin(loading_uuid).await;
 
@@ -336,65 +337,77 @@ impl DockerData {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             self.initialised = self.app_data.lock().initialised(&all_ids);
         }
-        self.app_data.lock().init = true;
+        self.gui_state.lock().status_del(Status::Init);
         self.stop_loading_spin(&loading_spin, loading_uuid);
+    }
+
+    /// Set the global error as the dockererror, and set gui_state to errro
+    fn set_error(&mut self, error: DockerControls) {
+        self.app_data
+            .lock()
+            .set_error(AppError::DockerCommand(error));
+        self.gui_state.lock().status_push(Status::Error);
+    }
+
+    /// Execute docker commands, will start and stop the loading spinner
+    async fn exec_docker(
+        &mut self,
+        docker_fn: impl Future<Output = Result<(), bollard::errors::Error>>,
+        uuid: Uuid,
+        control: DockerControls,
+    ) {
+        let loading_spin = self.loading_spin(uuid).await;
+        if docker_fn.await.is_err() {
+            self.set_error(control);
+        };
+        self.stop_loading_spin(&loading_spin, uuid);
     }
 
     /// Handle incoming messages, container controls & all container information update
     async fn message_handler(&mut self) {
         while let Some(message) = self.receiver.recv().await {
-            let docker = Arc::clone(&self.docker);
-            let app_data = Arc::clone(&self.app_data);
             let loading_uuid = Uuid::new_v4();
+            let docker = Arc::clone(&self.docker);
             match message {
                 DockerMessage::Pause(id) => {
-                    let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.pause_container(id.get()).await.is_err() {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Pause));
-                    };
-                    self.stop_loading_spin(&loading_spin, loading_uuid);
+                    self.exec_docker(
+                        docker.pause_container(id.get()),
+                        loading_uuid,
+                        DockerControls::Pause,
+                    )
+                    .await;
                 }
                 DockerMessage::Restart(id) => {
-                    let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.restart_container(id.get(), None).await.is_err() {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Restart));
-                    };
-                    self.stop_loading_spin(&loading_spin, loading_uuid);
+                    self.exec_docker(
+                        docker.restart_container(id.get(), None),
+                        loading_uuid,
+                        DockerControls::Restart,
+                    )
+                    .await;
                 }
                 DockerMessage::Start(id) => {
-                    let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker
-                        .start_container(id.get(), None::<StartContainerOptions<String>>)
-                        .await
-                        .is_err()
-                    {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Start));
-                    };
-                    self.stop_loading_spin(&loading_spin, loading_uuid);
+                    self.exec_docker(
+                        docker.start_container(id.get(), None::<StartContainerOptions<String>>),
+                        loading_uuid,
+                        DockerControls::Start,
+                    )
+                    .await;
                 }
                 DockerMessage::Stop(id) => {
-                    let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.stop_container(id.get(), None).await.is_err() {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Stop));
-                    };
-                    self.stop_loading_spin(&loading_spin, loading_uuid);
+                    self.exec_docker(
+                        docker.stop_container(id.get(), None),
+                        loading_uuid,
+                        DockerControls::Stop,
+                    )
+                    .await;
                 }
                 DockerMessage::Unpause(id) => {
-                    let loading_spin = self.loading_spin(loading_uuid).await;
-                    if docker.unpause_container(id.get()).await.is_err() {
-                        app_data
-                            .lock()
-                            .set_error(AppError::DockerCommand(DockerControls::Unpause));
-                    };
-                    self.stop_loading_spin(&loading_spin, loading_uuid);
+                    self.exec_docker(
+                        docker.unpause_container(id.get()),
+                        loading_uuid,
+                        DockerControls::Unpause,
+                    )
+                    .await;
                     self.update_everything().await;
                 }
                 DockerMessage::Update => self.update_everything().await,
