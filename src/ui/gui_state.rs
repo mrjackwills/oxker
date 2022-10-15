@@ -181,7 +181,6 @@ pub enum Status {
     Help,
     DockerConnect,
     Error,
-    Normal,
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
@@ -191,7 +190,7 @@ pub struct GuiState {
     heading_map: HashMap<Header, Rect>,
     loading_icon: Loading,
     is_loading: HashSet<Uuid>,
-    status: Status,
+    status: HashSet<Status>,
     pub selected_panel: SelectablePanel,
     pub info_box_text: Option<String>,
 }
@@ -205,7 +204,7 @@ impl GuiState {
             selected_panel: SelectablePanel::Containers,
             is_loading: HashSet::new(),
             info_box_text: None,
-            status: Status::Init,
+            status: HashSet::new(),
         }
     }
 
@@ -253,12 +252,16 @@ impl GuiState {
         };
     }
 
-    pub fn set_status(&mut self, status: Status) {
-        self.status = status
+    pub fn status_push(&mut self, status: Status) {
+        self.status.insert(status);
     }
 
-    pub fn get_status(&self) -> Status {
-        self.status
+    pub fn status_del(&mut self, status: Status) {
+        self.status.remove(&status);
+    }
+
+    pub fn status_contains(&self, status: &[Status]) -> bool {
+        status.iter().any(|i| self.status.contains(i))
     }
 
     /// Change to next selectable panel

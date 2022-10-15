@@ -14,10 +14,8 @@ pub struct AppData {
     args: CliArgs,
     error: Option<AppError>,
     logs_parsed: bool,
-    pub containers: StatefulList<ContainerItem>,
-    // pub init: bool,
-    // pub show_error: bool,
     sorted_by: Option<(Header, SortedOrder)>,
+    pub containers: StatefulList<ContainerItem>,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

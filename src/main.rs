@@ -61,12 +61,12 @@ async fn main() {
             }
             Err(_) => {
                 app_data.lock().set_error(AppError::DockerConnect);
-                docker_gui_state.lock().set_status(Status::DockerConnect)
+                docker_gui_state.lock().status_push(Status::DockerConnect)
             }
         },
         Err(_) => {
             app_data.lock().set_error(AppError::DockerConnect);
-            docker_gui_state.lock().set_status(Status::DockerConnect)
+            docker_gui_state.lock().status_push(Status::DockerConnect)
         }
     }
     let input_app_data = Arc::clone(&app_data);

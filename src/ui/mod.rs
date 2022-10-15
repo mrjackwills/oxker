@@ -85,9 +85,9 @@ async fn run_app<B: Backend + Send>(
     let input_poll_rate = std::time::Duration::from_millis(75);
 
     // Check for docker connect errors before attempting to draw the gui
-    let status = gui_state.lock().get_status();
+    let status_dockerconnect = gui_state.lock().status_contains(&[Status::DockerConnect]);
 
-    if status == Status::DockerConnect {
+    if status_dockerconnect {
         let mut seconds = 5;
         loop {
             if seconds < 1 {
@@ -159,7 +159,7 @@ fn ui<B: Backend>(
     let log_index = app_data.lock().get_selected_log_index();
     let sorted_by = app_data.lock().get_sorted();
 
-    let show_help = gui_state.lock().get_status() == Status::Help;
+    let show_help = gui_state.lock().status_contains(&[Status::Help]);
     let info_text = gui_state.lock().info_box_text.clone();
     let loading_icon = gui_state.lock().get_loading();
 
