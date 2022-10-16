@@ -1,21 +1,20 @@
-### 2022-10-07
-
+### 2022-10-16
 
 ### Chores
-+ Update clap to v4, [15597dbe6942ec053541398ce0e9dedc10a4d3ea]
++ Cargo update, [c3e72ae7369a25d903f39e55a4349cb005671dd4]
++ create_release.sh v0.1.0, [3c8d59c666bd4cda9ca54989b2f1b48bba17bc57]
++ uuid updated to version 1.2, [438ad770f4a5ecb5f4bbc308066ad9e808f66514]
 
-### Docs
-+ readme.md updated, [a05bf561cc6d96237f683ab0b3c782d6841974d9]
+### Fixes
++ loading icon shifting error fix, also make icon white, closes #15, [59797685dffa29752a48c98e6cf465884d6d9df6]
 
 ### Features
-+ use newtype construct for container id, [41cbb84f2896f8be2c37eba87e390d998aff7382]
++ Show container name in log panel title, closes #16, [9cb0c414afc284947fc2b8494504387e4e7edd87]
++ use gui_state HashSet to keep track of application gui state, [9e9d51559a13944622abf4fcbd3bd63766d11467]
++ terminal.clear() after run_app finished, [67c49575682cb271fac0998ff377a6504cd0bc86]
 
 ### Refactors
-+ Impl Copy where able to, [e76878f424d72b943713ef84e95e25fada77d79e]
-+ replace async fn with just fn, [17dc604befac75cb9dc0311a0e43f9927fe0ca30]
-+ remove pointless clone()'s & variable declarations, [6731002ee42c9460042c2c38aff5101b1bcebbe6]
-+ replace String::from("") with String::new(), [62fb22478697cc9a7ab9fb562a724965b437233a]
-+ replace map_or_else with map_or, [3e26f292c7dc5e13af4580952767ebe821aa5183], [5660b34d5149dce27706ff6daa90b854e6f84e14]
++ CpuStats & MemStats use tuple struct, [a060d032586a0707ac91cb13d922aae0850449c5]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details

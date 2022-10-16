@@ -24,7 +24,7 @@ mod input_handler;
 mod parse_args;
 mod ui;
 
-use ui::{create_ui, GuiState};
+use ui::{create_ui, GuiState, Status};
 
 fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
@@ -45,23 +45,25 @@ async fn main() {
     let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(16);
 
     // Create docker daemon handler, and only spawn up the docker data handler if ping returns non-error
-    match Docker::connect_with_socket_defaults() {
-        Ok(docker) => match docker.ping().await {
-            Ok(_) => {
-                let docker = Arc::new(docker);
-                let is_running = Arc::clone(&is_running);
-                tokio::spawn(DockerData::init(
-                    args,
-                    docker_app_data,
-                    docker,
-                    docker_gui_state,
-                    docker_rx,
-                    is_running,
-                ));
-            }
-            Err(_) => app_data.lock().set_error(AppError::DockerConnect),
-        },
-        Err(_) => app_data.lock().set_error(AppError::DockerConnect),
+    if let Ok(docker) = Docker::connect_with_socket_defaults() {
+        if docker.ping().await.is_ok() {
+            let docker = Arc::new(docker);
+            let is_running = Arc::clone(&is_running);
+            tokio::spawn(DockerData::init(
+                args,
+                docker_app_data,
+                docker,
+                docker_gui_state,
+                docker_rx,
+                is_running,
+            ));
+        } else {
+            app_data.lock().set_error(AppError::DockerConnect);
+            docker_gui_state.lock().status_push(Status::DockerConnect);
+        }
+    } else {
+        app_data.lock().set_error(AppError::DockerConnect);
+        docker_gui_state.lock().status_push(Status::DockerConnect);
     }
     let input_app_data = Arc::clone(&app_data);
 

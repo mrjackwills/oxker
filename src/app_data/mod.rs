@@ -14,10 +14,8 @@ pub struct AppData {
     args: CliArgs,
     error: Option<AppError>,
     logs_parsed: bool,
-    pub containers: StatefulList<ContainerItem>,
-    pub init: bool,
-    pub show_error: bool,
     sorted_by: Option<(Header, SortedOrder)>,
+    pub containers: StatefulList<ContainerItem>,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -79,9 +77,7 @@ impl AppData {
             args,
             containers: StatefulList::new(vec![]),
             error: None,
-            init: false,
             logs_parsed: false,
-            show_error: false,
             sorted_by: None,
         }
     }
@@ -257,11 +253,20 @@ impl AppData {
     }
 
     /// Get the title for log panel for selected container
-    /// will be "logs x/x"
+    /// will be either
+    /// 1) "logs x/x - container_name" where container_name is 32 chars max
+    /// 2) "logs - container_name" when no logs found, again 32 chars max
     pub fn get_log_title(&self) -> String {
         self.get_selected_log_index()
             .map_or("".to_owned(), |index| {
-                self.containers.items[index].logs.get_state_title()
+                let logs_len = self.containers.items[index].logs.get_state_title();
+                let mut name = self.containers.items[index].name.clone();
+                name.truncate(32);
+                if logs_len.is_empty() {
+                    format!("- {} ", name)
+                } else {
+                    format!("{} - {}", logs_len, name)
+                }
             })
     }
 

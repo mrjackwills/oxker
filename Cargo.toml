@@ -1,6 +1,6 @@
 [package]
 name = "oxker"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Jack Wills <email@mrjackwills.com>"]
 description = "A simple tui to view & control docker containers"
@@ -23,7 +23,7 @@ tokio = {version = "1.21", features=["full"]}
 tracing = "0.1"
 tracing-subscriber = "0.3"
 tui = "0.19"
-uuid = {version = "1.1", features = ["v4", "fast-rng"]}
+uuid = {version = "1.2", features = ["v4", "fast-rng"]}
 
 [dev-dependencies]
 

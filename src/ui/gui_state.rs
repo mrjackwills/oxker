@@ -59,6 +59,7 @@ pub enum BoxLocation {
 }
 
 impl BoxLocation {
+    /// Screen is divided into 3x3 sections
     pub const fn get_indexes(self) -> (usize, usize) {
         match self {
             Self::TopLeft => (0, 0),
@@ -172,6 +173,16 @@ impl fmt::Display for Loading {
     }
 }
 
+/// The application gui state can be in multiple of these four states at the same time
+/// Various functions (e.g input handler), operate differently depending upon current Status
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum Status {
+    Init,
+    Help,
+    DockerConnect,
+    Error,
+}
+
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 pub struct GuiState {
@@ -179,8 +190,8 @@ pub struct GuiState {
     heading_map: HashMap<Header, Rect>,
     loading_icon: Loading,
     is_loading: HashSet<Uuid>,
+    status: HashSet<Status>,
     pub selected_panel: SelectablePanel,
-    pub show_help: bool,
     pub info_box_text: Option<String>,
 }
 impl GuiState {
@@ -191,9 +202,9 @@ impl GuiState {
             heading_map: HashMap::new(),
             loading_icon: Loading::One,
             selected_panel: SelectablePanel::Containers,
-            show_help: false,
             is_loading: HashSet::new(),
             info_box_text: None,
+            status: HashSet::new(),
         }
     }
 
@@ -226,7 +237,7 @@ impl GuiState {
     }
 
     /// Insert, or updates header area panel into heading_map
-    pub fn update_map(&mut self, region: Region, area: Rect) {
+    pub fn update_heading_map(&mut self, region: Region, area: Rect) {
         match region {
             Region::Header(header) => self
                 .heading_map
@@ -239,6 +250,21 @@ impl GuiState {
                 .and_modify(|w| *w = area)
                 .or_insert(area),
         };
+    }
+
+    /// Check if the current gui_status contains any of the given status'
+    pub fn status_contains(&self, status: &[Status]) -> bool {
+        status.iter().any(|i| self.status.contains(i))
+    }
+
+    /// Remove a gui_status into the current gui_status hashset
+    pub fn status_del(&mut self, status: Status) {
+        self.status.remove(&status);
+    }
+
+    /// Insert a gui_status into the current gui_status hashset
+    pub fn status_push(&mut self, status: Status) {
+        self.status.insert(status);
     }
 
     /// Change to next selectable panel
@@ -260,7 +286,7 @@ impl GuiState {
     /// If is_loading has any entries, return the current loading_icon, else an emtpy string
     pub fn get_loading(&mut self) -> String {
         if self.is_loading.is_empty() {
-            String::new()
+            String::from(" ")
         } else {
             self.loading_icon.to_string()
         }
