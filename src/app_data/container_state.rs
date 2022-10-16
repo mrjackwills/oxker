@@ -107,6 +107,7 @@ impl<T> StatefulList<T> {
         }
     }
 
+	/// Return the current status of the select list, e.g. 2/5,
     pub fn get_state_title(&self) -> String {
         if self.items.is_empty() {
             String::new()
@@ -254,13 +255,11 @@ pub trait Stats {
 /// So can use custom display formatter
 /// Use trait Stats for use as generic in draw_chart function
 #[derive(Debug, Default, Clone, Copy)]
-pub struct CpuStats {
-    value: f64,
-}
+pub struct CpuStats(f64);
 
 impl CpuStats {
     pub const fn new(value: f64) -> Self {
-        Self { value }
+        Self(value)
     }
 }
 
@@ -268,21 +267,21 @@ impl Eq for CpuStats {}
 
 impl PartialEq for CpuStats {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value
+        self.0 == other.0
     }
 }
 
 impl PartialOrd for CpuStats {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.value.partial_cmp(&other.value)
+        self.0.partial_cmp(&other.0)
     }
 }
 
 impl Ord for CpuStats {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.value > other.value {
+        if self.0 > other.0 {
             Ordering::Greater
-        } else if (self.value - other.value).abs() < 0.01 {
+        } else if (self.0 - other.0).abs() < 0.01 {
             Ordering::Equal
         } else {
             Ordering::Less
@@ -292,13 +291,13 @@ impl Ord for CpuStats {
 
 impl Stats for CpuStats {
     fn get_value(&self) -> f64 {
-        self.value
+        self.0
     }
 }
 
 impl fmt::Display for CpuStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let disp = format!("{:05.2}%", self.value);
+        let disp = format!("{:05.2}%", self.0);
         write!(f, "{:>x$}", disp, x = f.width().unwrap_or(1))
     }
 }
@@ -307,41 +306,39 @@ impl fmt::Display for CpuStats {
 /// So can use custom display formatter
 /// Use trait Stats for use as generic in draw_chart function
 #[derive(Debug, Default, Clone, Copy, Eq)]
-pub struct ByteStats {
-    value: u64,
-}
+pub struct ByteStats(u64);
 
 impl PartialEq for ByteStats {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value
+        self.0 == other.0
     }
 }
 
 impl PartialOrd for ByteStats {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.value.partial_cmp(&other.value)
+        self.0.partial_cmp(&other.0)
     }
 }
 
 impl Ord for ByteStats {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.value.cmp(&other.value)
+        self.0.cmp(&other.0)
     }
 }
 
 impl ByteStats {
     pub const fn new(value: u64) -> Self {
-        Self { value }
+        Self(value)
     }
     pub fn update(&mut self, value: u64) {
-        self.value = value;
+        self.0 = value;
     }
 }
 
 #[allow(clippy::cast_precision_loss)]
 impl Stats for ByteStats {
     fn get_value(&self) -> f64 {
-        self.value as f64
+        self.0 as f64
     }
 }
 
@@ -353,7 +350,7 @@ impl fmt::Display for ByteStats {
             x if x >= ONE_GB => format!("{y:.2} GB", y = as_f64 / ONE_GB),
             x if x >= ONE_MB => format!("{y:.2} MB", y = as_f64 / ONE_MB),
             x if x >= ONE_KB => format!("{y:.2} kB", y = as_f64 / ONE_KB),
-            _ => format!("{} B", self.value),
+            _ => format!("{} B", self.0),
         };
         write!(f, "{:>x$}", p, x = f.width().unwrap_or(1))
     }
@@ -426,7 +423,7 @@ impl ContainerItem {
         self.cpu_stats
             .iter()
             .enumerate()
-            .map(|i| (i.0 as f64, i.1.value as f64))
+            .map(|i| (i.0 as f64, i.1.0 as f64))
             .collect::<Vec<_>>()
     }
 
@@ -436,7 +433,7 @@ impl ContainerItem {
         self.mem_stats
             .iter()
             .enumerate()
-            .map(|i| (i.0 as f64, i.1.value as f64))
+            .map(|i| (i.0 as f64, i.1.0 as f64))
             .collect::<Vec<_>>()
     }
 
