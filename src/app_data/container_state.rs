@@ -107,7 +107,7 @@ impl<T> StatefulList<T> {
         }
     }
 
-	/// Return the current status of the select list, e.g. 2/5,
+    /// Return the current status of the select list, e.g. 2/5,
     pub fn get_state_title(&self) -> String {
         if self.items.is_empty() {
             String::new()
@@ -423,7 +423,7 @@ impl ContainerItem {
         self.cpu_stats
             .iter()
             .enumerate()
-            .map(|i| (i.0 as f64, i.1.0 as f64))
+            .map(|i| (i.0 as f64, i.1 .0 as f64))
             .collect::<Vec<_>>()
     }
 
@@ -433,7 +433,7 @@ impl ContainerItem {
         self.mem_stats
             .iter()
             .enumerate()
-            .map(|i| (i.0 as f64, i.1.0 as f64))
+            .map(|i| (i.0 as f64, i.1 .0 as f64))
             .collect::<Vec<_>>()
     }
 
