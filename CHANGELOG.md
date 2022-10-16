@@ -1,6 +1,17 @@
+### Chores
++ Cargo update, [c3e72ae7369a25d903f39e55a4349cb005671dd4]
++ create_release.sh v0.1.0, [3c8d59c666bd4cda9ca54989b2f1b48bba17bc57]
+
+### Features
++ Show container name in log panel title, [9cb0c414afc284947fc2b8494504387e4e7edd87]
++ use gui_state HashSet to keep track of application state, [9e9d51559a13944622abf4fcbd3bd63766d11467]
++ terminal.clear() after run_app finished, [67c49575682cb271fac0998ff377a6504cd0bc86]
+
+### Refactors
++ CpuStats & MemStats use tuple struct, [a060d032586a0707ac91cb13d922aae0850449c5]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.5'>v0.1.5</a>
 ### 2022-10-07
-
 
 ### Chores
 + Update clap to v4, [15597dbe](https://github.com/mrjackwills/oxker/commit/15597dbe6942ec053541398ce0e9dedc10a4d3ea),
