@@ -1,6 +1,7 @@
 ### Chores
 + Cargo update, [c3e72ae7369a25d903f39e55a4349cb005671dd4]
 + create_release.sh v0.1.0, [3c8d59c666bd4cda9ca54989b2f1b48bba17bc57]
++ uuid updated to version 1.2, [438ad770f4a5ecb5f4bbc308066ad9e808f66514]
 
 ### Fixes
 + loading icon shifting error fix, also make icon white, closes #15, [59797685dffa29752a48c98e6cf465884d6d9df6]
