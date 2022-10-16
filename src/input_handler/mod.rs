@@ -69,7 +69,7 @@ impl InputHandler {
                         .lock()
                         .status_contains(&[Status::Error, Status::Help]);
                     if !error_or_help {
-                        self.mouse_press(mouse_event)
+                        self.mouse_press(mouse_event);
                     }
                 }
             }
@@ -105,7 +105,7 @@ impl InputHandler {
             }
         };
 
-        // If the info box sleep handle is currently being executed, as in m is pressed twice within a 4000ms window
+        // If the info box sleep handle is currently being executed, as in 'm' is pressed twice within a 4000ms window
         // then cancel the first handle, as a new handle will be invoked
         if let Some(info_sleep_timer) = self.info_sleep.as_ref() {
             info_sleep_timer.abort();
@@ -134,21 +134,21 @@ impl InputHandler {
     }
 
     /// Send a quit message to docker, to abort all spawns, if an error is return, set is_running to false here instead
+    /// If gui_status is Error or Init, then just set the is_running to false immediately, for a quicker exit
     async fn quit(&self) {
         let error_init = self
             .gui_state
             .lock()
             .status_contains(&[Status::Error, Status::Init]);
-        if error_init {
+        if error_init || self.docker_sender.send(DockerMessage::Quit).await.is_err() {
             self.is_running.store(false, Ordering::SeqCst);
-        } else if self.docker_sender.send(DockerMessage::Quit).await.is_err() {
-            self.is_running.store(false, Ordering::SeqCst)
         }
     }
 
     /// Handle any keyboard button events
     #[allow(clippy::too_many_lines)]
     async fn button_press(&mut self, key_code: KeyCode) {
+        // TODO - refactor this to a single call, maybe return Error, Help or Normal
         let contains_error = self.gui_state.lock().status_contains(&[Status::Error]);
         let contains_help = self.gui_state.lock().status_contains(&[Status::Help]);
 

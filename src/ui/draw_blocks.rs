@@ -51,7 +51,9 @@ fn generate_block<'a>(
     gui_state: &Arc<Mutex<GuiState>>,
     panel: SelectablePanel,
 ) -> Block<'a> {
-    gui_state.lock().update_map(Region::Panel(panel), area);
+    gui_state
+        .lock()
+        .update_heading_map(Region::Panel(panel), area);
     let current_selected_panel = gui_state.lock().selected_panel;
     let title = match panel {
         SelectablePanel::Containers => {
@@ -466,7 +468,9 @@ pub fn heading_bar<B: Backend>(
         // draw the actual header blocks
         for (index, (paragraph, header, _)) in header_data.into_iter().enumerate() {
             let rect = headers_section[index];
-            gui_state.lock().update_map(Region::Header(header), rect);
+            gui_state
+                .lock()
+                .update_heading_map(Region::Header(header), rect);
             f.render_widget(paragraph, rect);
         }
     }
@@ -501,7 +505,7 @@ fn max_line_width(text: &str) -> usize {
 }
 
 /// Draw the help box in the centre of the screen
-/// TODO this is message, should make every line it's own renderable span
+/// TODO should make every line it's own renderable span
 pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {} ", VERSION);
 

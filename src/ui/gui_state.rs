@@ -173,7 +173,7 @@ impl fmt::Display for Loading {
     }
 }
 
-/// The application can be in these four states
+/// The application gui state can be in multiple of these four states at the same time
 /// Various functions (e.g input handler), operate differently depending upon current Status
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Status {
@@ -237,7 +237,7 @@ impl GuiState {
     }
 
     /// Insert, or updates header area panel into heading_map
-    pub fn update_map(&mut self, region: Region, area: Rect) {
+    pub fn update_heading_map(&mut self, region: Region, area: Rect) {
         match region {
             Region::Header(header) => self
                 .heading_map
@@ -252,16 +252,19 @@ impl GuiState {
         };
     }
 
-    pub fn status_push(&mut self, status: Status) {
-        self.status.insert(status);
+    /// Check if the current gui_status contains any of the given status'
+    pub fn status_contains(&self, status: &[Status]) -> bool {
+        status.iter().any(|i| self.status.contains(i))
     }
 
+    /// Remove a gui_status into the current gui_status hashset
     pub fn status_del(&mut self, status: Status) {
         self.status.remove(&status);
     }
 
-    pub fn status_contains(&self, status: &[Status]) -> bool {
-        status.iter().any(|i| self.status.contains(i))
+    /// Insert a gui_status into the current gui_status hashset
+    pub fn status_push(&mut self, status: Status) {
+        self.status.insert(status);
     }
 
     /// Change to next selectable panel
@@ -281,7 +284,6 @@ impl GuiState {
     }
 
     /// If is_loading has any entries, return the current loading_icon, else an emtpy string
-    // Option<String>?
     pub fn get_loading(&mut self) -> String {
         if self.is_loading.is_empty() {
             String::from(" ")

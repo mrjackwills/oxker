@@ -316,7 +316,7 @@ impl DockerData {
         self.gui_state.lock().remove_loading(loading_uuid);
     }
 
-    // Initialize docker container data, before any messages are received
+    /// Initialize docker container data, before any messages are received
     async fn initialise_container_data(&mut self) {
         self.gui_state.lock().status_push(Status::Init);
         let loading_uuid = Uuid::new_v4();
@@ -341,7 +341,7 @@ impl DockerData {
         self.stop_loading_spin(&loading_spin, loading_uuid);
     }
 
-    /// Set the global error as the dockererror, and set gui_state to errro
+    /// Set the global error as the docker error, and set gui_state to error
     fn set_error(&mut self, error: DockerControls) {
         self.app_data
             .lock()
@@ -349,13 +349,13 @@ impl DockerData {
         self.gui_state.lock().status_push(Status::Error);
     }
 
-    /// Execute docker commands, will start and stop the loading spinner
+    /// Execute a docker command, will start and stop the loading spinner, and set correct error
     async fn exec_docker(
         &mut self,
-        docker_fn: impl Future<Output = Result<(), bollard::errors::Error>>,
-        uuid: Uuid,
+        docker_fn: impl Future<Output = Result<(), bollard::errors::Error>> + Send,
         control: DockerControls,
     ) {
+        let uuid = Uuid::new_v4();
         let loading_spin = self.loading_spin(uuid).await;
         if docker_fn.await.is_err() {
             self.set_error(control);
@@ -366,21 +366,15 @@ impl DockerData {
     /// Handle incoming messages, container controls & all container information update
     async fn message_handler(&mut self) {
         while let Some(message) = self.receiver.recv().await {
-            let loading_uuid = Uuid::new_v4();
             let docker = Arc::clone(&self.docker);
             match message {
                 DockerMessage::Pause(id) => {
-                    self.exec_docker(
-                        docker.pause_container(id.get()),
-                        loading_uuid,
-                        DockerControls::Pause,
-                    )
-                    .await;
+                    self.exec_docker(docker.pause_container(id.get()), DockerControls::Pause)
+                        .await;
                 }
                 DockerMessage::Restart(id) => {
                     self.exec_docker(
                         docker.restart_container(id.get(), None),
-                        loading_uuid,
                         DockerControls::Restart,
                     )
                     .await;
@@ -388,26 +382,17 @@ impl DockerData {
                 DockerMessage::Start(id) => {
                     self.exec_docker(
                         docker.start_container(id.get(), None::<StartContainerOptions<String>>),
-                        loading_uuid,
                         DockerControls::Start,
                     )
                     .await;
                 }
                 DockerMessage::Stop(id) => {
-                    self.exec_docker(
-                        docker.stop_container(id.get(), None),
-                        loading_uuid,
-                        DockerControls::Stop,
-                    )
-                    .await;
+                    self.exec_docker(docker.stop_container(id.get(), None), DockerControls::Stop)
+                        .await;
                 }
                 DockerMessage::Unpause(id) => {
-                    self.exec_docker(
-                        docker.unpause_container(id.get()),
-                        loading_uuid,
-                        DockerControls::Unpause,
-                    )
-                    .await;
+                    self.exec_docker(docker.unpause_container(id.get()), DockerControls::Unpause)
+                        .await;
                     self.update_everything().await;
                 }
                 DockerMessage::Update => self.update_everything().await,

@@ -83,10 +83,7 @@ async fn run_app<B: Backend + Send>(
     update_duration: Duration,
 ) -> Result<(), AppError> {
     let input_poll_rate = std::time::Duration::from_millis(75);
-
-    // Check for docker connect errors before attempting to draw the gui
     let status_dockerconnect = gui_state.lock().status_contains(&[Status::DockerConnect]);
-
     if status_dockerconnect {
         let mut seconds = 5;
         loop {
@@ -139,7 +136,6 @@ async fn run_app<B: Backend + Send>(
                 break;
             }
         }
-        // }
     }
     Ok(())
 }
