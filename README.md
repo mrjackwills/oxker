@@ -14,20 +14,30 @@
 	</a>
 </p>
 
-## Run via Docker
-
-Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
-
-`docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker`
-
 
 ## Download & install
 
+### Cargo
 Published on <a href='https://www.crates.io/crates/oxker' target='_blank' rel='noopener noreferrer'>crates.io</a>, so if you have cargo installed, simply run
 
 ```cargo install oxker```
 
-else see the <a href="https://github.com/mrjackwills/oxker/releases/latest" target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
+### Docker
+Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
+
+`docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker`
+
+### Nix
+Using nix flakes, oxker can be ran directly with
+
+```nix run nixpkgs#oxker```
+
+Without flakes, you can build a shell that contains oxker using
+
+```nix-shell -p oxker```
+
+### Pre-Built
+See the <a href="https://github.com/mrjackwills/oxker/releases/latest" target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
 
 or, download & install (x86_64 one liner)
 
