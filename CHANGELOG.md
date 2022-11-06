@@ -1,3 +1,6 @@
+### Docs
++ README.md improved Download & Install section, and now available on [NixPkg](https://search.nixos.org/packages?channel=unstable&show=oxker&from=0&size=50&sort=relevance&type=packages&query=oxker), thanks [siph](https://github.com/siph), [67a9e183ca04199da758255075ff7e73061eb850]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.6'>v0.1.6</a>
 ### 2022-10-16
 
