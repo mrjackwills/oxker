@@ -1,3 +1,6 @@
+### Chores
++  update dependencies, closes #17, [8a5d0ef8376e3739dda5b0ed4c3e75e565deed45]
+
 ### Docs
 + README.md improved Download & Install section, and now available on [NixPkg](https://search.nixos.org/packages?channel=unstable&show=oxker&from=0&size=50&sort=relevance&type=packages&query=oxker), thanks [siph](https://github.com/siph), [67a9e183ca04199da758255075ff7e73061eb850]
 
