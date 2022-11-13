@@ -93,11 +93,10 @@ impl<T> StatefulList<T> {
 
     pub fn previous(&mut self) {
         if !self.items.is_empty() {
-            let i = self.state.selected().map_or(0, |i| if i == 0 {
-                        0
-                    } else {
-                        i - 1
-                    });
+            let i = self
+                .state
+                .selected()
+                .map_or(0, |i| if i == 0 { 0 } else { i - 1 });
             self.state.select(Some(i));
         }
     }
@@ -398,12 +397,18 @@ impl ContainerItem {
 
     /// Find the max value in the cpu stats VecDeque
     fn max_cpu_stats(&self) -> CpuStats {
-        self.cpu_stats.iter().max().map_or_else(CpuStats::default, |value| *value)
+        self.cpu_stats
+            .iter()
+            .max()
+            .map_or_else(CpuStats::default, |value| *value)
     }
 
     /// Find the max value in the mem stats VecDeque
     fn max_mem_stats(&self) -> ByteStats {
-        self.mem_stats.iter().max().map_or_else(ByteStats::default, |value| *value)
+        self.mem_stats
+            .iter()
+            .max()
+            .map_or_else(ByteStats::default, |value| *value)
     }
 
     /// Convert cpu stats into a vec for the charts function
