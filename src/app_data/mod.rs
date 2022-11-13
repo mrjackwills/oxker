@@ -258,7 +258,7 @@ impl AppData {
     /// 2) "logs - container_name" when no logs found, again 32 chars max
     pub fn get_log_title(&self) -> String {
         self.get_selected_log_index()
-            .map_or("".to_owned(), |index| {
+            .map_or(String::new(), |index| {
                 let logs_len = self.containers.items[index].logs.get_state_title();
                 let mut name = self.containers.items[index].name.clone();
                 name.truncate(32);
@@ -454,8 +454,8 @@ impl AppData {
 
         for i in all_containers {
             if let Some(id) = i.id.as_ref() {
-                let name = i.names.as_mut().map_or("".to_owned(), |names| {
-                    names.first_mut().map_or("".to_owned(), |f| {
+                let name = i.names.as_mut().map_or(String::new(), |names| {
+                    names.first_mut().map_or(String::new(), |f| {
                         if f.starts_with('/') {
                             f.remove(0);
                         }
@@ -464,12 +464,12 @@ impl AppData {
                 });
 
                 let state = State::from(i.state.as_ref().map_or("dead".to_owned(), trim_owned));
-                let status = i.status.as_ref().map_or("".to_owned(), trim_owned);
+                let status = i.status.as_ref().map_or(String::new(), trim_owned);
 
                 let image = i
                     .image
                     .as_ref()
-                    .map_or("".to_owned(), std::clone::Clone::clone);
+                    .map_or(String::new(), std::clone::Clone::clone);
 
                 let id = ContainerId::from(id);
                 // If container info already in containers Vec, then just update details

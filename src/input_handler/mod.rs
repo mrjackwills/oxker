@@ -133,7 +133,7 @@ impl InputHandler {
         locked_data.set_sorted(output);
     }
 
-    /// Send a quit message to docker, to abort all spawns, if an error is return, set is_running to false here instead
+    /// Send a quit message to docker, to abort all spawns, if an error is returned, set is_running to false here instead
     /// If gui_status is Error or Init, then just set the is_running to false immediately, for a quicker exit
     async fn quit(&self) {
         let error_init = self
