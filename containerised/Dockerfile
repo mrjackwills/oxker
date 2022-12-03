@@ -31,7 +31,7 @@ WORKDIR /usr/src/oxker
 # Install target platform (Cross-Compilation)
 RUN rustup target add $(cat /.platform)
 
-# This is a dummy build to get the dependencies cached
+# This is a dummy build to get the dependencies cached - probably not needed - as run via a github action
 RUN cargo build --target $(cat /.platform) --release
 
 # Now copy in the rest of the sources
@@ -55,5 +55,5 @@ FROM alpine:latest AS runtime
 COPY --from=builder /oxker /usr/local/bin
 COPY ./containerised/start_oxker.sh ./
 
-# Run the application
+# Run the application, this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
 ENTRYPOINT [ "./start_oxker.sh"]
