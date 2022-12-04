@@ -51,14 +51,14 @@ impl Binate {
 
 pub struct DockerData {
     app_data: Arc<Mutex<AppData>>,
+    args: CliArgs,
+    binate: Binate,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
     initialised: bool,
     is_running: Arc<AtomicBool>,
     receiver: Receiver<DockerMessage>,
     spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
-    timestamps: bool,
-    binate: Binate,
 }
 
 impl DockerData {
@@ -173,7 +173,7 @@ impl DockerData {
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
-    /// Will ignore any container that contains `oxker` as an entry point
+    /// Will ignore any container that uses `./start_oxker.sh` as an entry point, unless the `-s` flag is set
     pub async fn update_all_containers(&mut self) -> Vec<(bool, ContainerId)> {
         let containers = self
             .docker
@@ -188,7 +188,11 @@ impl DockerData {
             .into_iter()
             .filter_map(|f| match f.id {
                 Some(_) => {
-                    if f.command.as_ref().map_or(false, |c| c.contains("oxker")) {
+                    if f.command
+                        .as_ref()
+                        .map_or(false, |c| c.starts_with("./start_oxker.sh"))
+                        && self.args.show_self
+                    {
                         None
                     } else {
                         Some(f)
@@ -199,9 +203,6 @@ impl DockerData {
             .collect::<Vec<ContainerSummary>>();
 
         self.app_data.lock().update_containers(&mut output);
-
-        let current_sort = self.app_data.lock().get_sorted();
-        self.app_data.lock().set_sorted(current_sort);
 
         // Just get the containers that are currently running, or being restarted, no point updating info on paused or dead containers
         output
@@ -263,7 +264,7 @@ impl DockerData {
                 tokio::spawn(Self::update_log(
                     docker,
                     id.clone(),
-                    self.timestamps,
+                    self.args.timestamp,
                     0,
                     app_data,
                     spawns,
@@ -288,7 +289,7 @@ impl DockerData {
                         tokio::spawn(Self::update_log(
                             docker,
                             container.id.clone(),
-                            self.timestamps,
+                            self.args.timestamp,
                             container.last_updated,
                             app_data,
                             spawns,
@@ -323,6 +324,7 @@ impl DockerData {
         let loading_spin = self.loading_spin(loading_uuid).await;
 
         let all_ids = self.update_all_containers().await;
+
         self.update_all_container_stats(&all_ids);
 
         // Maybe only do a single one at first?
@@ -410,22 +412,22 @@ impl DockerData {
 
     /// Initialise self, and start the message receiving loop
     pub async fn init(
-        args: CliArgs,
         app_data: Arc<Mutex<AppData>>,
         docker: Arc<Docker>,
         gui_state: Arc<Mutex<GuiState>>,
         receiver: Receiver<DockerMessage>,
         is_running: Arc<AtomicBool>,
     ) {
+        let args = app_data.lock().args;
         if app_data.lock().get_error().is_none() {
             let mut inner = Self {
                 app_data,
+                args,
                 docker,
                 gui_state,
                 initialised: false,
                 receiver,
                 spawns: Arc::new(Mutex::new(HashMap::new())),
-                timestamps: args.timestamp,
                 is_running,
                 binate: Binate::One,
             };

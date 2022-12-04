@@ -73,6 +73,7 @@ Available command line arguments
 |```-r```| show raw logs, by default oxker will remove ANSI formatting (conflicts with -c) |
 |```-c```| attempt to color the logs (conflicts with -r) |
 |```-t```| remove timestamps from each log entry |
+|```-s```| if running via docker, will show the oxker container |
 |```-g```| no tui, basically a pointless debugging mode, for now |
 
 ## Build step

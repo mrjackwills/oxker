@@ -55,5 +55,6 @@ FROM alpine:latest AS runtime
 COPY --from=builder /oxker /usr/local/bin
 COPY ./containerised/start_oxker.sh ./
 
-# Run the application, this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
+# Run the application
+# this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
 ENTRYPOINT [ "./start_oxker.sh"]

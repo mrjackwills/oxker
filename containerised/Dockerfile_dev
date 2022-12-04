@@ -8,7 +8,8 @@ FROM alpine:latest AS runtime
 COPY ./target/x86_64-unknown-linux-musl/release/oxker /usr/local/bin
 COPY ./containerised/start_oxker.sh ./
 
-# Run the application, this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
+# Run the application
+# this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
 ENTRYPOINT [ "./start_oxker.sh"]
 
 ## One liner to build musl program, build docker image, then execute the image
