@@ -11,10 +11,10 @@ pub use container_state::*;
 /// Global app_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 pub struct AppData {
-    args: CliArgs,
     error: Option<AppError>,
     logs_parsed: bool,
     sorted_by: Option<(Header, SortedOrder)>,
+    pub args: CliArgs,
     pub containers: StatefulList<ContainerItem>,
 }
 
@@ -171,19 +171,20 @@ impl AppData {
         output
     }
 
-    /// Sort the containers vec, based on a heading, either ascending or descending
-    pub fn sort_containers(&mut self) {
-        if let Some((head, ord)) = self.sorted_by.as_ref() {
+    /// Sort the containers vec, based on a heading, either ascending or descending,
+    /// If not sort set, then sort by created time
+    fn sort_containers(&mut self) {
+        if let Some((head, ord)) = self.sorted_by {
             match head {
                 Header::State => match ord {
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.state.order().cmp(&b.state.order())),
                     SortedOrder::Asc => self
                         .containers
                         .items
                         .sort_by(|a, b| b.state.order().cmp(&a.state.order())),
+                    SortedOrder::Desc => self
+                        .containers
+                        .items
+                        .sort_by(|a, b| a.state.order().cmp(&b.state.order())),
                 },
                 Header::Status => match ord {
                     SortedOrder::Asc => self
@@ -238,6 +239,10 @@ impl AppData {
                     SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.tx.cmp(&a.tx)),
                 },
             }
+        } else {
+            self.containers
+                .items
+                .sort_by(|a, b| a.created.cmp(&b.created))
         }
     }
 
@@ -428,9 +433,13 @@ impl AppData {
     pub fn update_containers(&mut self, all_containers: &mut [ContainerSummary]) {
         let all_ids = self.get_all_ids();
 
+        // Sort the containes by created, that have a constant order
+        all_containers.sort_by(|a, b| a.created.cmp(&b.created));
+
         if !all_containers.is_empty() && self.containers.state.selected().is_none() {
             self.containers.start();
         }
+        let now = Self::get_systemtime();
 
         for (index, id) in all_ids.iter().enumerate() {
             if !all_containers
@@ -472,6 +481,8 @@ impl AppData {
                     .map_or(String::new(), std::clone::Clone::clone);
 
                 let id = ContainerId::from(id);
+
+                let created = i.created.map_or(now, |i| u64::try_from(i).unwrap_or(now));
                 // If container info already in containers Vec, then just update details
                 if let Some(item) = self.get_container_by_id(&id) {
                     if item.name != name {
@@ -496,7 +507,7 @@ impl AppData {
                     };
                 // else container not known, so make new ContainerItem and push into containers Vec
                 } else {
-                    let container = ContainerItem::new(id, status, image, state, name);
+                    let container = ContainerItem::new(id, status, image, state, name, created);
                     self.containers.items.push(container);
                 }
             }

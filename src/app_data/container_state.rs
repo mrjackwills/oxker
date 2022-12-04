@@ -356,6 +356,7 @@ pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
 /// Info for each container
 #[derive(Debug, Clone)]
 pub struct ContainerItem {
+    pub created: u64,
     pub cpu_stats: VecDeque<CpuStats>,
     pub docker_controls: StatefulList<DockerControls>,
     pub id: ContainerId,
@@ -366,19 +367,27 @@ pub struct ContainerItem {
     pub mem_stats: VecDeque<ByteStats>,
     pub name: String,
     pub rx: ByteStats,
-    pub tx: ByteStats,
     pub state: State,
     pub status: String,
+    pub tx: ByteStats,
 }
 
 impl ContainerItem {
     /// Create a new container item
-    pub fn new(id: ContainerId, status: String, image: String, state: State, name: String) -> Self {
+    pub fn new(
+        id: ContainerId,
+        status: String,
+        image: String,
+        state: State,
+        name: String,
+        created: u64,
+    ) -> Self {
         let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
         let mut logs = StatefulList::new(vec![]);
         logs.end();
         Self {
+            created,
             cpu_stats: VecDeque::with_capacity(60),
             docker_controls,
             id,
@@ -389,9 +398,9 @@ impl ContainerItem {
             mem_stats: VecDeque::with_capacity(60),
             name,
             rx: ByteStats::default(),
-            tx: ByteStats::default(),
             state,
             status,
+            tx: ByteStats::default(),
         }
     }
 
