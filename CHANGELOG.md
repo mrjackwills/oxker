@@ -1,6 +1,6 @@
 ### Chores
 + dependencies updated, [e3aa4420cb510df0381e311d37e768937070387a]
-+ docker-compose alpine bump, [911c6596684db4ccbe7a55aadd6f595a95f89bb0]
++ docker-compose.yml alpine bump, [911c6596684db4ccbe7a55aadd6f595a95f89bb0]
 + github workflow use dtolnay/rust-toolchain, [57c18878690477a05d7330112a65d1d58a07901e]
 
 ### Features
