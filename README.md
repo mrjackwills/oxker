@@ -26,7 +26,7 @@ Published on <a href='https://www.crates.io/crates/oxker' target='_blank' rel='n
 ### Docker
 Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
 
-`docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --name oxker --pull=always mrjackwills/oxker`
+`docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker`
 
 ### Nix
 Using nix flakes, oxker can be ran directly with
