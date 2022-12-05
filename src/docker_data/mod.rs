@@ -20,6 +20,7 @@ use crate::{
     app_error::AppError,
     parse_args::CliArgs,
     ui::{GuiState, Status},
+    ENTRY_POINT,
 };
 mod message;
 pub use message::DockerMessage;
@@ -190,7 +191,7 @@ impl DockerData {
                 Some(_) => {
                     if f.command
                         .as_ref()
-                        .map_or(false, |c| c.starts_with("./start_oxker.sh"))
+                        .map_or(false, |c| c.starts_with(ENTRY_POINT))
                         && self.args.show_self
                     {
                         None

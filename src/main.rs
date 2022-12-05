@@ -26,6 +26,8 @@ mod ui;
 
 use ui::{create_ui, GuiState, Status};
 
+const ENTRY_POINT: &str = "./start_oxker.sh";
+
 fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
     // TODO write to file?

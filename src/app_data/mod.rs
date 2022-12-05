@@ -5,7 +5,7 @@ use tui::widgets::ListItem;
 
 mod container_state;
 
-use crate::{app_error::AppError, parse_args::CliArgs, ui::log_sanitizer};
+use crate::{app_error::AppError, parse_args::CliArgs, ui::log_sanitizer, ENTRY_POINT};
 pub use container_state::*;
 
 /// Global app_state, stored in an Arc<Mutex>
@@ -171,6 +171,18 @@ impl AppData {
         output
     }
 
+    /// Check if the selected container is a dockerised version of oxker
+    /// So that can disallow commands to be send
+    /// Is a poor way of implementing this
+    pub fn selected_container_is_oxker(&self) -> bool {
+        if let Some(index) = self.containers.state.selected() {
+            if let Some(x) = self.containers.items.get(index) {
+                return x.is_oxker;
+            }
+        }
+        false
+    }
+
     /// Sort the containers vec, based on a heading, either ascending or descending,
     /// If not sort set, then sort by created time
     fn sort_containers(&mut self) {
@@ -242,7 +254,7 @@ impl AppData {
         } else {
             self.containers
                 .items
-                .sort_by(|a, b| a.created.cmp(&b.created))
+                .sort_by(|a, b| a.created.cmp(&b.created));
         }
     }
 
@@ -433,13 +445,14 @@ impl AppData {
     pub fn update_containers(&mut self, all_containers: &mut [ContainerSummary]) {
         let all_ids = self.get_all_ids();
 
-        // Sort the containes by created, that have a constant order
-        all_containers.sort_by(|a, b| a.created.cmp(&b.created));
+        // Only sort it no containers currently set, as afterwards the order is fixed
+        if self.containers.items.is_empty() {
+            all_containers.sort_by(|a, b| a.created.cmp(&b.created));
+        }
 
         if !all_containers.is_empty() && self.containers.state.selected().is_none() {
             self.containers.start();
         }
-        let now = Self::get_systemtime();
 
         for (index, id) in all_ids.iter().enumerate() {
             if !all_containers
@@ -472,6 +485,11 @@ impl AppData {
                     })
                 });
 
+                let is_oxker = i
+                    .command
+                    .as_ref()
+                    .map_or(false, |i| i.starts_with(ENTRY_POINT));
+
                 let state = State::from(i.state.as_ref().map_or("dead".to_owned(), trim_owned));
                 let status = i.status.as_ref().map_or(String::new(), trim_owned);
 
@@ -482,7 +500,7 @@ impl AppData {
 
                 let id = ContainerId::from(id);
 
-                let created = i.created.map_or(now, |i| u64::try_from(i).unwrap_or(now));
+                let created = i.created.map_or(0, |i| u64::try_from(i).unwrap_or(0));
                 // If container info already in containers Vec, then just update details
                 if let Some(item) = self.get_container_by_id(&id) {
                     if item.name != name {
@@ -507,7 +525,8 @@ impl AppData {
                     };
                 // else container not known, so make new ContainerItem and push into containers Vec
                 } else {
-                    let container = ContainerItem::new(id, status, image, state, name, created);
+                    let container =
+                        ContainerItem::new(created, id, image, is_oxker, name, state, status);
                     self.containers.items.push(container);
                 }
             }
