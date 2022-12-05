@@ -439,7 +439,6 @@ impl AppData {
         if !all_containers.is_empty() && self.containers.state.selected().is_none() {
             self.containers.start();
         }
-        let now = Self::get_systemtime();
 
         for (index, id) in all_ids.iter().enumerate() {
             if !all_containers
@@ -482,7 +481,7 @@ impl AppData {
 
                 let id = ContainerId::from(id);
 
-                let created = i.created.map_or(now, |i| u64::try_from(i).unwrap_or(now));
+                let created = i.created.map_or(0, |i| u64::try_from(i).unwrap_or(0));
                 // If container info already in containers Vec, then just update details
                 if let Some(item) = self.get_container_by_id(&id) {
                     if item.name != name {
