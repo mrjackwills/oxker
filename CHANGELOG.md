@@ -5,7 +5,7 @@
 
 ### Features
 + Clicking a header now toggles between Ascending -> Descending -> Default. Use the containers created_time as the default order - maybe add created column in future version, closes #18, [cf14ba498987db587c0f5bef8a67cf4113ffcb1e], [d1de291473d8a1028f1936429832d3820d75df54]
-+ `-s` flag for showing the oxker container when exeucting the docker image, [c93870e5fbbc7df35c69d32e4460d2104e521e33]
++ `-s` flag for showing the oxker container when executing the docker image, [c93870e5fbbc7df35c69d32e4460d2104e521e33]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.7'>v0.1.7</a>
 ### 2022-11-13
