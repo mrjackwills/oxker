@@ -445,8 +445,10 @@ impl AppData {
     pub fn update_containers(&mut self, all_containers: &mut [ContainerSummary]) {
         let all_ids = self.get_all_ids();
 
-        // Sort the containes by created, that have a constant order
-        all_containers.sort_by(|a, b| a.created.cmp(&b.created));
+		// Only sort it no containers currently set, as afterwards the order is fixed
+		if self.containers.items.is_empty() {
+        	all_containers.sort_by(|a, b| a.created.cmp(&b.created));
+		}
 
         if !all_containers.is_empty() && self.containers.state.selected().is_none() {
             self.containers.start();
