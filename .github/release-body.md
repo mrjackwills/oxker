@@ -1,11 +1,13 @@
-### 2022-11-13
+### 2022-12-05
 
 ### Chores
-+ update dependencies, closes #17, [8a5d0ef8376e3739dda5b0ed4c3e75e565deed45], [eadfc3d6c6896ecc8cff88c6a9e9c8b3e477c0cd]
-+ aggressive linting with Rust 1.65.0, [8f3a15137155dc374e6b2822c9155c07d05d5e28]
++ dependencies updated, [e3aa4420cb510df0381e311d37e768937070387a]
++ docker-compose.yml alpine bump, [911c6596684db4ccbe7a55aadd6f595a95f89bb0]
++ github workflow use dtolnay/rust-toolchain, [57c18878690477a05d7330112a65d1d58a07901e]
 
-### Docs
-+ README.md improved Download & Install section, and now available on [NixPkg](https://search.nixos.org/packages?channel=unstable&show=oxker&from=0&size=50&sort=relevance&type=packages&query=oxker), thanks [siph](https://github.com/siph), [67a9e183ca04199da758255075ff7e73061eb850]
+### Features
++ Clicking a header now toggles between Ascending -> Descending -> Default. Use the containers created_time as the default order - maybe add created column in future version, closes #18, [cf14ba498987db587c0f5bef8a67cf4113ffcb1e], [d1de291473d8a1028f1936429832d3820d75df54]
++ `-s` flag for showing the oxker container when executing the docker image, [c93870e5fbbc7df35c69d32e4460d2104e521e33]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details
