@@ -124,12 +124,12 @@ impl InputHandler {
     /// Sort containers based on a given header, if headings match, and already ascending, remove sorting
     fn sort(&self, selected_header: Header) {
         let mut locked_data = self.app_data.lock();
-        let mut output = Some((selected_header, SortedOrder::Desc));
+        let mut output = Some((selected_header, SortedOrder::Asc));
         if let Some((current_header, order)) = locked_data.get_sorted() {
             if current_header == selected_header {
                 match order {
-                    SortedOrder::Asc => output = None,
-                    SortedOrder::Desc => output = Some((selected_header, SortedOrder::Asc)),
+                    SortedOrder::Desc => output = None,
+                    SortedOrder::Asc => output = Some((selected_header, SortedOrder::Desc)),
                 }
             }
         }
