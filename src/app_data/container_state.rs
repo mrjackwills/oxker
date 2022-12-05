@@ -370,16 +370,16 @@ pub struct ContainerItem {
     pub state: State,
     pub status: String,
     pub tx: ByteStats,
-	pub is_oxker: bool
+    pub is_oxker: bool,
 }
 
 impl ContainerItem {
     /// Create a new container item
     pub fn new(
-		created: u64,
+        created: u64,
         id: ContainerId,
         image: String,
-		is_oxker: bool,
+        is_oxker: bool,
         name: String,
         state: State,
         status: String,
@@ -394,7 +394,7 @@ impl ContainerItem {
             docker_controls,
             id,
             image,
-			is_oxker,
+            is_oxker,
             last_updated: 0,
             logs,
             mem_limit: ByteStats::default(),

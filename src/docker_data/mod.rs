@@ -19,7 +19,8 @@ use crate::{
     app_data::{AppData, ContainerId, DockerControls},
     app_error::AppError,
     parse_args::CliArgs,
-    ui::{GuiState, Status}, ENTRY_POINT,
+    ui::{GuiState, Status},
+    ENTRY_POINT,
 };
 mod message;
 pub use message::DockerMessage;

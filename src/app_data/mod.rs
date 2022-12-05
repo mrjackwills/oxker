@@ -171,13 +171,13 @@ impl AppData {
         output
     }
 
-	/// Check if the selected container is a dockerised version of oxker
-	/// So that can disallow commands to be send
-	/// Is a poor way of implementing this 
-	pub fn selected_container_is_oxker(&self) -> bool {
+    /// Check if the selected container is a dockerised version of oxker
+    /// So that can disallow commands to be send
+    /// Is a poor way of implementing this
+    pub fn selected_container_is_oxker(&self) -> bool {
         if let Some(index) = self.containers.state.selected() {
             if let Some(x) = self.containers.items.get(index) {
-                return x.is_oxker
+                return x.is_oxker;
             }
         }
         false
@@ -445,10 +445,10 @@ impl AppData {
     pub fn update_containers(&mut self, all_containers: &mut [ContainerSummary]) {
         let all_ids = self.get_all_ids();
 
-		// Only sort it no containers currently set, as afterwards the order is fixed
-		if self.containers.items.is_empty() {
-        	all_containers.sort_by(|a, b| a.created.cmp(&b.created));
-		}
+        // Only sort it no containers currently set, as afterwards the order is fixed
+        if self.containers.items.is_empty() {
+            all_containers.sort_by(|a, b| a.created.cmp(&b.created));
+        }
 
         if !all_containers.is_empty() && self.containers.state.selected().is_none() {
             self.containers.start();
@@ -485,7 +485,10 @@ impl AppData {
                     })
                 });
 
-				let is_oxker = i.command.as_ref().map_or(false, |i|i.starts_with(ENTRY_POINT));
+                let is_oxker = i
+                    .command
+                    .as_ref()
+                    .map_or(false, |i| i.starts_with(ENTRY_POINT));
 
                 let state = State::from(i.state.as_ref().map_or("dead".to_owned(), trim_owned));
                 let status = i.status.as_ref().map_or(String::new(), trim_owned);
@@ -522,7 +525,8 @@ impl AppData {
                     };
                 // else container not known, so make new ContainerItem and push into containers Vec
                 } else {
-                    let container = ContainerItem::new(created, id, image, is_oxker, name, state, status);
+                    let container =
+                        ContainerItem::new(created, id, image, is_oxker, name, state, status);
                     self.containers.items.push(container);
                 }
             }
