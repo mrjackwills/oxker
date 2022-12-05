@@ -370,17 +370,19 @@ pub struct ContainerItem {
     pub state: State,
     pub status: String,
     pub tx: ByteStats,
+	pub is_oxker: bool
 }
 
 impl ContainerItem {
     /// Create a new container item
     pub fn new(
+		created: u64,
         id: ContainerId,
-        status: String,
         image: String,
-        state: State,
+		is_oxker: bool,
         name: String,
-        created: u64,
+        state: State,
+        status: String,
     ) -> Self {
         let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
@@ -392,6 +394,7 @@ impl ContainerItem {
             docker_controls,
             id,
             image,
+			is_oxker,
             last_updated: 0,
             logs,
             mem_limit: ByteStats::default(),

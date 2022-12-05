@@ -5,7 +5,7 @@ use tui::widgets::ListItem;
 
 mod container_state;
 
-use crate::{app_error::AppError, parse_args::CliArgs, ui::log_sanitizer};
+use crate::{app_error::AppError, parse_args::CliArgs, ui::log_sanitizer, ENTRY_POINT};
 pub use container_state::*;
 
 /// Global app_state, stored in an Arc<Mutex>
@@ -171,6 +171,18 @@ impl AppData {
         output
     }
 
+	/// Check if the selected container is a dockerised version of oxker
+	/// So that can disallow commands to be send
+	/// Is a poor way of implementing this 
+	pub fn selected_container_is_oxker(&self) -> bool {
+        if let Some(index) = self.containers.state.selected() {
+            if let Some(x) = self.containers.items.get(index) {
+                return x.is_oxker
+            }
+        }
+        false
+    }
+
     /// Sort the containers vec, based on a heading, either ascending or descending,
     /// If not sort set, then sort by created time
     fn sort_containers(&mut self) {
@@ -242,7 +254,7 @@ impl AppData {
         } else {
             self.containers
                 .items
-                .sort_by(|a, b| a.created.cmp(&b.created))
+                .sort_by(|a, b| a.created.cmp(&b.created));
         }
     }
 
@@ -471,6 +483,8 @@ impl AppData {
                     })
                 });
 
+				let is_oxker = i.command.as_ref().map_or(false, |i|i.starts_with(ENTRY_POINT));
+
                 let state = State::from(i.state.as_ref().map_or("dead".to_owned(), trim_owned));
                 let status = i.status.as_ref().map_or(String::new(), trim_owned);
 
@@ -506,7 +520,7 @@ impl AppData {
                     };
                 // else container not known, so make new ContainerItem and push into containers Vec
                 } else {
-                    let container = ContainerItem::new(id, status, image, state, name, created);
+                    let container = ContainerItem::new(created, id, image, is_oxker, name, state, status);
                     self.containers.items.push(container);
                 }
             }
