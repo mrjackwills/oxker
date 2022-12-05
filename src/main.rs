@@ -50,7 +50,6 @@ async fn main() {
             let docker = Arc::new(docker);
             let is_running = Arc::clone(&is_running);
             tokio::spawn(DockerData::init(
-                args,
                 docker_app_data,
                 docker,
                 docker_gui_state,

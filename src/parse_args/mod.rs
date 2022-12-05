@@ -23,6 +23,10 @@ pub struct CliArgs {
     #[clap(short = 'r', conflicts_with = "color")]
     pub raw: bool,
 
+    /// Show self when running as a docker container
+    #[clap(short = 's')]
+    pub show_self: bool,
+
     /// Don't draw gui - for debugging - mostly pointless
     #[clap(short = 'g')]
     pub gui: bool,
@@ -43,6 +47,7 @@ impl CliArgs {
             color: args.color,
             docker_interval: args.docker_interval,
             gui: !args.gui,
+            show_self: !args.show_self,
             raw: args.raw,
             timestamp: !args.timestamp,
         }

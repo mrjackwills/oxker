@@ -121,13 +121,16 @@ impl InputHandler {
         self.mouse_capture = !self.mouse_capture;
     }
 
-    /// Sort containers based on a given header, switch asc to desc if already sorted, else always desc
-    fn sort(&self, header: Header) {
-        let mut output = Some((header, SortedOrder::Desc));
+    /// Sort containers based on a given header, if headings match, and already ascending, remove sorting
+    fn sort(&self, selected_header: Header) {
         let mut locked_data = self.app_data.lock();
-        if let Some((h, order)) = locked_data.get_sorted().as_ref() {
-            if &SortedOrder::Desc == order && h == &header {
-                output = Some((header, SortedOrder::Asc));
+        let mut output = Some((selected_header, SortedOrder::Asc));
+        if let Some((current_header, order)) = locked_data.get_sorted() {
+            if current_header == selected_header {
+                match order {
+                    SortedOrder::Desc => output = None,
+                    SortedOrder::Asc => output = Some((selected_header, SortedOrder::Desc)),
+                }
             }
         }
         locked_data.set_sorted(output);

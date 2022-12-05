@@ -364,7 +364,7 @@ pub fn heading_bar<B: Backend>(
             if x == a {
                 match b {
                     SortedOrder::Asc => suffix = " ⌃",
-                    SortedOrder::Desc => suffix = " ⌄",
+					SortedOrder::Desc => suffix = " ⌄",
                 }
                 suffix_margin = 2;
                 color = Color::White;
