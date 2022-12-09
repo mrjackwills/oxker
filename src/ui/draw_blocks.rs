@@ -355,7 +355,7 @@ pub fn heading_bar<B: Backend>(
 
     f.render_widget(block(Color::Black), area);
 
-    // Generate a bloack for the header, if the header is currently being used to sort a column, then highlight it white
+    // Generate a block for the header, if the header is currently being used to sort a column, then highlight it white
     let header_block = |x: &Header| {
         let mut color = Color::Black;
         let mut suffix = "";
