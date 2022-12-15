@@ -148,7 +148,7 @@ pub fn containers<B: Backend>(
                     state_style,
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.status, width = &widths.status.1),
+                    format!("{MARGIN}{:>width$}", i.status, width = &widths.status.1),
                     state_style,
                 ),
                 Span::styled(
@@ -161,7 +161,7 @@ pub fn containers<B: Backend>(
                     state_style,
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, mems, width = &widths.mem.1),
+                    format!("{MARGIN}{mems:>width$}", width = &widths.mem.1),
                     state_style,
                 ),
                 Span::styled(
@@ -174,19 +174,19 @@ pub fn containers<B: Backend>(
                     blue,
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.name, width = widths.name.1),
+                    format!("{MARGIN}{:>width$}", i.name, width = widths.name.1),
                     blue,
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.image, width = widths.image.1),
+                    format!("{MARGIN}{:>width$}", i.image, width = widths.image.1),
                     blue,
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.rx, width = widths.net_rx.1),
+                    format!("{MARGIN}{:>width$}", i.rx, width = widths.net_rx.1),
                     Style::default().fg(Color::Rgb(255, 233, 193)),
                 ),
                 Span::styled(
-                    format!("{}{:>width$}", MARGIN, i.tx, width = widths.net_tx.1),
+                    format!("{MARGIN}{:>width$}", i.tx, width = widths.net_tx.1),
                     Style::default().fg(Color::Rgb(205, 140, 140)),
                 ),
             ]);
@@ -220,7 +220,7 @@ pub fn logs<B: Backend>(
     let block = generate_block(app_data, area, gui_state, SelectablePanel::Logs);
     let contains_init = gui_state.lock().status_contains(&[Status::Init]);
     if contains_init {
-        let paragraph = Paragraph::new(format!("parsing logs {}", loading_icon))
+        let paragraph = Paragraph::new(format!("parsing logs {loading_icon}"))
             .style(Style::default())
             .block(block)
             .alignment(Alignment::Center);
@@ -309,7 +309,7 @@ fn make_chart<'a, T: Stats + Display>(
             Block::default()
                 .title_alignment(Alignment::Center)
                 .title(Span::styled(
-                    format!(" {} {} ", name, current),
+                    format!(" {name} {current} "),
                     Style::default()
                         .fg(title_color)
                         .add_modifier(Modifier::BOLD),
@@ -327,7 +327,7 @@ fn make_chart<'a, T: Stats + Display>(
                 .labels(vec![
                     Span::styled("", Style::default().fg(label_color)),
                     Span::styled(
-                        format!("{}", max),
+                        format!("{max}"),
                         Style::default()
                             .add_modifier(Modifier::BOLD)
                             .fg(label_color),
@@ -432,7 +432,7 @@ pub fn heading_bar<B: Backend>(
         .collect::<Vec<_>>();
 
     let suffix = if help_visible { "exit" } else { "show" };
-    let info_text = format!("( h ) {} help {}", suffix, MARGIN,);
+    let info_text = format!("( h ) {suffix} help {MARGIN}",);
     let info_width = info_text.chars().count();
 
     let column_width = usize::from(area.width) - info_width;
@@ -453,7 +453,7 @@ pub fn heading_bar<B: Backend>(
         .split(area);
     if has_containers {
         // Draw loading icon, or not, and a prefix with a single space
-        let loading_icon = format!("{:>2}", loading_icon);
+        let loading_icon = format!("{loading_icon:>2}");
         let loading_paragraph = Paragraph::new(loading_icon)
             .block(block(Color::White))
             .alignment(Alignment::Center);
@@ -507,9 +507,9 @@ fn max_line_width(text: &str) -> usize {
 /// Draw the help box in the centre of the screen
 /// TODO should make every line it's own renderable span
 pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
-    let title = format!(" {} ", VERSION);
+    let title = format!(" {VERSION} ");
 
-    let description_text = format!("\n{}", DESCRIPTION);
+    let description_text = format!("\n{DESCRIPTION}");
 
     let mut help_text = String::from("\n  ( tab )  or ( shift+tab ) to change panels");
     help_text
@@ -527,7 +527,7 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
     help_text.push_str(format!("\n  {}", REPO.trim()).as_str());
 
     // Find the maximum line widths & height
-    let all_text = format!("{}{}{}", NAME_TEXT, description_text, help_text);
+    let all_text = format!("{NAME_TEXT}{description_text}{help_text}");
     let mut max_line_width = max_line_width(&all_text);
     let mut lines = all_text.lines().count();
 
@@ -604,7 +604,7 @@ pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<
         _ => String::from("\n\n ( c ) to clear error\n ( q ) to quit oxker"),
     };
 
-    let mut text = format!("\n{}", error);
+    let mut text = format!("\n{error}");
 
     text.push_str(to_push.as_str());
 
