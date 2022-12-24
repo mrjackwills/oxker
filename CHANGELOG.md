@@ -3,7 +3,7 @@
 + Rust 1.66 linting, [bf9dcac7045c0d2314df147ec2744a3ad886564b]
 
 ### Features
-+ Caching opn github action, [a91c9aa45ffd5c998cd1b83d8e90d0912893c31f]
++ Caching on github action, [a91c9aa45ffd5c998cd1b83d8e90d0912893c31f]
 
 ### Fixes
 + comment typo, [7899b773569fed86343a035d3023bf34297fdabb]
