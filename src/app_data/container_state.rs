@@ -429,7 +429,7 @@ impl ContainerItem {
         self.cpu_stats
             .iter()
             .enumerate()
-            .map(|i| (i.0 as f64, i.1.0))
+            .map(|i| (i.0 as f64, i.1 .0))
             .collect::<Vec<_>>()
     }
 
