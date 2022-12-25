@@ -51,7 +51,7 @@ impl fmt::Display for Header {
             Self::Rx => "↓ rx",
             Self::Tx => "↑ tx",
         };
-        write!(f, "{:>x$}", disp, x = f.width().unwrap_or(1))
+        write!(f, "{disp:>x$}", x = f.width().unwrap_or(1))
     }
 }
 
@@ -280,9 +280,9 @@ impl AppData {
                 let mut name = self.containers.items[index].name.clone();
                 name.truncate(32);
                 if logs_len.is_empty() {
-                    format!("- {} ", name)
+                    format!("- {name} ")
                 } else {
-                    format!("{} - {}", logs_len, name)
+                    format!("{logs_len} - {name}")
                 }
             })
     }

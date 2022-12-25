@@ -169,7 +169,7 @@ impl fmt::Display for Loading {
             Self::Nine => '⠇',
             Self::Ten => '⠏',
         };
-        write!(f, "{}", disp)
+        write!(f, "{disp}")
     }
 }
 

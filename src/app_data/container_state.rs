@@ -111,7 +111,7 @@ impl<T> StatefulList<T> {
                 .state
                 .selected()
                 .map_or(0, |value| if len > 0 { value + 1 } else { value });
-            format!("{}/{}", c, self.items.len())
+            format!("{c}/{}", self.items.len())
         }
     }
 }
@@ -191,7 +191,7 @@ impl fmt::Display for State {
             Self::Running => "✓ running",
             Self::Unknown => "? unknown",
         };
-        write!(f, "{}", disp)
+        write!(f, "{disp}")
     }
 }
 
@@ -237,7 +237,7 @@ impl fmt::Display for DockerControls {
             Self::Stop => "stop",
             Self::Unpause => "unpause",
         };
-        write!(f, "{}", disp)
+        write!(f, "{disp}")
     }
 }
 
@@ -292,7 +292,7 @@ impl Stats for CpuStats {
 impl fmt::Display for CpuStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = format!("{:05.2}%", self.0);
-        write!(f, "{:>x$}", disp, x = f.width().unwrap_or(1))
+        write!(f, "{disp:>x$}", x = f.width().unwrap_or(1))
     }
 }
 
@@ -346,7 +346,7 @@ impl fmt::Display for ByteStats {
             x if x >= ONE_KB => format!("{y:.2} kB", y = as_f64 / ONE_KB),
             _ => format!("{} B", self.0),
         };
-        write!(f, "{:>x$}", p, x = f.width().unwrap_or(1))
+        write!(f, "{p:>x$}", x = f.width().unwrap_or(1))
     }
 }
 
@@ -429,7 +429,7 @@ impl ContainerItem {
         self.cpu_stats
             .iter()
             .enumerate()
-            .map(|i| (i.0 as f64, i.1 .0 as f64))
+            .map(|i| (i.0 as f64, i.1 .0))
             .collect::<Vec<_>>()
     }
 
