@@ -1,17 +1,16 @@
-### 2022-12-25
+### 2023-01-03
 
 ### Chores
-+ dependencies updated, [1525b3150293015c0fb2f2161da463b21ac2694c], [8d539ab14809136d743c49d60779687fc8eeef6d], [1774217a8a657d261397d213e5ecee667cf3b6b1]
-+ Rust 1.66 linting, [bf9dcac7045c0d2314df147ec2744a3ad886564b]
++ dependencies updated, [9b09146aadae5727a5fee4de5fe0c1d70c581c22]
 
 ### Features
-+ Caching on github action, [a91c9aa45ffd5c998cd1b83d8e90d0912893c31f]
++ `install.sh` script added, for automated platform selection, download, and installation, [7a42eba6b0968314af40ff87bcc42d288f6860bc], [e0703b76a1a28cfe266f130a7f7dec92f1b5ad58]
 
 ### Fixes
-+ comment typo, [7899b773569fed86343a035d3023bf34297fdabb]
++ If a sort order is set, sort containers on every `update_stats()` execution, [cfdea77594e48c8c20a4d6e6c7ea31c9181361a1]
 
 ### Refactors
-+ remove_ansi() to single liner, [57c3a6c186b916faba24bf7b5cdbbda31d636a7e]
++ input sort executed in app_data struct `sort_by_header()`, [3cdc5fae02097628799209f371ae9292e513e76c]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details

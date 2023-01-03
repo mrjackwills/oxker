@@ -56,21 +56,6 @@ impl fmt::Display for Header {
 }
 
 impl AppData {
-    pub const fn get_sorted(&self) -> Option<(Header, SortedOrder)> {
-        self.sorted_by
-    }
-
-    /// Change the sorted order, also set the selected container state to match new order
-    pub fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
-        self.sorted_by = x;
-        self.sort_containers();
-        self.containers
-            .state
-            .select(self.containers.items.iter().position(|i| {
-                self.get_selected_container_id()
-                    .map_or(false, |id| i.id == id)
-            }));
-    }
     /// Generate a default app_state
     pub fn default(args: CliArgs) -> Self {
         Self {
@@ -80,6 +65,41 @@ impl AppData {
             logs_parsed: false,
             sorted_by: None,
         }
+    }
+
+    pub const fn get_sorted(&self) -> Option<(Header, SortedOrder)> {
+        self.sorted_by
+    }
+
+    /// Remove the sorted header & order, and sort by default - created datetime
+    pub fn reset_sorted(&mut self) {
+        self.set_sorted(None);
+    }
+
+    /// Sort containers based on a given header, if headings match, and already ascending, remove sorting
+    pub fn set_sort_by_header(&mut self, selected_header: Header) {
+        let mut output = Some((selected_header, SortedOrder::Asc));
+        if let Some((current_header, order)) = self.get_sorted() {
+            if current_header == selected_header {
+                match order {
+                    SortedOrder::Desc => output = None,
+                    SortedOrder::Asc => output = Some((selected_header, SortedOrder::Desc)),
+                }
+            }
+        }
+        self.set_sorted(output);
+    }
+
+    /// Change the sorted order, also set the selected container state to match new order
+    fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
+        self.sorted_by = x;
+        self.sort_containers();
+        self.containers
+            .state
+            .select(self.containers.items.iter().position(|i| {
+                self.get_selected_container_id()
+                    .map_or(false, |id| i.id == id)
+            }));
     }
 
     /// Current time as unix timestamp
@@ -185,7 +205,7 @@ impl AppData {
 
     /// Sort the containers vec, based on a heading, either ascending or descending,
     /// If not sort set, then sort by created time
-    fn sort_containers(&mut self) {
+    pub fn sort_containers(&mut self) {
         if let Some((head, ord)) = self.sorted_by {
             match head {
                 Header::State => match ord {
@@ -411,6 +431,7 @@ impl AppData {
     }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
+    /// Will also, if a sort is set, sort the containers
     pub fn update_stats(
         &mut self,
         id: &ContainerId,
@@ -438,6 +459,10 @@ impl AppData {
             container.rx.update(rx);
             container.tx.update(tx);
             container.mem_limit.update(mem_limit);
+        }
+        // need to benchmark this?
+        if self.get_sorted().is_some() {
+            self.sort_containers();
         }
     }
 

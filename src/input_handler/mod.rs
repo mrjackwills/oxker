@@ -18,7 +18,7 @@ use tui::layout::Rect;
 
 mod message;
 use crate::{
-    app_data::{AppData, DockerControls, Header, SortedOrder},
+    app_data::{AppData, DockerControls, Header},
     app_error::AppError,
     docker_data::DockerMessage,
     ui::{GuiState, SelectablePanel, Status},
@@ -121,19 +121,9 @@ impl InputHandler {
         self.mouse_capture = !self.mouse_capture;
     }
 
-    /// Sort containers based on a given header, if headings match, and already ascending, remove sorting
+    /// Sort the containers by a given header
     fn sort(&self, selected_header: Header) {
-        let mut locked_data = self.app_data.lock();
-        let mut output = Some((selected_header, SortedOrder::Asc));
-        if let Some((current_header, order)) = locked_data.get_sorted() {
-            if current_header == selected_header {
-                match order {
-                    SortedOrder::Desc => output = None,
-                    SortedOrder::Asc => output = Some((selected_header, SortedOrder::Desc)),
-                }
-            }
-        }
-        locked_data.set_sorted(output);
+        self.app_data.lock().set_sort_by_header(selected_header);
     }
 
     /// Send a quit message to docker, to abort all spawns, if an error is returned, set is_running to false here instead
@@ -173,7 +163,7 @@ impl InputHandler {
             }
         } else {
             match key_code {
-                KeyCode::Char('0') => self.app_data.lock().set_sorted(None),
+                KeyCode::Char('0') => self.app_data.lock().reset_sorted(),
                 KeyCode::Char('1') => self.sort(Header::State),
                 KeyCode::Char('2') => self.sort(Header::Status),
                 KeyCode::Char('3') => self.sort(Header::Cpu),
