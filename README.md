@@ -49,7 +49,7 @@ install -Dm 755 oxker -t "${HOME}/.local/bin" &&
 rm oxker_linux_x86_64.tar.gz oxker
 ```
 
-or, automatically select platform, download, and installation to `$HOME/.local/bin`
+or, for automatic platform selection, download, and installation (to `$HOME/.local/bin`)
 
 *One should verify all scripts before running in your shell*
 
