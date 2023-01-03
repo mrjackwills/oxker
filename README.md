@@ -49,6 +49,14 @@ install -Dm 755 oxker -t "${HOME}/.local/bin" &&
 rm oxker_linux_x86_64.tar.gz oxker
 ```
 
+or, automatically select platform, download, and install to `$HOME/.local/bin`
+
+*One should verify all scripts before running in your shell*
+
+```bash
+curl https://raw.githubusercontent.com/mrjackwills/oxker/main/install.sh | bash
+```
+
 ## Run
 
 ```oxker```
