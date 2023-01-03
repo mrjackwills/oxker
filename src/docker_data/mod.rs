@@ -156,18 +156,20 @@ impl DockerData {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
-            let key = SpawnId::Stats((id.clone(), self.binate));
-            let spawn_key = key.clone();
-            self.spawns.lock().entry(key).or_insert_with(|| {
-                tokio::spawn(Self::update_container_stat(
-                    docker,
-                    id.clone(),
-                    app_data,
-                    *is_running,
-                    spawns,
-                    spawn_key,
-                ))
-            });
+            let spawn_key = SpawnId::Stats((id.clone(), self.binate));
+            self.spawns
+                .lock()
+                .entry(spawn_key.clone())
+                .or_insert_with(|| {
+                    tokio::spawn(Self::update_container_stat(
+                        docker,
+                        id.clone(),
+                        app_data,
+                        *is_running,
+                        spawns,
+                        spawn_key,
+                    ))
+                });
         }
         self.binate = self.binate.toggle();
     }
@@ -299,6 +301,7 @@ impl DockerData {
             }
         };
         self.update_all_container_stats(&all_ids);
+        self.app_data.lock().sort_containers();
     }
 
     /// Animate the loading icon
