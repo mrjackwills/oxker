@@ -462,7 +462,7 @@ impl AppData {
         }
         // need to benchmark this?
         if self.get_sorted().is_some() {
-        	self.sort_containers();
+            self.sort_containers();
         }
     }
 
