@@ -1,14 +1,17 @@
+# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.11'>v0.1.11</a>
+### 2023-01-03
+
 ### Chores
-+ dependencies updated, [9b09146aadae5727a5fee4de5fe0c1d70c581c22]
++ dependencies updated, [9b09146a](https://github.com/mrjackwills/oxker/commit/9b09146aadae5727a5fee4de5fe0c1d70c581c22)
 
 ### Features
-+ `install.sh` script added, for automated platform selection, download, and installation, [7a42eba6b0968314af40ff87bcc42d288f6860bc], [e0703b76a1a28cfe266f130a7f7dec92f1b5ad58]
++ `install.sh` script added, for automated platform selection, download, and installation, [7a42eba6](https://github.com/mrjackwills/oxker/commit/7a42eba6b0968314af40ff87bcc42d288f6860bc), [e0703b76](https://github.com/mrjackwills/oxker/commit/e0703b76a1a28cfe266f130a7f7dec92f1b5ad58)
 
 ### Fixes
-+ If a sort order is set, sort containers on every `update_stats()` execution, [cfdea77594e48c8c20a4d6e6c7ea31c9181361a1]
++ If a sort order is set, sort containers on every `update_stats()` execution, [cfdea775](https://github.com/mrjackwills/oxker/commit/cfdea77594e48c8c20a4d6e6c7ea31c9181361a1)
 
 ### Refactors
-+ input sort executed in app_data struct `sort_by_header()`, [3cdc5fae02097628799209f371ae9292e513e76c]
++ input sort executed in app_data struct `sort_by_header()`, [3cdc5fae](https://github.com/mrjackwills/oxker/commit/3cdc5fae02097628799209f371ae9292e513e76c)
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.10'>v0.1.10</a>
 ### 2022-12-25
