@@ -1,3 +1,12 @@
+### Chores
++ dependencies updated, [9b09146aadae5727a5fee4de5fe0c1d70c581c22]
+
+### Fixes
++ If a sort order is set, sort containers on every `update_stats()`, [cfdea77594e48c8c20a4d6e6c7ea31c9181361a1]
+
+### Refactors
++ input sort executed in app_data struct `sort_by_header()`, [3cdc5fae02097628799209f371ae9292e513e76c]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.1.10'>v0.1.10</a>
 ### 2022-12-25
 
