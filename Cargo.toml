@@ -15,7 +15,7 @@ categories = ["command-line-utilities"]
 anyhow = "1.0"
 bollard = "0.13"
 cansi = "2.2"
-clap={version="4.0", features = ["derive", "unicode", "color"] }
+clap={version="4.1", features = ["derive", "unicode", "color"] }
 crossterm = "0.25"
 futures-util = "0.3"
 parking_lot = {version= "0.12"}
