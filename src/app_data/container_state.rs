@@ -343,8 +343,7 @@ impl fmt::Display for ByteStats {
         let p = match as_f64 {
             x if x >= ONE_GB => format!("{y:.2} GB", y = as_f64 / ONE_GB),
             x if x >= ONE_MB => format!("{y:.2} MB", y = as_f64 / ONE_MB),
-            x if x >= ONE_KB => format!("{y:.2} kB", y = as_f64 / ONE_KB),
-            _ => format!("{} B", self.0),
+            _ => format!("{y:.2} kB", y = as_f64 / ONE_KB),
         };
         write!(f, "{p:>x$}", x = f.width().unwrap_or(1))
     }
@@ -463,15 +462,15 @@ impl ContainerItem {
 /// Container information panel headings + widths, for nice pretty formatting
 #[derive(Debug, Clone, Copy)]
 pub struct Columns {
-    pub state: (Header, usize),
-    pub status: (Header, usize),
-    pub cpu: (Header, usize),
-    pub mem: (Header, usize),
-    pub id: (Header, usize),
-    pub name: (Header, usize),
-    pub image: (Header, usize),
-    pub net_rx: (Header, usize),
-    pub net_tx: (Header, usize),
+    pub state: (Header, u8),
+    pub status: (Header, u8),
+    pub cpu: (Header, u8),
+    pub mem: (Header, u8, u8),
+    pub id: (Header, u8),
+    pub name: (Header, u8),
+    pub image: (Header, u8),
+    pub net_rx: (Header, u8),
+    pub net_tx: (Header, u8),
 }
 
 impl Columns {
@@ -482,7 +481,7 @@ impl Columns {
             status: (Header::Status, 16),
             // 7 to allow for "100.00%"
             cpu: (Header::Cpu, 7),
-            mem: (Header::Memory, 12),
+            mem: (Header::Memory, 6, 6),
             id: (Header::Id, 8),
             name: (Header::Name, 4),
             image: (Header::Image, 5),

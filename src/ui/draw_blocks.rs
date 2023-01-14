@@ -136,19 +136,19 @@ pub fn containers<B: Backend>(
             let state_style = Style::default().fg(i.state.get_color());
             let blue = Style::default().fg(Color::Blue);
 
-            let mems = format!(
-                "{:>1} / {:>1}",
-                i.mem_stats.back().unwrap_or(&ByteStats::default()),
-                i.mem_limit
-            );
+            // let mems = format!(
+            //     "{:>1} / {:>1}",
+            //     i.mem_stats.back().unwrap_or(&ByteStats::default()),
+            //     i.mem_limit
+            // );
 
             let lines = Spans::from(vec![
                 Span::styled(
-                    format!("{:<width$}", i.state.to_string(), width = widths.state.1),
+                    format!("{:<width$}", i.state.to_string(), width = widths.state.1.into()),
                     state_style,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.status, width = &widths.status.1),
+                    format!("{MARGIN}{:>width$}", i.status, width = &widths.status.1.into()),
                     state_style,
                 ),
                 Span::styled(
@@ -156,12 +156,12 @@ pub fn containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.cpu_stats.back().unwrap_or(&CpuStats::default()),
-                        width = &widths.cpu.1
+                        width = &widths.cpu.1.into()
                     ),
                     state_style,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{mems:>width$}", width = &widths.mem.1),
+                    format!("{MARGIN}{:>width_current$} / {:>width_limit$}", i.mem_stats.back().unwrap_or(&ByteStats::default()), i.mem_limit, width_current = &widths.mem.1.into(), width_limit = &widths.mem.2.into()),
                     state_style,
                 ),
                 Span::styled(
@@ -169,24 +169,24 @@ pub fn containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.id.get().chars().take(8).collect::<String>(),
-                        width = &widths.id.1
+                        width = &widths.id.1.into()
                     ),
                     blue,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.name, width = widths.name.1),
+                    format!("{MARGIN}{:>width$}", i.name, width = widths.name.1.into()),
                     blue,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.image, width = widths.image.1),
+                    format!("{MARGIN}{:>width$}", i.image, width = widths.image.1.into()),
                     blue,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.rx, width = widths.net_rx.1),
+                    format!("{MARGIN}{:>width$}", i.rx, width = widths.net_rx.1.into()),
                     Style::default().fg(Color::Rgb(255, 233, 193)),
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.tx, width = widths.net_tx.1),
+                    format!("{MARGIN}{:>width$}", i.tx, width = widths.net_tx.1.into()),
                     Style::default().fg(Color::Rgb(205, 140, 140)),
                 ),
             ]);
@@ -415,7 +415,7 @@ pub fn heading_bar<B: Backend>(
         (Header::State, columns.state.1),
         (Header::Status, columns.status.1),
         (Header::Cpu, columns.cpu.1),
-        (Header::Memory, columns.mem.1),
+        (Header::Memory, columns.mem.1 + columns.mem.2 + 3),
         (Header::Id, columns.id.1),
         (Header::Name, columns.name.1),
         (Header::Image, columns.image.1),
@@ -426,7 +426,7 @@ pub fn heading_bar<B: Backend>(
     let header_data = header_meta
         .iter()
         .map(|i| {
-            let header_block = gen_header(&i.0, i.1);
+            let header_block = gen_header(&i.0, i.1.into());
             (header_block.0, i.0, Constraint::Max(header_block.1))
         })
         .collect::<Vec<_>>();

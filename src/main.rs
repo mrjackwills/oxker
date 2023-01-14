@@ -40,61 +40,43 @@ async fn main() {
     let app_data = Arc::new(Mutex::new(AppData::default(args)));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
-
-    let docker_app_data = Arc::clone(&app_data);
-    let docker_gui_state = Arc::clone(&gui_state);
-
     let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(16);
+    let (input_sx, input_rx) = tokio::sync::mpsc::channel(16);
 
     // Create docker daemon handler, and only spawn up the docker data handler if ping returns non-error
     if let Ok(docker) = Docker::connect_with_socket_defaults() {
         if docker.ping().await.is_ok() {
-            let docker = Arc::new(docker);
+            let app_data = Arc::clone(&app_data);
+            let gui_state = Arc::clone(&gui_state);
             let is_running = Arc::clone(&is_running);
             tokio::spawn(DockerData::init(
-                docker_app_data,
-                docker,
-                docker_gui_state,
-                docker_rx,
-                is_running,
+                app_data, docker, gui_state, docker_rx, is_running,
             ));
         } else {
             app_data.lock().set_error(AppError::DockerConnect);
-            docker_gui_state.lock().status_push(Status::DockerConnect);
+            gui_state.lock().status_push(Status::DockerConnect);
         }
     } else {
         app_data.lock().set_error(AppError::DockerConnect);
-        docker_gui_state.lock().status_push(Status::DockerConnect);
+        gui_state.lock().status_push(Status::DockerConnect);
     }
+
     let input_app_data = Arc::clone(&app_data);
-
-    let (input_sx, input_rx) = tokio::sync::mpsc::channel(16);
-
-    let input_is_running = Arc::clone(&is_running);
     let input_gui_state = Arc::clone(&gui_state);
-    let input_docker_sender = docker_sx.clone();
-
+    let input_is_running = Arc::clone(&is_running);
     // Spawn input handling into own tokio thread
     tokio::spawn(input_handler::InputHandler::init(
         input_app_data,
         input_rx,
-        input_docker_sender,
+        docker_sx.clone(),
         input_gui_state,
         input_is_running,
     ));
 
     if args.gui {
-        let update_duration = std::time::Duration::from_millis(u64::from(args.docker_interval));
-        create_ui(
-            app_data,
-            input_sx,
-            is_running,
-            gui_state,
-            docker_sx,
-            update_duration,
-        )
-        .await
-        .unwrap_or(());
+        create_ui(app_data, input_sx, is_running, gui_state, docker_sx)
+            .await
+            .unwrap_or(());
     } else {
         // Debug mode for testing, mostly pointless, doesn't take terminal nor draw gui
         // TODO this needs to be improved to display something actually useful

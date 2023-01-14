@@ -364,7 +364,7 @@ impl AppData {
     /// So can display nicely and evenly
     pub fn get_width(&self) -> Columns {
         let mut output = Columns::new();
-        let count = |x: &String| x.chars().count();
+        let count = |x: &String| u8::try_from(x.chars().count()).unwrap_or(12);
 
         // Should probably find a refactor here somewhere
         for container in &self.containers.items {
@@ -375,11 +375,6 @@ impl AppData {
                     .unwrap_or(&CpuStats::default())
                     .to_string(),
             );
-            let mem_count = count(&format!(
-                "{} / {}",
-                container.mem_stats.back().unwrap_or(&ByteStats::default()),
-                container.mem_limit
-            ));
 
             let rx_count = count(&container.rx.to_string());
             let tx_count = count(&container.tx.to_string());
@@ -387,6 +382,8 @@ impl AppData {
             let name_count = count(&container.name);
             let state_count = count(&container.state.to_string());
             let status_count = count(&container.status);
+			let mem_current_count = count(&container.mem_stats.back().unwrap_or(&ByteStats::default()).to_string());
+			let mem_limit_count= count(&container.mem_limit.to_string());
 
             if cpu_count > output.cpu.1 {
                 output.cpu.1 = cpu_count;
@@ -394,8 +391,11 @@ impl AppData {
             if image_count > output.image.1 {
                 output.image.1 = image_count;
             };
-            if mem_count > output.mem.1 {
-                output.mem.1 = mem_count;
+            if mem_current_count > output.mem.1 {
+                output.mem.1 = mem_current_count;
+            };
+			if mem_limit_count > output.mem.2 {
+                output.mem.2 = mem_limit_count;
             };
             if name_count > output.name.1 {
                 output.name.1 = name_count;
