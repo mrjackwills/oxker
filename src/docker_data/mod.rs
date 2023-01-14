@@ -408,7 +408,7 @@ impl DockerData {
                         .values()
                         .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
-                    self.is_running.store(false, Ordering::SeqCst);
+                    self.is_running.store(false, Ordering::Relaxed);
                 }
             }
         }
@@ -417,7 +417,7 @@ impl DockerData {
     /// Initialise self, and start the message receiving loop
     pub async fn init(
         app_data: Arc<Mutex<AppData>>,
-        docker: Arc<Docker>,
+        docker: Docker,
         gui_state: Arc<Mutex<GuiState>>,
         receiver: Receiver<DockerMessage>,
         is_running: Arc<AtomicBool>,
@@ -427,7 +427,7 @@ impl DockerData {
             let mut inner = Self {
                 app_data,
                 args,
-                docker,
+                docker: Arc::new(docker),
                 gui_state,
                 initialised: false,
                 receiver,

@@ -73,7 +73,7 @@ impl InputHandler {
                     }
                 }
             }
-            if !self.is_running.load(Ordering::SeqCst) {
+            if !self.is_running.load(Ordering::Relaxed) {
                 break;
             }
         }
@@ -134,7 +134,7 @@ impl InputHandler {
             .lock()
             .status_contains(&[Status::Error, Status::Init]);
         if error_init || self.docker_sender.send(DockerMessage::Quit).await.is_err() {
-            self.is_running.store(false, Ordering::SeqCst);
+            self.is_running.store(false, Ordering::Relaxed);
         }
     }
 

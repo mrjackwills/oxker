@@ -9,10 +9,7 @@ use std::{
     io,
     sync::{atomic::Ordering, Arc},
 };
-use std::{
-    sync::atomic::AtomicBool,
-    time::{Duration, Instant},
-};
+use std::{sync::atomic::AtomicBool, time::Instant};
 use tokio::sync::mpsc::Sender;
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -38,7 +35,7 @@ pub async fn create_ui(
     is_running: Arc<AtomicBool>,
     gui_state: Arc<Mutex<GuiState>>,
     docker_sx: Sender<DockerMessage>,
-    update_duration: Duration,
+    // update_duration: Duration,
 ) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -53,7 +50,6 @@ pub async fn create_ui(
         is_running,
         gui_state,
         docker_sx,
-        update_duration,
     )
     .await;
     terminal.clear()?;
@@ -80,15 +76,16 @@ async fn run_app<B: Backend + Send>(
     is_running: Arc<AtomicBool>,
     gui_state: Arc<Mutex<GuiState>>,
     docker_sx: Sender<DockerMessage>,
-    update_duration: Duration,
 ) -> Result<(), AppError> {
+    let update_duration =
+        std::time::Duration::from_millis(u64::from(app_data.lock().args.docker_interval));
     let input_poll_rate = std::time::Duration::from_millis(75);
     let status_dockerconnect = gui_state.lock().status_contains(&[Status::DockerConnect]);
     if status_dockerconnect {
         let mut seconds = 5;
         loop {
             if seconds < 1 {
-                is_running.store(false, Ordering::SeqCst);
+                is_running.store(false, Ordering::Relaxed);
                 break;
             }
             if terminal
@@ -132,7 +129,7 @@ async fn run_app<B: Backend + Send>(
                 now = Instant::now();
             }
 
-            if !is_running.load(Ordering::SeqCst) {
+            if !is_running.load(Ordering::Relaxed) {
                 break;
             }
         }
