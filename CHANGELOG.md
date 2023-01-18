@@ -6,7 +6,7 @@
 ### Features
 + Logs in own struct, [657ea2d751a71f05b17547b47c492d5676817336]
 + spawn docker exec commands into own thread, [9ec43e124a62a80f4e78acba85fc3af5980ce260]
-+ align memory columns correctly, closes #20, [bd7dfcd2c512a527d66a1388f90006988a487186], [51c580010a24de2427373795803936d498dc8cee]
++ align memory columns correctly, minimum byte display value now `0.00 kB`, rather than `0 B`closes #20, [bd7dfcd2c512a527d66a1388f90006988a487186], [51c580010a24de2427373795803936d498dc8cee]
 
 ### Refactors
 + main.rs tidy up, [97b89349dc2de275ca514a1e6420255a63d775e8]
