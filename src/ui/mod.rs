@@ -6,7 +6,7 @@ use crossterm::{
 };
 use parking_lot::Mutex;
 use std::{
-    io,
+    io::{self, Write},
     sync::{atomic::Ordering, Arc},
 };
 use std::{sync::atomic::AtomicBool, time::Instant};
@@ -31,11 +31,10 @@ use crate::{
 /// Take control of the terminal in order to draw gui
 pub async fn create_ui(
     app_data: Arc<Mutex<AppData>>,
-    sender: Sender<InputMessages>,
-    is_running: Arc<AtomicBool>,
-    gui_state: Arc<Mutex<GuiState>>,
     docker_sx: Sender<DockerMessage>,
-    // update_duration: Duration,
+    gui_state: Arc<Mutex<GuiState>>,
+    is_running: Arc<AtomicBool>,
+    sender: Sender<InputMessages>,
 ) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -44,16 +43,14 @@ pub async fn create_ui(
     let mut terminal = Terminal::new(backend)?;
 
     let res = run_app(
-        &mut terminal,
         app_data,
-        sender,
-        is_running,
-        gui_state,
         docker_sx,
+        gui_state,
+        is_running,
+        sender,
+        &mut terminal,
     )
     .await;
-    terminal.clear()?;
-
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -65,28 +62,33 @@ pub async fn create_ui(
     if let Err(err) = res {
         println!("{err}");
     }
+	std::io::stdout().flush().unwrap_or(());
     Ok(())
 }
 
 /// Run a loop to draw the gui
 async fn run_app<B: Backend + Send>(
-    terminal: &mut Terminal<B>,
     app_data: Arc<Mutex<AppData>>,
-    sender: Sender<InputMessages>,
-    is_running: Arc<AtomicBool>,
-    gui_state: Arc<Mutex<GuiState>>,
     docker_sx: Sender<DockerMessage>,
+    gui_state: Arc<Mutex<GuiState>>,
+    is_running: Arc<AtomicBool>,
+    sender: Sender<InputMessages>,
+    terminal: &mut Terminal<B>,
 ) -> Result<(), AppError> {
     let update_duration =
         std::time::Duration::from_millis(u64::from(app_data.lock().args.docker_interval));
     let input_poll_rate = std::time::Duration::from_millis(75);
     let status_dockerconnect = gui_state.lock().status_contains(&[Status::DockerConnect]);
+    let mut now = Instant::now();
     if status_dockerconnect {
         let mut seconds = 5;
         loop {
             if seconds < 1 {
-                is_running.store(false, Ordering::Relaxed);
                 break;
+            }
+            if now.elapsed() >= std::time::Duration::from_secs(1) {
+                seconds -= 1;
+                now = Instant::now();
             }
             if terminal
                 .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
@@ -94,17 +96,9 @@ async fn run_app<B: Backend + Send>(
             {
                 return Err(AppError::Terminal);
             }
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            seconds -= 1;
         }
     } else {
-        let mut now = Instant::now();
-        loop {
-            if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
-                return Err(AppError::Terminal);
-            }
-            // TODO could only draw if in gui mode, that way all inputs & docker commands will run, and can just trace!("{event"}) all over the place
-            // refactor this into own function, so can be called without drawing to the terminal
+        while is_running.load(Ordering::Relaxed) {
             if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
@@ -128,12 +122,12 @@ async fn run_app<B: Backend + Send>(
                 docker_sx.send(DockerMessage::Update).await.unwrap_or(());
                 now = Instant::now();
             }
-
-            if !is_running.load(Ordering::Relaxed) {
-                break;
+            if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
+                return Err(AppError::Terminal);
             }
         }
     }
+    terminal.clear().unwrap_or(());
     Ok(())
 }
 
