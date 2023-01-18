@@ -12,7 +12,6 @@ pub use container_state::*;
 #[derive(Debug, Clone)]
 pub struct AppData {
     error: Option<AppError>,
-    logs_parsed: bool,
     sorted_by: Option<(Header, SortedOrder)>,
     pub args: CliArgs,
     pub containers: StatefulList<ContainerItem>,
@@ -62,7 +61,6 @@ impl AppData {
             args,
             containers: StatefulList::new(vec![]),
             error: None,
-            logs_parsed: false,
             sorted_by: None,
         }
     }
@@ -193,7 +191,7 @@ impl AppData {
 
     /// Check if the selected container is a dockerised version of oxker
     /// So that can disallow commands to be send
-    /// Is a poor way of implementing this
+    /// Is a shabby way of implementing this
     pub fn selected_container_is_oxker(&self) -> bool {
         if let Some(index) = self.containers.state.selected() {
             if let Some(x) = self.containers.items.get(index) {
@@ -352,7 +350,7 @@ impl AppData {
             .iter()
             .filter(|i| !i.cpu_stats.is_empty())
             .count();
-        self.logs_parsed && count_is_running == number_with_cpu_status
+        count_is_running == number_with_cpu_status
     }
 
     /// Just get the total number of containers
@@ -382,8 +380,14 @@ impl AppData {
             let name_count = count(&container.name);
             let state_count = count(&container.state.to_string());
             let status_count = count(&container.status);
-			let mem_current_count = count(&container.mem_stats.back().unwrap_or(&ByteStats::default()).to_string());
-			let mem_limit_count= count(&container.mem_limit.to_string());
+            let mem_current_count = count(
+                &container
+                    .mem_stats
+                    .back()
+                    .unwrap_or(&ByteStats::default())
+                    .to_string(),
+            );
+            let mem_limit_count = count(&container.mem_limit.to_string());
 
             if cpu_count > output.cpu.1 {
                 output.cpu.1 = cpu_count;
@@ -394,7 +398,7 @@ impl AppData {
             if mem_current_count > output.mem.1 {
                 output.mem.1 = mem_current_count;
             };
-			if mem_limit_count > output.mem.2 {
+            if mem_limit_count > output.mem.2 {
                 output.mem.2 = mem_limit_count;
             };
             if name_count > output.name.1 {
@@ -548,8 +552,8 @@ impl AppData {
                     if item.image != image {
                         item.image = image;
                     };
-                // else container not known, so make new ContainerItem and push into containers Vec
                 } else {
+                    // container not known, so make new ContainerItem and push into containers Vec
                     let container =
                         ContainerItem::new(created, id, image, is_oxker, name, state, status);
                     self.containers.items.push(container);
@@ -559,34 +563,39 @@ impl AppData {
     }
 
     /// update logs of a given container, based on id
-    pub fn update_log_by_id(&mut self, output: &[String], id: &ContainerId) {
-        let tz = Self::get_systemtime();
+    pub fn update_log_by_id(&mut self, output: Vec<String>, id: &ContainerId) {
         let color = self.args.color;
         let raw = self.args.raw;
 
-        if let Some(container) = self.get_container_by_id(id) {
-            container.last_updated = tz;
-            let current_len = container.logs.items.len();
+        let timestamp = self.args.timestamp;
 
-            for i in output {
+        if let Some(container) = self.get_container_by_id(id) {
+            container.last_updated = Self::get_systemtime();
+            let current_len = container.logs.len();
+
+            for mut i in output {
+                let tz = LogsTz::from(&i);
+                // Strip the timestamp if `-t` flag set
+                if !timestamp {
+                    i = i.replace(&tz.to_string(), "");
+                }
                 let lines = if color {
-                    log_sanitizer::colorize_logs(i)
+                    log_sanitizer::colorize_logs(&i)
                 } else if raw {
-                    log_sanitizer::raw(i)
+                    log_sanitizer::raw(&i)
                 } else {
-                    log_sanitizer::remove_ansi(i)
+                    log_sanitizer::remove_ansi(&i)
                 };
-                container.logs.items.push(ListItem::new(lines));
+                container.logs.insert(ListItem::new(lines), tz);
             }
 
             // Set the logs selected row for each container
             // Either when no long currently selected, or currently selected (before updated) is already at end
-            if container.logs.state.selected().is_none()
-                || container.logs.state.selected().map_or(1, |f| f + 1) == current_len
+            if container.logs.state().selected().is_none()
+                || container.logs.state().selected().map_or(1, |f| f + 1) == current_len
             {
                 container.logs.end();
             }
         }
-        self.logs_parsed = true;
     }
 }
