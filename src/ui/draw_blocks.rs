@@ -55,19 +55,22 @@ fn generate_block<'a>(
         .lock()
         .update_heading_map(Region::Panel(panel), area);
     let current_selected_panel = gui_state.lock().selected_panel;
-    let title = match panel {
+    let mut title = match panel {
         SelectablePanel::Containers => {
             format!(
-                " {} {} ",
+                "{} {}",
                 panel.title(),
                 app_data.lock().containers.get_state_title()
             )
         }
         SelectablePanel::Logs => {
-            format!(" {} {} ", panel.title(), app_data.lock().get_log_title())
+            format!("{} {}", panel.title(), app_data.lock().get_log_title())
         }
         SelectablePanel::Commands => String::new(),
     };
+    if !title.is_empty() {
+        title = format!(" {title} ");
+    }
     let mut block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
@@ -136,19 +139,21 @@ pub fn containers<B: Backend>(
             let state_style = Style::default().fg(i.state.get_color());
             let blue = Style::default().fg(Color::Blue);
 
-            // let mems = format!(
-            //     "{:>1} / {:>1}",
-            //     i.mem_stats.back().unwrap_or(&ByteStats::default()),
-            //     i.mem_limit
-            // );
-
             let lines = Spans::from(vec![
                 Span::styled(
-                    format!("{:<width$}", i.state.to_string(), width = widths.state.1.into()),
+                    format!(
+                        "{:<width$}",
+                        i.state.to_string(),
+                        width = widths.state.1.into()
+                    ),
                     state_style,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.status, width = &widths.status.1.into()),
+                    format!(
+                        "{MARGIN}{:>width$}",
+                        i.status,
+                        width = &widths.status.1.into()
+                    ),
                     state_style,
                 ),
                 Span::styled(
@@ -161,7 +166,13 @@ pub fn containers<B: Backend>(
                     state_style,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width_current$} / {:>width_limit$}", i.mem_stats.back().unwrap_or(&ByteStats::default()), i.mem_limit, width_current = &widths.mem.1.into(), width_limit = &widths.mem.2.into()),
+                    format!(
+                        "{MARGIN}{:>width_current$} / {:>width_limit$}",
+                        i.mem_stats.back().unwrap_or(&ByteStats::default()),
+                        i.mem_limit,
+                        width_current = &widths.mem.1.into(),
+                        width_limit = &widths.mem.2.into()
+                    ),
                     state_style,
                 ),
                 Span::styled(
@@ -226,22 +237,14 @@ pub fn logs<B: Backend>(
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
     } else if let Some(index) = index {
-        let items = app_data.lock().containers.items[index]
-            .logs
-            .items
-            .iter()
-            .enumerate()
-            .map(|i| i.1.clone())
-            .collect::<Vec<_>>();
-
-        let items = List::new(items)
+        let items = List::new(app_data.lock().containers.items[index].logs.to_vec())
             .block(block)
             .highlight_symbol(ARROW)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD));
         f.render_stateful_widget(
             items,
             area,
-            &mut app_data.lock().containers.items[index].logs.state,
+            app_data.lock().containers.items[index].logs.state(),
         );
     } else {
         let paragraph = Paragraph::new("no logs found")
