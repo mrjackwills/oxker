@@ -35,12 +35,12 @@ use crate::docker_data::DockerMessage;
 
 const ENTRY_POINT: &str = "./start_oxker.sh";
 
-// write to file if `-g` is set?
+/// write to file if `-g` is set?
 fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 }
 
-// Create docker daemon handler, and only spawn up the docker data handler if a ping returns non-error
+/// Create docker daemon handler, and only spawn up the docker data handler if a ping returns non-error
 async fn docker_init(
     app_data: &Arc<Mutex<AppData>>,
     docker_rx: Receiver<DockerMessage>,
