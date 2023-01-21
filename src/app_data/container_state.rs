@@ -1,4 +1,8 @@
-use std::{cmp::Ordering, collections::VecDeque, fmt};
+use std::{
+    cmp::Ordering,
+    collections::{HashSet, VecDeque},
+    fmt,
+};
 
 use tui::{
     style::Color,
@@ -343,8 +347,7 @@ impl fmt::Display for ByteStats {
         let p = match as_f64 {
             x if x >= ONE_GB => format!("{y:.2} GB", y = as_f64 / ONE_GB),
             x if x >= ONE_MB => format!("{y:.2} MB", y = as_f64 / ONE_MB),
-            x if x >= ONE_KB => format!("{y:.2} kB", y = as_f64 / ONE_KB),
-            _ => format!("{} B", self.0),
+            _ => format!("{y:.2} kB", y = as_f64 / ONE_KB),
         };
         write!(f, "{p:>x$}", x = f.width().unwrap_or(1))
     }
@@ -352,6 +355,87 @@ impl fmt::Display for ByteStats {
 
 pub type MemTuple = (Vec<(f64, f64)>, ByteStats, State);
 pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
+
+/// Used to make sure that each log entry, for each container, is unique,
+/// will only push a log entry into the logs vec if timetstamp of said log entry isn't in the hashset
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct LogsTz(String);
+
+/// The docker log, which should always contain a timestamp, is in the format `2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet`
+/// So just split at the inclusive index of the first space, needs to be inclusive, hence the use of format to at the space, so that we can remove the whole thing when the `-t` flag is set
+/// Need to make sure that this isn't an empty string?!
+impl From<&String> for LogsTz {
+    fn from(value: &String) -> Self {
+        Self(value.split_inclusive(' ').take(1).collect::<String>())
+    }
+}
+
+impl fmt::Display for LogsTz {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Store the logs alongside a HashSet, each log *should* generate a unique timestamp,
+/// so if we store the timestamp seperately in a HashSet, we can then check if we should insert a log line into the
+/// stateful list dependant on whethere the timestamp is in the HashSet or not
+#[derive(Debug, Clone)]
+pub struct Logs {
+    logs: StatefulList<ListItem<'static>>,
+    tz: HashSet<LogsTz>,
+}
+
+impl Default for Logs {
+    fn default() -> Self {
+        let mut logs = StatefulList::new(vec![]);
+        logs.end();
+        Self {
+            logs,
+            tz: HashSet::new(),
+        }
+    }
+}
+
+impl Logs {
+    /// Only allow a new log line to be inserted if the log timestamp isn't in the tz HashSet
+    pub fn insert(&mut self, line: ListItem<'static>, tz: LogsTz) {
+        if self.tz.insert(tz) {
+            self.logs.items.push(line);
+        };
+    }
+
+    pub fn to_vec(&self) -> Vec<ListItem<'static>> {
+        self.logs.items.clone()
+    }
+
+    /// The rest of the methods are basically forwarding from the underlying StatefulList
+    pub fn get_state_title(&self) -> String {
+        self.logs.get_state_title()
+    }
+
+    pub fn next(&mut self) {
+        self.logs.next();
+    }
+
+    pub fn previous(&mut self) {
+        self.logs.previous();
+    }
+
+    pub fn end(&mut self) {
+        self.logs.end();
+    }
+    pub fn start(&mut self) {
+        self.logs.start();
+    }
+
+    pub fn len(&self) -> usize {
+        self.logs.items.len()
+    }
+
+    pub fn state(&mut self) -> &mut ListState {
+        &mut self.logs.state
+    }
+}
 
 /// Info for each container
 #[derive(Debug, Clone)]
@@ -362,7 +446,7 @@ pub struct ContainerItem {
     pub id: ContainerId,
     pub image: String,
     pub last_updated: u64,
-    pub logs: StatefulList<ListItem<'static>>,
+    pub logs: Logs,
     pub mem_limit: ByteStats,
     pub mem_stats: VecDeque<ByteStats>,
     pub name: String,
@@ -386,8 +470,6 @@ impl ContainerItem {
     ) -> Self {
         let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
-        let mut logs = StatefulList::new(vec![]);
-        logs.end();
         Self {
             created,
             cpu_stats: VecDeque::with_capacity(60),
@@ -396,7 +478,7 @@ impl ContainerItem {
             image,
             is_oxker,
             last_updated: 0,
-            logs,
+            logs: Logs::default(),
             mem_limit: ByteStats::default(),
             mem_stats: VecDeque::with_capacity(60),
             name,
@@ -463,15 +545,15 @@ impl ContainerItem {
 /// Container information panel headings + widths, for nice pretty formatting
 #[derive(Debug, Clone, Copy)]
 pub struct Columns {
-    pub state: (Header, usize),
-    pub status: (Header, usize),
-    pub cpu: (Header, usize),
-    pub mem: (Header, usize),
-    pub id: (Header, usize),
-    pub name: (Header, usize),
-    pub image: (Header, usize),
-    pub net_rx: (Header, usize),
-    pub net_tx: (Header, usize),
+    pub state: (Header, u8),
+    pub status: (Header, u8),
+    pub cpu: (Header, u8),
+    pub mem: (Header, u8, u8),
+    pub id: (Header, u8),
+    pub name: (Header, u8),
+    pub image: (Header, u8),
+    pub net_rx: (Header, u8),
+    pub net_tx: (Header, u8),
 }
 
 impl Columns {
@@ -480,14 +562,13 @@ impl Columns {
         Self {
             state: (Header::State, 11),
             status: (Header::Status, 16),
-            // 7 to allow for "100.00%"
             cpu: (Header::Cpu, 7),
-            mem: (Header::Memory, 12),
+            mem: (Header::Memory, 7, 7),
             id: (Header::Id, 8),
             name: (Header::Name, 4),
             image: (Header::Image, 5),
-            net_rx: (Header::Rx, 5),
-            net_tx: (Header::Tx, 5),
+            net_rx: (Header::Rx, 7),
+            net_tx: (Header::Tx, 7),
         }
     }
 }

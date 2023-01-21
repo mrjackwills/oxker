@@ -1,6 +1,6 @@
 [package]
 name = "oxker"
-version = "0.1.11"
+version = "0.2.0"
 edition = "2021"
 authors = ["Jack Wills <email@mrjackwills.com>"]
 description = "A simple tui to view & control docker containers"
@@ -13,13 +13,13 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0"
-bollard = "0.13"
+bollard = "0.14"
 cansi = "2.2"
-clap={version="4.0", features = ["derive", "unicode", "color"] }
+clap={version="4.1", features = ["derive", "unicode", "color"] }
 crossterm = "0.25"
 futures-util = "0.3"
 parking_lot = {version= "0.12"}
-tokio = {version = "1.23", features=["full"]}
+tokio = {version = "1.24", features=["full"]}
 tracing = "0.1"
 tracing-subscriber = "0.3"
 tui = "0.19"

@@ -55,19 +55,22 @@ fn generate_block<'a>(
         .lock()
         .update_heading_map(Region::Panel(panel), area);
     let current_selected_panel = gui_state.lock().selected_panel;
-    let title = match panel {
+    let mut title = match panel {
         SelectablePanel::Containers => {
             format!(
-                " {} {} ",
+                "{} {}",
                 panel.title(),
                 app_data.lock().containers.get_state_title()
             )
         }
         SelectablePanel::Logs => {
-            format!(" {} {} ", panel.title(), app_data.lock().get_log_title())
+            format!("{} {}", panel.title(), app_data.lock().get_log_title())
         }
         SelectablePanel::Commands => String::new(),
     };
+    if !title.is_empty() {
+        title = format!(" {title} ");
+    }
     let mut block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
@@ -136,19 +139,21 @@ pub fn containers<B: Backend>(
             let state_style = Style::default().fg(i.state.get_color());
             let blue = Style::default().fg(Color::Blue);
 
-            let mems = format!(
-                "{:>1} / {:>1}",
-                i.mem_stats.back().unwrap_or(&ByteStats::default()),
-                i.mem_limit
-            );
-
             let lines = Spans::from(vec![
                 Span::styled(
-                    format!("{:<width$}", i.state.to_string(), width = widths.state.1),
+                    format!(
+                        "{:<width$}",
+                        i.state.to_string(),
+                        width = widths.state.1.into()
+                    ),
                     state_style,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.status, width = &widths.status.1),
+                    format!(
+                        "{MARGIN}{:>width$}",
+                        i.status,
+                        width = &widths.status.1.into()
+                    ),
                     state_style,
                 ),
                 Span::styled(
@@ -156,12 +161,18 @@ pub fn containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.cpu_stats.back().unwrap_or(&CpuStats::default()),
-                        width = &widths.cpu.1
+                        width = &widths.cpu.1.into()
                     ),
                     state_style,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{mems:>width$}", width = &widths.mem.1),
+                    format!(
+                        "{MARGIN}{:>width_current$} / {:>width_limit$}",
+                        i.mem_stats.back().unwrap_or(&ByteStats::default()),
+                        i.mem_limit,
+                        width_current = &widths.mem.1.into(),
+                        width_limit = &widths.mem.2.into()
+                    ),
                     state_style,
                 ),
                 Span::styled(
@@ -169,24 +180,24 @@ pub fn containers<B: Backend>(
                         "{}{:>width$}",
                         MARGIN,
                         i.id.get().chars().take(8).collect::<String>(),
-                        width = &widths.id.1
+                        width = &widths.id.1.into()
                     ),
                     blue,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.name, width = widths.name.1),
+                    format!("{MARGIN}{:>width$}", i.name, width = widths.name.1.into()),
                     blue,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.image, width = widths.image.1),
+                    format!("{MARGIN}{:>width$}", i.image, width = widths.image.1.into()),
                     blue,
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.rx, width = widths.net_rx.1),
+                    format!("{MARGIN}{:>width$}", i.rx, width = widths.net_rx.1.into()),
                     Style::default().fg(Color::Rgb(255, 233, 193)),
                 ),
                 Span::styled(
-                    format!("{MARGIN}{:>width$}", i.tx, width = widths.net_tx.1),
+                    format!("{MARGIN}{:>width$}", i.tx, width = widths.net_tx.1.into()),
                     Style::default().fg(Color::Rgb(205, 140, 140)),
                 ),
             ]);
@@ -226,22 +237,14 @@ pub fn logs<B: Backend>(
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
     } else if let Some(index) = index {
-        let items = app_data.lock().containers.items[index]
-            .logs
-            .items
-            .iter()
-            .enumerate()
-            .map(|i| i.1.clone())
-            .collect::<Vec<_>>();
-
-        let items = List::new(items)
+        let items = List::new(app_data.lock().containers.items[index].logs.to_vec())
             .block(block)
             .highlight_symbol(ARROW)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD));
         f.render_stateful_widget(
             items,
             area,
-            &mut app_data.lock().containers.items[index].logs.state,
+            app_data.lock().containers.items[index].logs.state(),
         );
     } else {
         let paragraph = Paragraph::new("no logs found")
@@ -415,7 +418,7 @@ pub fn heading_bar<B: Backend>(
         (Header::State, columns.state.1),
         (Header::Status, columns.status.1),
         (Header::Cpu, columns.cpu.1),
-        (Header::Memory, columns.mem.1),
+        (Header::Memory, columns.mem.1 + columns.mem.2 + 3),
         (Header::Id, columns.id.1),
         (Header::Name, columns.name.1),
         (Header::Image, columns.image.1),
@@ -426,7 +429,7 @@ pub fn heading_bar<B: Backend>(
     let header_data = header_meta
         .iter()
         .map(|i| {
-            let header_block = gen_header(&i.0, i.1);
+            let header_block = gen_header(&i.0, i.1.into());
             (header_block.0, i.0, Constraint::Max(header_block.1))
         })
         .collect::<Vec<_>>();

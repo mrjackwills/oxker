@@ -7,8 +7,9 @@ use uuid::Uuid;
 
 use crate::app_data::Header;
 
-#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SelectablePanel {
+    #[default]
     Containers,
     Commands,
     Logs,
@@ -124,8 +125,9 @@ impl BoxLocation {
 }
 
 /// State for the loading animation
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum Loading {
+    #[default]
     One,
     Two,
     Three,
@@ -184,7 +186,7 @@ pub enum Status {
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct GuiState {
     panel_map: HashMap<SelectablePanel, Rect>,
     heading_map: HashMap<Header, Rect>,
@@ -195,19 +197,6 @@ pub struct GuiState {
     pub info_box_text: Option<String>,
 }
 impl GuiState {
-    /// Generate a default gui_state
-    pub fn default() -> Self {
-        Self {
-            panel_map: HashMap::new(),
-            heading_map: HashMap::new(),
-            loading_icon: Loading::One,
-            selected_panel: SelectablePanel::Containers,
-            is_loading: HashSet::new(),
-            info_box_text: None,
-            status: HashSet::new(),
-        }
-    }
-
     /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
     pub fn clear_area_map(&mut self) {
         self.panel_map.clear();
@@ -257,12 +246,12 @@ impl GuiState {
         status.iter().any(|i| self.status.contains(i))
     }
 
-    /// Remove a gui_status into the current gui_status hashset
+    /// Remove a gui_status into the current gui_status HashSet
     pub fn status_del(&mut self, status: Status) {
         self.status.remove(&status);
     }
 
-    /// Insert a gui_status into the current gui_status hashset
+    /// Insert a gui_status into the current gui_status HashSet
     pub fn status_push(&mut self, status: Status) {
         self.status.insert(status);
     }
@@ -277,7 +266,7 @@ impl GuiState {
         self.selected_panel = self.selected_panel.prev();
     }
 
-    /// Insert a new loading_uuid into hashset, and advance the animation by one frame
+    /// Insert a new loading_uuid into HashSet, and advance the animation by one frame
     pub fn next_loading(&mut self, uuid: Uuid) {
         self.loading_icon = self.loading_icon.next();
         self.is_loading.insert(uuid);
@@ -292,7 +281,7 @@ impl GuiState {
         }
     }
 
-    /// Remove a loading_uuid from the is_loading hashset
+    /// Remove a loading_uuid from the is_loading HashSet
     pub fn remove_loading(&mut self, uuid: Uuid) {
         self.is_loading.remove(&uuid);
     }

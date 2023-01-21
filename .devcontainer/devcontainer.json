@@ -16,6 +16,8 @@
 		"seccomp=unconfined"
 	],
 
+	"postCreateCommand": "cargo install cross",
+
 	"mounts": [
 		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly"
 	],
