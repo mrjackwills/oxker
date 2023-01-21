@@ -62,7 +62,7 @@ pub async fn create_ui(
     if let Err(err) = res {
         println!("{err}");
     }
-	std::io::stdout().flush().unwrap_or(());
+    std::io::stdout().flush().unwrap_or(());
     Ok(())
 }
 
