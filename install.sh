@@ -7,8 +7,9 @@ case "$(arch)" in
 esac
 
 if [ -n "$SUFFIX" ]; then
-  wget "https://github.com/mrjackwills/oxker/releases/latest/download/oxker_linux_${SUFFIX}.tar.gz"
-  tar xzvf "oxker_linux_${SUFFIX}.tar.gz" oxker
+  OXKER_GZ="oxker_linux_${SUFFIX}.tar.gz"
+  wget "https://github.com/mrjackwills/oxker/releases/latest/download/${OXKER_GZ}"
+  tar xzvf "${OXKER_GZ}" oxker
   install -Dm 755 oxker -t "${HOME}/.local/bin"
-  rm "oxker_linux_${SUFFIX}.tar.gz" oxker
+  rm "${OXKER_GZ}" oxker
 fi
