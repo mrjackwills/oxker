@@ -293,7 +293,7 @@ impl DockerData {
 
     /// Animate the loading icon
     async fn loading_spin(loading_uuid: Uuid, gui_state: &Arc<Mutex<GuiState>>) -> JoinHandle<()> {
-        let gui_state = Arc::clone(&gui_state);
+        let gui_state = Arc::clone(gui_state);
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
