@@ -405,7 +405,7 @@ impl DockerData {
                         .values()
                         .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
-                    self.is_running.store(false, Ordering::Relaxed);
+                    self.is_running.store(false, Ordering::SeqCst);
                 }
             }
         }

@@ -98,7 +98,7 @@ async fn run_app<B: Backend + Send>(
             }
         }
     } else {
-        while is_running.load(Ordering::Relaxed) {
+        while is_running.load(Ordering::SeqCst) {
             if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
