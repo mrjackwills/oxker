@@ -227,19 +227,24 @@ pub fn logs<B: Backend>(
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
     } else {
-        let items = app_data.lock().get_logs();
-        let items = List::new(items)
-            .block(block())
-            .highlight_symbol(ARROW)
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD));
+        let logs = app_data.lock().get_logs();
 
-        if let Some(i) = app_data.lock().get_log_state() {
-            f.render_stateful_widget(items, area, i);
+        if logs.is_empty() {
+			let paragraph = Paragraph::new("no logs found")
+			.block(block())
+			.alignment(Alignment::Center);
+		f.render_widget(paragraph, area);
         } else {
-            let paragraph = Paragraph::new("no logs found")
+            let items = List::new(logs)
                 .block(block())
-                .alignment(Alignment::Center);
-            f.render_widget(paragraph, area);
+                .highlight_symbol(ARROW)
+                .highlight_style(Style::default().add_modifier(Modifier::BOLD));
+
+            // This should always return Some, as logs is not empty
+            if let Some(i) = app_data.lock().get_log_state() {
+                f.render_stateful_widget(items, area, i);
+            }
+
         }
     }
 }
