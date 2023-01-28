@@ -1,6 +1,8 @@
 name: Release CI
 on:
   push:
+    branch:
+      - 'main'
     tags:
       - 'v*.*.*'
 jobs:
