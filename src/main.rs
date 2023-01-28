@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::unused_async, clippy::unwrap_used, clippy::expect_used)]
-// Wanring - These are indeed pedantic
+// Warning - These are indeed pedantic
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![allow(
