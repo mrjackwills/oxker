@@ -242,6 +242,7 @@ impl GuiState {
     }
 
     /// Check if the current gui_status contains any of the given status'
+    /// Don't really like this methodology for gui state, needs a re-think
     pub fn status_contains(&self, status: &[Status]) -> bool {
         status.iter().any(|i| self.status.contains(i))
     }

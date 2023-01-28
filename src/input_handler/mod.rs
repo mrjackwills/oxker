@@ -207,7 +207,7 @@ impl InputHandler {
                 KeyCode::Home => {
                     let mut locked_data = self.app_data.lock();
                     match self.gui_state.lock().selected_panel {
-                        SelectablePanel::Containers => locked_data.containers.start(),
+                        SelectablePanel::Containers => locked_data.containers_start(),
                         SelectablePanel::Logs => locked_data.log_start(),
                         SelectablePanel::Commands => locked_data.docker_command_start(),
                     }
@@ -215,7 +215,7 @@ impl InputHandler {
                 KeyCode::End => {
                     let mut locked_data = self.app_data.lock();
                     match self.gui_state.lock().selected_panel {
-                        SelectablePanel::Containers => locked_data.containers.end(),
+                        SelectablePanel::Containers => locked_data.containers_end(),
                         SelectablePanel::Logs => locked_data.log_end(),
                         SelectablePanel::Commands => locked_data.docker_command_end(),
                     }
@@ -236,7 +236,7 @@ impl InputHandler {
                     // This isn't great, just means you can't send docker commands before full initialization of the program
                     let panel = self.gui_state.lock().selected_panel;
                     if panel == SelectablePanel::Commands {
-                        let option_command = self.app_data.lock().get_docker_command();
+                        let option_command = self.app_data.lock().selected_docker_command();
 
                         if let Some(command) = option_command {
                             let option_id = self.app_data.lock().get_selected_container_id();
@@ -287,14 +287,12 @@ impl InputHandler {
             MouseEventKind::ScrollUp => self.previous(),
             MouseEventKind::ScrollDown => self.next(),
             MouseEventKind::Down(MouseButton::Left) => {
-                let header_intersects = self.gui_state.lock().header_intersect(Rect::new(
+                if let Some(header) = self.gui_state.lock().header_intersect(Rect::new(
                     mouse_event.column,
                     mouse_event.row,
                     1,
                     1,
-                ));
-
-                if let Some(header) = header_intersects {
+                )) {
                     self.sort(header);
                 }
 
@@ -313,7 +311,7 @@ impl InputHandler {
     fn next(&mut self) {
         let mut locked_data = self.app_data.lock();
         match self.gui_state.lock().selected_panel {
-            SelectablePanel::Containers => locked_data.containers.next(),
+            SelectablePanel::Containers => locked_data.containers_next(),
             SelectablePanel::Logs => locked_data.log_next(),
             SelectablePanel::Commands => locked_data.docker_command_next(),
         };
@@ -323,7 +321,7 @@ impl InputHandler {
     fn previous(&mut self) {
         let mut locked_data = self.app_data.lock();
         match self.gui_state.lock().selected_panel {
-            SelectablePanel::Containers => locked_data.containers.previous(),
+            SelectablePanel::Containers => locked_data.containers_previous(),
             SelectablePanel::Logs => locked_data.log_previous(),
             SelectablePanel::Commands => locked_data.docker_command_previous(),
         }
