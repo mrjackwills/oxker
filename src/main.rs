@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::unused_async, clippy::unwrap_used, clippy::expect_used)]
-// Wanring - These are indeed pedantic
+// Warning - These are indeed pedantic
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![allow(
@@ -49,9 +49,9 @@ async fn docker_init(
 ) {
     if let Ok(docker) = Docker::connect_with_socket_defaults() {
         if docker.ping().await.is_ok() {
-            let app_data = Arc::clone(&app_data);
-            let gui_state = Arc::clone(&gui_state);
-            let is_running = Arc::clone(&is_running);
+            let app_data = Arc::clone(app_data);
+            let gui_state = Arc::clone(gui_state);
+            let is_running = Arc::clone(is_running);
             tokio::spawn(DockerData::init(
                 app_data, docker, docker_rx, gui_state, is_running,
             ));
@@ -66,16 +66,16 @@ async fn docker_init(
 }
 
 /// Create data for, and then spawn a tokio thread, for the input handler
-async fn handler_init(
+fn handler_init(
     app_data: &Arc<Mutex<AppData>>,
     docker_sx: &Sender<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
     input_rx: Receiver<InputMessages>,
     is_running: &Arc<AtomicBool>,
 ) {
-    let input_app_data = Arc::clone(&app_data);
-    let input_gui_state = Arc::clone(&gui_state);
-    let input_is_running = Arc::clone(&is_running);
+    let input_app_data = Arc::clone(app_data);
+    let input_gui_state = Arc::clone(gui_state);
+    let input_is_running = Arc::clone(is_running);
     tokio::spawn(input_handler::InputHandler::init(
         input_app_data,
         input_rx,
@@ -97,7 +97,7 @@ async fn main() {
 
     docker_init(&app_data, docker_rx, &gui_state, &is_running).await;
 
-    handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running).await;
+    handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running);
 
     if args.gui {
         create_ui(app_data, docker_sx, gui_state, is_running, input_sx)

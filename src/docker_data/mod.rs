@@ -267,25 +267,18 @@ impl DockerData {
     /// Update all cpu_mem, and selected container log (if a log update join_handle isn't currently being executed)
     async fn update_everything(&mut self) {
         let all_ids = self.update_all_containers().await;
-        let optional_index = self.app_data.lock().get_selected_log_index();
-        if let Some(index) = optional_index {
-            if let Some(container) = self.app_data.lock().containers.items.get(index) {
-                self.spawns
-                    .lock()
-                    .entry(SpawnId::Log(container.id.clone()))
-                    .or_insert_with(|| {
-                        let docker = Arc::clone(&self.docker);
-                        let app_data = Arc::clone(&self.app_data);
-                        let spawns = Arc::clone(&self.spawns);
-                        tokio::spawn(Self::update_log(
-                            app_data,
-                            docker,
-                            container.id.clone(),
-                            container.last_updated,
-                            spawns,
-                        ))
-                    });
-            }
+        if let Some(container) = self.app_data.lock().get_selected_container() {
+            let id = container.id.clone();
+            let last_updated = container.last_updated;
+            self.spawns
+                .lock()
+                .entry(SpawnId::Log(id.clone()))
+                .or_insert_with(|| {
+                    let docker = Arc::clone(&self.docker);
+                    let app_data = Arc::clone(&self.app_data);
+                    let spawns = Arc::clone(&self.spawns);
+                    tokio::spawn(Self::update_log(app_data, docker, id, last_updated, spawns))
+                });
         };
         self.update_all_container_stats(&all_ids);
         self.app_data.lock().sort_containers();
@@ -293,7 +286,7 @@ impl DockerData {
 
     /// Animate the loading icon
     async fn loading_spin(loading_uuid: Uuid, gui_state: &Arc<Mutex<GuiState>>) -> JoinHandle<()> {
-        let gui_state = Arc::clone(&gui_state);
+        let gui_state = Arc::clone(gui_state);
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -412,7 +405,7 @@ impl DockerData {
                         .values()
                         .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
-                    self.is_running.store(false, Ordering::Relaxed);
+                    self.is_running.store(false, Ordering::SeqCst);
                 }
             }
         }

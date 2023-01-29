@@ -1,3 +1,24 @@
+# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.2.1'>v0.2.1</a>
+### 2023-01-29
+
+### Chores
++ dependencies updated, [c129f474](https://github.com/mrjackwills/oxker/commit/c129f474fe2976454b1868d00e8d7d99b87ec23b), [9788b8af](https://github.com/mrjackwills/oxker/commit/9788b8afd98e59b1d4412a8adc54b34d2c5671fd), [2ab88eb2](https://github.com/mrjackwills/oxker/commit/2ab88eb26e9bbbc4dad4651256d8d9b044ea3272)
+
+### Docs
++ comment typo, [10255791](https://github.com/mrjackwills/oxker/commit/1025579138f11e4987263c7bfe936c4c8542f8b3)
+
+### Fixes
++ deadlock on draw logs when no containers found, [68e444bf](https://github.com/mrjackwills/oxker/commit/68e444bfc393eb46bac2b99eb57697bb9b0451af)
++ github workflow release on main only (with semver tag), [e4ca41df](https://github.com/mrjackwills/oxker/commit/e4ca41dfd8ec3acae202a2d2464b8e18f5c5bdd5), [749ec712](https://github.com/mrjackwills/oxker/commit/749ec712f07cff2c941aed6726c56bdbd5cb8d2c)
+
+### Refactors
++ major refactor of internal data handling, [b4488e4b](https://github.com/mrjackwills/oxker/commit/b4488e4bdb0252f5c5680cee6a46427f22a282ab)
++ needless (double) referencing removed, [a174dafe](https://github.com/mrjackwills/oxker/commit/a174dafe1b05908735680a874dc551a86da24777)
++ app_data methods re-ordered & renamed, [c0bb5355](https://github.com/mrjackwills/oxker/commit/c0bb5355d6a5d352260655110ce3d5ab695acda9)
+
+### Reverts
++ is_running AtomicBool back to SeqCst, [c4d80061](https://github.com/mrjackwills/oxker/commit/c4d80061dab94afd08d4d793dc147f878c965ad6)
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.2.0'>v0.2.0</a>
 ### 2023-01-21
 

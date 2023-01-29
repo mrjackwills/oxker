@@ -60,7 +60,7 @@ pub async fn create_ui(
     terminal.show_cursor()?;
 
     if let Err(err) = res {
-        println!("{err}");
+        println!("error: {err}");
     }
     std::io::stdout().flush().unwrap_or(());
     Ok(())
@@ -98,7 +98,7 @@ async fn run_app<B: Backend + Send>(
             }
         }
     } else {
-        while is_running.load(Ordering::Relaxed) {
+        while is_running.load(Ordering::SeqCst) {
             if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
@@ -141,9 +141,8 @@ fn ui<B: Backend>(
     let height = if height < 12 { height + 4 } else { 12 };
 
     let column_widths = app_data.lock().get_width();
-    let has_containers = !app_data.lock().containers.items.is_empty();
+    let has_containers = app_data.lock().get_container_len() > 0;
     let has_error = app_data.lock().get_error();
-    let log_index = app_data.lock().get_selected_log_index();
     let sorted_by = app_data.lock().get_sorted();
 
     let show_help = gui_state.lock().status_contains(&[Status::Help]);
@@ -193,17 +192,10 @@ fn ui<B: Backend>(
     draw_blocks::containers(app_data, top_panel[0], f, gui_state, &column_widths);
 
     if has_containers {
-        draw_blocks::commands(app_data, top_panel[1], f, gui_state, log_index);
+        draw_blocks::commands(app_data, top_panel[1], f, gui_state);
     }
 
-    draw_blocks::logs(
-        app_data,
-        lower_main[0],
-        f,
-        gui_state,
-        log_index,
-        &loading_icon,
-    );
+    draw_blocks::logs(app_data, lower_main[0], f, gui_state, &loading_icon);
 
     draw_blocks::heading_bar(
         whole_layout[0],
@@ -217,7 +209,7 @@ fn ui<B: Backend>(
 
     // only draw charts if there are containers
     if has_containers {
-        draw_blocks::chart(f, lower_main[1], app_data, log_index);
+        draw_blocks::chart(f, lower_main[1], app_data);
     }
 
     if let Some(info) = info_text {

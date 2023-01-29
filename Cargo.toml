@@ -1,6 +1,6 @@
 [package]
 name = "oxker"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Jack Wills <email@mrjackwills.com>"]
 description = "A simple tui to view & control docker containers"
@@ -16,7 +16,7 @@ anyhow = "1.0"
 bollard = "0.14"
 cansi = "2.2"
 clap={version="4.1", features = ["derive", "unicode", "color"] }
-crossterm = "0.25"
+crossterm = "0.26"
 futures-util = "0.3"
 parking_lot = {version= "0.12"}
 tokio = {version = "1.24", features=["full"]}

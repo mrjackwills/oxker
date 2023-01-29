@@ -1,8 +1,10 @@
 name: Release CI
 on:
   push:
+    branch:
+      - 'main'
     tags:
-      - 'v*.*.*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 jobs:
   deploy:
     runs-on: ubuntu-18.04

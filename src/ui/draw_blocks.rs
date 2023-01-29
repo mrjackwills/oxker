@@ -57,11 +57,7 @@ fn generate_block<'a>(
     let current_selected_panel = gui_state.lock().selected_panel;
     let mut title = match panel {
         SelectablePanel::Containers => {
-            format!(
-                "{} {}",
-                panel.title(),
-                app_data.lock().containers.get_state_title()
-            )
+            format!("{} {}", panel.title(), app_data.lock().container_title())
         }
         SelectablePanel::Logs => {
             format!("{} {}", panel.title(), app_data.lock().get_log_title())
@@ -87,35 +83,31 @@ pub fn commands<B: Backend>(
     area: Rect,
     f: &mut Frame<'_, B>,
     gui_state: &Arc<Mutex<GuiState>>,
-    index: Option<usize>,
 ) {
-    let block = generate_block(app_data, area, gui_state, SelectablePanel::Commands);
-    if let Some(i) = index {
-        let items = app_data.lock().containers.items[i]
-            .docker_controls
-            .items
-            .iter()
-            .map(|i| {
+    let block = || generate_block(app_data, area, gui_state, SelectablePanel::Commands);
+    let items = app_data.lock().get_control_items().map_or(vec![], |i| {
+        i.iter()
+            .map(|c| {
                 let lines = Spans::from(vec![Span::styled(
-                    i.to_string(),
-                    Style::default().fg(i.get_color()),
+                    c.to_string(),
+                    Style::default().fg(c.get_color()),
                 )]);
                 ListItem::new(lines)
             })
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+    });
 
-        let items = List::new(items)
-            .block(block)
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-            .highlight_symbol(ARROW);
+    let items = List::new(items)
+        .block(block())
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+        .highlight_symbol(ARROW);
 
-        f.render_stateful_widget(
-            items,
-            area,
-            &mut app_data.lock().containers.items[i].docker_controls.state,
-        );
+    if let Some(i) = app_data.lock().get_control_state() {
+        f.render_stateful_widget(items, area, i);
     } else {
-        let paragraph = Paragraph::new("").block(block).alignment(Alignment::Center);
+        let paragraph = Paragraph::new("")
+            .block(block())
+            .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
     }
 }
@@ -132,8 +124,7 @@ pub fn containers<B: Backend>(
 
     let items = app_data
         .lock()
-        .containers
-        .items
+        .get_container_items()
         .iter()
         .map(|i| {
             let state_style = Style::default().fg(i.state.get_color());
@@ -204,6 +195,7 @@ pub fn containers<B: Backend>(
             ListItem::new(lines)
         })
         .collect::<Vec<_>>();
+
     if items.is_empty() {
         let paragraph = Paragraph::new("no containers running")
             .block(block)
@@ -215,7 +207,7 @@ pub fn containers<B: Backend>(
             .highlight_style(Style::default().add_modifier(Modifier::BOLD))
             .highlight_symbol(CIRCLE);
 
-        f.render_stateful_widget(items, area, &mut app_data.lock().containers.state);
+        f.render_stateful_widget(items, area, app_data.lock().get_container_state());
     }
 }
 
@@ -225,69 +217,63 @@ pub fn logs<B: Backend>(
     area: Rect,
     f: &mut Frame<'_, B>,
     gui_state: &Arc<Mutex<GuiState>>,
-    index: Option<usize>,
     loading_icon: &str,
 ) {
-    let block = generate_block(app_data, area, gui_state, SelectablePanel::Logs);
-    let contains_init = gui_state.lock().status_contains(&[Status::Init]);
-    if contains_init {
+    let block = || generate_block(app_data, area, gui_state, SelectablePanel::Logs);
+    if gui_state.lock().status_contains(&[Status::Init]) {
         let paragraph = Paragraph::new(format!("parsing logs {loading_icon}"))
             .style(Style::default())
-            .block(block)
+            .block(block())
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
-    } else if let Some(index) = index {
-        let items = List::new(app_data.lock().containers.items[index].logs.to_vec())
-            .block(block)
-            .highlight_symbol(ARROW)
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD));
-        f.render_stateful_widget(
-            items,
-            area,
-            app_data.lock().containers.items[index].logs.state(),
-        );
     } else {
-        let paragraph = Paragraph::new("no logs found")
-            .block(block)
-            .alignment(Alignment::Center);
-        f.render_widget(paragraph, area);
+        let logs = app_data.lock().get_logs();
+
+        if logs.is_empty() {
+            let paragraph = Paragraph::new("no logs found")
+                .block(block())
+                .alignment(Alignment::Center);
+            f.render_widget(paragraph, area);
+        } else {
+            let items = List::new(logs)
+                .block(block())
+                .highlight_symbol(ARROW)
+                .highlight_style(Style::default().add_modifier(Modifier::BOLD));
+
+            // This should always return Some, as logs is not empty
+            if let Some(i) = app_data.lock().get_log_state() {
+                f.render_stateful_widget(items, area, i);
+            }
+        }
     }
 }
 
 /// Draw the cpu + mem charts
-pub fn chart<B: Backend>(
-    f: &mut Frame<'_, B>,
-    area: Rect,
-    app_data: &Arc<Mutex<AppData>>,
-    index: Option<usize>,
-) {
-    if let Some(index) = index {
+pub fn chart<B: Backend>(f: &mut Frame<'_, B>, area: Rect, app_data: &Arc<Mutex<AppData>>) {
+    if let Some((cpu, mem)) = app_data.lock().get_chart_data() {
         let area = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(area);
 
-        // Check is some, else can cause out of bounds error, if containers get removed before a docker update
-        if let Some(data) = app_data.lock().containers.items.get(index) {
-            let (cpu, mem) = data.get_chart_data();
-            let cpu_dataset = vec![Dataset::default()
-                .marker(symbols::Marker::Dot)
-                .style(Style::default().fg(Color::Magenta))
-                .graph_type(GraphType::Line)
-                .data(&cpu.0)];
-            let mem_dataset = vec![Dataset::default()
-                .marker(symbols::Marker::Dot)
-                .style(Style::default().fg(Color::Cyan))
-                .graph_type(GraphType::Line)
-                .data(&mem.0)];
-            let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
-            let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
-            let cpu_chart = make_chart(cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
-            let mem_chart = make_chart(mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
+        let cpu_dataset = vec![Dataset::default()
+            .marker(symbols::Marker::Dot)
+            .style(Style::default().fg(Color::Magenta))
+            .graph_type(GraphType::Line)
+            .data(&cpu.0)];
+        let mem_dataset = vec![Dataset::default()
+            .marker(symbols::Marker::Dot)
+            .style(Style::default().fg(Color::Cyan))
+            .graph_type(GraphType::Line)
+            .data(&mem.0)];
 
-            f.render_widget(cpu_chart, area[0]);
-            f.render_widget(mem_chart, area[1]);
-        }
+        let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
+        let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
+        let cpu_chart = make_chart(cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
+        let mem_chart = make_chart(mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
+
+        f.render_widget(cpu_chart, area[0]);
+        f.render_widget(mem_chart, area[1]);
     }
 }
 
@@ -490,8 +476,6 @@ pub fn heading_bar<B: Backend>(
 
     // If no containers, don't display the headers, could maybe do this first?
     let help_index = if has_containers { 2 } else { 0 };
-    // render help info
-
     f.render_widget(help_paragraph, split_bar[help_index]);
 }
 
