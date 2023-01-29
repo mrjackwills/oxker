@@ -55,67 +55,6 @@ impl fmt::Display for Header {
 }
 
 impl AppData {
-    /// Generate a default app_state
-    pub fn default(args: CliArgs) -> Self {
-        Self {
-            args,
-            containers: StatefulList::new(vec![]),
-            error: None,
-            sorted_by: None,
-        }
-    }
-
-    pub const fn get_sorted(&self) -> Option<(Header, SortedOrder)> {
-        self.sorted_by
-    }
-
-    pub fn has_containers(&self) -> bool {
-        self.containers.items.is_empty()
-    }
-
-    pub fn container_title(&self) -> String {
-        self.containers.get_state_title()
-    }
-
-    /// Select the first container
-    pub fn containers_start(&mut self) {
-        self.containers.start();
-    }
-
-    // select the last container
-    pub fn containers_end(&mut self) {
-        self.containers.end();
-    }
-
-    /// Select the next container
-    pub fn containers_next(&mut self) {
-        self.containers.next();
-    }
-
-    // select the previous container
-    pub fn containers_previous(&mut self) {
-        self.containers.previous();
-    }
-
-    /// Remove the sorted header & order, and sort by default - created datetime
-    pub fn reset_sorted(&mut self) {
-        self.set_sorted(None);
-    }
-
-    /// Sort containers based on a given header, if headings match, and already ascending, remove sorting
-    pub fn set_sort_by_header(&mut self, selected_header: Header) {
-        let mut output = Some((selected_header, SortedOrder::Asc));
-        if let Some((current_header, order)) = self.get_sorted() {
-            if current_header == selected_header {
-                match order {
-                    SortedOrder::Desc => output = None,
-                    SortedOrder::Asc => output = Some((selected_header, SortedOrder::Desc)),
-                }
-            }
-        }
-        self.set_sorted(output);
-    }
-
     /// Change the sorted order, also set the selected container state to match new order
     fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
@@ -137,152 +76,39 @@ impl AppData {
             .as_secs()
     }
 
-    /// Get the current selected docker command
-    /// So know which command to execute
-    pub fn selected_docker_command(&self) -> Option<DockerControls> {
-        self.get_selected_container().and_then(|i| {
-            i.docker_controls.state.selected().and_then(|x| {
-                i.docker_controls
-                    .items
-                    .get(x)
-                    .map(std::borrow::ToOwned::to_owned)
-            })
-        })
-    }
-
-    /// Get Option of the current selected container
-    pub fn get_selected_container(&self) -> Option<&ContainerItem> {
-        self.containers
-            .state
-            .selected()
-            .and_then(|i| self.containers.items.get(i))
-    }
-
-    /// Get Option of the current selected container
-    pub const fn get_container_items(&self) -> &Vec<ContainerItem> {
-        &self.containers.items
-    }
-
-    pub fn get_container_state(&mut self) -> &mut ListState {
-        &mut self.containers.state
-    }
-
-    /// Get mutable Option of the current selected container
-    fn get_mut_selected_container(&mut self) -> Option<&mut ContainerItem> {
-        self.containers
-            .state
-            .selected()
-            .and_then(|i| self.containers.items.get_mut(i))
-    }
-
-    /// Get mutable Option of the currently selected container chart data
-    pub fn get_chart_data(&mut self) -> Option<(CpuTuple, MemTuple)> {
-        self.containers
-            .state
-            .selected()
-            .and_then(|i| self.containers.items.get_mut(i))
-            .map(|i| i.get_chart_data())
-    }
-
-    /// Get mutable Vec of current containers logs
-    pub fn get_logs(&mut self) -> Vec<ListItem<'static>> {
-        self.containers
-            .state
-            .selected()
-            .and_then(|i| self.containers.items.get_mut(i))
-            .map_or(vec![], |i| i.logs.to_vec())
-    }
-
-    /// Get mutable Option of the currently selected container Logs state
-    pub fn get_log_state(&mut self) -> Option<&mut ListState> {
-        self.containers
-            .state
-            .selected()
-            .and_then(|i| self.containers.items.get_mut(i))
-            .map(|i| i.logs.state())
-    }
-
-    /// Get mutable Option of the currently selected container DockerControls state
-    pub fn get_control_state(&mut self) -> Option<&mut ListState> {
-        self.get_mut_selected_container()
-            .map(|i| &mut i.docker_controls.state)
-    }
-
-    /// Get mutable Option of the currently selected container DockerControls items
-    pub fn get_control_items(&mut self) -> Option<&mut Vec<DockerControls>> {
-        self.get_mut_selected_container()
-            .map(|i| &mut i.docker_controls.items)
-    }
-
-    /// Get all containers ids
-    pub fn get_all_ids(&self) -> Vec<ContainerId> {
-        self.containers
-            .items
-            .iter()
-            .map(|i| i.id.clone())
-            .collect::<Vec<_>>()
-    }
-
-    /// return a mutable container by given id
-    fn get_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
-        self.containers.items.iter_mut().find(|i| &i.id == id)
-    }
-
-    /// Change selected choice of docker commands of selected container
-    pub fn docker_command_next(&mut self) {
-        if let Some(i) = self.get_mut_selected_container() {
-            i.docker_controls.next();
+    /// Generate a default app_state
+    pub fn default(args: CliArgs) -> Self {
+        Self {
+            args,
+            containers: StatefulList::new(vec![]),
+            error: None,
+            sorted_by: None,
         }
     }
 
-    /// Change selected choice of docker commands of selected container
-    pub fn docker_command_previous(&mut self) {
-        if let Some(i) = self.get_mut_selected_container() {
-            i.docker_controls.previous();
+    /// Container sort related methods
+
+    /// Remove the sorted header & order, and sort by default - created datetime
+    pub fn reset_sorted(&mut self) {
+        self.set_sorted(None);
+    }
+
+    /// Sort containers based on a given header, if headings match, and already ascending, remove sorting
+    pub fn set_sort_by_header(&mut self, selected_header: Header) {
+        let mut output = Some((selected_header, SortedOrder::Asc));
+        if let Some((current_header, order)) = self.get_sorted() {
+            if current_header == selected_header {
+                match order {
+                    SortedOrder::Desc => output = None,
+                    SortedOrder::Asc => output = Some((selected_header, SortedOrder::Desc)),
+                }
+            }
         }
+        self.set_sorted(output);
     }
 
-    /// Change selected choice of docker commands of selected container
-    pub fn docker_command_start(&mut self) {
-        if let Some(i) = self.get_mut_selected_container() {
-            i.docker_controls.start();
-        }
-    }
-
-    /// Change selected choice of docker commands of selected container
-    pub fn docker_command_end(&mut self) {
-        if let Some(i) = self.get_mut_selected_container() {
-            i.docker_controls.end();
-        }
-    }
-
-    /// return single app_state error
-    pub const fn get_error(&self) -> Option<AppError> {
-        self.error
-    }
-
-    /// remove single app_state error
-    pub fn remove_error(&mut self) {
-        self.error = None;
-    }
-
-    /// insert single app_state error
-    pub fn set_error(&mut self, error: AppError) {
-        self.error = Some(error);
-    }
-
-    /// Find the id of the currently selected container.
-    /// If any containers on system, will always return a ContainerId
-    /// Only returns None when no containers found.
-    pub fn get_selected_container_id(&self) -> Option<ContainerId> {
-        self.get_selected_container().map(|i| i.id.clone())
-    }
-
-    /// Check if the selected container is a dockerised version of oxker
-    /// So that can disallow commands to be send
-    /// Is a shabby way of implementing this
-    pub fn selected_container_is_oxker(&self) -> bool {
-        self.get_selected_container().map_or(false, |i| i.is_oxker)
+    pub const fn get_sorted(&self) -> Option<(Header, SortedOrder)> {
+        self.sorted_by
     }
 
     /// Sort the containers vec, based on a heading, either ascending or descending,
@@ -360,6 +186,120 @@ impl AppData {
         }
     }
 
+    /// Container state methods
+
+    /// Just get the total number of containers
+    pub fn get_container_len(&self) -> usize {
+        self.containers.items.len()
+    }
+
+    /// Get title for containers section
+    pub fn container_title(&self) -> String {
+        self.containers.get_state_title()
+    }
+
+    /// Select the first container
+    pub fn containers_start(&mut self) {
+        self.containers.start();
+    }
+
+    // select the last container
+    pub fn containers_end(&mut self) {
+        self.containers.end();
+    }
+
+    /// Select the next container
+    pub fn containers_next(&mut self) {
+        self.containers.next();
+    }
+
+    // select the previous container
+    pub fn containers_previous(&mut self) {
+        self.containers.previous();
+    }
+
+    /// Get Container items
+    pub const fn get_container_items(&self) -> &Vec<ContainerItem> {
+        &self.containers.items
+    }
+
+    /// Get Option of the current selected container
+    pub fn get_selected_container(&self) -> Option<&ContainerItem> {
+        self.containers
+            .state
+            .selected()
+            .and_then(|i| self.containers.items.get(i))
+    }
+
+    /// Get mutable Option of the current selected container
+    fn get_mut_selected_container(&mut self) -> Option<&mut ContainerItem> {
+        self.containers
+            .state
+            .selected()
+            .and_then(|i| self.containers.items.get_mut(i))
+    }
+
+    /// Get ListState of containers
+    pub fn get_container_state(&mut self) -> &mut ListState {
+        &mut self.containers.state
+    }
+
+    /// Selected DockerCommand methods
+
+    /// Get the current selected docker command
+    /// So know which command to execute
+    pub fn selected_docker_command(&self) -> Option<DockerControls> {
+        self.get_selected_container().and_then(|i| {
+            i.docker_controls.state.selected().and_then(|x| {
+                i.docker_controls
+                    .items
+                    .get(x)
+                    .map(std::borrow::ToOwned::to_owned)
+            })
+        })
+    }
+    /// Get mutable Option of the currently selected container DockerControls state
+    pub fn get_control_state(&mut self) -> Option<&mut ListState> {
+        self.get_mut_selected_container()
+            .map(|i| &mut i.docker_controls.state)
+    }
+
+    /// Get mutable Option of the currently selected container DockerControls items
+    pub fn get_control_items(&mut self) -> Option<&mut Vec<DockerControls>> {
+        self.get_mut_selected_container()
+            .map(|i| &mut i.docker_controls.items)
+    }
+
+    /// Change selected choice of docker commands of selected container
+    pub fn docker_command_next(&mut self) {
+        if let Some(i) = self.get_mut_selected_container() {
+            i.docker_controls.next();
+        }
+    }
+
+    /// Change selected choice of docker commands of selected container
+    pub fn docker_command_previous(&mut self) {
+        if let Some(i) = self.get_mut_selected_container() {
+            i.docker_controls.previous();
+        }
+    }
+
+    /// Change selected choice of docker commands of selected container
+    pub fn docker_command_start(&mut self) {
+        if let Some(i) = self.get_mut_selected_container() {
+            i.docker_controls.start();
+        }
+    }
+
+    /// Change selected choice of docker commands of selected container
+    pub fn docker_command_end(&mut self) {
+        if let Some(i) = self.get_mut_selected_container() {
+            i.docker_controls.end();
+        }
+    }
+
+    /// Logs related methods
+
     /// Get the title for log panel for selected container, will be either
     /// 1) "logs x/x - container_name" where container_name is 32 chars max
     /// 2) "logs - container_name" when no logs found, again 32 chars max
@@ -405,6 +345,61 @@ impl AppData {
         }
     }
 
+    /// Chart data related methods
+
+    /// Get mutable Option of the currently selected container chart data
+    pub fn get_chart_data(&mut self) -> Option<(CpuTuple, MemTuple)> {
+        self.containers
+            .state
+            .selected()
+            .and_then(|i| self.containers.items.get_mut(i))
+            .map(|i| i.get_chart_data())
+    }
+
+    /// Logs related methods
+
+    /// Get mutable Vec of current containers logs
+    pub fn get_logs(&mut self) -> Vec<ListItem<'static>> {
+        self.containers
+            .state
+            .selected()
+            .and_then(|i| self.containers.items.get_mut(i))
+            .map_or(vec![], |i| i.logs.to_vec())
+    }
+
+    /// Get mutable Option of the currently selected container Logs state
+    pub fn get_log_state(&mut self) -> Option<&mut ListState> {
+        self.containers
+            .state
+            .selected()
+            .and_then(|i| self.containers.items.get_mut(i))
+            .map(|i| i.logs.state())
+    }
+
+    /// Error realted methods
+
+    /// return single app_state error
+    pub const fn get_error(&self) -> Option<AppError> {
+        self.error
+    }
+
+    /// remove single app_state error
+    pub fn remove_error(&mut self) {
+        self.error = None;
+    }
+
+    /// insert single app_state error
+    pub fn set_error(&mut self, error: AppError) {
+        self.error = Some(error);
+    }
+
+    /// Check if the selected container is a dockerised version of oxker
+    /// So that can disallow commands to be send
+    /// Is a shabby way of implementing this
+    pub fn is_oxker(&self) -> bool {
+        self.get_selected_container().map_or(false, |i| i.is_oxker)
+    }
+
     /// Check if the initial parsing has been completed, by making sure that all ids given (which are running) have a non empty cpu_stats vecdec
     pub fn initialised(&mut self, all_ids: &[(bool, ContainerId)]) -> bool {
         let count_is_running = all_ids.iter().filter(|i| i.0).count();
@@ -415,11 +410,6 @@ impl AppData {
             .filter(|i| !i.cpu_stats.is_empty())
             .count();
         count_is_running == number_with_cpu_status
-    }
-
-    /// Just get the total number of containers
-    pub fn get_container_len(&self) -> usize {
-        self.containers.items.len()
     }
 
     /// Find the widths for the strings in the containers panel.
@@ -484,6 +474,20 @@ impl AppData {
         columns
     }
 
+    /// Update related methods
+
+    /// return a mutable container by given id
+    fn get_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
+        self.containers.items.iter_mut().find(|i| &i.id == id)
+    }
+
+    /// Find the id of the currently selected container.
+    /// If any containers on system, will always return a ContainerId
+    /// Only returns None when no containers found.
+    pub fn get_selected_container_id(&self) -> Option<ContainerId> {
+        self.get_selected_container().map(|i| i.id.clone())
+    }
+
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
     /// Will also, if a sort is set, sort the containers
     pub fn update_stats(
@@ -515,14 +519,19 @@ impl AppData {
             container.mem_limit.update(mem_limit);
         }
         // need to benchmark this?
-        if self.get_sorted().is_some() {
+        // if self.get_sorted().is_some() {
             self.sort_containers();
-        }
+        // }
     }
 
     /// Update, or insert, containers
     pub fn update_containers(&mut self, all_containers: &mut [ContainerSummary]) {
-        let all_ids = self.get_all_ids();
+        let all_ids = self
+            .containers
+            .items
+            .iter()
+            .map(|i| i.id.to_owned())
+            .collect::<Vec<_>>();
 
         // Only sort it no containers currently set, as afterwards the order is fixed
         if self.containers.items.is_empty() {

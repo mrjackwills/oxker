@@ -230,10 +230,10 @@ pub fn logs<B: Backend>(
         let logs = app_data.lock().get_logs();
 
         if logs.is_empty() {
-			let paragraph = Paragraph::new("no logs found")
-			.block(block())
-			.alignment(Alignment::Center);
-		f.render_widget(paragraph, area);
+            let paragraph = Paragraph::new("no logs found")
+                .block(block())
+                .alignment(Alignment::Center);
+            f.render_widget(paragraph, area);
         } else {
             let items = List::new(logs)
                 .block(block())
@@ -244,7 +244,6 @@ pub fn logs<B: Backend>(
             if let Some(i) = app_data.lock().get_log_state() {
                 f.render_stateful_widget(items, area, i);
             }
-
         }
     }
 }

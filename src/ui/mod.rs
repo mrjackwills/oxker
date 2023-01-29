@@ -60,7 +60,7 @@ pub async fn create_ui(
     terminal.show_cursor()?;
 
     if let Err(err) = res {
-        println!("{err}");
+        println!("error: {err}");
     }
     std::io::stdout().flush().unwrap_or(());
     Ok(())
@@ -141,7 +141,7 @@ fn ui<B: Backend>(
     let height = if height < 12 { height + 4 } else { 12 };
 
     let column_widths = app_data.lock().get_width();
-    let has_containers = !app_data.lock().has_containers();
+    let has_containers = app_data.lock().get_container_len() > 0;
     let has_error = app_data.lock().get_error();
     let sorted_by = app_data.lock().get_sorted();
 

@@ -241,7 +241,7 @@ impl InputHandler {
                         if let Some(command) = option_command {
                             let option_id = self.app_data.lock().get_selected_container_id();
                             // Poor way of disallowing commands to be sent to a containerised okxer
-                            if self.app_data.lock().selected_container_is_oxker() {
+                            if self.app_data.lock().is_oxker() {
                                 return;
                             };
                             if let Some(id) = option_id {
