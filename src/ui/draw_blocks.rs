@@ -266,6 +266,7 @@ pub fn chart<B: Backend>(f: &mut Frame<'_, B>, area: Rect, app_data: &Arc<Mutex<
             .style(Style::default().fg(Color::Cyan))
             .graph_type(GraphType::Line)
             .data(&mem.0)];
+
         let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
         let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
         let cpu_chart = make_chart(cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);

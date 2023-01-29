@@ -12,6 +12,7 @@
 ### Refactors
 + major refactor of internal data handling, [b4488e4bdb0252f5c5680cee6a46427f22a282ab]
 + needless (double) referencing removed, [a174dafe1b05908735680a874dc551a86da24777]
++ app_data methods re-ordered & renamed, [c0bb5355d6a5d352260655110ce3d5ab695acda9]
 
 ### Reverts
 + is_running AtomicBool back to SeqCst, [c4d80061dab94afd08d4d793dc147f878c965ad6]

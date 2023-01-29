@@ -530,7 +530,7 @@ impl AppData {
             .containers
             .items
             .iter()
-            .map(|i| i.id.to_owned())
+            .map(|i| i.id.clone())
             .collect::<Vec<_>>();
 
         // Only sort it no containers currently set, as afterwards the order is fixed
