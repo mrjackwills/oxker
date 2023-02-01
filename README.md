@@ -37,6 +37,12 @@ Without flakes, you can build a shell that contains oxker using
 
 ```nix-shell -p oxker```
 
+### AUR
+
+oxker can be installed from the [AUR](https://aur.archlinux.org/packages/oxker) with using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers):
+
+```paru -S oxker```
+
 ### Pre-Built
 See the <a href="https://github.com/mrjackwills/oxker/releases/latest" target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
 
