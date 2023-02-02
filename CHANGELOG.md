@@ -1,3 +1,6 @@
+## Docs
++ AUR install instructions, thanks [orhun](https://github.com/orhun), [c5aa346bca139cc5ece1f4127293977924d16fca]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.2.1'>v0.2.1</a>
 ### 2023-01-29
 
