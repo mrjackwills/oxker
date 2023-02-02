@@ -376,7 +376,7 @@ impl AppData {
             .map(|i| i.logs.state())
     }
 
-    /// Error realted methods
+    /// Error related methods
 
     /// return single app_state error
     pub const fn get_error(&self) -> Option<AppError> {
