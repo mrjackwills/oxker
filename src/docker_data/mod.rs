@@ -54,6 +54,7 @@ pub struct DockerData {
     app_data: Arc<Mutex<AppData>>,
     args: CliArgs,
     binate: Binate,
+    containerised: bool,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
     is_running: Arc<AtomicBool>,
@@ -175,7 +176,7 @@ impl DockerData {
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
-    /// Will ignore any container that uses `./start_oxker.sh` as an entry point, unless the `-s` flag is set
+    /// If in a containerised runtime, will ignore any container that uses the q`./app/oxker` as an entry point, unless the `-s` flag is set
     pub async fn update_all_containers(&mut self) -> Vec<(bool, ContainerId)> {
         let containers = self
             .docker
@@ -190,15 +191,15 @@ impl DockerData {
             .into_iter()
             .filter_map(|f| match f.id {
                 Some(_) => {
-                    if f.command
-                        .as_ref()
-                        .map_or(false, |c| c.starts_with(ENTRY_POINT))
-                        && self.args.show_self
-                    {
-                        None
-                    } else {
-                        Some(f)
-                    }
+                    if self.containerised && f.command
+                            .as_ref()
+                            .map_or(false, |c| c.starts_with(ENTRY_POINT))
+                            && self.args.show_self
+                        {
+                            None
+                        } else {
+                            Some(f)
+                        }
                 }
                 None => None,
             })
@@ -414,6 +415,7 @@ impl DockerData {
     /// Initialise self, and start the message receiving loop
     pub async fn init(
         app_data: Arc<Mutex<AppData>>,
+        containerised: bool,
         docker: Docker,
         docker_rx: Receiver<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
@@ -423,6 +425,7 @@ impl DockerData {
         if app_data.lock().get_error().is_none() {
             let mut inner = Self {
                 app_data,
+                containerised,
                 args,
                 binate: Binate::One,
                 docker: Arc::new(docker),

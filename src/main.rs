@@ -33,16 +33,33 @@ use ui::{create_ui, GuiState, Status};
 
 use crate::docker_data::DockerMessage;
 
-const ENTRY_POINT: &str = "./start_oxker.sh";
+// this is the entry point when running as a Docker Container, and is used to check if we are running as a Docker Containerq
+const ENTRY_POINT: &str = "./app/oxker";
 
+/// Enable tracing, only really used in debug mode, for now
 /// write to file if `-g` is set?
 fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 }
 
+/// An ENV is set in the ./containerised/Dockerfile, if this is ENV found, then sleep for 250ms, else the container, for as yet unknown reasons, will close immediately
+/// returns a bool, so that the `update_all_containers()` won't bother to check the entry point unless running via a container
+fn check_if_containerised() -> bool {
+    if std::env::vars()
+        .into_iter()
+        .any(|x| x == ("OXKER_RUNTIME".to_owned(), "container".to_owned()))
+    {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        true
+    } else {
+        false
+    }
+}
+
 /// Create docker daemon handler, and only spawn up the docker data handler if a ping returns non-error
 async fn docker_init(
     app_data: &Arc<Mutex<AppData>>,
+    containerised: bool,
     docker_rx: Receiver<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
     is_running: &Arc<AtomicBool>,
@@ -53,7 +70,12 @@ async fn docker_init(
             let gui_state = Arc::clone(gui_state);
             let is_running = Arc::clone(is_running);
             tokio::spawn(DockerData::init(
-                app_data, docker, docker_rx, gui_state, is_running,
+                app_data,
+                containerised,
+                docker,
+                docker_rx,
+                gui_state,
+                is_running,
             ));
         } else {
             app_data.lock().set_error(AppError::DockerConnect);
@@ -87,7 +109,10 @@ fn handler_init(
 
 #[tokio::main]
 async fn main() {
+    let containerised = check_if_containerised();
+
     setup_tracing();
+
     let args = CliArgs::new();
     let app_data = Arc::new(Mutex::new(AppData::default(args)));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
@@ -95,7 +120,7 @@ async fn main() {
     let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(16);
     let (input_sx, input_rx) = tokio::sync::mpsc::channel(16);
 
-    docker_init(&app_data, docker_rx, &gui_state, &is_running).await;
+    docker_init(&app_data, containerised, docker_rx, &gui_state, &is_running).await;
 
     handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running);
 

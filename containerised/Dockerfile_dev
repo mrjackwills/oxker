@@ -1,16 +1,23 @@
 #############
 ## Runtime ##
 #############
+FROM scratch
 
-FROM alpine:latest AS runtime
+# Set env that we're running in a container, so that the application can sleep for 250ms at start
+ENV OXKER_RUNTIME=container
 
 # Copy application binary from builder image
-COPY ./target/x86_64-unknown-linux-musl/release/oxker /usr/local/bin
-COPY ./containerised/start_oxker.sh ./
+COPY ./target/x86_64-unknown-linux-musl/release/oxker /app/
 
 # Run the application
 # this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
-ENTRYPOINT [ "./start_oxker.sh"]
+ENTRYPOINT [ "./app/oxker"]
+
+# Dev build for testing
+# docker build -t oxker_dev -f Dockerfile . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
+
+# Dev build one liner, x86 host
+# docker image prune -a; cargo build --release --target x86_64-unknown-linux-musl && docker build -t oxker_dev -f containerised/Dockerfile_dev . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
 
 ## One liner to build musl program, build docker image, then execute the image
 # cargo build --release --target x86_64-unknown-linux-musl && docker build -t oxker_dev -f containerised/Dockerfile . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
