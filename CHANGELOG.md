@@ -1,4 +1,7 @@
-## Docs
+### Chores
++ devcontainer.json updated, typos-cli installed, temporary(?) buildkit fix, [3c6a8db6ef74d499b49fabe8912785cac16d9c4b]
+
+### Docs
 + AUR install instructions, thanks [orhun](https://github.com/orhun), [c5aa346bca139cc5ece1f4127293977924d16fca]
 + typos fixes, thanks [kianmeng](https://github.com/kianmeng), [5052d7ab0a156c43cadbd922c0019b284f24943a]
 

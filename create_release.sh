@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # rust create_release
-# v0.1.2
+# v0.2.1
 
 STAR_LINE='****************************************'
 CWD=$(pwd)
@@ -192,10 +192,21 @@ release_continue () {
 	ask_continue
 
 }
+
+# Check repository for typos
+check_typos () {
+	echo -e "\n${PURPLE}check typos${RESET}"
+	typos
+	ask_continue
+}
+
 # Full flow to create a new release
 release_flow() {
+	check_typos
+
 	check_git
 	get_git_remote_url
+
 	cargo_test
 	cargo_build
 
@@ -227,8 +238,10 @@ release_flow() {
 	release_continue "git checkout main"
 	git checkout main
 
-	release_continue "git merge --no-ff \"${RELEASE_BRANCH}\" -m \"chore: merge ${RELEASE_BRANCH} into main\"" 
+	echo -e "${PURPLE}git merge --no-ff \"${RELEASE_BRANCH}\" -m \"chore: merge ${RELEASE_BRANCH} into main\"${RESET}"
 	git merge --no-ff "$RELEASE_BRANCH" -m "chore: merge ${RELEASE_BRANCH} into main"
+	echo -e "\n${PURPLE}cargo check${RESET}\n"
+	cargo check
 
 	release_continue "git tag -am \"${RELEASE_BRANCH}\" \"$NEW_TAG_WITH_V\""
 	git tag -am "${RELEASE_BRANCH}" "$NEW_TAG_WITH_V"
