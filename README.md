@@ -1,5 +1,7 @@
 <p align="center">
 	<img src='./.github/logo.svg' width='100px' />
+</p>
+<p align="center">
 	<br>
 	<h1 align="center">oxker</h1>
 	<div align="center">A simple tui to view & control docker containers</div>
