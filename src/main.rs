@@ -1,5 +1,10 @@
 #![forbid(unsafe_code)]
-#![warn(clippy::unused_async, clippy::unwrap_used, clippy::expect_used)]
+#![warn(
+    clippy::expect_used,
+    clippy::todo,
+    clippy::unused_async,
+    clippy::unwrap_used
+)]
 // Warning - These are indeed pedantic
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]

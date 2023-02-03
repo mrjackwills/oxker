@@ -191,15 +191,16 @@ impl DockerData {
             .into_iter()
             .filter_map(|f| match f.id {
                 Some(_) => {
-                    if self.containerised && f.command
+                    if self.containerised
+                        && f.command
                             .as_ref()
                             .map_or(false, |c| c.starts_with(ENTRY_POINT))
-                            && self.args.show_self
-                        {
-                            None
-                        } else {
-                            Some(f)
-                        }
+                        && self.args.show_self
+                    {
+                        None
+                    } else {
+                        Some(f)
+                    }
                 }
                 None => None,
             })
