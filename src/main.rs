@@ -38,8 +38,10 @@ use ui::{create_ui, GuiState, Status};
 
 use crate::docker_data::DockerMessage;
 
-// this is the entry point when running as a Docker Container, and is used to check if we are running as a Docker Containerq
+// this is the entry point when running as a Docker Container, and is used, in conjunction with the `CONTAINER_ENV` ENV, to check if we are running as a Docker Container
 const ENTRY_POINT: &str = "./app/oxker";
+const ENV_KEY: &str = "OXKER_RUNTIME";
+const ENV_VALUE: &str = "container";
 
 /// Enable tracing, only really used in debug mode, for now
 /// write to file if `-g` is set?
@@ -52,7 +54,7 @@ fn setup_tracing() {
 fn check_if_containerised() -> bool {
     if std::env::vars()
         .into_iter()
-        .any(|x| x == ("OXKER_RUNTIME".to_owned(), "container".to_owned()))
+        .any(|x| x == (ENV_KEY.into(), ENV_VALUE.into()))
     {
         std::thread::sleep(std::time::Duration::from_millis(250));
         true

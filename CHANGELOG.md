@@ -8,7 +8,7 @@
 + Readme.md styling tweak, [310a63f4cabaa374797a7e4ed0d7fd1f5e79c8fe]
 
 ### Features
-+ Use a scratch container for the docker image, should reduce image size by around 60%. This checks for the ENV `OXKER_RUTIME=container`, which is automatically set by the docker image, [17b71b6b41f6a98a0f92277f40a88f4b1b8a1328]
++ Use a scratch container for the docker image, should reduce image size by around 60%. This checks for the ENV `OXKER_RUNTIME=container`, which is automatically set by the docker image, [17b71b6b41f6a98a0f92277f40a88f4b1b8a1328]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.2.1'>v0.2.1</a>
 ### 2023-01-29
