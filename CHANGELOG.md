@@ -1,3 +1,19 @@
+# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.2.2'>v0.2.2</a>
+### 2023-02-04
+
+### Chores
++ devcontainer.json updated, typos-cli installed, temporary(?) buildkit fix, [3c6a8db6](https://github.com/mrjackwills/oxker/commit/3c6a8db6ef74d499b49fabe8912785cac16d9c4b)
++ create_release.sh check for typos, [310a63f4](https://github.com/mrjackwills/oxker/commit/310a63f4cabaa374797a7e4ed0d7fd1f5e79c8fe)
+
+### Docs
++ AUR install instructions, thanks [orhun](https://github.com/orhun), [c5aa346b](https://github.com/mrjackwills/oxker/commit/c5aa346bca139cc5ece1f4127293977924d16fca)
++ typos fixes, thanks [kianmeng](https://github.com/kianmeng), [5052d7ab](https://github.com/mrjackwills/oxker/commit/5052d7ab0a156c43cadbd922c0019b284f24943a)
++ Readme.md styling tweak, [310a63f4](https://github.com/mrjackwills/oxker/commit/310a63f4cabaa374797a7e4ed0d7fd1f5e79c8fe)
++ Contributing guide, [5aaa00d6](https://github.com/mrjackwills/oxker/commit/5aaa00d6a3c58d98cb250b7b14584238df02961c), [a44b15f7](https://github.com/mrjackwills/oxker/commit/a44b15f76088561a0e272d4e7456197c2aaabdb4)
+
+### Features
++ Use a scratch container for the docker image, should reduce image size by around 60%. This checks for the ENV `OXKER_RUNTIME=container`, which is automatically set by the docker image, [17b71b6b](https://github.com/mrjackwills/oxker/commit/17b71b6b41f6a98a0f92277f40a88f4b1b8a1328)
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.2.1'>v0.2.1</a>
 ### 2023-01-29
 
@@ -256,7 +272,7 @@
 ### 2022-04-29
 
 ### Features
-+ allow toggling of mouse caputre, to select & copy text with mouse, closes [#2](https://github.com/mrjackwills/oxker/issues/2), [aec184ea](https://github.com/mrjackwills/oxker/commit/aec184ea22b289e91942a4c3e6a415685884bc47),
++ allow toggling of mouse capture, to select & copy text with mouse, closes [#2](https://github.com/mrjackwills/oxker/issues/2), [aec184ea](https://github.com/mrjackwills/oxker/commit/aec184ea22b289e91942a4c3e6a415685884bc47),
 + show id column, [b10f9274](https://github.com/mrjackwills/oxker/commit/b10f927481c9e38a48c1d4b94e744ec48e8b6ba6),
 + draw_popup, using enum to draw in one of 9 areas, closes [#6](https://github.com/mrjackwills/oxker/issues/6), [1017850a](https://github.com/mrjackwills/oxker/commit/1017850a6cc91328abc1127bdb117495f5e909d8),
 + use a message rx/sx for all docker commands, remove update loop, wait for update message from gui instead, [9b70fdfa](https://github.com/mrjackwills/oxker/commit/9b70fdfad7b38361ebee301bdc2545d3f0dfcf9e),

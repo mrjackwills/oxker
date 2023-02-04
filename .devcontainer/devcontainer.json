@@ -7,7 +7,8 @@
 		"args": {
 			// Use the VARIANT arg to pick a Debian OS version: buster, bullseye
 			// Use bullseye when on local on arm64/Apple Silicon.
-			"VARIANT": "bullseye"
+			"VARIANT": "bullseye",
+			"BUILDKIT_INLINE_CACHE": "0"
 		}
 	},
 	"runArgs": [
@@ -16,41 +17,49 @@
 		"seccomp=unconfined"
 	],
 
-	"postCreateCommand": "cargo install cross",
+	"postCreateCommand": "cargo install cross typos-cli",
 
 	"mounts": [
 		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly"
 	],
 
-	// Set *default* container specific settings.json values on container create.
-	"settings": {
-		"lldb.executable": "/usr/bin/lldb",
-		// VS Code don't watch files under ./target
-		"files.watcherExclude": {
-			"**/target/**": true
-		},
-		"rust-analyzer.checkOnSave.command": "clippy"
+	"customizations": {
+		"vscode": {
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"bmuskalla.vscode-tldr",
+				"christian-kohler.path-intellisense",
+				"ms-vscode.live-server",
+				"mutantdino.resourcemonitor",
+				"rangav.vscode-thunder-client",
+				"rust-lang.rust-analyzer",
+				"serayuzgur.crates",
+				"tamasfe.even-better-toml",
+				"timonwong.shellcheck",
+				"vadimcn.vscode-lldb"
+			],
+			
+			// Set *default* container specific settings.json values on container create.
+			"settings": {
+				"lldb.executable": "/usr/bin/lldb",
+				// VS Code don't watch files under ./target
+				"files.watcherExclude": {
+					"**/target/**": true
+				},
+				"rust-analyzer.checkOnSave.command": "clippy"
+			}
+		}
 	},
-
-	// Add the IDs of extensions you want installed when the container is created.
-	"extensions": [
-		"vadimcn.vscode-lldb",
-		"mutantdino.resourcemonitor",
-		"rust-lang.rust-analyzer",
-		"tamasfe.even-better-toml",
-		"serayuzgur.crates",
-		"christian-kohler.path-intellisense",
-		"timonwong.shellcheck",
-		"ms-vscode.live-server",
-		"rangav.vscode-thunder-client",
-		"bmuskalla.vscode-tldr"
-	],
-
-
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
 	"features": {
-		"docker-in-docker": "latest",
-		"git": "os-provided"
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {
+			"version": "latest",
+			"moby": true,
+			"dockerDashComposeVersion":"v2"
+		},
+		"ghcr.io/devcontainers/features/git:1": {
+				"version":"os-provided"
+			}
 	}
 }

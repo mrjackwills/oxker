@@ -1,22 +1,17 @@
-### 2023-01-29
+### 2023-02-04
 
 ### Chores
-+ dependencies updated, [c129f474fe2976454b1868d00e8d7d99b87ec23b], [9788b8afd98e59b1d4412a8adc54b34d2c5671fd], [2ab88eb26e9bbbc4dad4651256d8d9b044ea3272]
++ devcontainer.json updated, typos-cli installed, temporary(?) buildkit fix, [3c6a8db6ef74d499b49fabe8912785cac16d9c4b]
++ create_release.sh check for typos, [310a63f4cabaa374797a7e4ed0d7fd1f5e79c8fe]
 
 ### Docs
-+ comment typo, [1025579138f11e4987263c7bfe936c4c8542f8b3]
++ AUR install instructions, thanks [orhun](https://github.com/orhun), [c5aa346bca139cc5ece1f4127293977924d16fca]
++ typos fixes, thanks [kianmeng](https://github.com/kianmeng), [5052d7ab0a156c43cadbd922c0019b284f24943a]
++ Readme.md styling tweak, [310a63f4cabaa374797a7e4ed0d7fd1f5e79c8fe]
++ Contributing guide, [5aaa00d6a3c58d98cb250b7b14584238df02961c], [a44b15f76088561a0e272d4e7456197c2aaabdb4]
 
-### Fixes
-+ deadlock on draw logs when no containers found, [68e444bfc393eb46bac2b99eb57697bb9b0451af]
-+ github workflow release on main only (with semver tag), [e4ca41dfd8ec3acae202a2d2464b8e18f5c5bdd5], [749ec712f07cff2c941aed6726c56bdbd5cb8d2c]
-
-### Refactors
-+ major refactor of internal data handling, [b4488e4bdb0252f5c5680cee6a46427f22a282ab]
-+ needless (double) referencing removed, [a174dafe1b05908735680a874dc551a86da24777]
-+ app_data methods re-ordered & renamed, [c0bb5355d6a5d352260655110ce3d5ab695acda9]
-
-### Reverts
-+ is_running AtomicBool back to SeqCst, [c4d80061dab94afd08d4d793dc147f878c965ad6]
+### Features
++ Use a scratch container for the docker image, should reduce image size by around 60%. This checks for the ENV `OXKER_RUNTIME=container`, which is automatically set by the docker image, [17b71b6b41f6a98a0f92277f40a88f4b1b8a1328]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details

@@ -377,8 +377,8 @@ impl fmt::Display for LogsTz {
 }
 
 /// Store the logs alongside a HashSet, each log *should* generate a unique timestamp,
-/// so if we store the timestamp seperately in a HashSet, we can then check if we should insert a log line into the
-/// stateful list dependant on whethere the timestamp is in the HashSet or not
+/// so if we store the timestamp separately in a HashSet, we can then check if we should insert a log line into the
+/// stateful list dependent on whethere the timestamp is in the HashSet or not
 #[derive(Debug, Clone)]
 pub struct Logs {
     logs: StatefulList<ListItem<'static>>,

@@ -273,7 +273,7 @@ impl GuiState {
         self.is_loading.insert(uuid);
     }
 
-    /// If is_loading has any entries, return the current loading_icon, else an emtpy string
+    /// If is_loading has any entries, return the current loading_icon, else an empty string
     pub fn get_loading(&mut self) -> String {
         if self.is_loading.is_empty() {
             String::from(" ")

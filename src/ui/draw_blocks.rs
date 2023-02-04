@@ -328,7 +328,7 @@ fn make_chart<'a, T: Stats + Display>(
 }
 
 /// Draw heading bar at top of program, always visible
-/// TODO Should seperate into loading icon/headers/help functions
+/// TODO Should separate into loading icon/headers/help functions
 #[allow(clippy::too_many_lines)]
 pub fn heading_bar<B: Backend>(
     area: Rect,
@@ -510,7 +510,7 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
     );
     help_text.push_str("\n  ( q ) to quit at any time");
     help_text.push_str("\n  mouse scrolling & clicking also available");
-    help_text.push_str("\n\n  currenty an early work in progress, all and any input appreciated");
+    help_text.push_str("\n\n  currently an early work in progress, all and any input appreciated");
     help_text.push_str(format!("\n  {}", REPO.trim()).as_str());
 
     // Find the maximum line widths & height
@@ -527,7 +527,7 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .block(Block::default())
         .alignment(Alignment::Center);
 
-    let description_paragrpah = Paragraph::new(description_text.as_str())
+    let description_paragraph = Paragraph::new(description_text.as_str())
         .style(Style::default().bg(Color::Magenta).fg(Color::Black))
         .block(Block::default())
         .alignment(Alignment::Center);
@@ -566,7 +566,7 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
     // Order is important here
     f.render_widget(Clear, area);
     f.render_widget(name_paragraph, split_popup[0]);
-    f.render_widget(description_paragrpah, split_popup[1]);
+    f.render_widget(description_paragraph, split_popup[1]);
     f.render_widget(help_paragraph, split_popup[2]);
     f.render_widget(block, area);
 }

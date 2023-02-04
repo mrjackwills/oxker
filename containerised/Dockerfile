@@ -51,10 +51,12 @@ RUN cp /usr/src/oxker/target/$(cat /.platform)/release/oxker /
 
 FROM alpine:latest AS runtime
 
+# Set an ENV that we're running in a container, so that the application can sleep for 250ms at start
+ENV OXKER_RUNTIME=container
+
 # Copy application binary from builder image
 COPY --from=builder /oxker /usr/local/bin
-COPY ./containerised/start_oxker.sh ./
 
 # Run the application
 # this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
-ENTRYPOINT [ "./start_oxker.sh"]
+ENTRYPOINT [ "./app/oxker"]

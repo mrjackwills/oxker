@@ -1,5 +1,7 @@
 <p align="center">
 	<img src='./.github/logo.svg' width='100px' />
+</p>
+<p align="center">
 	<br>
 	<h1 align="center">oxker</h1>
 	<div align="center">A simple tui to view & control docker containers</div>
@@ -132,8 +134,8 @@ using docker-compose.yml;
 
 or individually
 
-```docker run --name redis -d redis:alpine3.16```
+```docker run --name redis -d redis:alpine3.17```
 
-```docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine3.16```
+```docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine3.17```
 
 ```docker run -d --hostname my-rabbit --name rabbitmq rabbitmq:3```
