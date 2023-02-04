@@ -1,6 +1,6 @@
 # Contributing to oxker
 
-oxker encourages any, and all, contributions as, suggestions, bug reports, pull requests, and feedback.
+oxker encourages any, and all, suggestions, bug reports, pull requests, and/or feedback.
 
 ## Submitting Issues
 
