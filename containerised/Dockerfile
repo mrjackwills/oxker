@@ -55,7 +55,7 @@ FROM scratch AS RUNTIME
 ENV OXKER_RUNTIME=container
 
 # Copy application binary from builder image
-COPY --from=BUILDER /oxker /usr/local/bin
+COPY --from=BUILDER /oxker /app/
 
 # Run the application
 # this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
