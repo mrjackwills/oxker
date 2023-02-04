@@ -2,7 +2,7 @@
 ## Builder ##
 #############
 
-FROM --platform=linux/amd64 rust:slim as builder
+FROM --platform=linux/amd64 rust:slim as BUILDER
 
 ARG TARGETARCH
 
@@ -49,13 +49,13 @@ RUN cp /usr/src/oxker/target/$(cat /.platform)/release/oxker /
 ## Runtime ##
 #############
 
-FROM alpine:latest AS runtime
+FROM scratch AS RUNTIME
 
 # Set an ENV that we're running in a container, so that the application can sleep for 250ms at start
 ENV OXKER_RUNTIME=container
 
 # Copy application binary from builder image
-COPY --from=builder /oxker /usr/local/bin
+COPY --from=BUILDER /oxker /app/
 
 # Run the application
 # this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
