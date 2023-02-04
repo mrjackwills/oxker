@@ -11,4 +11,4 @@ Don't hesitate to submit any issues or pull requests, regardless of size.
 
 ## Conduct
 
-oxker follow the [Rust Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct)
+oxker follows the [Rust Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct)
