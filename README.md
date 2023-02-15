@@ -19,16 +19,19 @@
 ## Download & install
 
 ### Cargo
+[![crates.io package](https://repology.org/badge/version-for-repo/crates_io/rust:oxker.svg)](https://repology.org/project/rust:oxker/versions)  
 Published on <a href='https://www.crates.io/crates/oxker' target='_blank' rel='noopener noreferrer'>crates.io</a>, so if you have cargo installed, simply run
 
 ```cargo install oxker```
 
 ### Docker
+![Docker Image Version (latest by date)](https://img.shields.io/docker/v/mrjackwills/oxker?color=ok&label=Dockerhub)  
 Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
 
 `docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker`
 
 ### Nix
+[![nixpkgs unstable package](https://repology.org/badge/version-for-repo/nix_unstable/oxker.svg)](https://repology.org/project/oxker/versions)  
 Using nix flakes, oxker can be ran directly with
 
 ```nix run nixpkgs#oxker```
@@ -38,7 +41,7 @@ Without flakes, you can build a shell that contains oxker using
 ```nix-shell -p oxker```
 
 ### AUR
-
+[![AUR package](https://repology.org/badge/version-for-repo/aur/oxker.svg)](https://repology.org/project/oxker/versions)  
 oxker can be installed from the [AUR](https://aur.archlinux.org/packages/oxker) with using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers):
 
 ```paru -S oxker```
