@@ -22,29 +22,38 @@
 [![crates.io package](https://repology.org/badge/version-for-repo/crates_io/rust:oxker.svg)](https://repology.org/project/rust:oxker/versions)  
 Published on <a href='https://www.crates.io/crates/oxker' target='_blank' rel='noopener noreferrer'>crates.io</a>, so if you have cargo installed, simply run
 
-```cargo install oxker```
+```shell
+cargo install oxker
+```
 
 ### Docker
 ![Docker Image Version (latest by date)](https://img.shields.io/docker/v/mrjackwills/oxker?color=ok&label=Dockerhub)  
 Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
-
-`docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker`
+```shell
+docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker
+```
 
 ### Nix
 [![nixpkgs unstable package](https://repology.org/badge/version-for-repo/nix_unstable/oxker.svg)](https://repology.org/project/oxker/versions)  
 Using nix flakes, oxker can be ran directly with
 
-```nix run nixpkgs#oxker```
+```shell
+nix run nixpkgs#oxker
+```
 
 Without flakes, you can build a shell that contains oxker using
 
-```nix-shell -p oxker```
+```shell
+nix-shell -p oxker
+```
 
 ### AUR
 [![AUR package](https://repology.org/badge/version-for-repo/aur/oxker.svg)](https://repology.org/project/oxker/versions)  
 oxker can be installed from the [AUR](https://aur.archlinux.org/packages/oxker) with using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers):
 
-```paru -S oxker```
+```shell
+paru -S oxker
+```
 
 ### Pre-Built
 See the <a href="https://github.com/mrjackwills/oxker/releases/latest" target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
@@ -68,7 +77,9 @@ curl https://raw.githubusercontent.com/mrjackwills/oxker/main/install.sh | bash
 
 ## Run
 
-```oxker```
+```shell
+oxker
+```
 
 In application controls
 | button| result|
@@ -97,7 +108,9 @@ Available command line arguments
 
 ### x86_64
 
-```cargo build --release```
+```shell
+cargo build --release
+```
 
 ### Raspberry pi
 
@@ -105,17 +118,23 @@ requires docker & <a href='https://github.com/cross-rs/cross' target='_blank' re
 
 #### 64bit pi (pi 4, pi zero w 2)
 
-```cross build --target aarch64-unknown-linux-gnu --release```
+```shell
+cross build --target aarch64-unknown-linux-gnu --release
+```
 
 #### 32bit pi (pi zero w)
 
 Tested, and fully working on pi zero w, running Raspberry Pi OS 32 bit, the initial logs parsing can take an extended period of time if thousands of lines long, suggest running with a -d argument of 5000
 
-```cross build --target arm-unknown-linux-musleabihf --release```
+```shell
+cross build --target arm-unknown-linux-musleabihf --release
+```
 
-If no memory information available, try appending ```/boot/cmdline.txt``` with
+If no memory information available, try appending `/boot/cmdline.txt` with
 
-```cgroup_enable=cpuset cgroup_enable=memory```
+```shell
+cgroup_enable=cpuset cgroup_enable=memory
+```
 
 see <a href="https://forums.raspberrypi.com/viewtopic.php?t=203128" target='_blank' rel='noopener noreferrer'>https://forums.raspberrypi.com/viewtopic.php?t=203128</a> and <a href="https://github.com/docker/for-linux/issues/1112" target='_blank' rel='noopener noreferrer'>https://github.com/docker/for-linux/issues/1112</a> 
 
@@ -125,18 +144,28 @@ see <a href="https://forums.raspberrypi.com/viewtopic.php?t=203128" target='_bla
 
 As of yet untested, needs work
 
-```cargo test -- --test-threads=1```
+```shell
+cargo test -- --test-threads=1
+```
 
 Run some example docker images
 
 using docker-compose.yml;
 
-```docker compose -f docker-compose.yml up -d```
+```shell
+docker compose -f docker-compose.yml up -d
+```
 
 or individually
 
-```docker run --name redis -d redis:alpine3.17```
+```shell
+docker run --name redis -d redis:alpine3.17
+```
 
-```docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine3.17```
+```shell
+docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine3.17
+```
 
-```docker run -d --hostname my-rabbit --name rabbitmq rabbitmq:3```
+```shell
+docker run -d --hostname my-rabbit --name rabbitmq rabbitmq:3
+```
