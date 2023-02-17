@@ -59,4 +59,4 @@ COPY --from=BUILDER /oxker /app/
 
 # Run the application
 # this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
-ENTRYPOINT [ "./app/oxker"]
+ENTRYPOINT [ "/app/oxker"]

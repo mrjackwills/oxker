@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # rust create_release
-# v0.2.1
+# v0.2.2
 
 STAR_LINE='****************************************'
 CWD=$(pwd)
@@ -231,7 +231,9 @@ release_flow() {
 	
 	echo -e "\ncargo fmt"
 	cargo fmt
-	
+	echo -e "\n${PURPLE}cargo check${RESET}\n"
+	cargo check
+
 	release_continue "git add ."
 	git add .
 
