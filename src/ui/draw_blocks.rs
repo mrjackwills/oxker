@@ -640,16 +640,14 @@ pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
 /// draw a box in the one of the BoxLocations, based on max line width + number of lines
 fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocation) -> Rect {
     // Make sure blank_space can't be an negative, as will crash
-    let blank_vertical = if usize::from(r.height) > text_lines {
-        (usize::from(r.height) - text_lines) / 2
-    } else {
-        1
+    let calc = |x: u16, y: usize| {
+        (usize::from(x).checked_sub(y).map_or(1usize, |f| f))
+            .checked_div(2)
+            .map_or(1usize, |f| f)
     };
-    let blank_horizontal = if usize::from(r.width) > text_width {
-        (usize::from(r.width) - text_width) / 2
-    } else {
-        1
-    };
+
+    let blank_vertical = calc(r.height, text_lines);
+    let blank_horizontal = calc(r.width, text_width);
 
     let (h_constraints, v_constraints) = box_location.get_constraints(
         blank_horizontal.try_into().unwrap_or_default(),
