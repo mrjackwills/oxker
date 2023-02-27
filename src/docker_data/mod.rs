@@ -176,7 +176,7 @@ impl DockerData {
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
-    /// If in a containerised runtime, will ignore any container that uses the q`./app/oxker` as an entry point, unless the `-s` flag is set
+    /// If in a containerised runtime, will ignore any container that uses the `/app/oxker` as an entry point, unless the `-s` flag is set
     pub async fn update_all_containers(&mut self) -> Vec<(bool, ContainerId)> {
         let containers = self
             .docker
