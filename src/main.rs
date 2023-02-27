@@ -1,13 +1,13 @@
 #![forbid(unsafe_code)]
 #![warn(
+	clippy::nursery,
+	clippy::pedantic,
     clippy::expect_used,
     clippy::todo,
     clippy::unused_async,
     clippy::unwrap_used
 )]
 // Warning - These are indeed pedantic
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
 #![allow(
     clippy::module_name_repetitions,
     clippy::doc_markdown,
@@ -23,7 +23,7 @@ use docker_data::DockerData;
 use input_handler::InputMessages;
 use parking_lot::Mutex;
 use parse_args::CliArgs;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::{sync::{atomic::AtomicBool, Arc}, io::Write};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{info, Level};
 
@@ -39,7 +39,7 @@ use ui::{create_ui, GuiState, Status};
 use crate::docker_data::DockerMessage;
 
 // this is the entry point when running as a Docker Container, and is used, in conjunction with the `CONTAINER_ENV` ENV, to check if we are running as a Docker Container
-const ENTRY_POINT: &str = "./app/oxker";
+const ENTRY_POINT: &str = "/app/oxker";
 const ENV_KEY: &str = "OXKER_RUNTIME";
 const ENV_VALUE: &str = "container";
 
@@ -146,4 +146,6 @@ async fn main() {
             .await;
         }
     }
+	// Clear screen
+	std::io::stdout().flush().unwrap_or(());
 }

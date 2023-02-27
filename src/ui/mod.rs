@@ -6,7 +6,7 @@ use crossterm::{
 };
 use parking_lot::Mutex;
 use std::{
-    io::{self, Write},
+    io,
     sync::{atomic::Ordering, Arc},
 };
 use std::{sync::atomic::AtomicBool, time::Instant};
@@ -62,7 +62,6 @@ pub async fn create_ui(
     if let Err(err) = res {
         println!("error: {err}");
     }
-    std::io::stdout().flush().unwrap_or(());
     Ok(())
 }
 
