@@ -651,12 +651,10 @@ fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocatio
         1
     };
 
-    let v_constraints = box_location.get_vertical_constraints(
+    let (h_constraints, v_constraints) = box_location.get_constraints(
+        blank_horizontal.try_into().unwrap_or_default(),
         blank_vertical.try_into().unwrap_or_default(),
         text_lines.try_into().unwrap_or_default(),
-    );
-    let h_constraints = box_location.get_horizontal_constraints(
-        blank_horizontal.try_into().unwrap_or_default(),
         text_width.try_into().unwrap_or_default(),
     );
 

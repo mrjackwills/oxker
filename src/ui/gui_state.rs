@@ -75,31 +75,45 @@ impl BoxLocation {
         }
     }
 
-    // Should combine with get_vertical_constraints and just return a tuple of (vc, hc)?
-    pub const fn get_horizontal_constraints(
+    /// Get both the vertical and hoziztonal constrains
+    pub const fn get_constraints(
         self,
+        blank_horizontal: u16,
         blank_vertical: u16,
+        text_lines: u16,
+        text_width: u16,
+    ) -> ([Constraint; 3], [Constraint; 3]) {
+        (
+            Self::get_horizontal_constraints(self, blank_horizontal, text_width),
+            Self::get_vertical_constraints(self, blank_vertical, text_lines),
+        )
+    }
+
+    const fn get_horizontal_constraints(
+        self,
+        blank_horizontal: u16,
         text_width: u16,
     ) -> [Constraint; 3] {
         match self {
             Self::TopLeft | Self::MiddleLeft | Self::BottomLeft => [
                 Constraint::Max(text_width),
-                Constraint::Max(blank_vertical),
-                Constraint::Max(blank_vertical),
+                Constraint::Max(blank_horizontal),
+                Constraint::Max(blank_horizontal),
             ],
             Self::TopCentre | Self::MiddleCentre | Self::BottomCentre => [
-                Constraint::Max(blank_vertical),
+                Constraint::Max(blank_horizontal),
                 Constraint::Max(text_width),
-                Constraint::Max(blank_vertical),
+                Constraint::Max(blank_horizontal),
             ],
             Self::TopRight | Self::MiddleRight | Self::BottomRight => [
-                Constraint::Max(blank_vertical),
-                Constraint::Max(blank_vertical),
+                Constraint::Max(blank_horizontal),
+                Constraint::Max(blank_horizontal),
                 Constraint::Max(text_width),
             ],
         }
     }
-    pub const fn get_vertical_constraints(
+
+    const fn get_vertical_constraints(
         self,
         blank_vertical: u16,
         number_lines: u16,
@@ -188,13 +202,13 @@ pub enum Status {
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug, Default, Clone)]
 pub struct GuiState {
-    panel_map: HashMap<SelectablePanel, Rect>,
     heading_map: HashMap<Header, Rect>,
-    loading_icon: Loading,
     is_loading: HashSet<Uuid>,
+    loading_icon: Loading,
+    panel_map: HashMap<SelectablePanel, Rect>,
     status: HashSet<Status>,
-    pub selected_panel: SelectablePanel,
     pub info_box_text: Option<String>,
+    pub selected_panel: SelectablePanel,
 }
 impl GuiState {
     /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
@@ -273,7 +287,7 @@ impl GuiState {
         self.is_loading.insert(uuid);
     }
 
-    /// If is_loading has any entries, return the current loading_icon, else an empty string
+    /// If is_loading has any entries, return the current loading_icon, else an empty string, which needs to take up the same space, hence ' '
     pub fn get_loading(&mut self) -> String {
         if self.is_loading.is_empty() {
             String::from(" ")
