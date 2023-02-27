@@ -1,20 +1,20 @@
 #![forbid(unsafe_code)]
-#![warn(
-	clippy::nursery,
-	clippy::pedantic,
-    clippy::expect_used,
-    clippy::todo,
-    clippy::unused_async,
-    clippy::unwrap_used
-)]
-// Warning - These are indeed pedantic
-#![allow(
-    clippy::module_name_repetitions,
-    clippy::doc_markdown,
-    clippy::similar_names
-)]
+// #![warn(
+//     clippy::nursery,
+//     clippy::pedantic,
+//     clippy::expect_used,
+//     clippy::todo,
+//     clippy::unused_async,
+//     clippy::unwrap_used
+// )]
+// // Warning - These are indeed pedantic
+// #![allow(
+//     clippy::module_name_repetitions,
+//     clippy::doc_markdown,
+//     clippy::similar_names
+// )]
 // Only allow when debugging
-// #![allow(unused)]
+#![allow(unused)]
 
 use app_data::AppData;
 use app_error::AppError;
@@ -23,7 +23,10 @@ use docker_data::DockerData;
 use input_handler::InputMessages;
 use parking_lot::Mutex;
 use parse_args::CliArgs;
-use std::{sync::{atomic::AtomicBool, Arc}, io::Write};
+use std::{
+    io::Write,
+    sync::{atomic::AtomicBool, Arc},
+};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{info, Level};
 
@@ -146,6 +149,7 @@ async fn main() {
             .await;
         }
     }
-	// Clear screen
-	std::io::stdout().flush().unwrap_or(());
+    // Clear screen
+    // std::io::stdout().lock().flush().unwrap_or(());
+    // std::io::stdout().lock().write(b"").unwrap_or_default();
 }

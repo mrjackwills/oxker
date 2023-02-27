@@ -6,7 +6,7 @@ use crossterm::{
 };
 use parking_lot::Mutex;
 use std::{
-    io,
+    io::{self, Write},
     sync::{atomic::Ordering, Arc},
 };
 use std::{sync::atomic::AtomicBool, time::Instant};
@@ -38,11 +38,12 @@ pub async fn create_ui(
 ) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    // EnableMouseCapture
+    execute!(stdout, EnableMouseCapture, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let res = run_app(
+    run_app(
         app_data,
         docker_sx,
         gui_state,
@@ -50,7 +51,8 @@ pub async fn create_ui(
         sender,
         &mut terminal,
     )
-    .await;
+    .await
+    .unwrap_or(());
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -59,8 +61,39 @@ pub async fn create_ui(
     )?;
     terminal.show_cursor()?;
 
-    if let Err(err) = res {
-        println!("error: {err}");
+    // if let Err(err) = res {
+        // println!("error: {err}");
+    // }
+    std::io::stdout().flush().unwrap_or(());
+    Ok(())
+}
+
+/// Display error message for 5 seconds, with countdown
+fn err_loop<B: Backend + Send>(
+    now: &mut Instant,
+    terminal: &mut Terminal<B>,
+) -> Result<(), AppError> {
+    let mut seconds = 5;
+    loop {
+        if seconds < 1 {
+            // terminal.clear().unwrap_or(());
+            break;
+        }
+
+        if now.elapsed() >= std::time::Duration::from_secs(1) {
+            seconds -= 1;
+            *now = Instant::now();
+        }
+
+        terminal
+            .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
+            .unwrap();
+        // {
+        // return Err(AppError::Terminal);
+        // }
+        // terminal
+        // .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
+        // .unwrap();
     }
     Ok(())
 }
@@ -79,23 +112,9 @@ async fn run_app<B: Backend + Send>(
     let input_poll_rate = std::time::Duration::from_millis(75);
     let status_dockerconnect = gui_state.lock().status_contains(&[Status::DockerConnect]);
     let mut now = Instant::now();
-    if status_dockerconnect {
-        let mut seconds = 5;
-        loop {
-            if seconds < 1 {
-                break;
-            }
-            if now.elapsed() >= std::time::Duration::from_secs(1) {
-                seconds -= 1;
-                now = Instant::now();
-            }
-            if terminal
-                .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
-                .is_err()
-            {
-                return Err(AppError::Terminal);
-            }
-        }
+
+    if !status_dockerconnect {
+        err_loop(&mut now, terminal).unwrap_or(());
     } else {
         while is_running.load(Ordering::SeqCst) {
             if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
@@ -126,7 +145,7 @@ async fn run_app<B: Backend + Send>(
             }
         }
     }
-    terminal.clear().unwrap_or(());
+
     Ok(())
 }
 
