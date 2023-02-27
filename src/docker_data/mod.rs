@@ -270,14 +270,14 @@ impl DockerData {
     async fn update_everything(&mut self) {
         let all_ids = self.update_all_containers().await;
         if let Some(container) = self.app_data.lock().get_selected_container() {
-            let id = container.id.clone();
             let last_updated = container.last_updated;
             self.spawns
                 .lock()
-                .entry(SpawnId::Log(id.clone()))
+                .entry(SpawnId::Log(container.id.clone()))
                 .or_insert_with(|| {
-                    let docker = Arc::clone(&self.docker);
                     let app_data = Arc::clone(&self.app_data);
+                    let docker = Arc::clone(&self.docker);
+                    let id = container.id.clone();
                     let spawns = Arc::clone(&self.spawns);
                     tokio::spawn(Self::update_log(app_data, docker, id, last_updated, spawns))
                 });
