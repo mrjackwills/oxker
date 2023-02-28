@@ -7,6 +7,7 @@ use crossterm::{
 use parking_lot::Mutex;
 use std::{
     io::{self, Write},
+    process::Stdio,
     sync::{atomic::Ordering, Arc},
 };
 use std::{sync::atomic::AtomicBool, time::Instant};
@@ -59,43 +60,79 @@ pub async fn create_ui(
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
-    terminal.show_cursor()?;
 
-    // if let Err(err) = res {
-        // println!("error: {err}");
-    // }
-    std::io::stdout().flush().unwrap_or(());
+    terminal.show_cursor()?;
     Ok(())
 }
 
-/// Display error message for 5 seconds, with countdown
+/// Run the error message loop, for 5 seconds, with countdown
 fn err_loop<B: Backend + Send>(
-    now: &mut Instant,
     terminal: &mut Terminal<B>,
 ) -> Result<(), AppError> {
     let mut seconds = 5;
+	let mut now = Instant::now();
     loop {
+        // This is a fix for a weird bug on Linux + WSL which will output mouse movement to the stdout
+        execute!(io::stdout(), EnableMouseCapture).unwrap_or(());
+        execute!(io::stdout(), DisableMouseCapture).unwrap_or(());
         if seconds < 1 {
-            // terminal.clear().unwrap_or(());
             break;
         }
-
         if now.elapsed() >= std::time::Duration::from_secs(1) {
             seconds -= 1;
-            *now = Instant::now();
+            now = Instant::now();
         }
 
-        terminal
+        if terminal
             .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
-            .unwrap();
-        // {
-        // return Err(AppError::Terminal);
-        // }
-        // terminal
-        // .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
-        // .unwrap();
+            .is_err()
+        {
+            return Err(AppError::Terminal);
+        }
     }
     Ok(())
+}
+
+/// Run the normal application ui loop
+async fn run_loop<B: Backend + Send>(  app_data: Arc<Mutex<AppData>>,
+    docker_sx: Sender<DockerMessage>,
+    gui_state: Arc<Mutex<GuiState>>,
+    is_running: Arc<AtomicBool>,
+    sender: Sender<InputMessages>,
+    terminal: &mut Terminal<B>) -> Result<(), AppError>{
+		let input_poll_rate = std::time::Duration::from_millis(100);
+		let update_duration =
+        std::time::Duration::from_millis(u64::from(app_data.lock().args.docker_interval));
+		let mut now = Instant::now();
+	while is_running.load(Ordering::SeqCst) {
+		if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
+			return Err(AppError::Terminal);
+		}
+		if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
+			if let Ok(event) = event::read() {
+				if let Event::Key(key) = event {
+					sender
+						.send(InputMessages::ButtonPress(key.code))
+						.await
+						.unwrap_or(());
+				} else if let Event::Mouse(m) = event {
+					sender
+						.send(InputMessages::MouseEvent(m))
+						.await
+						.unwrap_or(());
+				} else if let Event::Resize(_, _) = event {
+					gui_state.lock().clear_area_map();
+					terminal.autoresize().unwrap_or(());
+				}
+			}
+		}
+
+		if now.elapsed() >= update_duration {
+			docker_sx.send(DockerMessage::Update).await.unwrap_or(());
+			now = Instant::now();
+		}
+	}
+	Ok(())
 }
 
 /// Run a loop to draw the gui
@@ -107,45 +144,12 @@ async fn run_app<B: Backend + Send>(
     sender: Sender<InputMessages>,
     terminal: &mut Terminal<B>,
 ) -> Result<(), AppError> {
-    let update_duration =
-        std::time::Duration::from_millis(u64::from(app_data.lock().args.docker_interval));
-    let input_poll_rate = std::time::Duration::from_millis(75);
     let status_dockerconnect = gui_state.lock().status_contains(&[Status::DockerConnect]);
-    let mut now = Instant::now();
-
-    if !status_dockerconnect {
-        err_loop(&mut now, terminal).unwrap_or(());
+    if status_dockerconnect {
+        err_loop(terminal).unwrap_or(());
     } else {
-        while is_running.load(Ordering::SeqCst) {
-            if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
-                if let Ok(event) = event::read() {
-                    if let Event::Key(key) = event {
-                        sender
-                            .send(InputMessages::ButtonPress(key.code))
-                            .await
-                            .unwrap_or(());
-                    } else if let Event::Mouse(m) = event {
-                        sender
-                            .send(InputMessages::MouseEvent(m))
-                            .await
-                            .unwrap_or(());
-                    } else if let Event::Resize(_, _) = event {
-                        gui_state.lock().clear_area_map();
-                        terminal.autoresize().unwrap_or(());
-                    }
-                }
-            }
-
-            if now.elapsed() >= update_duration {
-                docker_sx.send(DockerMessage::Update).await.unwrap_or(());
-                now = Instant::now();
-            }
-            if terminal.draw(|f| ui(f, &app_data, &gui_state)).is_err() {
-                return Err(AppError::Terminal);
-            }
-        }
-    }
-
+		run_loop(app_data, docker_sx, gui_state, is_running, sender, terminal).await?;
+	}
     Ok(())
 }
 

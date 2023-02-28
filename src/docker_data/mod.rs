@@ -3,6 +3,7 @@ use bollard::{
     service::ContainerSummary,
     Docker,
 };
+use crossterm::{event::DisableMouseCapture, execute};
 use futures_util::StreamExt;
 use parking_lot::Mutex;
 use std::{
@@ -407,6 +408,11 @@ impl DockerData {
                         .values()
                         .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
+                    // This is a fix for a weird bug on Linux + WSL which will output mouse movement to the stdout
+                    // execute!(std::io::stdout(), DisableMouseCapture).unwrap_or(());
+					std::thread::spawn(||{
+						execute!(std::io::stdout(), DisableMouseCapture).unwrap_or(());
+					});
                     self.is_running.store(false, Ordering::SeqCst);
                 }
             }
