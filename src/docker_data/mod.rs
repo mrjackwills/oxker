@@ -20,6 +20,7 @@ use crate::{
     app_data::{AppData, ContainerId, DockerControls},
     app_error::AppError,
     parse_args::CliArgs,
+    stop_running,
     ui::{GuiState, Status},
     ENTRY_POINT,
 };
@@ -408,12 +409,7 @@ impl DockerData {
                         .values()
                         .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
-                    // This is a fix for a weird bug on Linux + WSL which will output mouse movement to the stdout
-                    // execute!(std::io::stdout(), DisableMouseCapture).unwrap_or(());
-					std::thread::spawn(||{
-						execute!(std::io::stdout(), DisableMouseCapture).unwrap_or(());
-					});
-                    self.is_running.store(false, Ordering::SeqCst);
+                    stop_running(&self.is_running);
                 }
             }
         }

@@ -21,6 +21,7 @@ use crate::{
     app_data::{AppData, DockerControls, Header},
     app_error::AppError,
     docker_data::DockerMessage,
+    stop_running,
     ui::{GuiState, SelectablePanel, Status},
 };
 pub use message::InputMessages;
@@ -134,12 +135,7 @@ impl InputHandler {
             .lock()
             .status_contains(&[Status::Error, Status::Init]);
         if error_init || self.docker_sender.send(DockerMessage::Quit).await.is_err() {
-            // This is a fix for a weird bug on Linux + WSL which will output mouse movement to the stdout
-
-			std::thread::spawn(||{
-				execute!(std::io::stdout(), DisableMouseCapture).unwrap_or(());
-			});
-            self.is_running.store(false, Ordering::SeqCst);
+            stop_running(&self.is_running);
         }
     }
 
