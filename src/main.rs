@@ -41,7 +41,7 @@ mod input_handler;
 mod parse_args;
 mod ui;
 
-use ui::{create_ui, GuiState, Status};
+use ui::{GuiState, Status, Ui};
 
 use crate::docker_data::DockerMessage;
 
@@ -148,9 +148,7 @@ async fn main() {
     handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running);
 
     if args.gui {
-        create_ui(app_data, docker_sx, gui_state, is_running, input_sx)
-            .await
-            .unwrap_or(());
+        Ui::create(app_data, docker_sx, gui_state, is_running, input_sx).await;
     } else {
         // Debug mode for testing, mostly pointless, doesn't take terminal
         info!("in debug mode");
