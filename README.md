@@ -84,7 +84,7 @@ In application controls
 | button| result|
 |--|--|
 | ```( tab )``` or ```( shift+tab )``` | change panel, clicking on a panel also changes the selected panel|
-| ```( ↑ ↓ )``` or ```( j k )``` or ```(PgUp PgDown)``` or ```(Home End)```| change selected line in selected panel, mouse scroll also changes selected line |
+| ```( ↑ ↓ )``` or ```( j k )``` or ```( PgUp PgDown )``` or ```( Home End )```| change selected line in selected panel, mouse scroll also changes selected line |
 | ```( enter )```| execute selected docker command|
 | ```( 1-9 )``` | sort containers by heading, clicking on headings also sorts the selected column |
 | ```( 0 )``` | stop sorting |
