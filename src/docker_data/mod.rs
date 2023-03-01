@@ -3,15 +3,11 @@ use bollard::{
     service::ContainerSummary,
     Docker,
 };
-use crossterm::{event::DisableMouseCapture, execute};
 use futures_util::StreamExt;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::{atomic::AtomicBool, Arc},
 };
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 use uuid::Uuid;
@@ -438,7 +434,6 @@ impl DockerData {
                 spawns: Arc::new(Mutex::new(HashMap::new())),
             };
             inner.initialise_container_data().await;
-
             inner.message_handler().await;
         }
     }

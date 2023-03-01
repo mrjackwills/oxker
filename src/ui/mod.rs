@@ -6,8 +6,7 @@ use crossterm::{
 };
 use parking_lot::Mutex;
 use std::{
-    io::{self, Stdout, Write},
-    process::Stdio,
+    io::{self, Stdout},
     sync::{atomic::Ordering, Arc},
 };
 use std::{sync::atomic::AtomicBool, time::Instant};
@@ -35,12 +34,13 @@ pub struct Ui {
     docker_sx: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
     is_running: Arc<AtomicBool>,
+    now: Instant,
     sender: Sender<InputMessages>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
 impl Ui {
-    /// Create a new Ui struct, and execute the drawing loops
+    /// Create a new Ui struct, and execute the drawing loop
     pub async fn create(
         app_data: Arc<Mutex<AppData>>,
         docker_sx: Sender<DockerMessage>,
@@ -48,35 +48,40 @@ impl Ui {
         is_running: Arc<AtomicBool>,
         sender: Sender<InputMessages>,
     ) {
-        if let Ok(mut terminal) = Self::start_terminal() {
+        if let Ok(terminal) = Self::setup_terminal() {
             let mut ui = Self {
                 app_data,
                 docker_sx,
                 gui_state,
                 is_running,
+                now: Instant::now(),
                 sender,
                 terminal,
             };
             if let Err(e) = ui.draw_ui().await {
                 error!("{e}");
             }
-            if let Err(e) = ui.end_terminal() {
+            if let Err(e) = ui.reset_terminal() {
                 error!("{e}");
             };
+        } else {
+            error!("Terminal Error");
         }
     }
 
-    // Setup the terminal for full-screen drawing mode, with mouse capture
-    fn start_terminal() -> io::Result<Terminal<CrosstermBackend<Stdout>>> {
+    /// Setup the terminal for full-screen drawing mode, with mouse capture
+    fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<Stdout>>> {
         enable_raw_mode()?;
         let mut stdout = io::stdout();
-        execute!(stdout, EnableMouseCapture, EnterAlternateScreen)?;
+        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
         let backend = CrosstermBackend::new(stdout);
         Terminal::new(backend)
     }
 
     /// reset the terminal back to default settings
-    pub fn end_terminal(&mut self) -> Result<()> {
+    pub fn reset_terminal(&mut self) -> Result<()> {
+        self.terminal.clear()?;
+
         disable_raw_mode()?;
         execute!(
             self.terminal.backend_mut(),
@@ -90,20 +95,19 @@ impl Ui {
     /// Draw the the error message ui, for 5 seconds, with a countdown
     fn err_loop(&mut self) -> Result<(), AppError> {
         let mut seconds = 5;
-        let mut now = Instant::now();
         loop {
-            // This is a fix for a weird bug on Linux + WSL which will output mouse movement to the stdout
+            // This is a fix for a weird bug on Linux + WSL which will output mouse movement to stdout
             std::thread::spawn(|| {
                 execute!(io::stdout(), EnableMouseCapture).unwrap_or(());
                 execute!(io::stdout(), DisableMouseCapture).unwrap_or(());
             });
 
-            if now.elapsed() >= std::time::Duration::from_secs(1) {
+            if self.now.elapsed() >= std::time::Duration::from_secs(1) {
                 seconds -= 1;
-                now = Instant::now();
+                self.now = Instant::now();
             }
-			
-			if seconds < 1 {
+
+            if seconds < 1 {
                 break;
             }
 
@@ -120,14 +124,14 @@ impl Ui {
 
     /// The loop for drawing the main UI to the terminal
     async fn gui_loop(&mut self) -> Result<(), AppError> {
-        let input_poll_rate = std::time::Duration::from_millis(100);
+        let input_poll_rate = std::time::Duration::from_millis(1);
         let update_duration =
             std::time::Duration::from_millis(u64::from(self.app_data.lock().args.docker_interval));
-        let mut now = Instant::now();
+
         while self.is_running.load(Ordering::SeqCst) {
             if self
                 .terminal
-                .draw(|frame| ui(frame, &self.app_data, &self.gui_state))
+                .draw(|frame| ui_frame(frame, &self.app_data, &self.gui_state))
                 .is_err()
             {
                 return Err(AppError::Terminal);
@@ -151,19 +155,18 @@ impl Ui {
                 }
             }
 
-            if now.elapsed() >= update_duration {
+            if self.now.elapsed() >= update_duration {
                 self.docker_sx
                     .send(DockerMessage::Update)
                     .await
                     .unwrap_or(());
-                now = Instant::now();
+                self.now = Instant::now();
             }
         }
         Ok(())
     }
 
-
-	/// Draw either the Error, or main oxker ui, to the terminal
+    /// Draw either the Error, or main oxker ui, to the terminal
     async fn draw_ui(&mut self) -> Result<(), AppError> {
         let status_dockerconnect = self
             .gui_state
@@ -180,7 +183,7 @@ impl Ui {
 }
 
 /// Draw the main ui to a frame of the terminal
-fn ui<B: Backend>(
+fn ui_frame<B: Backend>(
     f: &mut Frame<'_, B>,
     app_data: &Arc<Mutex<AppData>>,
     gui_state: &Arc<Mutex<GuiState>>,
@@ -232,7 +235,7 @@ fn ui<B: Backend>(
         vec![Constraint::Percentage(100)]
     };
 
-    // Split into 3, containers+controls, logs, then graphs
+    // Split into 2, logs, and optional charts
     let lower_main = Layout::default()
         .direction(Direction::Vertical)
         .constraints(lower_split.as_ref())
