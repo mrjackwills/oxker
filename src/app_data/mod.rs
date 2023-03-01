@@ -428,12 +428,6 @@ impl AppData {
                     .to_string(),
             );
 
-            let rx_count = count(&container.rx.to_string());
-            let tx_count = count(&container.tx.to_string());
-            let image_count = count(&container.image);
-            let name_count = count(&container.name);
-            let state_count = count(&container.state.to_string());
-            let status_count = count(&container.status);
             let mem_current_count = count(
                 &container
                     .mem_stats
@@ -441,35 +435,16 @@ impl AppData {
                     .unwrap_or(&ByteStats::default())
                     .to_string(),
             );
-            let mem_limit_count = count(&container.mem_limit.to_string());
 
-            if cpu_count > columns.cpu.1 {
-                columns.cpu.1 = cpu_count;
-            };
-            if image_count > columns.image.1 {
-                columns.image.1 = image_count;
-            };
-            if mem_current_count > columns.mem.1 {
-                columns.mem.1 = mem_current_count;
-            };
-            if mem_limit_count > columns.mem.2 {
-                columns.mem.2 = mem_limit_count;
-            };
-            if name_count > columns.name.1 {
-                columns.name.1 = name_count;
-            };
-            if state_count > columns.state.1 {
-                columns.state.1 = state_count;
-            };
-            if status_count > columns.status.1 {
-                columns.status.1 = status_count;
-            };
-            if rx_count > columns.net_rx.1 {
-                columns.net_rx.1 = rx_count;
-            };
-            if tx_count > columns.net_tx.1 {
-                columns.net_tx.1 = tx_count;
-            };
+            columns.cpu.1 = columns.cpu.1.max(cpu_count);
+            columns.image.1 = columns.image.1.max(count(&container.image));
+            columns.mem.1 = columns.mem.1.max(mem_current_count);
+            columns.mem.2 = columns.mem.2.max(count(&container.mem_limit.to_string()));
+            columns.name.1 = columns.name.1.max(count(&container.name));
+            columns.net_rx.1 = columns.net_rx.1.max(count(&container.rx.to_string()));
+            columns.net_tx.1 = columns.net_tx.1.max(count(&container.tx.to_string()));
+            columns.state.1 = columns.state.1.max(count(&container.state.to_string()));
+            columns.status.1 = columns.status.1.max(count(&container.status));
         }
         columns
     }
