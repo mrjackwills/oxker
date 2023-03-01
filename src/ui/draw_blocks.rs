@@ -496,7 +496,7 @@ struct HelpInfo {
 }
 
 impl HelpInfo {
-    /// Find the max width of a Span in &[Spans], although it isn't calulating it correctly
+    /// Find the max width of a Span in &[Spans], although it isn't calculating it correctly
     fn calc_width(spans: &[Spans]) -> usize {
         spans
             .iter()
@@ -526,6 +526,7 @@ impl HelpInfo {
         Self::span(input, Color::White)
     }
 
+    /// Generate the `oxker` name span + metadata
     fn gen_name() -> Self {
         let mut spans = NAME_TEXT
             .lines()
@@ -542,6 +543,7 @@ impl HelpInfo {
         }
     }
 
+    /// Generate the description span + metadata
     fn gen_description() -> Self {
         let spans = [
             Self::empty_span(),
@@ -557,6 +559,7 @@ impl HelpInfo {
         }
     }
 
+    /// Generate the button information span + metadata
     fn gen_button() -> Self {
         let button_item = |x: &str| Self::white_span(&format!(" {x} "));
         let button_desc = |x: &str| Self::black_span(x);
@@ -625,6 +628,7 @@ impl HelpInfo {
         }
     }
 
+    /// Generate the final lines, GitHub link etc, + metadata
     fn gen_final() -> Self {
         let spans = [
             Self::empty_span(),
