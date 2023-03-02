@@ -114,11 +114,11 @@ impl Ui {
             if self.now.elapsed() >= std::time::Duration::from_secs(1) {
                 seconds -= 1;
                 self.now = Instant::now();
+				if seconds < 1 {
+					break;
+				}
             }
 
-            if seconds < 1 {
-                break;
-            }
 
             if self
                 .terminal

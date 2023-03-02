@@ -7,7 +7,7 @@
 + comments improved, [ec962295a8789ff8010604e974969bf618ea7108]
 
 ### Features
-+ Mouse capture is now more fined grained, should have substantial performace impact on low end machines, as well as fixing intermittent mouse events output bug, [0a1b53111627206cc7436589e5b7212e1b72edb8]
++ Mouse capture is now more specific, should have substantial performance impact on low end machines (i.e. raspberry pi), as well as fixing intermittent mouse events output bug, [0a1b53111627206cc7436589e5b7212e1b72edb8]
 + Improve the styling of the help information popup, [28de74b866f07c8543e46be3cab929eff28953fd]
 + use checked_sub & checked_div for bounds checks, [72279e26ae996353c95a75527f704bac1e4bcf4d]
 
@@ -15,7 +15,7 @@
 + Dead code removed, [b8f5792d1865d3a398cd7f23aa9473a55dc6ea44]
 + improve the get_width function, [04c26fe8fc7c79506921b9cff42825b1ee132737]
 + Place ui methods into a Ui struct, [3437df59884f084624031fceb34ea3012a8e2251]
-+ get_horizotal/vertical contraints into single method, [e8f5cf9c6f8cd5f807a05fb61e31d7cd1426486f]
++ get_horizotal/vertical constraints into single method, [e8f5cf9c6f8cd5f807a05fb61e31d7cd1426486f]
 + docker update_everything variables, [074cb957f274675a468f08fecb1c43ff7453217d]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.2.3'>v0.2.3</a>
