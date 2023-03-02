@@ -203,7 +203,7 @@ impl AppData {
         self.containers.start();
     }
 
-    // select the last container
+    /// select the last container
     pub fn containers_end(&mut self) {
         self.containers.end();
     }
@@ -213,7 +213,7 @@ impl AppData {
         self.containers.next();
     }
 
-    // select the previous container
+    /// select the previous container
     pub fn containers_previous(&mut self) {
         self.containers.previous();
     }
@@ -494,9 +494,7 @@ impl AppData {
             container.mem_limit.update(mem_limit);
         }
         // need to benchmark this?
-        // if self.get_sorted().is_some() {
         self.sort_containers();
-        // }
     }
 
     /// Update, or insert, containers

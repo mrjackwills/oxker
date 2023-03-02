@@ -1,6 +1,6 @@
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, Event, EnableMouseCapture},
+    event::{self, DisableMouseCapture, Event},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -96,7 +96,7 @@ impl Ui {
         Terminal::new(backend)
     }
 
-    // This is a fix for mouse-events being printed to screen, read an event and do nothing with it
+    /// This is a fix for mouse-events being printed to screen, read an event and do nothing with it
     fn nullify_event_read(&self) {
         if crossterm::event::poll(self.input_poll_rate).unwrap_or(true) {
             event::read().ok();
