@@ -1,6 +1,6 @@
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, Event},
+    event::{self, DisableMouseCapture, Event, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -8,6 +8,7 @@ use parking_lot::Mutex;
 use std::{
     io::{self, Stdout, Write},
     sync::{atomic::Ordering, Arc},
+    time::Duration,
 };
 use std::{sync::atomic::AtomicBool, time::Instant};
 use tokio::sync::mpsc::Sender;
@@ -33,13 +34,14 @@ pub struct Ui {
     app_data: Arc<Mutex<AppData>>,
     docker_sx: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
+    input_poll_rate: Duration,
     is_running: Arc<AtomicBool>,
     now: Instant,
     sender: Sender<InputMessages>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
-/// Enable moust capture, but don't enable all the mouse movements, which improves performance, and fixes the weird mouse event output bug
+/// Enable mouse capture, but don't enable all the mouse movements, which improves performance, and is part of the fix for the weird mouse event output bug
 pub fn enable_mouse_capture() {
     io::stdout()
         .write_all(
@@ -67,6 +69,7 @@ impl Ui {
                 app_data,
                 docker_sx,
                 gui_state,
+                input_poll_rate: std::time::Duration::from_millis(100),
                 is_running,
                 now: Instant::now(),
                 sender,
@@ -93,16 +96,23 @@ impl Ui {
         Terminal::new(backend)
     }
 
+    // This is a fix for mouse-events being printed to screen, read an event and do nothing with it
+    fn nullify_event_read(&self) {
+        if crossterm::event::poll(self.input_poll_rate).unwrap_or(true) {
+            event::read().ok();
+        }
+    }
+
     /// reset the terminal back to default settings
     pub fn reset_terminal(&mut self) -> Result<()> {
         self.terminal.clear()?;
 
-        disable_raw_mode()?;
         execute!(
             self.terminal.backend_mut(),
             LeaveAlternateScreen,
             DisableMouseCapture
         )?;
+        disable_raw_mode()?;
         self.terminal.show_cursor()?;
         Ok(())
     }
@@ -114,11 +124,13 @@ impl Ui {
             if self.now.elapsed() >= std::time::Duration::from_secs(1) {
                 seconds -= 1;
                 self.now = Instant::now();
-				if seconds < 1 {
-					break;
-				}
+                if seconds < 1 {
+                    break;
+                }
             }
 
+            // This is a fix for mouse-events being printed to screen
+            self.nullify_event_read();
 
             if self
                 .terminal
@@ -133,7 +145,6 @@ impl Ui {
 
     /// The loop for drawing the main UI to the terminal
     async fn gui_loop(&mut self) -> Result<(), AppError> {
-        let input_poll_rate = std::time::Duration::from_millis(100);
         let update_duration =
             std::time::Duration::from_millis(u64::from(self.app_data.lock().args.docker_interval));
 
@@ -145,7 +156,7 @@ impl Ui {
             {
                 return Err(AppError::Terminal);
             }
-            if crossterm::event::poll(input_poll_rate).unwrap_or(false) {
+            if crossterm::event::poll(self.input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
                         self.sender
@@ -186,7 +197,7 @@ impl Ui {
         } else {
             self.gui_loop().await?;
         }
-
+        self.nullify_event_read();
         Ok(())
     }
 }
