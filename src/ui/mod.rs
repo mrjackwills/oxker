@@ -43,17 +43,16 @@ pub struct Ui {
 
 impl Ui {
     /// Enable mouse capture, but don't enable capture of all the mouse movements, doing so will improve performance, and is part of the fix for the weird mouse event output bug
-    pub fn enable_mouse_capture() {
-        io::stdout()
-            .write_all(
-                concat!(
-                    crossterm::csi!("?1000h"),
-                    crossterm::csi!("?1015h"),
-                    crossterm::csi!("?1006h"),
-                )
-                .as_bytes(),
+    pub fn enable_mouse_capture() -> Result<()> {
+        io::stdout().write_all(
+            concat!(
+                crossterm::csi!("?1000h"),
+                crossterm::csi!("?1015h"),
+                crossterm::csi!("?1006h"),
             )
-            .unwrap_or(());
+            .as_bytes(),
+        )?;
+        Ok(())
     }
 
     /// Create a new Ui struct, and execute the drawing loop
@@ -87,13 +86,13 @@ impl Ui {
     }
 
     /// Setup the terminal for full-screen drawing mode, with mouse capture
-    fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<Stdout>>> {
+    fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
         enable_raw_mode()?;
         let mut stdout = io::stdout();
         execute!(stdout, EnterAlternateScreen)?;
-        Self::enable_mouse_capture();
+        Self::enable_mouse_capture()?;
         let backend = CrosstermBackend::new(stdout);
-        Terminal::new(backend)
+        Ok(Terminal::new(backend)?)
     }
 
     /// This is a fix for mouse-events being printed to screen, read an event and do nothing with it
