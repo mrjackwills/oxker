@@ -128,9 +128,6 @@ impl Ui {
                 }
             }
 
-            // This is a fix for mouse-events being printed to screen
-            self.nullify_event_read();
-
             if self
                 .terminal
                 .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
@@ -159,14 +156,21 @@ impl Ui {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
                         self.sender
-                            .send(InputMessages::ButtonPress(key.code))
+                            .send(InputMessages::ButtonPress((key.code, key.modifiers)))
                             .await
                             .unwrap_or(());
                     } else if let Event::Mouse(m) = event {
-                        self.sender
-                            .send(InputMessages::MouseEvent(m))
-                            .await
-                            .unwrap_or(());
+                        match m.kind {
+                            event::MouseEventKind::Down(_)
+                            | event::MouseEventKind::ScrollDown
+                            | event::MouseEventKind::ScrollUp => {
+                                self.sender
+                                    .send(InputMessages::MouseEvent(m))
+                                    .await
+                                    .unwrap_or(());
+                            }
+                            _ => (),
+                        }
                     } else if let Event::Resize(_, _) = event {
                         self.gui_state.lock().clear_area_map();
                         self.terminal.autoresize().unwrap_or(());
