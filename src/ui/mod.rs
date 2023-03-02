@@ -42,7 +42,7 @@ pub struct Ui {
 }
 
 impl Ui {
-    /// Enable mouse capture, but don't enable all the mouse movements, which improves performance, and is part of the fix for the weird mouse event output bug
+    /// Enable mouse capture, but don't enable capture of all the mouse movements, doing so will improve performance, and is part of the fix for the weird mouse event output bug
     pub fn enable_mouse_capture() {
         io::stdout()
             .write_all(
