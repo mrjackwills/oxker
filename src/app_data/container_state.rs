@@ -142,7 +142,7 @@ impl State {
             _ => Color::Red,
         }
     }
-    // Dirty way to create order for the state, rather than impl Ord
+    /// Dirty way to create order for the state, rather than impl Ord
     pub const fn order(self) -> u8 {
         match self {
             Self::Running => 0,

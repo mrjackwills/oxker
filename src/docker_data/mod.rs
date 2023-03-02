@@ -7,10 +7,7 @@ use futures_util::StreamExt;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::{atomic::AtomicBool, Arc},
 };
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 use uuid::Uuid;
@@ -407,7 +404,8 @@ impl DockerData {
                         .values()
                         .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
-                    self.is_running.store(false, Ordering::SeqCst);
+                    self.is_running
+                        .store(false, std::sync::atomic::Ordering::SeqCst);
                 }
             }
         }
@@ -436,7 +434,6 @@ impl DockerData {
                 spawns: Arc::new(Mutex::new(HashMap::new())),
             };
             inner.initialise_container_data().await;
-
             inner.message_handler().await;
         }
     }

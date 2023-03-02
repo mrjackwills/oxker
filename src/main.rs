@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![warn(
-	clippy::nursery,
-	clippy::pedantic,
+    clippy::nursery,
+    clippy::pedantic,
     clippy::expect_used,
     clippy::todo,
     clippy::unused_async,
@@ -23,7 +23,7 @@ use docker_data::DockerData;
 use input_handler::InputMessages;
 use parking_lot::Mutex;
 use parse_args::CliArgs;
-use std::{sync::{atomic::AtomicBool, Arc}, io::Write};
+use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{info, Level};
 
@@ -34,7 +34,7 @@ mod input_handler;
 mod parse_args;
 mod ui;
 
-use ui::{create_ui, GuiState, Status};
+use ui::{GuiState, Status, Ui};
 
 use crate::docker_data::DockerMessage;
 
@@ -132,9 +132,7 @@ async fn main() {
     handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running);
 
     if args.gui {
-        create_ui(app_data, docker_sx, gui_state, is_running, input_sx)
-            .await
-            .unwrap_or(());
+        Ui::create(app_data, docker_sx, gui_state, is_running, input_sx).await;
     } else {
         // Debug mode for testing, mostly pointless, doesn't take terminal
         info!("in debug mode");
@@ -146,6 +144,4 @@ async fn main() {
             .await;
         }
     }
-	// Clear screen
-	std::io::stdout().flush().unwrap_or(());
 }
