@@ -481,61 +481,240 @@ pub fn heading_bar<B: Backend>(
 
 /// From a given &str, return the maximum number of chars on a single line
 fn max_line_width(text: &str) -> usize {
-    let mut max_line_width = 0;
-    text.lines().into_iter().for_each(|line| {
-        let width = line.chars().count();
-        if width > max_line_width {
-            max_line_width = width;
+    text.lines()
+        .into_iter()
+        .map(|i| i.chars().count())
+        .max()
+        .unwrap_or_default()
+}
+
+/// Help popup box needs these three pieces of information
+struct HelpInfo {
+    spans: Vec<Spans<'static>>,
+    width: usize,
+    height: usize,
+}
+
+impl HelpInfo {
+    /// Find the max width of a Span in &[Spans], although it isn't calculating it correctly
+    fn calc_width(spans: &[Spans]) -> usize {
+        spans
+            .iter()
+            .flat_map(|x| x.0.iter())
+            .map(tui::text::Span::width)
+            .max()
+            .unwrap_or(1)
+    }
+
+    /// Just an empty span, i.e. a new line
+    fn empty_span<'a>() -> Spans<'a> {
+        Spans::from(String::new())
+    }
+
+    /// generate a span, of given &str and given color
+    fn span<'a>(input: &str, color: Color) -> Span<'a> {
+        Span::styled(input.to_owned(), Style::default().fg(color))
+    }
+
+    /// Span to black text span
+    fn black_span<'a>(input: &str) -> Span<'a> {
+        Self::span(input, Color::Black)
+    }
+
+    /// Span to white text span
+    fn white_span<'a>(input: &str) -> Span<'a> {
+        Self::span(input, Color::White)
+    }
+
+    /// Generate the `oxker` name span + metadata
+    fn gen_name() -> Self {
+        let mut spans = NAME_TEXT
+            .lines()
+            .into_iter()
+            .map(|i| Spans::from(Self::white_span(i)))
+            .collect::<Vec<_>>();
+        spans.insert(0, Self::empty_span());
+        let width = Self::calc_width(&spans);
+        let height = spans.len();
+        Self {
+            spans,
+            width,
+            height,
         }
-    });
-    max_line_width
+    }
+
+    /// Generate the description span + metadata
+    fn gen_description() -> Self {
+        let spans = [
+            Self::empty_span(),
+            Spans::from(Self::white_span(DESCRIPTION)),
+            Self::empty_span(),
+        ];
+        let width = Self::calc_width(&spans);
+        let height = spans.len();
+        Self {
+            spans: spans.to_vec(),
+            width,
+            height,
+        }
+    }
+
+    /// Generate the button information span + metadata
+    fn gen_button() -> Self {
+        let button_item = |x: &str| Self::white_span(&format!(" {x} "));
+        let button_desc = |x: &str| Self::black_span(x);
+        let or = || button_desc("or");
+        let space = || button_desc(" ");
+
+        let spans = [
+            Spans::from(vec![
+                space(),
+                button_item("( tab )"),
+                or(),
+                button_item("( shift+tab )"),
+                button_desc("to change panels"),
+            ]),
+            Spans::from(vec![
+                space(),
+                button_item("( ↑ ↓ )"),
+                or(),
+                button_item("( j k )"),
+                or(),
+                button_item("( PgUp PgDown )"),
+                or(),
+                button_item("( Home End )"),
+                button_desc("to change selected line"),
+            ]),
+            Spans::from(vec![
+                space(),
+                button_item("( enter )"),
+                button_desc("to send docker container command"),
+            ]),
+            Spans::from(vec![
+                space(),
+                button_item("( h )"),
+                button_desc("to toggle this help information"),
+            ]),
+            Spans::from(vec![
+                space(),
+                button_item("( 0 )"),
+                button_desc("to stop sort"),
+            ]),
+            Spans::from(vec![
+                space(),
+                button_item("( 1 - 9 )"),
+                button_desc("sort by header - or click header"),
+            ]),
+            Spans::from(vec![
+				space(),
+				button_item("( m )"),
+				button_desc(
+					"to toggle mouse capture - if disabled, text on screen can be selected & copied",
+				),
+			]),
+            Spans::from(vec![
+                space(),
+                button_item("( q )"),
+                button_desc("to quit at any time"),
+            ]),
+        ];
+
+        let height = spans.len();
+        let width = Self::calc_width(&spans);
+        Self {
+            spans: spans.to_vec(),
+            width,
+            height,
+        }
+    }
+
+    /// Generate the final lines, GitHub link etc, + metadata
+    fn gen_final() -> Self {
+        let spans = [
+            Self::empty_span(),
+            Spans::from(vec![Self::black_span(
+                "currently an early work in progress, all and any input appreciated",
+            )]),
+            Spans::from(vec![Span::styled(
+                REPO.to_owned(),
+                Style::default()
+                    .bg(Color::Magenta)
+                    .fg(Color::Black)
+                    .add_modifier(Modifier::UNDERLINED),
+            )]),
+        ];
+        let height = spans.len();
+        let width = Self::calc_width(&spans);
+        Self {
+            spans: spans.to_vec(),
+            width,
+            height,
+        }
+    }
 }
 
 /// Draw the help box in the centre of the screen
-/// TODO should make every line it's own renderable span
 pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
     let title = format!(" {VERSION} ");
 
-    let description_text = format!("\n{DESCRIPTION}");
+    let name_info = HelpInfo::gen_name();
+    let description_info = HelpInfo::gen_description();
+    let button_info = HelpInfo::gen_button();
+    let final_info = HelpInfo::gen_final();
 
-    let mut help_text = String::from("\n  ( tab )  or ( shift+tab ) to change panels");
-    help_text
-        .push_str("\n  ( ↑ ↓ ) or ( j k ) or (PgUp PgDown) or (Home End) to change selected line");
-    help_text.push_str("\n  ( enter ) to send docker container commands");
-    help_text.push_str("\n  ( h ) to toggle this help information");
-    help_text.push_str("\n  ( 0 ) stop sort");
-    help_text.push_str("\n  ( 1 - 9 ) sort by header - or click header");
-    help_text.push_str(
-        "\n  ( m ) to toggle mouse capture - if disabled, text on screen can be selected & copied",
+    // have to add 10, but shouldn't need to, is an error somewhere
+    let max_line_width = [
+        name_info.width,
+        description_info.width,
+        button_info.width,
+        final_info.width,
+    ]
+    .into_iter()
+    .max()
+    .unwrap_or_default()
+        + 10;
+    let max_height =
+        name_info.height + description_info.height + button_info.height + final_info.height + 2;
+
+    let area = popup(
+        max_height,
+        max_line_width,
+        f.size(),
+        BoxLocation::MiddleCentre,
     );
-    help_text.push_str("\n  ( q ) to quit at any time");
-    help_text.push_str("\n  mouse scrolling & clicking also available");
-    help_text.push_str("\n\n  currently an early work in progress, all and any input appreciated");
-    help_text.push_str(format!("\n  {}", REPO.trim()).as_str());
 
-    // Find the maximum line widths & height
-    let all_text = format!("{NAME_TEXT}{description_text}{help_text}");
-    let mut max_line_width = max_line_width(&all_text);
-    let mut lines = all_text.lines().count();
+    let split_popup = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Max(name_info.height.try_into().unwrap_or_default()),
+                Constraint::Max(description_info.height.try_into().unwrap_or_default()),
+                Constraint::Max(button_info.height.try_into().unwrap_or_default()),
+                Constraint::Max(final_info.height.try_into().unwrap_or_default()),
+            ]
+            .as_ref(),
+        )
+        .split(area);
 
-    // Add some vertical and horizontal padding to the info box
-    lines += 3;
-    max_line_width += 4;
-
-    let name_paragraph = Paragraph::new(NAME_TEXT)
+    let name_paragraph = Paragraph::new(name_info.spans)
         .style(Style::default().bg(Color::Magenta).fg(Color::White))
         .block(Block::default())
         .alignment(Alignment::Center);
 
-    let description_paragraph = Paragraph::new(description_text.as_str())
+    let description_paragraph = Paragraph::new(description_info.spans)
         .style(Style::default().bg(Color::Magenta).fg(Color::Black))
         .block(Block::default())
         .alignment(Alignment::Center);
 
-    let help_paragraph = Paragraph::new(help_text.as_str())
+    let help_paragraph = Paragraph::new(button_info.spans)
         .style(Style::default().bg(Color::Magenta).fg(Color::Black))
         .block(Block::default())
         .alignment(Alignment::Left);
+
+    let final_paragraph = Paragraph::new(final_info.spans)
+        .style(Style::default().bg(Color::Magenta).fg(Color::Black))
+        .block(Block::default())
+        .alignment(Alignment::Center);
 
     let block = Block::default()
         .title(title)
@@ -543,31 +722,12 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Black));
 
-    let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
-
-    let split_popup = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Max(NAME_TEXT.lines().count().try_into().unwrap_or_default()),
-                Constraint::Max(
-                    description_text
-                        .lines()
-                        .count()
-                        .try_into()
-                        .unwrap_or_default(),
-                ),
-                Constraint::Max(help_text.lines().count().try_into().unwrap_or_default()),
-            ]
-            .as_ref(),
-        )
-        .split(area);
-
     // Order is important here
     f.render_widget(Clear, area);
     f.render_widget(name_paragraph, split_popup[0]);
     f.render_widget(description_paragraph, split_popup[1]);
     f.render_widget(help_paragraph, split_popup[2]);
+    f.render_widget(final_paragraph, split_popup[3]);
     f.render_widget(block, area);
 }
 
@@ -640,23 +800,19 @@ pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
 /// draw a box in the one of the BoxLocations, based on max line width + number of lines
 fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocation) -> Rect {
     // Make sure blank_space can't be an negative, as will crash
-    let blank_vertical = if usize::from(r.height) > text_lines {
-        (usize::from(r.height) - text_lines) / 2
-    } else {
-        1
-    };
-    let blank_horizontal = if usize::from(r.width) > text_width {
-        (usize::from(r.width) - text_width) / 2
-    } else {
-        1
+    let calc = |x: u16, y: usize| {
+        (usize::from(x).checked_sub(y).map_or(1usize, |f| f))
+            .checked_div(2)
+            .map_or(1usize, |f| f)
     };
 
-    let v_constraints = box_location.get_vertical_constraints(
+    let blank_vertical = calc(r.height, text_lines);
+    let blank_horizontal = calc(r.width, text_width);
+
+    let (h_constraints, v_constraints) = box_location.get_constraints(
+        blank_horizontal.try_into().unwrap_or_default(),
         blank_vertical.try_into().unwrap_or_default(),
         text_lines.try_into().unwrap_or_default(),
-    );
-    let h_constraints = box_location.get_horizontal_constraints(
-        blank_horizontal.try_into().unwrap_or_default(),
         text_width.try_into().unwrap_or_default(),
     );
 
@@ -672,3 +828,15 @@ fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocatio
         .constraints(h_constraints)
         .split(popup_layout[indexes.0])[indexes.1]
 }
+
+// Draw nothing, as in a blank screen
+// pub fn nothing<B: Backend>(f: &mut Frame<'_, B>) {
+//     let whole_layout = Layout::default()
+//         .direction(Direction::Vertical)
+//         .constraints([Constraint::Min(100)].as_ref())
+//         .split(f.size());
+
+//     let block = Block::default()
+//         .borders(Borders::NONE);
+//     f.render_widget(block, whole_layout[0]);
+// }

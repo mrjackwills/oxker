@@ -4,7 +4,7 @@ oxker encourages any, and all, suggestions, bug reports, pull requests, and/or f
 
 ## Submitting Issues
 
-Please use the oxker [issue templates for](https://github.com/mrjackwills/oxker/issues/new/choose) any Bug Report, Feature Suggestions,
+Please use the oxker [issue templates](https://github.com/mrjackwills/oxker/issues/new/choose) for any Bug Report, Feature Suggestions,
 Refactor Idea, or Security Vulnerabilities.
 
 Don't hesitate to submit any issues or pull requests, regardless of size.

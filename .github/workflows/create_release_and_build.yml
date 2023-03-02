@@ -38,6 +38,7 @@ jobs:
         run: cargo install cross --git https://github.com/cross-rs/cross
 
       # Build for linux x86_64
+      # Should this actually build for musl?
       - name: build release linux_x86_64
         run: cargo build --release
       # Compress output into tar

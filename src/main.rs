@@ -1,13 +1,13 @@
 #![forbid(unsafe_code)]
 #![warn(
+    clippy::nursery,
+    clippy::pedantic,
     clippy::expect_used,
     clippy::todo,
     clippy::unused_async,
     clippy::unwrap_used
 )]
 // Warning - These are indeed pedantic
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
 #![allow(
     clippy::module_name_repetitions,
     clippy::doc_markdown,
@@ -34,12 +34,12 @@ mod input_handler;
 mod parse_args;
 mod ui;
 
-use ui::{create_ui, GuiState, Status};
+use ui::{GuiState, Status, Ui};
 
 use crate::docker_data::DockerMessage;
 
 // this is the entry point when running as a Docker Container, and is used, in conjunction with the `CONTAINER_ENV` ENV, to check if we are running as a Docker Container
-const ENTRY_POINT: &str = "./app/oxker";
+const ENTRY_POINT: &str = "/app/oxker";
 const ENV_KEY: &str = "OXKER_RUNTIME";
 const ENV_VALUE: &str = "container";
 
@@ -132,9 +132,7 @@ async fn main() {
     handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running);
 
     if args.gui {
-        create_ui(app_data, docker_sx, gui_state, is_running, input_sx)
-            .await
-            .unwrap_or(());
+        Ui::create(app_data, docker_sx, gui_state, is_running, input_sx).await;
     } else {
         // Debug mode for testing, mostly pointless, doesn't take terminal
         info!("in debug mode");

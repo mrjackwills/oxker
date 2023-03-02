@@ -4,9 +4,7 @@ use std::sync::{
 };
 
 use crossterm::{
-    event::{
-        DisableMouseCapture, EnableMouseCapture, KeyCode, MouseButton, MouseEvent, MouseEventKind,
-    },
+    event::{DisableMouseCapture, KeyCode, MouseButton, MouseEvent, MouseEventKind},
     execute,
 };
 use parking_lot::Mutex;
@@ -21,7 +19,7 @@ use crate::{
     app_data::{AppData, DockerControls, Header},
     app_error::AppError,
     docker_data::DockerMessage,
-    ui::{GuiState, SelectablePanel, Status},
+    ui::{GuiState, SelectablePanel, Status, Ui},
 };
 pub use message::InputMessages;
 
@@ -82,27 +80,23 @@ impl InputHandler {
     /// Toggle the mouse capture (via input of the 'm' key)
     fn m_key(&mut self) {
         if self.mouse_capture {
-            match execute!(std::io::stdout(), DisableMouseCapture) {
-                Ok(_) => self
-                    .gui_state
+            if execute!(std::io::stdout(), DisableMouseCapture).is_ok() {
+                self.gui_state
                     .lock()
-                    .set_info_box("✖ mouse capture disabled".to_owned()),
-                Err(_) => {
-                    self.app_data
-                        .lock()
-                        .set_error(AppError::MouseCapture(false));
-                }
+                    .set_info_box("✖ mouse capture disabled".to_owned());
+            } else {
+                self.app_data
+                    .lock()
+                    .set_error(AppError::MouseCapture(false));
+                self.gui_state.lock().status_push(Status::Error);
             }
+        } else if Ui::enable_mouse_capture().is_ok() {
+            self.gui_state
+                .lock()
+                .set_info_box("✓ mouse capture enabled".to_owned());
         } else {
-            match execute!(std::io::stdout(), EnableMouseCapture) {
-                Ok(_) => self
-                    .gui_state
-                    .lock()
-                    .set_info_box("✓ mouse capture enabled".to_owned()),
-                Err(_) => {
-                    self.app_data.lock().set_error(AppError::MouseCapture(true));
-                }
-            }
+            self.app_data.lock().set_error(AppError::MouseCapture(true));
+            self.gui_state.lock().status_push(Status::Error);
         };
 
         // If the info box sleep handle is currently being executed, as in 'm' is pressed twice within a 4000ms window
@@ -134,7 +128,8 @@ impl InputHandler {
             .lock()
             .status_contains(&[Status::Error, Status::Init]);
         if error_init || self.docker_sender.send(DockerMessage::Quit).await.is_err() {
-            self.is_running.store(false, Ordering::SeqCst);
+            self.is_running
+                .store(false, std::sync::atomic::Ordering::SeqCst);
         }
     }
 

@@ -7,10 +7,7 @@ use futures_util::StreamExt;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::{atomic::AtomicBool, Arc},
 };
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 use uuid::Uuid;
@@ -34,7 +31,7 @@ enum SpawnId {
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
 /// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
 /// Binate value is toggled when all handles have been spawned off
-/// Also effectively means that if the docker_update interval minimum will be 1000ms
+/// Also effectively means that the docker_update interval minimum will be 1000ms
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 enum Binate {
     One,
@@ -176,7 +173,7 @@ impl DockerData {
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
-    /// If in a containerised runtime, will ignore any container that uses the q`./app/oxker` as an entry point, unless the `-s` flag is set
+    /// If in a containerised runtime, will ignore any container that uses the `/app/oxker` as an entry point, unless the `-s` flag is set
     pub async fn update_all_containers(&mut self) -> Vec<(bool, ContainerId)> {
         let containers = self
             .docker
@@ -270,14 +267,14 @@ impl DockerData {
     async fn update_everything(&mut self) {
         let all_ids = self.update_all_containers().await;
         if let Some(container) = self.app_data.lock().get_selected_container() {
-            let id = container.id.clone();
             let last_updated = container.last_updated;
             self.spawns
                 .lock()
-                .entry(SpawnId::Log(id.clone()))
+                .entry(SpawnId::Log(container.id.clone()))
                 .or_insert_with(|| {
-                    let docker = Arc::clone(&self.docker);
                     let app_data = Arc::clone(&self.app_data);
+                    let docker = Arc::clone(&self.docker);
+                    let id = container.id.clone();
                     let spawns = Arc::clone(&self.spawns);
                     tokio::spawn(Self::update_log(app_data, docker, id, last_updated, spawns))
                 });
@@ -407,7 +404,8 @@ impl DockerData {
                         .values()
                         .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
-                    self.is_running.store(false, Ordering::SeqCst);
+                    self.is_running
+                        .store(false, std::sync::atomic::Ordering::SeqCst);
                 }
             }
         }
@@ -436,7 +434,6 @@ impl DockerData {
                 spawns: Arc::new(Mutex::new(HashMap::new())),
             };
             inner.initialise_container_data().await;
-
             inner.message_handler().await;
         }
     }
