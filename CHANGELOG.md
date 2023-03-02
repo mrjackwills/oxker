@@ -7,7 +7,7 @@
 + comments improved, [ec962295a8789ff8010604e974969bf618ea7108]
 
 ### Features
-+ Mouse capture is now more specific, should have substantial performance impact, especially on low end machines (i.e. raspberry pi), as well as fixing intermittent mouse events output bug, [0a1b53111627206cc7436589e5b7212e1b72edb8], [93f7c07f708885f8870da5dfb6d57c62f93c9c78], [c74f6c1179b5f62989eb74f395a56b43a8781b03]
++ Mouse capture is now more specific, should have substantial performance impact, two to four time reduction in cpu usage when mouse is moved, especially on low end machines (i.e. raspberry pi), as well as fixing intermittent mouse events output bug, [0a1b53111627206cc7436589e5b7212e1b72edb8], [93f7c07f708885f8870da5dfb6d57c62f93c9c78], [c74f6c1179b5f62989eb74f395a56b43a8781b03]
 + Improve the styling of the help information popup, [28de74b866f07c8543e46be3cab929eff28953fd]
 + use checked_sub & checked_div for bounds checks, [72279e26ae996353c95a75527f704bac1e4bcf4d]
 
