@@ -19,7 +19,7 @@ use crate::{
     app_data::{AppData, DockerControls, Header},
     app_error::AppError,
     docker_data::DockerMessage,
-    ui::{enable_mouse_capture, GuiState, SelectablePanel, Status},
+    ui::{GuiState, SelectablePanel, Status, Ui},
 };
 pub use message::InputMessages;
 
@@ -92,7 +92,7 @@ impl InputHandler {
                 }
             }
         } else {
-            enable_mouse_capture();
+            Ui::enable_mouse_capture();
             self.gui_state
                 .lock()
                 .set_info_box("✓ mouse capture enabled".to_owned());

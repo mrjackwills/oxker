@@ -41,21 +41,21 @@ pub struct Ui {
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
-/// Enable mouse capture, but don't enable all the mouse movements, which improves performance, and is part of the fix for the weird mouse event output bug
-pub fn enable_mouse_capture() {
-    io::stdout()
-        .write_all(
-            concat!(
-                crossterm::csi!("?1000h"),
-                crossterm::csi!("?1015h"),
-                crossterm::csi!("?1006h"),
-            )
-            .as_bytes(),
-        )
-        .unwrap_or(());
-}
-
 impl Ui {
+    /// Enable mouse capture, but don't enable all the mouse movements, which improves performance, and is part of the fix for the weird mouse event output bug
+    pub fn enable_mouse_capture() {
+        io::stdout()
+            .write_all(
+                concat!(
+                    crossterm::csi!("?1000h"),
+                    crossterm::csi!("?1015h"),
+                    crossterm::csi!("?1006h"),
+                )
+                .as_bytes(),
+            )
+            .unwrap_or(());
+    }
+
     /// Create a new Ui struct, and execute the drawing loop
     pub async fn create(
         app_data: Arc<Mutex<AppData>>,
@@ -91,7 +91,7 @@ impl Ui {
         enable_raw_mode()?;
         let mut stdout = io::stdout();
         execute!(stdout, EnterAlternateScreen)?;
-        enable_mouse_capture();
+        Self::enable_mouse_capture();
         let backend = CrosstermBackend::new(stdout);
         Terminal::new(backend)
     }
