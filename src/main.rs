@@ -19,10 +19,6 @@
 use app_data::AppData;
 use app_error::AppError;
 use bollard::Docker;
-use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
-    execute,
-};
 use docker_data::DockerData;
 use input_handler::InputMessages;
 use parking_lot::Mutex;
@@ -67,15 +63,6 @@ fn check_if_containerised() -> bool {
     }
 }
 
-/// Set is_running to false, disable mouse capture, due to weird bug on Linux & WSL terminals
-/// where mouse movement will be piped to the stdout
-fn stop_running(is_running: &AtomicBool) {
-    std::thread::spawn(|| {
-        execute!(std::io::stdout(), EnableMouseCapture).unwrap_or(());
-        execute!(std::io::stdout(), DisableMouseCapture).unwrap_or(());
-    });
-    is_running.store(false, std::sync::atomic::Ordering::SeqCst);
-}
 /// Create docker daemon handler, and only spawn up the docker data handler if a ping returns non-error
 async fn docker_init(
     app_data: &Arc<Mutex<AppData>>,

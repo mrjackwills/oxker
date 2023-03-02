@@ -1,12 +1,12 @@
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event},
+    event::{self, DisableMouseCapture, Event},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use parking_lot::Mutex;
 use std::{
-    io::{self, Stdout},
+    io::{self, Stdout, Write},
     sync::{atomic::Ordering, Arc},
 };
 use std::{sync::atomic::AtomicBool, time::Instant};
@@ -37,6 +37,20 @@ pub struct Ui {
     now: Instant,
     sender: Sender<InputMessages>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
+}
+
+/// Enable moust capture, but don't enable all the mouse movements, which improves performance, and fixes the weird mouse event output bug
+pub fn enable_mouse_capture() {
+    io::stdout()
+        .write_all(
+            concat!(
+                crossterm::csi!("?1000h"),
+                crossterm::csi!("?1015h"),
+                crossterm::csi!("?1006h"),
+            )
+            .as_bytes(),
+        )
+        .unwrap_or(());
 }
 
 impl Ui {
@@ -73,7 +87,8 @@ impl Ui {
     fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<Stdout>>> {
         enable_raw_mode()?;
         let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+        execute!(stdout, EnterAlternateScreen)?;
+        enable_mouse_capture();
         let backend = CrosstermBackend::new(stdout);
         Terminal::new(backend)
     }
@@ -96,12 +111,6 @@ impl Ui {
     fn err_loop(&mut self) -> Result<(), AppError> {
         let mut seconds = 5;
         loop {
-            // This is a fix for a weird bug on Linux + WSL which will output mouse movement to stdout
-            std::thread::spawn(|| {
-                execute!(io::stdout(), EnableMouseCapture).unwrap_or(());
-                execute!(io::stdout(), DisableMouseCapture).unwrap_or(());
-            });
-
             if self.now.elapsed() >= std::time::Duration::from_secs(1) {
                 seconds -= 1;
                 self.now = Instant::now();
@@ -124,14 +133,14 @@ impl Ui {
 
     /// The loop for drawing the main UI to the terminal
     async fn gui_loop(&mut self) -> Result<(), AppError> {
-        let input_poll_rate = std::time::Duration::from_millis(1);
+        let input_poll_rate = std::time::Duration::from_millis(100);
         let update_duration =
             std::time::Duration::from_millis(u64::from(self.app_data.lock().args.docker_interval));
 
         while self.is_running.load(Ordering::SeqCst) {
             if self
                 .terminal
-                .draw(|frame| ui_frame(frame, &self.app_data, &self.gui_state))
+                .draw(|frame| draw_frame(frame, &self.app_data, &self.gui_state))
                 .is_err()
             {
                 return Err(AppError::Terminal);
@@ -183,7 +192,7 @@ impl Ui {
 }
 
 /// Draw the main ui to a frame of the terminal
-fn ui_frame<B: Backend>(
+fn draw_frame<B: Backend>(
     f: &mut Frame<'_, B>,
     app_data: &Arc<Mutex<AppData>>,
     gui_state: &Arc<Mutex<GuiState>>,

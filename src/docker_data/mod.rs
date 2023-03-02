@@ -16,7 +16,6 @@ use crate::{
     app_data::{AppData, ContainerId, DockerControls},
     app_error::AppError,
     parse_args::CliArgs,
-    stop_running,
     ui::{GuiState, Status},
     ENTRY_POINT,
 };
@@ -405,7 +404,8 @@ impl DockerData {
                         .values()
                         .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
-                    stop_running(&self.is_running);
+                    self.is_running
+                        .store(false, std::sync::atomic::Ordering::SeqCst);
                 }
             }
         }
