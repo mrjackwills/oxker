@@ -11,6 +11,9 @@
 + Improve the styling of the help information popup, [28de74b866f07c8543e46be3cab929eff28953fd]
 + use checked_sub & checked_div for bounds checks, [72279e26ae996353c95a75527f704bac1e4bcf4d]
 
+### Fixes
++ correctly set gui error, [340893a860e99ec4029d12613f2a6de3cb7b47e2]
+
 ### Refactors
 + Dead code removed, [b8f5792d1865d3a398cd7f23aa9473a55dc6ea44]
 + improve the get_width function, [04c26fe8fc7c79506921b9cff42825b1ee132737]
