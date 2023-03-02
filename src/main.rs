@@ -23,7 +23,10 @@ use docker_data::DockerData;
 use input_handler::InputMessages;
 use parking_lot::Mutex;
 use parse_args::CliArgs;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{info, Level};
 
@@ -134,14 +137,16 @@ async fn main() {
     if args.gui {
         Ui::create(app_data, docker_sx, gui_state, is_running, input_sx).await;
     } else {
-        // Debug mode for testing, mostly pointless, doesn't take terminal
         info!("in debug mode");
-        loop {
-            docker_sx.send(DockerMessage::Update).await.unwrap_or(());
-            tokio::time::sleep(std::time::Duration::from_millis(u64::from(
-                args.docker_interval,
-            )))
-            .await;
+        while is_running.load(Ordering::SeqCst) {
+            // Debug mode for testing, mostly pointless, doesn't take terminal
+            loop {
+                docker_sx.send(DockerMessage::Update).await.unwrap_or(());
+                tokio::time::sleep(std::time::Duration::from_millis(u64::from(
+                    args.docker_interval,
+                )))
+                .await;
+            }
         }
     }
 }

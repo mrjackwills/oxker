@@ -4,7 +4,7 @@ use std::sync::{
 };
 
 use crossterm::{
-    event::{DisableMouseCapture, KeyCode, MouseButton, MouseEvent, MouseEventKind},
+    event::{DisableMouseCapture, KeyCode, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
     execute,
 };
 use parking_lot::Mutex;
@@ -60,7 +60,7 @@ impl InputHandler {
     async fn start(&mut self) {
         while let Some(message) = self.rec.recv().await {
             match message {
-                InputMessages::ButtonPress(key_code) => self.button_press(key_code).await,
+                InputMessages::ButtonPress(key) => self.button_press(key.0, key.1).await,
                 InputMessages::MouseEvent(mouse_event) => {
                     let error_or_help = self
                         .gui_state
@@ -135,10 +135,16 @@ impl InputHandler {
 
     /// Handle any keyboard button events
     #[allow(clippy::too_many_lines)]
-    async fn button_press(&mut self, key_code: KeyCode) {
+    async fn button_press(&mut self, key_code: KeyCode, key_modififer: KeyModifiers) {
         // TODO - refactor this to a single call, maybe return Error, Help or Normal
         let contains_error = self.gui_state.lock().status_contains(&[Status::Error]);
         let contains_help = self.gui_state.lock().status_contains(&[Status::Help]);
+
+        // Quit on Ctrl + c/ Ctrl + C
+        let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
+        if key_modififer == KeyModifiers::CONTROL && is_c() {
+            self.quit().await;
+        }
 
         if contains_error {
             match key_code {
@@ -157,7 +163,11 @@ impl InputHandler {
                 _ => (),
             }
         } else {
+            // let abc = KeyEvent::new(KeyCode::Char('d'), KeyModifiers::Ctrl);
             match key_code {
+                // KeyCode::Ctrl('c') => {
+                // 	self.quit().await;
+                // }
                 KeyCode::Char('0') => self.app_data.lock().reset_sorted(),
                 KeyCode::Char('1') => self.sort(Header::State),
                 KeyCode::Char('2') => self.sort(Header::Status),
