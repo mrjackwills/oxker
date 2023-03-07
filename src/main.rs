@@ -127,8 +127,8 @@ async fn main() {
     let app_data = Arc::new(Mutex::new(AppData::default(args)));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
-    let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(16);
-    let (input_sx, input_rx) = tokio::sync::mpsc::channel(16);
+    let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(32);
+    let (input_sx, input_rx) = tokio::sync::mpsc::channel(32);
 
     docker_init(&app_data, containerised, docker_rx, &gui_state, &is_running).await;
 
