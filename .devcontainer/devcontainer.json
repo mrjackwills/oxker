@@ -7,8 +7,7 @@
 		"args": {
 			// Use the VARIANT arg to pick a Debian OS version: buster, bullseye
 			// Use bullseye when on local on arm64/Apple Silicon.
-			"VARIANT": "bullseye",
-			"BUILDKIT_INLINE_CACHE": "0"
+			"VARIANT": "bullseye"
 		}
 	},
 	"runArgs": [
