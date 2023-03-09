@@ -55,10 +55,7 @@ fn setup_tracing() {
 /// An ENV is set in the ./containerised/Dockerfile, if this is ENV found, then sleep for 250ms, else the container, for as yet unknown reasons, will close immediately
 /// returns a bool, so that the `update_all_containers()` won't bother to check the entry point unless running via a container
 fn check_if_containerised() -> bool {
-    if std::env::vars()
-        .into_iter()
-        .any(|x| x == (ENV_KEY.into(), ENV_VALUE.into()))
-    {
+    if std::env::vars().any(|x| x == (ENV_KEY.into(), ENV_VALUE.into())) {
         std::thread::sleep(std::time::Duration::from_millis(250));
         true
     } else {
@@ -141,7 +138,7 @@ async fn main() {
         while is_running.load(Ordering::SeqCst) {
             // Debug mode for testing, mostly pointless, doesn't take terminal
             loop {
-                docker_sx.send(DockerMessage::Update).await.unwrap_or(());
+                docker_sx.send(DockerMessage::Update).await.ok();
                 tokio::time::sleep(std::time::Duration::from_millis(u64::from(
                     args.docker_interval,
                 )))

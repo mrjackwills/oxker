@@ -251,32 +251,26 @@ impl InputHandler {
                             };
                             if let Some(id) = option_id {
                                 match command {
-                                    DockerControls::Pause => self
-                                        .docker_sender
-                                        .send(DockerMessage::Pause(id))
-                                        .await
-                                        .unwrap_or(()),
+                                    DockerControls::Pause => {
+                                        self.docker_sender.send(DockerMessage::Pause(id)).await.ok()
+                                    }
                                     DockerControls::Unpause => self
                                         .docker_sender
                                         .send(DockerMessage::Unpause(id))
                                         .await
-                                        .unwrap_or(()),
-                                    DockerControls::Start => self
-                                        .docker_sender
-                                        .send(DockerMessage::Start(id))
-                                        .await
-                                        .unwrap_or(()),
-                                    DockerControls::Stop => self
-                                        .docker_sender
-                                        .send(DockerMessage::Stop(id))
-                                        .await
-                                        .unwrap_or(()),
+                                        .ok(),
+                                    DockerControls::Start => {
+                                        self.docker_sender.send(DockerMessage::Start(id)).await.ok()
+                                    }
+                                    DockerControls::Stop => {
+                                        self.docker_sender.send(DockerMessage::Stop(id)).await.ok()
+                                    }
                                     DockerControls::Restart => self
                                         .docker_sender
                                         .send(DockerMessage::Restart(id))
                                         .await
-                                        .unwrap_or(()),
-                                }
+                                        .ok(),
+                                };
                             }
                         }
                     }

@@ -158,31 +158,25 @@ impl Ui {
                         self.sender
                             .send(InputMessages::ButtonPress((key.code, key.modifiers)))
                             .await
-                            .unwrap_or(());
+                            .ok();
                     } else if let Event::Mouse(m) = event {
                         match m.kind {
                             event::MouseEventKind::Down(_)
                             | event::MouseEventKind::ScrollDown
                             | event::MouseEventKind::ScrollUp => {
-                                self.sender
-                                    .send(InputMessages::MouseEvent(m))
-                                    .await
-                                    .unwrap_or(());
+                                self.sender.send(InputMessages::MouseEvent(m)).await.ok();
                             }
                             _ => (),
                         }
                     } else if let Event::Resize(_, _) = event {
                         self.gui_state.lock().clear_area_map();
-                        self.terminal.autoresize().unwrap_or(());
+                        self.terminal.autoresize().ok();
                     }
                 }
             }
 
             if self.now.elapsed() >= update_duration {
-                self.docker_sx
-                    .send(DockerMessage::Update)
-                    .await
-                    .unwrap_or(());
+                self.docker_sx.send(DockerMessage::Update).await.ok();
                 self.now = Instant::now();
             }
         }
