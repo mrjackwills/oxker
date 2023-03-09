@@ -1,3 +1,19 @@
+### Chores
++ Rust 1.68.0 clippy linting, [5582c45403413d3355bbcd629cfad559296f5e5b]
++ devcontainer use spare protocol index, [20b79e9cd5bf75bb253158c0b590284139e0291d]
++ dependencies updated, [0c07d4b40607a0eba003b6dcd0345ec0543c6264], [601a73d2c830043a25d64922c4d4aa38f8801912]
+
+### Features
++ increase mpsc channel size (16 to 32 messages), [924f14e998f79f731447a2eded038eab51f2e932]
++ KeyEvents send modifier, so can quit on ctrl + c, [598f67c6f6a8713102bcc415f0409911763bb914]
++ only send relevant mouse events to input handler, [507660d835d0beaa8cd021110401ecc58c0613c6]
+
+### Refactors
++ replace `unwrap_or(())` with `.ok()`, [8ba37a165bb89277ab957194da6464bdb35be2e6]
+
+### Reverts
++ temporary devcontainer buildkit fix removed, [d1497a4451f4de54d3cc26c5a3957cd636c29118]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.2.4'>v0.2.4</a>
 ### 2023-03-02
 
