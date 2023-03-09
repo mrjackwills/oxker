@@ -402,7 +402,6 @@ impl DockerData {
                     self.spawns
                         .lock()
                         .values()
-                        .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
                     self.is_running
                         .store(false, std::sync::atomic::Ordering::SeqCst);

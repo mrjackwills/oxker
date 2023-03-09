@@ -482,7 +482,6 @@ pub fn heading_bar<B: Backend>(
 /// From a given &str, return the maximum number of chars on a single line
 fn max_line_width(text: &str) -> usize {
     text.lines()
-        .into_iter()
         .map(|i| i.chars().count())
         .max()
         .unwrap_or_default()
@@ -530,7 +529,6 @@ impl HelpInfo {
     fn gen_name() -> Self {
         let mut spans = NAME_TEXT
             .lines()
-            .into_iter()
             .map(|i| Spans::from(Self::white_span(i)))
             .collect::<Vec<_>>();
         spans.insert(0, Self::empty_span());
