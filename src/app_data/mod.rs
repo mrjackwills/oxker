@@ -561,7 +561,7 @@ impl AppData {
 
                 let id = ContainerId::from(id);
 
-                let created = i.created.map_or(0, |i| u64::try_from(i).unwrap_or(0));
+                let created = i.created.map_or(0, |i| u64::try_from(i).unwrap_or_default());
                 // If container info already in containers Vec, then just update details
                 if let Some(item) = self.get_container_by_id(&id) {
                     if item.name != name {
