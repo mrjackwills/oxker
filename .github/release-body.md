@@ -1,27 +1,25 @@
-### 2023-03-02
+### 2023-03-13
 
 ### Chores
-+ dependencies updated, [aac3ef2b1def3345d749d813d9b76020d6b5e5ca], [4723be7fb2eb101024bb9d5a514e2c6cc51eb6f6], [c69ab4f7c3b873f25ea46958add37be78d23e9cf], [ba6437862dae0f422660a602aeabd6217d023fac], [2bb4c338903e09856053894d9646307e31d32f1c]
-+ dev container install x86 musl toolchain, [e650034d50f01a7598876d4f2887df691700e06a]
-
-### Docs
-+ typos removed, [23ad9a5fb3cacf3fb8cb70c65ca9133ed9949e45], [cebb975cb82f653407ec801fd8c726ca6ed68289], [fdc67c9249a239bac97a78b20c9378472865209c]
-+ comments improved, [ec962295a8789ff8010604e974969bf618ea7108]
++ Rust 1.68.0 clippy linting, [5582c45403413d3355bbcd629cfad559296f5e5b]
++ devcontainer use sparse protocol index, [20b79e9cd5bf75bb253158c0b590284139e0291d]
++ dependencies updated, [0c07d4b40607a0eba003b6dcd0345ec0543c6264], [601a73d2c830043a25d64922c4d4aa38f8801912], [5aaa3c1ab08b0c85df9bfce18a3e60206556fa58], [7a1563030e48499da7f41033673c70deefe3de8a], [457157755baa1f9e9cfef9315a7940c357b0953d]
 
 ### Features
-+ mouse capture is now more specific, should have substantial performance impact, 10x reduction in cpu usage when mouse is moved observed, as well as fixing intermittent mouse events output bug, [0a1b53111627206cc7436589e5b7212e1b72edb8], [93f7c07f708885f8870da5dfb6d57c62f93c9c78], [c74f6c1179b5f62989eb74f395a56b43a8781b03]
-+ improve the styling of the help information popup, [28de74b866f07c8543e46be3cab929eff28953fd]
-+ use checked_sub & checked_div for bounds checks, [72279e26ae996353c95a75527f704bac1e4bcf4d]
++ increase mpsc channel size from 16 to 32 messages, [924f14e998f79f731447a2eded038eab51f2e932]
++ KeyEvents send modifier, so can quit on `ctrl + c`, [598f67c6f6a8713102bcc415f0409911763bb914]
++ only send relevant mouse events to input handler, [507660d835d0beaa8cd021110401ecc58c0613c6]
 
 ### Fixes
-+ correctly set gui error, [340893a860e99ec4029d12613f2a6de3cb7b47e2]
++ GitHub workflow on SEMEVR tag only, [140773865165bf006e74f9d436fc744220f5eae7]
 
 ### Refactors
-+ dead code removed, [b8f5792d1865d3a398cd7f23aa9473a55dc6ea44]
-+ improve the get_width function, [04c26fe8fc7c79506921b9cff42825b1ee132737]
-+ place ui methods into a Ui struct, [3437df59884f084624031fceb34ea3012a8e2251]
-+ get_horizotal/vertical constraints into single method, [e8f5cf9c6f8cd5f807a05fb61e31d7cd1426486f]
-+ docker update_everything variables, [074cb957f274675a468f08fecb1c43ff7453217d]
++ replace `unwrap_or(())` with `.ok()`, [8ba37a165bb89277ab957194da6464bdb35be2e6]
++ use `unwrap_or_default()`, [79de92c3921702417bb2df1f44939a7b09cb7fa0]
++ Result return, [d9f0bd5566e27218b8c8eaba6ece237907771c1d]
+
+### Reverts
++ temporary devcontainer buildkit fix removed, [d1497a4451f4de54d3cc26c5a3957cd636c29118]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details
