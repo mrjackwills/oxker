@@ -140,7 +140,7 @@ impl InputHandler {
         let contains_error = self.gui_state.lock().status_contains(&[Status::Error]);
         let contains_help = self.gui_state.lock().status_contains(&[Status::Help]);
 
-        // Quit on Ctrl + c/ Ctrl + C
+        // Quit on Ctrl + c/C
         let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
         if key_modififer == KeyModifiers::CONTROL && is_c() {
             self.quit().await;
