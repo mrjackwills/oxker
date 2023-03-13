@@ -1,11 +1,11 @@
 ### Chores
 + Rust 1.68.0 clippy linting, [5582c45403413d3355bbcd629cfad559296f5e5b]
 + devcontainer use sparse protocol index, [20b79e9cd5bf75bb253158c0b590284139e0291d]
-+ dependencies updated, [0c07d4b40607a0eba003b6dcd0345ec0543c6264], [601a73d2c830043a25d64922c4d4aa38f8801912], [5aaa3c1ab08b0c85df9bfce18a3e60206556fa58], [7a1563030e48499da7f41033673c70deefe3de8a]
++ dependencies updated, [0c07d4b40607a0eba003b6dcd0345ec0543c6264], [601a73d2c830043a25d64922c4d4aa38f8801912], [5aaa3c1ab08b0c85df9bfce18a3e60206556fa58], [7a1563030e48499da7f41033673c70deefe3de8a], [457157755baa1f9e9cfef9315a7940c357b0953d]
 
 ### Features
 + increase mpsc channel size from 16 to 32 messages, [924f14e998f79f731447a2eded038eab51f2e932]
-+ KeyEvents send modifier, so can quit on ctrl + c, [598f67c6f6a8713102bcc415f0409911763bb914]
++ KeyEvents send modifier, so can quit on `ctrl + c`, [598f67c6f6a8713102bcc415f0409911763bb914]
 + only send relevant mouse events to input handler, [507660d835d0beaa8cd021110401ecc58c0613c6]
 
 ### Refactors
