@@ -8,6 +8,9 @@
 + KeyEvents send modifier, so can quit on `ctrl + c`, [598f67c6f6a8713102bcc415f0409911763bb914]
 + only send relevant mouse events to input handler, [507660d835d0beaa8cd021110401ecc58c0613c6]
 
+### Fixes
++ GitHub workflow on SEMEVR tag only, [140773865165bf006e74f9d436fc744220f5eae7]
+
 ### Refactors
 + replace `unwrap_or(())` with `.ok()`, [8ba37a165bb89277ab957194da6464bdb35be2e6]
 + use `unwrap_or_default()`, [79de92c3921702417bb2df1f44939a7b09cb7fa0]
