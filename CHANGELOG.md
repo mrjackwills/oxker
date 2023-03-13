@@ -1,6 +1,6 @@
 ### Chores
 + Rust 1.68.0 clippy linting, [5582c45403413d3355bbcd629cfad559296f5e5b]
-+ devcontainer use spare protocol index, [20b79e9cd5bf75bb253158c0b590284139e0291d]
++ devcontainer use sparse protocol index, [20b79e9cd5bf75bb253158c0b590284139e0291d]
 + dependencies updated, [0c07d4b40607a0eba003b6dcd0345ec0543c6264], [601a73d2c830043a25d64922c4d4aa38f8801912], [5aaa3c1ab08b0c85df9bfce18a3e60206556fa58], [7a1563030e48499da7f41033673c70deefe3de8a]
 
 ### Features
