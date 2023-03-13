@@ -44,15 +44,14 @@ pub struct Ui {
 impl Ui {
     /// Enable mouse capture, but don't enable capture of all the mouse movements, doing so will improve performance, and is part of the fix for the weird mouse event output bug
     pub fn enable_mouse_capture() -> Result<()> {
-        io::stdout().write_all(
+        Ok(io::stdout().write_all(
             concat!(
                 crossterm::csi!("?1000h"),
                 crossterm::csi!("?1015h"),
                 crossterm::csi!("?1006h"),
             )
             .as_bytes(),
-        )?;
-        Ok(())
+        )?)
     }
 
     /// Create a new Ui struct, and execute the drawing loop
@@ -112,8 +111,7 @@ impl Ui {
             DisableMouseCapture
         )?;
         disable_raw_mode()?;
-        self.terminal.show_cursor()?;
-        Ok(())
+        Ok(self.terminal.show_cursor()?)
     }
 
     /// Draw the the error message ui, for 5 seconds, with a countdown
@@ -127,9 +125,6 @@ impl Ui {
                     break;
                 }
             }
-
-            // This is a fix for mouse-events being printed to screen
-            self.nullify_event_read();
 
             if self
                 .terminal
@@ -159,26 +154,27 @@ impl Ui {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
                         self.sender
-                            .send(InputMessages::ButtonPress(key.code))
+                            .send(InputMessages::ButtonPress((key.code, key.modifiers)))
                             .await
-                            .unwrap_or(());
+                            .ok();
                     } else if let Event::Mouse(m) = event {
-                        self.sender
-                            .send(InputMessages::MouseEvent(m))
-                            .await
-                            .unwrap_or(());
+                        match m.kind {
+                            event::MouseEventKind::Down(_)
+                            | event::MouseEventKind::ScrollDown
+                            | event::MouseEventKind::ScrollUp => {
+                                self.sender.send(InputMessages::MouseEvent(m)).await.ok();
+                            }
+                            _ => (),
+                        }
                     } else if let Event::Resize(_, _) = event {
                         self.gui_state.lock().clear_area_map();
-                        self.terminal.autoresize().unwrap_or(());
+                        self.terminal.autoresize().ok();
                     }
                 }
             }
 
             if self.now.elapsed() >= update_duration {
-                self.docker_sx
-                    .send(DockerMessage::Update)
-                    .await
-                    .unwrap_or(());
+                self.docker_sx.send(DockerMessage::Update).await.ok();
                 self.now = Instant::now();
             }
         }

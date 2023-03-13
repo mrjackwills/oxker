@@ -1,7 +1,7 @@
-use crossterm::event::{KeyCode, MouseEvent};
+use crossterm::event::{KeyCode, KeyModifiers, MouseEvent};
 
 #[derive(Debug, Clone, Copy)]
 pub enum InputMessages {
-    ButtonPress(KeyCode),
+    ButtonPress((KeyCode, KeyModifiers)),
     MouseEvent(MouseEvent),
 }

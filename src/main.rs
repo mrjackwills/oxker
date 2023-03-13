@@ -1,13 +1,12 @@
 #![forbid(unsafe_code)]
 #![warn(
+    clippy::expect_used,
     clippy::nursery,
     clippy::pedantic,
-    clippy::expect_used,
     clippy::todo,
     clippy::unused_async,
     clippy::unwrap_used
 )]
-// Warning - These are indeed pedantic
 #![allow(
     clippy::module_name_repetitions,
     clippy::doc_markdown,
@@ -23,7 +22,10 @@ use docker_data::DockerData;
 use input_handler::InputMessages;
 use parking_lot::Mutex;
 use parse_args::CliArgs;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{info, Level};
 
@@ -52,10 +54,7 @@ fn setup_tracing() {
 /// An ENV is set in the ./containerised/Dockerfile, if this is ENV found, then sleep for 250ms, else the container, for as yet unknown reasons, will close immediately
 /// returns a bool, so that the `update_all_containers()` won't bother to check the entry point unless running via a container
 fn check_if_containerised() -> bool {
-    if std::env::vars()
-        .into_iter()
-        .any(|x| x == (ENV_KEY.into(), ENV_VALUE.into()))
-    {
+    if std::env::vars().any(|x| x == (ENV_KEY.into(), ENV_VALUE.into())) {
         std::thread::sleep(std::time::Duration::from_millis(250));
         true
     } else {
@@ -124,8 +123,8 @@ async fn main() {
     let app_data = Arc::new(Mutex::new(AppData::default(args)));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
-    let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(16);
-    let (input_sx, input_rx) = tokio::sync::mpsc::channel(16);
+    let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(32);
+    let (input_sx, input_rx) = tokio::sync::mpsc::channel(32);
 
     docker_init(&app_data, containerised, docker_rx, &gui_state, &is_running).await;
 
@@ -134,14 +133,16 @@ async fn main() {
     if args.gui {
         Ui::create(app_data, docker_sx, gui_state, is_running, input_sx).await;
     } else {
-        // Debug mode for testing, mostly pointless, doesn't take terminal
         info!("in debug mode");
-        loop {
-            docker_sx.send(DockerMessage::Update).await.unwrap_or(());
-            tokio::time::sleep(std::time::Duration::from_millis(u64::from(
-                args.docker_interval,
-            )))
-            .await;
+        while is_running.load(Ordering::SeqCst) {
+            // Debug mode for testing, mostly pointless, doesn't take terminal
+            loop {
+                docker_sx.send(DockerMessage::Update).await.ok();
+                tokio::time::sleep(std::time::Duration::from_millis(u64::from(
+                    args.docker_interval,
+                )))
+                .await;
+            }
         }
     }
 }

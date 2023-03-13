@@ -109,8 +109,8 @@ impl DockerData {
             .take(1);
 
         while let Some(Ok(stats)) = stream.next().await {
-            let mem_stat = stats.memory_stats.usage.unwrap_or(0);
-            let mem_limit = stats.memory_stats.limit.unwrap_or(0);
+            let mem_stat = stats.memory_stats.usage.unwrap_or_default();
+            let mem_limit = stats.memory_stats.limit.unwrap_or_default();
 
             let op_key = stats
                 .networks
@@ -402,7 +402,6 @@ impl DockerData {
                     self.spawns
                         .lock()
                         .values()
-                        .into_iter()
                         .for_each(tokio::task::JoinHandle::abort);
                     self.is_running
                         .store(false, std::sync::atomic::Ordering::SeqCst);
