@@ -1,7 +1,7 @@
 use parking_lot::Mutex;
 use std::default::Default;
 use std::{fmt::Display, sync::Arc};
-use tui::{
+use ratatui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -500,7 +500,7 @@ impl HelpInfo {
         spans
             .iter()
             .flat_map(|x| x.0.iter())
-            .map(tui::text::Span::width)
+            .map(ratatui::text::Span::width)
             .max()
             .unwrap_or(1)
     }

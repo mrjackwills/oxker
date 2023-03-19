@@ -4,7 +4,7 @@ use std::{
     fmt,
 };
 
-use tui::{
+use ratatui::{
     style::Color,
     widgets::{ListItem, ListState},
 };

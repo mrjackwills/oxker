@@ -13,7 +13,7 @@ use std::{
 use std::{sync::atomic::AtomicBool, time::Instant};
 use tokio::sync::mpsc::Sender;
 use tracing::error;
-use tui::{
+use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout},
     Frame, Terminal,

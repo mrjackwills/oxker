@@ -12,7 +12,7 @@ use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
 };
-use tui::layout::Rect;
+use ratatui::layout::Rect;
 
 mod message;
 use crate::{

@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
 };
-use tui::layout::{Constraint, Rect};
+use ratatui::layout::{Constraint, Rect};
 use uuid::Uuid;
 
 use crate::app_data::Header;

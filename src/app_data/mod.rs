@@ -1,7 +1,7 @@
 use bollard::models::ContainerSummary;
 use core::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tui::widgets::{ListItem, ListState};
+use ratatui::widgets::{ListItem, ListState};
 
 mod container_state;
 
