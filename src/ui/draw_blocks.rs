@@ -1,6 +1,4 @@
 use parking_lot::Mutex;
-use std::default::Default;
-use std::{fmt::Display, sync::Arc};
 use ratatui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -13,6 +11,8 @@ use ratatui::{
     },
     Frame,
 };
+use std::default::Default;
+use std::{fmt::Display, sync::Arc};
 
 use crate::app_data::{Header, SortedOrder};
 use crate::ui::Status;
@@ -628,6 +628,7 @@ impl HelpInfo {
 
     /// Generate the final lines, GitHub link etc, + metadata
     fn gen_final() -> Self {
+        let top_bar = (0..REPO.chars().count()).map(|_|"▔").collect::<String>();
         let spans = [
             Self::empty_span(),
             Spans::from(vec![Self::black_span(
@@ -635,11 +636,9 @@ impl HelpInfo {
             )]),
             Spans::from(vec![Span::styled(
                 REPO.to_owned(),
-                Style::default()
-                    .bg(Color::Magenta)
-                    .fg(Color::Black)
-                    .add_modifier(Modifier::UNDERLINED),
+                Style::default().fg(Color::White), // .add_modifier(Modifier::BOLD),
             )]),
+            Spans::from(vec![Self::white_span(&top_bar)]),
         ];
         let height = spans.len();
         let width = Self::calc_width(&spans);
