@@ -515,12 +515,12 @@ impl HelpInfo {
         Span::styled(input.to_owned(), Style::default().fg(color))
     }
 
-    /// Span to black text span
+    /// &str to black text span
     fn black_span<'a>(input: &str) -> Span<'a> {
         Self::span(input, Color::Black)
     }
 
-    /// Span to white text span
+    /// &str to white text span
     fn white_span<'a>(input: &str) -> Span<'a> {
         Self::span(input, Color::White)
     }
@@ -559,7 +559,7 @@ impl HelpInfo {
 
     /// Generate the button information span + metadata
     fn gen_button() -> Self {
-        let button_item = |x: &str| Self::white_span(&format!(" {x} "));
+        let button_item = |x: &str| Self::white_span(&format!(" ( {x} ) "));
         let button_desc = |x: &str| Self::black_span(x);
         let or = || button_desc("or");
         let space = || button_desc(" ");
@@ -567,52 +567,52 @@ impl HelpInfo {
         let spans = [
             Spans::from(vec![
                 space(),
-                button_item("( tab )"),
+                button_item("tab"),
                 or(),
-                button_item("( shift+tab )"),
+                button_item("shift+tab"),
                 button_desc("to change panels"),
             ]),
             Spans::from(vec![
                 space(),
-                button_item("( ↑ ↓ )"),
+                button_item("↑ ↓"),
                 or(),
-                button_item("( j k )"),
+                button_item("j k"),
                 or(),
-                button_item("( PgUp PgDown )"),
+                button_item("PgUp PgDown"),
                 or(),
-                button_item("( Home End )"),
+                button_item("Home End"),
                 button_desc("to change selected line"),
             ]),
             Spans::from(vec![
                 space(),
-                button_item("( enter )"),
+                button_item("enter"),
                 button_desc("to send docker container command"),
             ]),
             Spans::from(vec![
                 space(),
-                button_item("( h )"),
+                button_item("h"),
                 button_desc("to toggle this help information"),
             ]),
             Spans::from(vec![
                 space(),
-                button_item("( 0 )"),
+                button_item("0"),
                 button_desc("to stop sort"),
             ]),
             Spans::from(vec![
                 space(),
-                button_item("( 1 - 9 )"),
+                button_item("1 - 9"),
                 button_desc("sort by header - or click header"),
             ]),
             Spans::from(vec![
 				space(),
-				button_item("( m )"),
+				button_item("m"),
 				button_desc(
 					"to toggle mouse capture - if disabled, text on screen can be selected & copied",
 				),
 			]),
             Spans::from(vec![
                 space(),
-                button_item("( q )"),
+                button_item("q"),
                 button_desc("to quit at any time"),
             ]),
         ];
@@ -635,7 +635,9 @@ impl HelpInfo {
             )]),
             Spans::from(vec![Span::styled(
                 REPO.to_owned(),
-                Style::default().fg(Color::White).add_modifier(Modifier::UNDERLINED),
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::UNDERLINED),
             )]),
         ];
         let height = spans.len();
