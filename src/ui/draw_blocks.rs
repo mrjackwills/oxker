@@ -628,7 +628,6 @@ impl HelpInfo {
 
     /// Generate the final lines, GitHub link etc, + metadata
     fn gen_final() -> Self {
-        let top_bar = (0..REPO.chars().count()).map(|_|"▔").collect::<String>();
         let spans = [
             Self::empty_span(),
             Spans::from(vec![Self::black_span(
@@ -636,9 +635,8 @@ impl HelpInfo {
             )]),
             Spans::from(vec![Span::styled(
                 REPO.to_owned(),
-                Style::default().fg(Color::White), // .add_modifier(Modifier::BOLD),
+                Style::default().fg(Color::White).add_modifier(Modifier::UNDERLINED),
             )]),
-            Spans::from(vec![Self::white_span(&top_bar)]),
         ];
         let height = spans.len();
         let width = Self::calc_width(&spans);

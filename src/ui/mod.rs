@@ -5,6 +5,11 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use parking_lot::Mutex;
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    layout::{Constraint, Direction, Layout},
+    Frame, Terminal,
+};
 use std::{
     io::{self, Stdout, Write},
     sync::{atomic::Ordering, Arc},
@@ -13,11 +18,6 @@ use std::{
 use std::{sync::atomic::AtomicBool, time::Instant};
 use tokio::sync::mpsc::Sender;
 use tracing::error;
-use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
-    Frame, Terminal,
-};
 
 mod color_match;
 mod draw_blocks;

@@ -8,11 +8,11 @@ use crossterm::{
     execute,
 };
 use parking_lot::Mutex;
+use ratatui::layout::Rect;
 use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
 };
-use ratatui::layout::Rect;
 
 mod message;
 use crate::{

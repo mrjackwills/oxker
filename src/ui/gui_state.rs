@@ -1,8 +1,8 @@
+use ratatui::layout::{Constraint, Rect};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
 };
-use ratatui::layout::{Constraint, Rect};
 use uuid::Uuid;
 
 use crate::app_data::Header;
