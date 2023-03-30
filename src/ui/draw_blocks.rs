@@ -11,7 +11,7 @@ use ratatui::{
     },
     Frame,
 };
-use std::{default::Default, ops::Sub};
+use std::default::Default;
 use std::{fmt::Display, sync::Arc};
 
 use crate::app_data::{Header, SortedOrder};
@@ -794,16 +794,17 @@ pub fn delete_confirm<B: Backend>(
         )
         .split(area);
 
+	// Should maybe have a differenet button_space IF the f.width() is within 2 chars of no_chars + yes_chars?
     let button_spacing = (max_line_width - no_chars - yes_chars) / 3;
     let split_buttons = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
             [
-                Constraint::Min(button_spacing),
-                Constraint::Max(no_chars),
-                Constraint::Min(button_spacing),
-                Constraint::Max(yes_chars),
-                Constraint::Min(button_spacing),
+                Constraint::Max(button_spacing),
+                Constraint::Min(no_chars),
+                Constraint::Max(button_spacing),
+                Constraint::Min(yes_chars),
+                Constraint::Max(button_spacing),
             ]
             .as_ref(),
         )
