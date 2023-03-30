@@ -1,5 +1,5 @@
 ### Chores
-+ dependencies updated, [7a9bdc9699594532e17a33e044ca0678693c8d3f], [58e03a750fe89b914b9069cb0c6c02a3d0929439]
++ dependencies updated, [7a9bdc9699594532e17a33e044ca0678693c8d3f], [58e03a750fe89b914b9069cb0c6c02a3d0929439], [b246e8c25af0c5136953afca7c694cda66550d9b]
 
 ### Docs
 + README.md and screenshot updated, [73ab7580c61dd59c59f10872629111360afb9033]
