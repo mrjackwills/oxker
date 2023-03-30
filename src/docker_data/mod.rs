@@ -424,7 +424,7 @@ impl DockerData {
                     self.gui_state.lock().set_delete_container(None);
                 }
                 DockerMessage::ConfirmDelete(id) => {
-                    self.gui_state.lock().set_delete_container(Some(id))
+                    self.gui_state.lock().set_delete_container(Some(id));
                 }
                 DockerMessage::Update => self.update_everything().await,
                 DockerMessage::Quit => {

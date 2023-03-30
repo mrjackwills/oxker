@@ -432,7 +432,7 @@ pub fn heading_bar<B: Backend>(
     let info_text = format!("( h ) {suffix} help {MARGIN}",);
     let info_width = info_text.chars().count();
 
-    let column_width = usize::from(area.width) - info_width;
+	let column_width = usize::from(area.width).saturating_sub(info_width);
     let column_width = if column_width > 0 { column_width } else { 1 };
     let splits = if has_containers {
         vec![
