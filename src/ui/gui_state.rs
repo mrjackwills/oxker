@@ -292,7 +292,7 @@ impl GuiState {
         if id.is_some() {
             self.status.insert(Status::DeleteConfirm);
         } else {
-			self.delete_map.clear();
+            self.delete_map.clear();
             self.status.remove(&Status::DeleteConfirm);
         }
         self.delete_container = id;

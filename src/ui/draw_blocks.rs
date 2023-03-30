@@ -432,7 +432,7 @@ pub fn heading_bar<B: Backend>(
     let info_text = format!("( h ) {suffix} help {MARGIN}",);
     let info_width = info_text.chars().count();
 
-	let column_width = usize::from(area.width).saturating_sub(info_width);
+    let column_width = usize::from(area.width).saturating_sub(info_width);
     let column_width = if column_width > 0 { column_width } else { 1 };
     let splits = if has_containers {
         vec![
@@ -794,14 +794,14 @@ pub fn delete_confirm<B: Backend>(
         )
         .split(area);
 
-	// Should maybe have a differenet button_space IF the f.width() is within 2 chars of no_chars + yes_chars?
+    // Should maybe have a differenet button_space IF the f.width() is within 2 chars of no_chars + yes_chars?
     let button_spacing = (max_line_width - no_chars - yes_chars) / 3;
 
-	let button_spacing = if (button_spacing + max_line_width) > f.size().width {
-		1
-	}else{
-		button_spacing
-	};
+    let button_spacing = if (button_spacing + max_line_width) > f.size().width {
+        1
+    } else {
+        button_spacing
+    };
     let split_buttons = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
@@ -904,9 +904,7 @@ pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
 /// draw a box in the one of the BoxLocations, based on max line width + number of lines
 fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocation) -> Rect {
     // Make sure blank_space can't be an negative, as will crash
-    let calc = |x: u16, y: usize| {
-		usize::from(x).saturating_sub(y).saturating_div(2)
-    };
+    let calc = |x: u16, y: usize| usize::from(x).saturating_sub(y).saturating_div(2);
 
     let blank_vertical = calc(r.height, text_lines);
     let blank_horizontal = calc(r.width, text_width);
