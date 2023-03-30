@@ -5,7 +5,7 @@
 + README.md and screenshot updated, [73ab7580c61dd59c59f10872629111360afb9033]
 
 ### Features
-+ Ability to delete a container, be warned, as this will force delete, closes #27, [937202fe34d1692693c62dd1a7ad19db37651233]
++ Ability to delete a container, be warned, as this will force delete, closes #27, [937202fe34d1692693c62dd1a7ad19db37651233], [b25f8b18f4f2acd5c9af4a1d40655761d1bd720e]
 + Publish images to `ghcr.io` as well as Docker Hub, and correctly tag images with `latest` and the current sermver, [cb1271cf7f21c898020481ad85914a3dcc83ec93]
 + Replace `tui-rs` with [ratatui](https://github.com/tui-rs-revival/ratatui), [d431f850219b28af2bc45f3b6917377604596a40]
 
