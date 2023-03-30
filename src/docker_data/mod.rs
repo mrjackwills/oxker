@@ -1,5 +1,8 @@
 use bollard::{
-    container::{ListContainersOptions, LogsOptions, StartContainerOptions, Stats, StatsOptions},
+    container::{
+        ListContainersOptions, LogsOptions, RemoveContainerOptions, StartContainerOptions, Stats,
+        StatsOptions,
+    },
     service::ContainerSummary,
     Docker,
 };
@@ -335,13 +338,14 @@ impl DockerData {
     }
 
     /// Handle incoming messages, container controls & all container information update
-    /// Spawn dowcker commands off into own thread
+    /// Spawn Docker commands off into own thread
     async fn message_handler(&mut self) {
         while let Some(message) = self.receiver.recv().await {
             let docker = Arc::clone(&self.docker);
             let gui_state = Arc::clone(&self.gui_state);
             let app_data = Arc::clone(&self.app_data);
             let uuid = Uuid::new_v4();
+            // TODO need to refactor these
             match message {
                 DockerMessage::Pause(id) => {
                     tokio::spawn(async move {
@@ -396,6 +400,31 @@ impl DockerData {
                         Self::stop_loading_spin(&gui_state, &loading_spin, uuid);
                     });
                     self.update_everything().await;
+                }
+                DockerMessage::Delete(id) => {
+                    tokio::spawn(async move {
+                        let loading_spin = Self::loading_spin(uuid, &gui_state).await;
+                        if docker
+                            .remove_container(
+                                id.get(),
+                                Some(RemoveContainerOptions {
+                                    v: false,
+                                    force: true,
+                                    link: false,
+                                }),
+                            )
+                            .await
+                            .is_err()
+                        {
+                            Self::set_error(&app_data, DockerControls::Stop, &gui_state);
+                        }
+                        Self::stop_loading_spin(&gui_state, &loading_spin, uuid);
+                    });
+                    self.update_everything().await;
+                    self.gui_state.lock().set_delete_container(None);
+                }
+                DockerMessage::ConfirmDelete(id) => {
+                    self.gui_state.lock().set_delete_container(Some(id))
                 }
                 DockerMessage::Update => self.update_everything().await,
                 DockerMessage::Quit => {

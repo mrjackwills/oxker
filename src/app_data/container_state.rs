@@ -207,6 +207,7 @@ pub enum DockerControls {
     Start,
     Stop,
     Unpause,
+    Delete,
 }
 
 impl DockerControls {
@@ -216,6 +217,7 @@ impl DockerControls {
             Self::Restart => Color::Magenta,
             Self::Start => Color::Green,
             Self::Stop => Color::Red,
+            Self::Delete => Color::Gray,
             Self::Unpause => Color::Blue,
         }
     }
@@ -223,11 +225,11 @@ impl DockerControls {
     /// Docker commands available depending on the containers state
     pub fn gen_vec(state: State) -> Vec<Self> {
         match state {
-            State::Dead | State::Exited => vec![Self::Start, Self::Restart],
-            State::Paused => vec![Self::Unpause, Self::Stop],
-            State::Restarting => vec![Self::Stop],
-            State::Running => vec![Self::Pause, Self::Restart, Self::Stop],
-            _ => vec![],
+            State::Dead | State::Exited => vec![Self::Start, Self::Restart, Self::Delete],
+            State::Paused => vec![Self::Unpause, Self::Stop, Self::Delete],
+            State::Restarting => vec![Self::Stop, Self::Delete],
+            State::Running => vec![Self::Pause, Self::Restart, Self::Stop, Self::Delete],
+            _ => vec![Self::Delete],
         }
     }
 }
@@ -236,6 +238,7 @@ impl fmt::Display for DockerControls {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = match self {
             Self::Pause => "pause",
+            Self::Delete => "delete",
             Self::Restart => "restart",
             Self::Start => "start",
             Self::Stop => "stop",
