@@ -40,7 +40,7 @@ use ui::{GuiState, Status, Ui};
 
 use crate::docker_data::DockerMessage;
 
-// this is the entry point when running as a Docker Container, and is used, in conjunction with the `CONTAINER_ENV` ENV, to check if we are running as a Docker Container
+/// This is the entry point when running as a Docker Container, and is used, in conjunction with the `CONTAINER_ENV` ENV, to check if we are running as a Docker Container
 const ENTRY_POINT: &str = "/app/oxker";
 const ENV_KEY: &str = "OXKER_RUNTIME";
 const ENV_VALUE: &str = "container";

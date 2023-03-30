@@ -1,7 +1,7 @@
 pub mod log_sanitizer {
 
     use cansi::{v3::categorise_text, Color as CansiColor, Intensity};
-    use tui::{
+    use ratatui::{
         style::{Color, Modifier, Style},
         text::{Span, Spans},
     };

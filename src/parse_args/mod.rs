@@ -40,7 +40,7 @@ impl CliArgs {
         // Quit the program if the docker update argument is 0
         // Should maybe change it to check if less than 100
         if args.docker_interval == 0 {
-            error!("docker args needs to be greater than 0");
+            error!("\"-d\" argument needs to be greater than 0");
             process::exit(1)
         }
         Self {

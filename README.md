@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-	Built in <a href='https://www.rust-lang.org/' target='_blank' rel='noopener noreferrer'>Rust</a>, making heavy use of <a href='https://github.com/fdehau/tui-rs' target='_blank' rel='noopener noreferrer'>tui-rs</a> & <a href='https://github.com/fussybeaver/bollard' target='_blank' rel='noopener noreferrer'>Bollard</a>
+	Built in <a href='https://www.rust-lang.org/' target='_blank' rel='noopener noreferrer'>Rust</a>, making heavy use of <a href='https://github.com/tui-rs-revival/ratatui' target='_blank' rel='noopener noreferrer'>ratatui</a> & <a href='https://github.com/fussybeaver/bollard' target='_blank' rel='noopener noreferrer'>Bollard</a>
 </p>
 
 <p align="center">
@@ -27,10 +27,19 @@ cargo install oxker
 ```
 
 ### Docker
-Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>, with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
 
+Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a> and <a href='https://ghcr.io/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>ghcr.io</a>,
+with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
+
+**via Docker Hub**
 ```shell
 docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker
+```
+
+**via ghcr.io**
+
+```shell
+docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always ghcr.io/mrjackwills/oxker
 ```
 
 ### Nix
@@ -68,7 +77,7 @@ rm oxker_linux_x86_64.tar.gz oxker
 
 or, for automatic platform selection, download, and installation (to `$HOME/.local/bin`)
 
-*One should always verify script content before running in a shell*
+*One should always verify <a href='https://github.com/mrjackwills/oxker/blob/main/install.sh' target='_blank' rel='noopener noreferrer'>script content</a> before running in a shell*
 
 ```shell
 curl https://raw.githubusercontent.com/mrjackwills/oxker/main/install.sh | bash

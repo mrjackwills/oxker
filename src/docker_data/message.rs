@@ -2,11 +2,13 @@ use crate::app_data::ContainerId;
 
 #[derive(Debug, Clone)]
 pub enum DockerMessage {
-    Update,
-    Start(ContainerId),
-    Restart(ContainerId),
+    Delete(ContainerId),
+    ConfirmDelete(ContainerId),
     Pause(ContainerId),
-    Unpause(ContainerId),
-    Stop(ContainerId),
     Quit,
+    Restart(ContainerId),
+    Start(ContainerId),
+    Stop(ContainerId),
+    Unpause(ContainerId),
+    Update,
 }

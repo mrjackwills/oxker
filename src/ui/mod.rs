@@ -5,6 +5,11 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use parking_lot::Mutex;
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    layout::{Constraint, Direction, Layout},
+    Frame, Terminal,
+};
 use std::{
     io::{self, Stdout, Write},
     sync::{atomic::Ordering, Arc},
@@ -13,18 +18,13 @@ use std::{
 use std::{sync::atomic::AtomicBool, time::Instant};
 use tokio::sync::mpsc::Sender;
 use tracing::error;
-use tui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
-    Frame, Terminal,
-};
 
 mod color_match;
 mod draw_blocks;
 mod gui_state;
 
 pub use self::color_match::*;
-pub use self::gui_state::{GuiState, SelectablePanel, Status};
+pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
 use crate::{
     app_data::AppData, app_error::AppError, docker_data::DockerMessage,
     input_handler::InputMessages,
@@ -198,19 +198,22 @@ impl Ui {
 }
 
 /// Draw the main ui to a frame of the terminal
+/// TODO add a single line area for debug message - if not in release mode, maybe with #[cfg(debug_assertions)] ?
 fn draw_frame<B: Backend>(
     f: &mut Frame<'_, B>,
     app_data: &Arc<Mutex<AppData>>,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    // set max height for container section, needs +4 to deal with docker commands list and borders
+    // set max height for container section, needs +5 to deal with docker commands list and borders
     let height = app_data.lock().get_container_len();
-    let height = if height < 12 { height + 4 } else { 12 };
+    let height = if height < 12 { height + 5 } else { 12 };
 
     let column_widths = app_data.lock().get_width();
     let has_containers = app_data.lock().get_container_len() > 0;
     let has_error = app_data.lock().get_error();
     let sorted_by = app_data.lock().get_sorted();
+
+    let delete_confirm = gui_state.lock().get_delete_container();
 
     let show_help = gui_state.lock().status_contains(&[Status::Help]);
     let info_text = gui_state.lock().info_box_text.clone();
@@ -273,6 +276,20 @@ fn draw_frame<B: Backend>(
         sorted_by,
         gui_state,
     );
+
+    if let Some(id) = delete_confirm {
+        let name = app_data.lock().get_container_name_by_id(&id);
+        name.map_or_else(
+            || {
+                // If a container is deleted outside of oxker but whilst the Delete Confirm dialog is open, it can get caught in kind of a dead lock situation
+                // so if in that unique situation, just clear the delete_container id
+                gui_state.lock().set_delete_container(None);
+            },
+            |name| {
+                draw_blocks::delete_confirm(f, gui_state, &name);
+            },
+        );
+    }
 
     // only draw charts if there are containers
     if has_containers {

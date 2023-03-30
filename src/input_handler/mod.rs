@@ -8,18 +8,18 @@ use crossterm::{
     execute,
 };
 use parking_lot::Mutex;
+use ratatui::layout::Rect;
 use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
 };
-use tui::layout::Rect;
 
 mod message;
 use crate::{
     app_data::{AppData, DockerControls, Header},
     app_error::AppError,
     docker_data::DockerMessage,
-    ui::{GuiState, SelectablePanel, Status, Ui},
+    ui::{DeleteButton, GuiState, SelectablePanel, Status, Ui},
 };
 pub use message::InputMessages;
 
@@ -62,12 +62,20 @@ impl InputHandler {
             match message {
                 InputMessages::ButtonPress(key) => self.button_press(key.0, key.1).await,
                 InputMessages::MouseEvent(mouse_event) => {
-                    let error_or_help = self
-                        .gui_state
-                        .lock()
-                        .status_contains(&[Status::Error, Status::Help]);
+                    let error_or_help = self.gui_state.lock().status_contains(&[
+                        Status::Error,
+                        Status::Help,
+                        Status::DeleteConfirm,
+                    ]);
                     if !error_or_help {
                         self.mouse_press(mouse_event);
+                    }
+                    let delete_confirm = self
+                        .gui_state
+                        .lock()
+                        .status_contains(&[Status::DeleteConfirm]);
+                    if delete_confirm {
+                        self.button_intersect(mouse_event).await;
                     }
                 }
             }
@@ -133,41 +141,59 @@ impl InputHandler {
         }
     }
 
+    /// This is executed from the Delete Confirm dialog, and will send an internal message to actually remove the given container
+    async fn confirm_delete(&self) {
+        let id = self.gui_state.lock().get_delete_container();
+        if let Some(id) = id {
+            self.docker_sender
+                .send(DockerMessage::Delete(id))
+                .await
+                .ok();
+        }
+    }
+
+    /// This is executed from the Delete Confirm dialog, and will clear the delete_container information (removes id and closes panel)
+    fn clear_delete(&self) {
+        self.gui_state.lock().set_delete_container(None);
+    }
+
     /// Handle any keyboard button events
     #[allow(clippy::too_many_lines)]
     async fn button_press(&mut self, key_code: KeyCode, key_modififer: KeyModifiers) {
         // TODO - refactor this to a single call, maybe return Error, Help or Normal
         let contains_error = self.gui_state.lock().status_contains(&[Status::Error]);
         let contains_help = self.gui_state.lock().status_contains(&[Status::Help]);
+        let contains_delete = self
+            .gui_state
+            .lock()
+            .status_contains(&[Status::DeleteConfirm]);
 
-        // Quit on Ctrl + c/C
+        // Always just quit on Ctrl + c/C or q/Q
         let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
-        if key_modififer == KeyModifiers::CONTROL && is_c() {
+        let is_q = || key_code == KeyCode::Char('q') || key_code == KeyCode::Char('Q');
+        if key_modififer == KeyModifiers::CONTROL && is_c() || is_q() {
             self.quit().await;
         }
 
         if contains_error {
-            match key_code {
-                KeyCode::Char('q' | 'Q') => self.quit().await,
-                KeyCode::Char('c' | 'C') => {
-                    self.app_data.lock().remove_error();
-                    self.gui_state.lock().status_del(Status::Error);
-                }
-                _ => (),
+            if let KeyCode::Char('c' | 'C') = key_code {
+                self.app_data.lock().remove_error();
+                self.gui_state.lock().status_del(Status::Error);
             }
         } else if contains_help {
             match key_code {
-                KeyCode::Char('q' | 'Q') => self.quit().await,
                 KeyCode::Char('h' | 'H') => self.gui_state.lock().status_del(Status::Help),
                 KeyCode::Char('m' | 'M') => self.m_key(),
                 _ => (),
             }
-        } else {
-            // let abc = KeyEvent::new(KeyCode::Char('d'), KeyModifiers::Ctrl);
+        } else if contains_delete {
             match key_code {
-                // KeyCode::Ctrl('c') => {
-                // 	self.quit().await;
-                // }
+                KeyCode::Char('y' | 'Y') => self.confirm_delete().await,
+                KeyCode::Char('n' | 'N') => self.clear_delete(),
+                _ => (),
+            }
+        } else {
+            match key_code {
                 KeyCode::Char('0') => self.app_data.lock().reset_sorted(),
                 KeyCode::Char('1') => self.sort(Header::State),
                 KeyCode::Char('2') => self.sort(Header::Status),
@@ -178,7 +204,6 @@ impl InputHandler {
                 KeyCode::Char('7') => self.sort(Header::Image),
                 KeyCode::Char('8') => self.sort(Header::Rx),
                 KeyCode::Char('9') => self.sort(Header::Tx),
-                KeyCode::Char('q' | 'Q') => self.quit().await,
                 KeyCode::Char('h' | 'H') => self.gui_state.lock().status_push(Status::Help),
                 KeyCode::Char('m' | 'M') => self.m_key(),
                 KeyCode::Tab => {
@@ -251,6 +276,11 @@ impl InputHandler {
                             };
                             if let Some(id) = option_id {
                                 match command {
+                                    DockerControls::Delete => self
+                                        .docker_sender
+                                        .send(DockerMessage::ConfirmDelete(id))
+                                        .await
+                                        .ok(),
                                     DockerControls::Pause => {
                                         self.docker_sender.send(DockerMessage::Pause(id)).await.ok()
                                     }
@@ -276,6 +306,25 @@ impl InputHandler {
                     }
                 }
                 _ => (),
+            }
+        }
+    }
+
+    /// Check if a button press interacts with either the yes or no buttons in the delete container confirm window
+    async fn button_intersect(&mut self, mouse_event: MouseEvent) {
+        if mouse_event.kind == MouseEventKind::Down(MouseButton::Left) {
+            let intersect = self.gui_state.lock().button_intersect(Rect::new(
+                mouse_event.column,
+                mouse_event.row,
+                1,
+                1,
+            ));
+
+            if let Some(button) = intersect {
+                match button {
+                    DeleteButton::Yes => self.confirm_delete().await,
+                    DeleteButton::No => self.clear_delete(),
+                }
             }
         }
     }
