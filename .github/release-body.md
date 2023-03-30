@@ -1,25 +1,23 @@
-### 2023-03-13
+### 2023-03-30
 
 ### Chores
-+ Rust 1.68.0 clippy linting, [5582c45403413d3355bbcd629cfad559296f5e5b]
-+ devcontainer use sparse protocol index, [20b79e9cd5bf75bb253158c0b590284139e0291d]
-+ dependencies updated, [0c07d4b40607a0eba003b6dcd0345ec0543c6264], [601a73d2c830043a25d64922c4d4aa38f8801912], [5aaa3c1ab08b0c85df9bfce18a3e60206556fa58], [7a1563030e48499da7f41033673c70deefe3de8a], [457157755baa1f9e9cfef9315a7940c357b0953d]
++ dependencies updated, [7a9bdc9699594532e17a33e044ca0678693c8d3f], [58e03a750fe89b914b9069cb0c6c02a3d0929439], [b246e8c25af0c5136953afca7c694cda66550d9b]
+
+### Docs
++ README.md and screenshot updated, [73ab7580c61dd59c59f10872629111360afb9033]
 
 ### Features
-+ increase mpsc channel size from 16 to 32 messages, [924f14e998f79f731447a2eded038eab51f2e932]
-+ KeyEvents send modifier, so can quit on `ctrl + c`, [598f67c6f6a8713102bcc415f0409911763bb914]
-+ only send relevant mouse events to input handler, [507660d835d0beaa8cd021110401ecc58c0613c6]
++ Ability to delete a container, be warned, as this will force delete, closes #27, [937202fe34d1692693c62dd1a7ad19db37651233], [b25f8b18f4f2acd5c9af4a1d40655761d1bd720e]
++ Publish images to `ghcr.io` as well as Docker Hub, and correctly tag images with `latest` and the current sermver, [cb1271cf7f21c898020481ad85914a3dcc83ec93]
++ Replace `tui-rs` with [ratatui](https://github.com/tui-rs-revival/ratatui), [d431f850219b28af2bc45f3b6917377604596a40]
 
 ### Fixes
-+ GitHub workflow on SEMEVR tag only, [140773865165bf006e74f9d436fc744220f5eae7]
++ out of bound bug in `heading_bar()`, [b9c125da46fe0eb4aae15c354d87ac824e9cb83a]
++ `-d` arg error text updated, [e0b49be84062abdfcb636418f57043fad37d06ec]
 
 ### Refactors
-+ replace `unwrap_or(())` with `.ok()`, [8ba37a165bb89277ab957194da6464bdb35be2e6]
-+ use `unwrap_or_default()`, [79de92c3921702417bb2df1f44939a7b09cb7fa0]
-+ Result return, [d9f0bd5566e27218b8c8eaba6ece237907771c1d]
-
-### Reverts
-+ temporary devcontainer buildkit fix removed, [d1497a4451f4de54d3cc26c5a3957cd636c29118]
++ `popup()` use `saturating_x()` rather than `checked_x()`, [d628e8029942916053b3b7e72d363b1290fc5711]
++ button_item() include brackets, [7c92ffef7da20143a31706a310b5e6f2c3e0554f]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details
