@@ -796,6 +796,12 @@ pub fn delete_confirm<B: Backend>(
 
 	// Should maybe have a differenet button_space IF the f.width() is within 2 chars of no_chars + yes_chars?
     let button_spacing = (max_line_width - no_chars - yes_chars) / 3;
+
+	let button_spacing = if (button_spacing + max_line_width) > f.size().width {
+		1
+	}else{
+		button_spacing
+	};
     let split_buttons = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
