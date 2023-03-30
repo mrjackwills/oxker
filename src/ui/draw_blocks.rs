@@ -11,7 +11,7 @@ use ratatui::{
     },
     Frame,
 };
-use std::default::Default;
+use std::{default::Default, ops::Sub};
 use std::{fmt::Display, sync::Arc};
 
 use crate::app_data::{Header, SortedOrder};
@@ -898,9 +898,7 @@ pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
 fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocation) -> Rect {
     // Make sure blank_space can't be an negative, as will crash
     let calc = |x: u16, y: usize| {
-        (usize::from(x).checked_sub(y).map_or(1usize, |f| f))
-            .checked_div(2)
-            .map_or(1usize, |f| f)
+		usize::from(x).saturating_sub(y).saturating_div(2)
     };
 
     let blank_vertical = calc(r.height, text_lines);
