@@ -456,6 +456,15 @@ impl AppData {
         self.containers.items.iter_mut().find(|i| &i.id == id)
     }
 
+    /// return a mutable container by given id
+    pub fn get_container_name_by_id(&mut self, id: &ContainerId) -> Option<String> {
+        self.containers
+            .items
+            .iter_mut()
+            .find(|i| &i.id == id)
+            .map(|i| i.name.clone())
+    }
+
     /// Find the id of the currently selected container.
     /// If any containers on system, will always return a ContainerId
     /// Only returns None when no containers found.
@@ -532,6 +541,7 @@ impl AppData {
                 }
             }
         }
+
         // Trim a &String and return String
         let trim_owned = |x: &String| x.trim().to_owned();
 

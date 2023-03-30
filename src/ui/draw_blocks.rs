@@ -21,7 +21,7 @@ use crate::{
     app_error::AppError,
 };
 
-use super::gui_state::{BoxLocation, Region};
+use super::gui_state::{BoxLocation, DeleteButton, Region};
 use super::{GuiState, SelectablePanel};
 
 const NAME_TEXT: &str = r#"
@@ -43,6 +43,14 @@ const MARGIN: &str = "   ";
 const ARROW: &str = "▶ ";
 const CIRCLE: &str = "⚪ ";
 
+/// From a given &str, return the maximum number of chars on a single line
+fn max_line_width(text: &str) -> usize {
+    text.lines()
+        .map(|i| i.chars().count())
+        .max()
+        .unwrap_or_default()
+}
+
 /// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
 fn generate_block<'a>(
@@ -53,7 +61,7 @@ fn generate_block<'a>(
 ) -> Block<'a> {
     gui_state
         .lock()
-        .update_heading_map(Region::Panel(panel), area);
+        .update_region_map(Region::Panel(panel), area);
     let current_selected_panel = gui_state.lock().selected_panel;
     let mut title = match panel {
         SelectablePanel::Containers => {
@@ -459,7 +467,7 @@ pub fn heading_bar<B: Backend>(
             let rect = headers_section[index];
             gui_state
                 .lock()
-                .update_heading_map(Region::Header(header), rect);
+                .update_region_map(Region::Header(header), rect);
             f.render_widget(paragraph, rect);
         }
     }
@@ -477,14 +485,6 @@ pub fn heading_bar<B: Backend>(
     // If no containers, don't display the headers, could maybe do this first?
     let help_index = if has_containers { 2 } else { 0 };
     f.render_widget(help_paragraph, split_bar[help_index]);
-}
-
-/// From a given &str, return the maximum number of chars on a single line
-fn max_line_width(text: &str) -> usize {
-    text.lines()
-        .map(|i| i.chars().count())
-        .max()
-        .unwrap_or_default()
 }
 
 /// Help popup box needs these three pieces of information
@@ -515,12 +515,12 @@ impl HelpInfo {
         Span::styled(input.to_owned(), Style::default().fg(color))
     }
 
-    /// Span to black text span
+    /// &str to black text span
     fn black_span<'a>(input: &str) -> Span<'a> {
         Self::span(input, Color::Black)
     }
 
-    /// Span to white text span
+    /// &str to white text span
     fn white_span<'a>(input: &str) -> Span<'a> {
         Self::span(input, Color::White)
     }
@@ -559,7 +559,7 @@ impl HelpInfo {
 
     /// Generate the button information span + metadata
     fn gen_button() -> Self {
-        let button_item = |x: &str| Self::white_span(&format!(" {x} "));
+        let button_item = |x: &str| Self::white_span(&format!(" ( {x} ) "));
         let button_desc = |x: &str| Self::black_span(x);
         let or = || button_desc("or");
         let space = || button_desc(" ");
@@ -567,52 +567,48 @@ impl HelpInfo {
         let spans = [
             Spans::from(vec![
                 space(),
-                button_item("( tab )"),
+                button_item("tab"),
                 or(),
-                button_item("( shift+tab )"),
+                button_item("shift+tab"),
                 button_desc("to change panels"),
             ]),
             Spans::from(vec![
                 space(),
-                button_item("( ↑ ↓ )"),
+                button_item("↑ ↓"),
                 or(),
-                button_item("( j k )"),
+                button_item("j k"),
                 or(),
-                button_item("( PgUp PgDown )"),
+                button_item("PgUp PgDown"),
                 or(),
-                button_item("( Home End )"),
+                button_item("Home End"),
                 button_desc("to change selected line"),
             ]),
             Spans::from(vec![
                 space(),
-                button_item("( enter )"),
+                button_item("enter"),
                 button_desc("to send docker container command"),
             ]),
             Spans::from(vec![
                 space(),
-                button_item("( h )"),
+                button_item("h"),
                 button_desc("to toggle this help information"),
             ]),
+            Spans::from(vec![space(), button_item("0"), button_desc("to stop sort")]),
             Spans::from(vec![
                 space(),
-                button_item("( 0 )"),
-                button_desc("to stop sort"),
-            ]),
-            Spans::from(vec![
-                space(),
-                button_item("( 1 - 9 )"),
+                button_item("1 - 9"),
                 button_desc("sort by header - or click header"),
             ]),
             Spans::from(vec![
 				space(),
-				button_item("( m )"),
+				button_item("m"),
 				button_desc(
 					"to toggle mouse capture - if disabled, text on screen can be selected & copied",
 				),
 			]),
             Spans::from(vec![
                 space(),
-                button_item("( q )"),
+                button_item("q"),
                 button_desc("to quit at any time"),
             ]),
         ];
@@ -635,7 +631,9 @@ impl HelpInfo {
             )]),
             Spans::from(vec![Span::styled(
                 REPO.to_owned(),
-                Style::default().fg(Color::White).add_modifier(Modifier::UNDERLINED),
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::UNDERLINED),
             )]),
         ];
         let height = spans.len();
@@ -724,6 +722,110 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
     f.render_widget(help_paragraph, split_popup[2]);
     f.render_widget(final_paragraph, split_popup[3]);
     f.render_widget(block, area);
+}
+
+/// Draw the delete confirm box in the centre of the screen
+/// take in container id and container name here?
+pub fn delete_confirm<B: Backend>(
+    f: &mut Frame<'_, B>,
+    gui_state: &Arc<Mutex<GuiState>>,
+    name: &str,
+) {
+    let block = Block::default()
+        .title(" Confirm Delete ")
+        .border_type(BorderType::Rounded)
+        .style(Style::default().bg(Color::White).fg(Color::Black))
+        .title_alignment(Alignment::Center)
+        .borders(Borders::ALL);
+
+    let confirm = Spans::from(vec![
+        Span::from("Are you sure you want to delete container: "),
+        Span::styled(
+            name,
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
+    ]);
+
+    let yes_text = " (Y)es ";
+    let no_text = " (N)o ";
+
+    // Find the maximum line width & height, and add some padding
+    let max_line_width = u16::try_from(confirm.width()).unwrap_or(64) + 12;
+    let lines = 8;
+
+    let confirm_para = Paragraph::new(confirm).alignment(Alignment::Center);
+
+    let button_block = || {
+        Block::default()
+            .border_type(BorderType::Rounded)
+            .borders(Borders::ALL)
+    };
+
+    let yes_para = Paragraph::new(yes_text)
+        .alignment(Alignment::Center)
+        .block(button_block());
+    // Need to add some padding for the borders
+    let yes_chars = u16::try_from(yes_text.chars().count() + 2).unwrap_or(9);
+
+    let no_para = Paragraph::new(no_text)
+        .alignment(Alignment::Center)
+        .block(button_block());
+    // Need to add some padding for the borders
+    let no_chars = u16::try_from(no_text.chars().count() + 2).unwrap_or(8);
+
+    let area = popup(
+        lines,
+        max_line_width.into(),
+        f.size(),
+        BoxLocation::MiddleCentre,
+    );
+
+    let split_popup = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Min(2),
+                Constraint::Max(1),
+                Constraint::Max(1),
+                Constraint::Max(3),
+                Constraint::Min(1),
+            ]
+            .as_ref(),
+        )
+        .split(area);
+
+    let button_spacing = (max_line_width - no_chars - yes_chars) / 3;
+    let split_buttons = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Min(button_spacing),
+                Constraint::Max(no_chars),
+                Constraint::Min(button_spacing),
+                Constraint::Max(yes_chars),
+                Constraint::Min(button_spacing),
+            ]
+            .as_ref(),
+        )
+        .split(split_popup[3]);
+
+    let no_area = split_buttons[1];
+    let yes_area = split_buttons[3];
+
+    // Insert button areas into region map, so can interact with them on click
+    gui_state
+        .lock()
+        .update_region_map(Region::Delete(DeleteButton::No), no_area);
+
+    gui_state
+        .lock()
+        .update_region_map(Region::Delete(DeleteButton::Yes), yes_area);
+
+    f.render_widget(Clear, area);
+    f.render_widget(block, area);
+    f.render_widget(confirm_para, split_popup[1]);
+    f.render_widget(no_para, no_area);
+    f.render_widget(yes_para, yes_area);
 }
 
 /// Draw an error popup over whole screen

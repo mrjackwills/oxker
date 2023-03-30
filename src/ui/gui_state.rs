@@ -5,7 +5,7 @@ use std::{
 };
 use uuid::Uuid;
 
-use crate::app_data::Header;
+use crate::app_data::{ContainerId, Header};
 
 #[derive(Debug, Default, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SelectablePanel {
@@ -43,6 +43,13 @@ impl SelectablePanel {
 pub enum Region {
     Panel(SelectablePanel),
     Header(Header),
+    Delete(DeleteButton),
+}
+
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+pub enum DeleteButton {
+    Yes,
+    No,
 }
 
 #[allow(unused)]
@@ -191,11 +198,13 @@ impl fmt::Display for Loading {
 
 /// The application gui state can be in multiple of these four states at the same time
 /// Various functions (e.g input handler), operate differently depending upon current Status
+// Copy
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Status {
     Init,
     Help,
     DockerConnect,
+    DeleteConfirm,
     Error,
 }
 
@@ -206,7 +215,9 @@ pub struct GuiState {
     is_loading: HashSet<Uuid>,
     loading_icon: Loading,
     panel_map: HashMap<SelectablePanel, Rect>,
+    delete_map: HashMap<DeleteButton, Rect>,
     status: HashSet<Status>,
+    delete_container: Option<ContainerId>,
     pub info_box_text: Option<String>,
     pub selected_panel: SelectablePanel,
 }
@@ -229,6 +240,16 @@ impl GuiState {
         }
     }
 
+    /// Check if a given Rect (a clicked area of 1x1), interacts with any known delete button
+    pub fn button_intersect(&mut self, rect: Rect) -> Option<DeleteButton> {
+        self.delete_map
+            .iter()
+            .filter(|i| i.1.intersects(rect))
+            .collect::<Vec<_>>()
+            .get(0)
+            .map(|data| *data.0)
+    }
+
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
     pub fn header_intersect(&mut self, rect: Rect) -> Option<Header> {
         self.heading_map
@@ -240,7 +261,7 @@ impl GuiState {
     }
 
     /// Insert, or updates header area panel into heading_map
-    pub fn update_heading_map(&mut self, region: Region, area: Rect) {
+    pub fn update_region_map(&mut self, region: Region, area: Rect) {
         match region {
             Region::Header(header) => self
                 .heading_map
@@ -252,7 +273,28 @@ impl GuiState {
                 .entry(panel)
                 .and_modify(|w| *w = area)
                 .or_insert(area),
+            Region::Delete(button) => self
+                .delete_map
+                .entry(button)
+                .and_modify(|w| *w = area)
+                .or_insert(area),
         };
+    }
+
+    /// Check if an ContainerId is set in the delete_container field
+    pub fn get_delete_container(&self) -> Option<ContainerId> {
+        self.delete_container.clone()
+    }
+
+    /// Set either a ContainerId, or None, to the delete_container field
+    /// If Some, will also insert the DeleteConfirm status into self.status
+    pub fn set_delete_container(&mut self, id: Option<ContainerId>) {
+        if id.is_some() {
+            self.status.insert(Status::DeleteConfirm);
+        } else {
+            self.status.remove(&Status::DeleteConfirm);
+        }
+        self.delete_container = id;
     }
 
     /// Check if the current gui_status contains any of the given status'
@@ -264,6 +306,9 @@ impl GuiState {
     /// Remove a gui_status into the current gui_status HashSet
     pub fn status_del(&mut self, status: Status) {
         self.status.remove(&status);
+        if status == Status::DeleteConfirm {
+            self.status.remove(&Status::DeleteConfirm);
+        }
     }
 
     /// Insert a gui_status into the current gui_status HashSet
