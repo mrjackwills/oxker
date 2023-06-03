@@ -98,6 +98,7 @@ jobs:
           -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:${{env.CURRENT_SEMVER}} \
           -t ghcr.io/${{ github.repository_owner }}/oxker:latest \
           -t ghcr.io/${{ github.repository_owner }}/oxker:${{env.CURRENT_SEMVER}} \
+          --provenance=false --sbom=false \
           --push \
           -f containerised/Dockerfile .
 
