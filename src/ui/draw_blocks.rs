@@ -489,7 +489,7 @@ pub fn heading_bar<B: Backend>(
 
 /// Help popup box needs these three pieces of information
 struct HelpInfo {
-    spans: Vec<Line<'static>>,
+    lines: Vec<Line<'static>>,
     width: usize,
     height: usize,
 }
@@ -527,15 +527,15 @@ impl HelpInfo {
 
     /// Generate the `oxker` name span + metadata
     fn gen_name() -> Self {
-        let mut spans = NAME_TEXT
+        let mut lines = NAME_TEXT
             .lines()
             .map(|i| Line::from(Self::white_span(i)))
             .collect::<Vec<_>>();
-        spans.insert(0, Self::empty_span());
-        let width = Self::calc_width(&spans);
-        let height = spans.len();
+        lines.insert(0, Self::empty_span());
+        let width = Self::calc_width(&lines);
+        let height = lines.len();
         Self {
-            spans,
+            lines,
             width,
             height,
         }
@@ -543,15 +543,15 @@ impl HelpInfo {
 
     /// Generate the description span + metadata
     fn gen_description() -> Self {
-        let spans = [
+        let lines = [
             Self::empty_span(),
             Line::from(Self::white_span(DESCRIPTION)),
             Self::empty_span(),
         ];
-        let width = Self::calc_width(&spans);
-        let height = spans.len();
+        let width = Self::calc_width(&lines);
+        let height = lines.len();
         Self {
-            spans: spans.to_vec(),
+            lines: lines.to_vec(),
             width,
             height,
         }
@@ -564,7 +564,7 @@ impl HelpInfo {
         let or = || button_desc("or");
         let space = || button_desc(" ");
 
-        let spans = [
+        let lines = [
             Line::from(vec![
                 space(),
                 button_item("tab"),
@@ -613,10 +613,10 @@ impl HelpInfo {
             ]),
         ];
 
-        let height = spans.len();
-        let width = Self::calc_width(&spans);
+        let height = lines.len();
+        let width = Self::calc_width(&lines);
         Self {
-            spans: spans.to_vec(),
+            lines: lines.to_vec(),
             width,
             height,
         }
@@ -624,7 +624,7 @@ impl HelpInfo {
 
     /// Generate the final lines, GitHub link etc, + metadata
     fn gen_final() -> Self {
-        let spans = [
+        let lines = [
             Self::empty_span(),
             Line::from(vec![Self::black_span(
                 "currently an early work in progress, all and any input appreciated",
@@ -636,10 +636,10 @@ impl HelpInfo {
                     .add_modifier(Modifier::UNDERLINED),
             )]),
         ];
-        let height = spans.len();
-        let width = Self::calc_width(&spans);
+        let height = lines.len();
+        let width = Self::calc_width(&lines);
         Self {
-            spans: spans.to_vec(),
+            lines: lines.to_vec(),
             width,
             height,
         }
@@ -689,22 +689,22 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
         )
         .split(area);
 
-    let name_paragraph = Paragraph::new(name_info.spans)
+    let name_paragraph = Paragraph::new(name_info.lines)
         .style(Style::default().bg(Color::Magenta).fg(Color::White))
         .block(Block::default())
         .alignment(Alignment::Center);
 
-    let description_paragraph = Paragraph::new(description_info.spans)
+    let description_paragraph = Paragraph::new(description_info.lines)
         .style(Style::default().bg(Color::Magenta).fg(Color::Black))
         .block(Block::default())
         .alignment(Alignment::Center);
 
-    let help_paragraph = Paragraph::new(button_info.spans)
+    let help_paragraph = Paragraph::new(button_info.lines)
         .style(Style::default().bg(Color::Magenta).fg(Color::Black))
         .block(Block::default())
         .alignment(Alignment::Left);
 
-    let final_paragraph = Paragraph::new(final_info.spans)
+    let final_paragraph = Paragraph::new(final_info.lines)
         .style(Style::default().bg(Color::Magenta).fg(Color::Black))
         .block(Block::default())
         .alignment(Alignment::Center);

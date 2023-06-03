@@ -6,7 +6,7 @@ pub mod log_sanitizer {
         text::{Span, Line},
     };
 
-    /// Attempt to colorize the given string to tui-rs standards
+    /// Attempt to colorize the given string to ratatui standards
     pub fn colorize_logs<'a>(input: &str) -> Vec<Line<'a>> {
         vec![Line::from(
             categorise_text(input)
@@ -39,7 +39,7 @@ pub mod log_sanitizer {
         )]
     }
 
-    /// Remove all ansi formatting from a given string and create tui-rs spans
+    /// Remove all ansi formatting from a given string and create ratatui Lines
     pub fn remove_ansi<'a>(input: &str) -> Vec<Line<'a>> {
         raw(&categorise_text(input)
             .into_iter()
@@ -47,7 +47,7 @@ pub mod log_sanitizer {
             .collect::<String>())
     }
 
-    /// create tui-rs spans that exactly match the given strings
+    /// create ratatui Lines that exactly match the given strings
     pub fn raw<'a>(input: &str) -> Vec<Line<'a>> {
         vec![Line::from(Span::raw(input.to_owned()))]
     }
