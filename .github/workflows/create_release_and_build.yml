@@ -5,8 +5,7 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 jobs:
   deploy:
-    # Change this to latest - or ubuntu 20.04?
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -36,13 +35,12 @@ jobs:
       - name: install cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
-      # Build for linux x86_64
-      # Should this actually build for musl?
-      - name: build release linux_x86_64
-        run: cargo build --release
+      # Build for linux x86 musl
+      - name: build x86_64-unknown-linux-musl
+        run: cross build --target x86_64-unknown-linux-musl --release
       # Compress output into tar
-      - name: compress oxker_linux_x86_64 binary
-        run: tar -C target/release -czf ./oxker_linux_x86_64.tar.gz oxker
+      - name: compress aarch64 binary
+        run: tar -C target/x86_64-unknown-linux-musl/release -czf ./oxker_linux_x86_64.tar.gz oxker
 
       # Build for linux aarch64, aka 64 bit pi 4
       - name: build aarch64-unknown-linux-musl
