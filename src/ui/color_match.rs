@@ -3,12 +3,12 @@ pub mod log_sanitizer {
     use cansi::{v3::categorise_text, Color as CansiColor, Intensity};
     use ratatui::{
         style::{Color, Modifier, Style},
-        text::{Span, Spans},
+        text::{Span, Line},
     };
 
     /// Attempt to colorize the given string to tui-rs standards
-    pub fn colorize_logs<'a>(input: &str) -> Vec<Spans<'a>> {
-        vec![Spans::from(
+    pub fn colorize_logs<'a>(input: &str) -> Vec<Line<'a>> {
+        vec![Line::from(
             categorise_text(input)
                 .iter()
                 .map(|i| {
@@ -40,7 +40,7 @@ pub mod log_sanitizer {
     }
 
     /// Remove all ansi formatting from a given string and create tui-rs spans
-    pub fn remove_ansi<'a>(input: &str) -> Vec<Spans<'a>> {
+    pub fn remove_ansi<'a>(input: &str) -> Vec<Line<'a>> {
         raw(&categorise_text(input)
             .into_iter()
             .map(|i| i.text)
@@ -48,8 +48,8 @@ pub mod log_sanitizer {
     }
 
     /// create tui-rs spans that exactly match the given strings
-    pub fn raw<'a>(input: &str) -> Vec<Spans<'a>> {
-        vec![Spans::from(Span::raw(input.to_owned()))]
+    pub fn raw<'a>(input: &str) -> Vec<Line<'a>> {
+        vec![Line::from(Span::raw(input.to_owned()))]
     }
 
     /// Change from ansi to tui colors

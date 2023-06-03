@@ -4,7 +4,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     symbols,
-    text::{Span, Spans},
+    text::{Span, Line},
     widgets::{
         Axis, Block, BorderType, Borders, Chart, Clear, Dataset, GraphType, List, ListItem,
         Paragraph,
@@ -96,7 +96,7 @@ pub fn commands<B: Backend>(
     let items = app_data.lock().get_control_items().map_or(vec![], |i| {
         i.iter()
             .map(|c| {
-                let lines = Spans::from(vec![Span::styled(
+                let lines = Line::from(vec![Span::styled(
                     c.to_string(),
                     Style::default().fg(c.get_color()),
                 )]);
@@ -138,7 +138,7 @@ pub fn containers<B: Backend>(
             let state_style = Style::default().fg(i.state.get_color());
             let blue = Style::default().fg(Color::Blue);
 
-            let lines = Spans::from(vec![
+            let lines = Line::from(vec![
                 Span::styled(
                     format!(
                         "{:<width$}",
@@ -489,25 +489,25 @@ pub fn heading_bar<B: Backend>(
 
 /// Help popup box needs these three pieces of information
 struct HelpInfo {
-    spans: Vec<Spans<'static>>,
+    spans: Vec<Line<'static>>,
     width: usize,
     height: usize,
 }
 
 impl HelpInfo {
-    /// Find the max width of a Span in &[Spans], although it isn't calculating it correctly
-    fn calc_width(spans: &[Spans]) -> usize {
-        spans
+    /// Find the max width of a Span in &[Line], although it isn't calculating it correctly
+    fn calc_width(lines: &[Line]) -> usize {
+        lines
             .iter()
-            .flat_map(|x| x.0.iter())
+            .flat_map(|x| x.spans.iter())
             .map(ratatui::text::Span::width)
             .max()
             .unwrap_or(1)
     }
 
     /// Just an empty span, i.e. a new line
-    fn empty_span<'a>() -> Spans<'a> {
-        Spans::from(String::new())
+    fn empty_span<'a>() -> Line<'a> {
+        Line::from(String::new())
     }
 
     /// generate a span, of given &str and given color
@@ -529,7 +529,7 @@ impl HelpInfo {
     fn gen_name() -> Self {
         let mut spans = NAME_TEXT
             .lines()
-            .map(|i| Spans::from(Self::white_span(i)))
+            .map(|i| Line::from(Self::white_span(i)))
             .collect::<Vec<_>>();
         spans.insert(0, Self::empty_span());
         let width = Self::calc_width(&spans);
@@ -545,7 +545,7 @@ impl HelpInfo {
     fn gen_description() -> Self {
         let spans = [
             Self::empty_span(),
-            Spans::from(Self::white_span(DESCRIPTION)),
+            Line::from(Self::white_span(DESCRIPTION)),
             Self::empty_span(),
         ];
         let width = Self::calc_width(&spans);
@@ -565,14 +565,14 @@ impl HelpInfo {
         let space = || button_desc(" ");
 
         let spans = [
-            Spans::from(vec![
+            Line::from(vec![
                 space(),
                 button_item("tab"),
                 or(),
                 button_item("shift+tab"),
                 button_desc("to change panels"),
             ]),
-            Spans::from(vec![
+            Line::from(vec![
                 space(),
                 button_item("↑ ↓"),
                 or(),
@@ -583,30 +583,30 @@ impl HelpInfo {
                 button_item("Home End"),
                 button_desc("to change selected line"),
             ]),
-            Spans::from(vec![
+            Line::from(vec![
                 space(),
                 button_item("enter"),
                 button_desc("to send docker container command"),
             ]),
-            Spans::from(vec![
+            Line::from(vec![
                 space(),
                 button_item("h"),
                 button_desc("to toggle this help information"),
             ]),
-            Spans::from(vec![space(), button_item("0"), button_desc("to stop sort")]),
-            Spans::from(vec![
+            Line::from(vec![space(), button_item("0"), button_desc("to stop sort")]),
+            Line::from(vec![
                 space(),
                 button_item("1 - 9"),
                 button_desc("sort by header - or click header"),
             ]),
-            Spans::from(vec![
+            Line::from(vec![
 				space(),
 				button_item("m"),
 				button_desc(
 					"to toggle mouse capture - if disabled, text on screen can be selected & copied",
 				),
 			]),
-            Spans::from(vec![
+            Line::from(vec![
                 space(),
                 button_item("q"),
                 button_desc("to quit at any time"),
@@ -626,10 +626,10 @@ impl HelpInfo {
     fn gen_final() -> Self {
         let spans = [
             Self::empty_span(),
-            Spans::from(vec![Self::black_span(
+            Line::from(vec![Self::black_span(
                 "currently an early work in progress, all and any input appreciated",
             )]),
-            Spans::from(vec![Span::styled(
+            Line::from(vec![Span::styled(
                 REPO.to_owned(),
                 Style::default()
                     .fg(Color::White)
@@ -738,7 +738,7 @@ pub fn delete_confirm<B: Backend>(
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL);
 
-    let confirm = Spans::from(vec![
+    let confirm = Line::from(vec![
         Span::from("Are you sure you want to delete container: "),
         Span::styled(
             name,
