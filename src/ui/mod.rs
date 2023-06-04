@@ -278,7 +278,8 @@ fn draw_frame<B: Backend>(
     );
 
     if let Some(id) = delete_confirm {
-        app_data.lock().get_container_name_by_id(&id).map_or_else(|| {
+        app_data.lock().get_container_name_by_id(&id).map_or_else(
+            || {
                 // If a container is deleted outside of oxker but whilst the Delete Confirm dialog is open, it can get caught in kind of a dead lock situation
                 // so if in that unique situation, just clear the delete_container id
                 gui_state.lock().set_delete_container(None);
