@@ -176,19 +176,25 @@ cargo_test () {
 # This will download GB's of docker images
 cargo_build () {
 	cargo install cross
-	echo -e "${YELLOW}cargo build --release${RESET}"
-	cargo build --release
+	cargo_clean
+	echo -e "${YELLOW}cross build --target x86_64-unknown-linux-musl --release${RESET}"
+	cross build --target x86_64-unknown-linux-musl --release
 	ask_continue
+	cargo_clean
 	echo -e "${YELLOW}cross build --target aarch64-unknown-linux-musl --release${RESET}"
 	cross build --target aarch64-unknown-linux-musl --release
 	ask_continue
+	cargo_clean
 	echo -e "${YELLOW}cross build --target arm-unknown-linux-musleabihf --release${RESET}"
 	cross build --target arm-unknown-linux-musleabihf --release
 	ask_continue
+	cargo_clean
 	echo -e "${YELLOW}cross build --target x86_64-pc-windows-gnu --release${RESET}"
 	cross build --target x86_64-pc-windows-gnu --release
 	ask_continue
+	cargo_clean
 }
+
 
 # $1 text to colourise
 release_continue () {
@@ -196,6 +202,11 @@ release_continue () {
 	ask_continue
 }
 
+# Clean/remove builds, due to issue with cross-rs
+cargo_clean() {
+	echo -e "${YELLOW}cargo clean${RESET}"
+	cargo clean
+}
 # Check repository for typos
 check_typos () {
 	echo -e "\n${PURPLE}check typos${RESET}"
