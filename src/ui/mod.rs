@@ -197,27 +197,32 @@ impl Ui {
     }
 }
 
+// This macro simplifies the definition and evaluation of variables by capturing and immediately evaluating an expression.
+macro_rules! value_capture {
+    ($name:ident, $lock_expr:expr) => {
+        let $name = || $lock_expr;
+        let $name = $name();
+    };
+}
+
 /// Draw the main ui to a frame of the terminal
-/// TODO add a single line area for debug message - if not in release mode, maybe with #[cfg(debug_assertions)] ?
+/// TODO add a single line area for debug message - if not in release mode?
 fn draw_frame<B: Backend>(
     f: &mut Frame<'_, B>,
     app_data: &Arc<Mutex<AppData>>,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
+    value_capture!(height, app_data.lock().get_container_len());
+    value_capture!(column_widths, app_data.lock().get_width());
+    value_capture!(has_containers, app_data.lock().get_container_len() > 0);
+    value_capture!(sorted_by, app_data.lock().get_sorted());
+    value_capture!(delete_confirm, gui_state.lock().get_delete_container());
+    value_capture!(has_error, app_data.lock().get_error());
+    value_capture!(info_text, gui_state.lock().info_box_text.clone());
+    value_capture!(loading_icon, gui_state.lock().get_loading().to_string());
+
     // set max height for container section, needs +5 to deal with docker commands list and borders
-    let height = app_data.lock().get_container_len();
     let height = if height < 12 { height + 5 } else { 12 };
-
-    let column_widths = app_data.lock().get_width();
-    let has_containers = app_data.lock().get_container_len() > 0;
-    let has_error = app_data.lock().get_error();
-    let sorted_by = app_data.lock().get_sorted();
-
-    let delete_confirm = gui_state.lock().get_delete_container();
-
-    let show_help = gui_state.lock().status_contains(&[Status::Help]);
-    let info_text = gui_state.lock().info_box_text.clone();
-    let loading_icon = gui_state.lock().get_loading();
 
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -261,10 +266,6 @@ fn draw_frame<B: Backend>(
 
     draw_blocks::containers(app_data, top_panel[0], f, gui_state, &column_widths);
 
-    if has_containers {
-        draw_blocks::commands(app_data, top_panel[1], f, gui_state);
-    }
-
     draw_blocks::logs(app_data, lower_main[0], f, gui_state, &loading_icon);
 
     draw_blocks::heading_bar(
@@ -290,8 +291,9 @@ fn draw_frame<B: Backend>(
         );
     }
 
-    // only draw charts if there are containers
+    // only draw commands + charts if there are containers
     if has_containers {
+        draw_blocks::commands(app_data, top_panel[1], f, gui_state);
         draw_blocks::chart(f, lower_main[1], app_data);
     }
 
@@ -300,7 +302,7 @@ fn draw_frame<B: Backend>(
     }
 
     // Check if error, and show popup if so
-    if show_help {
+    if gui_state.lock().status_contains(&[Status::Help]) {
         draw_blocks::help_box(f);
     }
 
