@@ -323,8 +323,8 @@ impl DockerData {
         while !self.app_data.lock().initialised(&all_ids) {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
-        self.gui_state.lock().status_del(Status::Init);
         Self::stop_loading_spin(&self.gui_state, &loading_spin, loading_uuid);
+        self.gui_state.lock().status_del(Status::Init);
     }
 
     /// Set the global error as the docker error, and set gui_state to error

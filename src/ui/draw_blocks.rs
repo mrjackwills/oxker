@@ -62,7 +62,6 @@ fn generate_block<'a>(
     gui_state
         .lock()
         .update_region_map(Region::Panel(panel), area);
-    let current_selected_panel = gui_state.lock().selected_panel;
     let mut title = match panel {
         SelectablePanel::Containers => {
             format!("{} {}", panel.title(), app_data.lock().container_title())
@@ -79,7 +78,7 @@ fn generate_block<'a>(
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .title(title);
-    if current_selected_panel == panel {
+    if gui_state.lock().selected_panel == panel {
         block = block.border_style(Style::default().fg(Color::LightCyan));
     }
     block
@@ -819,6 +818,11 @@ pub fn delete_confirm<B: Backend>(
     let no_area = split_buttons[1];
     let yes_area = split_buttons[3];
 
+    f.render_widget(Clear, area);
+    f.render_widget(block, area);
+    f.render_widget(confirm_para, split_popup[1]);
+    f.render_widget(no_para, no_area);
+    f.render_widget(yes_para, yes_area);
     // Insert button areas into region map, so can interact with them on click
     gui_state
         .lock()
@@ -827,12 +831,6 @@ pub fn delete_confirm<B: Backend>(
     gui_state
         .lock()
         .update_region_map(Region::Delete(DeleteButton::Yes), yes_area);
-
-    f.render_widget(Clear, area);
-    f.render_widget(block, area);
-    f.render_widget(confirm_para, split_popup[1]);
-    f.render_widget(no_para, no_area);
-    f.render_widget(yes_para, yes_area);
 }
 
 /// Draw an error popup over whole screen

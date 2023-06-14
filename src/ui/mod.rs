@@ -197,7 +197,8 @@ impl Ui {
     }
 }
 
-// This macro simplifies the definition and evaluation of variables by capturing and immediately evaluating an expression.
+#[macro_export]
+/// This macro simplifies the definition and evaluation of variables by capturing and immediately evaluating an expression.
 macro_rules! value_capture {
     ($name:ident, $lock_expr:expr) => {
         let $name = || $lock_expr;

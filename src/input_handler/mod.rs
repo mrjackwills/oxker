@@ -20,6 +20,7 @@ use crate::{
     app_error::AppError,
     docker_data::DockerMessage,
     ui::{DeleteButton, GuiState, SelectablePanel, Status, Ui},
+    value_capture,
 };
 pub use message::InputMessages;
 
@@ -62,12 +63,11 @@ impl InputHandler {
             match message {
                 InputMessages::ButtonPress(key) => self.button_press(key.0, key.1).await,
                 InputMessages::MouseEvent(mouse_event) => {
-                    let error_or_help = self.gui_state.lock().status_contains(&[
+                    if !self.gui_state.lock().status_contains(&[
                         Status::Error,
                         Status::Help,
                         Status::DeleteConfirm,
-                    ]);
-                    if !error_or_help {
+                    ]) {
                         self.mouse_press(mouse_event);
                     }
                     let delete_confirm = self
@@ -160,13 +160,21 @@ impl InputHandler {
     /// Handle any keyboard button events
     #[allow(clippy::too_many_lines)]
     async fn button_press(&mut self, key_code: KeyCode, key_modififer: KeyModifiers) {
-        // TODO - refactor this to a single call, maybe return Error, Help or Normal
-        let contains_error = self.gui_state.lock().status_contains(&[Status::Error]);
-        let contains_help = self.gui_state.lock().status_contains(&[Status::Help]);
-        let contains_delete = self
-            .gui_state
-            .lock()
-            .status_contains(&[Status::DeleteConfirm]);
+        value_capture!(
+            contains_delete,
+            self.gui_state
+                .lock()
+                .status_contains(&[Status::DeleteConfirm])
+        );
+
+        value_capture!(
+            contains_error,
+            self.gui_state.lock().status_contains(&[Status::Error])
+        );
+        value_capture!(
+            contains_help,
+            self.gui_state.lock().status_contains(&[Status::Help])
+        );
 
         // Always just quit on Ctrl + c/C or q/Q
         let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
@@ -208,10 +216,9 @@ impl InputHandler {
                 KeyCode::Char('m' | 'M') => self.m_key(),
                 KeyCode::Tab => {
                     // Skip control panel if no containers, could be refactored
-                    let has_containers = self.app_data.lock().get_container_len() == 0;
                     let is_containers =
                         self.gui_state.lock().selected_panel == SelectablePanel::Containers;
-                    let count = if has_containers && is_containers {
+                    let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
                         2
                     } else {
                         1
@@ -222,10 +229,9 @@ impl InputHandler {
                 }
                 KeyCode::BackTab => {
                     // Skip control panel if no containers, could be refactored
-                    let has_containers = self.app_data.lock().get_container_len() == 0;
                     let is_containers =
                         self.gui_state.lock().selected_panel == SelectablePanel::Logs;
-                    let count = if has_containers && is_containers {
+                    let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
                         2
                     } else {
                         1
@@ -236,7 +242,8 @@ impl InputHandler {
                 }
                 KeyCode::Home => {
                     let mut locked_data = self.app_data.lock();
-                    match self.gui_state.lock().selected_panel {
+                    let selected_panel = self.gui_state.lock().selected_panel;
+                    match selected_panel {
                         SelectablePanel::Containers => locked_data.containers_start(),
                         SelectablePanel::Logs => locked_data.log_start(),
                         SelectablePanel::Commands => locked_data.docker_command_start(),
@@ -244,7 +251,8 @@ impl InputHandler {
                 }
                 KeyCode::End => {
                     let mut locked_data = self.app_data.lock();
-                    match self.gui_state.lock().selected_panel {
+                    let selected_panel = self.gui_state.lock().selected_panel;
+                    match selected_panel {
                         SelectablePanel::Containers => locked_data.containers_end(),
                         SelectablePanel::Logs => locked_data.log_end(),
                         SelectablePanel::Commands => locked_data.docker_command_end(),
@@ -358,7 +366,8 @@ impl InputHandler {
     /// Change state to next, depending which panel is currently in focus
     fn next(&mut self) {
         let mut locked_data = self.app_data.lock();
-        match self.gui_state.lock().selected_panel {
+        let selected_panel = self.gui_state.lock().selected_panel;
+        match selected_panel {
             SelectablePanel::Containers => locked_data.containers_next(),
             SelectablePanel::Logs => locked_data.log_next(),
             SelectablePanel::Commands => locked_data.docker_command_next(),
@@ -368,7 +377,8 @@ impl InputHandler {
     /// Change state to previous, depending which panel is currently in focus
     fn previous(&mut self) {
         let mut locked_data = self.app_data.lock();
-        match self.gui_state.lock().selected_panel {
+        let selected_panel = self.gui_state.lock().selected_panel;
+        match selected_panel {
             SelectablePanel::Containers => locked_data.containers_previous(),
             SelectablePanel::Logs => locked_data.log_previous(),
             SelectablePanel::Commands => locked_data.docker_command_previous(),
