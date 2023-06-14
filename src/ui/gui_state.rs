@@ -1,8 +1,5 @@
 use ratatui::layout::{Constraint, Rect};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-};
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::app_data::{ContainerId, Header};
@@ -145,60 +142,12 @@ impl BoxLocation {
     }
 }
 
-/// State for the loading animation
-#[derive(Debug, Default, Clone, Copy)]
-pub enum Loading {
-    #[default]
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-    Eight,
-    Nine,
-    Ten,
-}
-
-impl Loading {
-    pub const fn next(self) -> Self {
-        match self {
-            Self::One => Self::Two,
-            Self::Two => Self::Three,
-            Self::Three => Self::Four,
-            Self::Four => Self::Five,
-            Self::Five => Self::Six,
-            Self::Six => Self::Seven,
-            Self::Seven => Self::Eight,
-            Self::Eight => Self::Nine,
-            Self::Nine => Self::Ten,
-            Self::Ten => Self::One,
-        }
-    }
-}
-
-impl fmt::Display for Loading {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let disp = match self {
-            Self::One => '⠋',
-            Self::Two => '⠙',
-            Self::Three => '⠹',
-            Self::Four => '⠸',
-            Self::Five => '⠼',
-            Self::Six => '⠴',
-            Self::Seven => '⠦',
-            Self::Eight => '⠧',
-            Self::Nine => '⠇',
-            Self::Ten => '⠏',
-        };
-        write!(f, "{disp}")
-    }
-}
+// loading animation frames
+const FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+const FRAMES_LEN: u8 = 9;
 
 /// The application gui state can be in multiple of these four states at the same time
 /// Various functions (e.g input handler), operate differently depending upon current Status
-// Copy
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Status {
     Init,
@@ -213,7 +162,7 @@ pub enum Status {
 pub struct GuiState {
     heading_map: HashMap<Header, Rect>,
     is_loading: HashSet<Uuid>,
-    loading_icon: Loading,
+    loading_index: u8,
     panel_map: HashMap<SelectablePanel, Rect>,
     delete_map: HashMap<DeleteButton, Rect>,
     status: HashSet<Status>,
@@ -327,24 +276,31 @@ impl GuiState {
         self.selected_panel = self.selected_panel.prev();
     }
 
-    /// Insert a new loading_uuid into HashSet, and advance the animation by one frame
+    /// Insert a new loading_uuid into HashSet, and advance the loading_index by one frame, or reset to 0 if at end of array
     pub fn next_loading(&mut self, uuid: Uuid) {
-        self.loading_icon = self.loading_icon.next();
+        if self.loading_index == FRAMES_LEN {
+            self.loading_index = 0;
+        } else {
+            self.loading_index += 1;
+        }
         self.is_loading.insert(uuid);
     }
 
-    /// If is_loading has any entries, return the current loading_icon, else an empty string, which needs to take up the same space, hence ' '
-    pub fn get_loading(&mut self) -> String {
+    /// If is_loading has any entries, return the char at FRAMES[index], else an empty char, which needs to take up the same space, hence ' '
+    pub fn get_loading(&mut self) -> char {
         if self.is_loading.is_empty() {
-            String::from(" ")
+            ' '
         } else {
-            self.loading_icon.to_string()
+            FRAMES[usize::from(self.loading_index)]
         }
     }
 
-    /// Remove a loading_uuid from the is_loading HashSet
+    /// Remove a loading_uuid from the is_loading HashSet, if empty, reset loading_index to 0
     pub fn remove_loading(&mut self, uuid: Uuid) {
         self.is_loading.remove(&uuid);
+        if self.is_loading.is_empty() {
+            self.loading_index = 0;
+        }
     }
 
     /// Set info box content
