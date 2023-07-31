@@ -3,7 +3,7 @@ use std::process;
 use clap::Parser;
 use tracing::error;
 
-#[derive(Parser, Debug, Clone, Copy)]
+#[derive(Parser, Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 #[command(version, about)]
 pub struct CliArgs {
@@ -18,6 +18,10 @@ pub struct CliArgs {
     /// Attempt to colorize the logs, conflicts with "-r"
     #[clap(short = 'c', conflicts_with = "raw")]
     pub color: bool,
+
+    /// Docker host, defaults to `/var/run/docker.sock`
+    #[clap(long, short = None)]
+    pub host: Option<String>,
 
     /// Show raw logs, default is to remove ansi formatting, conflicts with "-c"
     #[clap(short = 'r', conflicts_with = "color")]
@@ -46,6 +50,7 @@ impl CliArgs {
         Self {
             color: args.color,
             docker_interval: args.docker_interval,
+            host: args.host,
             gui: !args.gui,
             show_self: !args.show_self,
             raw: args.raw,
