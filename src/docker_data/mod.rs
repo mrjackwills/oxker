@@ -448,7 +448,7 @@ impl DockerData {
         gui_state: Arc<Mutex<GuiState>>,
         is_running: Arc<AtomicBool>,
     ) {
-        let args = app_data.lock().args;
+        let args = app_data.lock().args.clone();
         if app_data.lock().get_error().is_none() {
             let mut inner = Self {
                 app_data,
