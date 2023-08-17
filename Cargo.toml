@@ -15,15 +15,15 @@ categories = ["command-line-utilities"]
 anyhow = "1.0"
 bollard = "0.14"
 cansi = "2.2"
-clap={version="4.3", features = ["derive", "unicode", "color"] }
-crossterm = "0.26"
+clap = { version = "4.3", features = ["derive", "unicode", "color"] }
+crossterm = "0.27"
 futures-util = "0.3"
-parking_lot = {version= "0.12"}
-tokio = {version = "1.29", features=["full"]}
+parking_lot = { version= "0.12" }
+tokio = { version = "1.32", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 ratatui = "0.22"
-uuid = {version = "1.4", features = ["v4", "fast-rng"]}
+uuid = { version = "1.4", features = ["v4", "fast-rng"] }
 
 [dev-dependencies]
 
