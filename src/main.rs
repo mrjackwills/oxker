@@ -143,8 +143,6 @@ async fn main() {
     let args = CliArgs::new();
     let host = read_docker_host(&args);
 
-    //todo if host in arg, use that instead of env?
-
     let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
