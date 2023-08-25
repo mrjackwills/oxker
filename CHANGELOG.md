@@ -1,9 +1,8 @@
 ### Chores
-+ dependencies updated, [8ce5a1877a8c56d9bbab560c97e2596ea87cc4c0]
++ dependencies updated, [8ce5a1877a8c56d9bbab560c97e2596ea87cc4c0], [94a20584e6ef0701c9f36838b0dfbcd911698dbe]
 
 ### Features
 + Use `$DOCKER_HOST` env if set, or use `--host` cli argument for custom Docker hostnames, closes #30, [10950787649d2b66fc1e8cd8b85526df51479857]
-
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.3.1'>v0.3.1</a>
 ### 2023-06-04
