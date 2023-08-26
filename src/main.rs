@@ -105,12 +105,10 @@ async fn docker_init(
                 is_running,
             ));
         } else {
-            app_data.lock().set_error(AppError::DockerConnect);
-            gui_state.lock().status_push(Status::DockerConnect);
+            app_data.lock().set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
         }
     } else {
-        app_data.lock().set_error(AppError::DockerConnect);
-        gui_state.lock().status_push(Status::DockerConnect);
+        app_data.lock().set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
     }
 }
 
@@ -147,7 +145,6 @@ async fn main() {
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
     let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(32);
-    let (input_sx, input_rx) = tokio::sync::mpsc::channel(32);
 
     docker_init(
         &app_data,
@@ -159,13 +156,13 @@ async fn main() {
     )
     .await;
 
-    handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running);
-
     if args.gui {
+        let (input_sx, input_rx) = tokio::sync::mpsc::channel(32);
+        handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running);
         Ui::create(app_data, docker_sx, gui_state, is_running, input_sx).await;
     } else {
         info!("in debug mode");
-		// Debug mode for testing, mostly pointless, doesn't take terminal
+        // Debug mode for testing, mostly pointless, doesn't take terminal
         while is_running.load(Ordering::SeqCst) {
             loop {
                 if let Some(err) = app_data.lock().get_error() {

@@ -289,7 +289,7 @@ impl DockerData {
     /// Animate the loading icon
     fn loading_spin(loading_uuid: Uuid, gui_state: &Arc<Mutex<GuiState>>) -> JoinHandle<()> {
         let gui_state = Arc::clone(gui_state);
-       tokio::spawn(async move {
+        tokio::spawn(async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 gui_state.lock().next_loading(loading_uuid);
@@ -333,8 +333,7 @@ impl DockerData {
         error: DockerControls,
         gui_state: &Arc<Mutex<GuiState>>,
     ) {
-        app_data.lock().set_error(AppError::DockerCommand(error));
-        gui_state.lock().status_push(Status::Error);
+        app_data.lock().set_error(AppError::DockerCommand(error), gui_state, Status::Error);
     }
 
     /// Handle incoming messages, container controls & all container information update
