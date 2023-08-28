@@ -4,6 +4,10 @@
 ### Features
 + Custom hostname setting. Oxker will use `$DOCKER_HOST` env if set, can also use the cli argument `--host` - which takes prioerity over the `$DOCKER_HOST`, closes #30, [10950787649d2b66fc1e8cd8b85526df51479857]
 
+### Refactors
++ `set_error()` takes `gui_state` and error enum, to make sure app_data & gui_state is in sync [62c78dfaa50a8d8c084f7fbf7e203b50aaa731ae]
++ `fn loading_spin` doesn't need to be async, [2e27462d1b3f0bdb27d7646511e36d0c9af07f3e]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.3.1'>v0.3.1</a>
 ### 2023-06-04
 
