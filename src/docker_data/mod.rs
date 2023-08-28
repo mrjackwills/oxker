@@ -333,7 +333,9 @@ impl DockerData {
         error: DockerControls,
         gui_state: &Arc<Mutex<GuiState>>,
     ) {
-        app_data.lock().set_error(AppError::DockerCommand(error), gui_state, Status::Error);
+        app_data
+            .lock()
+            .set_error(AppError::DockerCommand(error), gui_state, Status::Error);
     }
 
     /// Handle incoming messages, container controls & all container information update

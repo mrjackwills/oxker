@@ -105,10 +105,14 @@ async fn docker_init(
                 is_running,
             ));
         } else {
-            app_data.lock().set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
+            app_data
+                .lock()
+                .set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
         }
     } else {
-        app_data.lock().set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
+        app_data
+            .lock()
+            .set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
     }
 }
 

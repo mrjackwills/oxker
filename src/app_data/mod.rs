@@ -1,12 +1,20 @@
 use bollard::models::ContainerSummary;
-use parking_lot::Mutex;
 use core::fmt;
+use parking_lot::Mutex;
 use ratatui::widgets::{ListItem, ListState};
-use std::{time::{SystemTime, UNIX_EPOCH}, sync::Arc};
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 mod container_state;
 
-use crate::{app_error::AppError, parse_args::CliArgs, ui::{log_sanitizer, Status, GuiState}, ENTRY_POINT};
+use crate::{
+    app_error::AppError,
+    parse_args::CliArgs,
+    ui::{log_sanitizer, GuiState, Status},
+    ENTRY_POINT,
+};
 pub use container_state::*;
 
 /// Global app_state, stored in an Arc<Mutex>
@@ -391,7 +399,7 @@ impl AppData {
 
     /// insert single app_state error
     pub fn set_error(&mut self, error: AppError, gui_state: &Arc<Mutex<GuiState>>, status: Status) {
-		gui_state.lock().status_push(status);
+        gui_state.lock().status_push(status);
         self.error = Some(error);
     }
 
