@@ -3,7 +3,7 @@
 + `_typos.toml` added, [84ba1020939606abf4a287cbd1de1f3a10d3f0c0]
 
 ### Features
-+ Custom hostname. `oxker` will use `$DOCKER_HOST` env if set, and one can also use the cli argument `--host`, which takes prioerity over the `$DOCKER_HOST`, closes #30, [10950787649d2b66fc1e8cd8b85526df51479857]
++ Custom hostname. `oxker` will use `$DOCKER_HOST` env if set, and one can also use the cli argument `--host`, which takes priority over the `$DOCKER_HOST`, closes #30, [10950787649d2b66fc1e8cd8b85526df51479857]
 
 ### Refactors
 + `set_error()` takes `gui_state` and error enum, to make sure app_data & gui_state is in sync [62c78dfaa50a8d8c084f7fbf7e203b50aaa731ae]
