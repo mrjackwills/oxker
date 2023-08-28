@@ -1,13 +1,15 @@
-### 2023-06-04
+### 2023-08-28
 
 ### Chores
-+ github workflow ubuntu latest, build for x86 musl, [4fa841e6e74e3e10e3d3e82eac1a1ca1338814cf]
-+ dependencies updated, [0caa92f6a4728d50d8b2d8f15d96a21112732ec5], [1fd1dfc75d6fa4e84451ebc845b9e1c730381f41]
-+ `Spans` -> `Line`, ratatui 0.21 update, [4679ddc885a9b35c901f3600b63fd9e86118264c], [0d37ac55018038363e5f92dc4215996f8cff7b2e]
-+ `create_release.sh` updated, [7dec5f14a381d237c5e72fbf9551bcf398f93f3e]
++ dependencies updated, [8ce5a1877a8c56d9bbab560c97e2596ea87cc4c0], [94a20584e6ef0701c9f36838b0dfbcd911698dbe], [29e02e0d1faae4a836c7e5cfd0d791338ff586e3], [8e4c2e686761df56920df2267b765ab1297c9972]
++ `_typos.toml` added, [84ba1020939606abf4a287cbd1de1f3a10d3f0c0]
 
-### Fixes
-+ workflow additional image fix, closes #29, [47cda44b8213cfb8c3807df6c43e3f5dc2452b57]
+### Features
++ Custom hostname. `oxker` will use `$DOCKER_HOST` env if set, or one can use the cli argument `--host`, which takes priority over the `$DOCKER_HOST`, closes #30, [10950787649d2b66fc1e8cd8b85526df51479857]
+
+### Refactors
++ `set_error()` takes `gui_state` and error enum, to make sure app_data & gui_state is in sync [62c78dfaa50a8d8c084f7fbf7e203b50aaa731ae]
++ `fn loading_spin` doesn't need to be async, [2e27462d1b3f0bdb27d7646511e36d0c9af07f3e]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details

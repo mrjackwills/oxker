@@ -106,6 +106,7 @@ Available command line arguments
 | argument|result|
 |--|--|
 |```-d [number > 0]```| set the minimum update interval for docker information, in ms, defaults to 1000 (1 second) |
+|```--host [hostname]```| connect to Docker with a custom hostname, defaults to `/var/run/docker.sock`, will use `$DOCKER_HOST` env if set |
 |```-r```| show raw logs, by default oxker will remove ANSI formatting (conflicts with -c) |
 |```-c```| attempt to color the logs (conflicts with -r) |
 |```-t```| remove timestamps from each log entry |
