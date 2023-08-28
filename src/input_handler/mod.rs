@@ -93,16 +93,22 @@ impl InputHandler {
                     .lock()
                     .set_info_box("✖ mouse capture disabled".to_owned());
             } else {
-                self.app_data
-                    .lock()
-                    .set_error(AppError::MouseCapture(false), &self.gui_state, Status::Error);
+                self.app_data.lock().set_error(
+                    AppError::MouseCapture(false),
+                    &self.gui_state,
+                    Status::Error,
+                );
             }
         } else if Ui::enable_mouse_capture().is_ok() {
             self.gui_state
                 .lock()
                 .set_info_box("✓ mouse capture enabled".to_owned());
         } else {
-            self.app_data.lock().set_error(AppError::MouseCapture(true), &self.gui_state, Status::Error);
+            self.app_data.lock().set_error(
+                AppError::MouseCapture(true),
+                &self.gui_state,
+                Status::Error,
+            );
         };
 
         // If the info box sleep handle is currently being executed, as in 'm' is pressed twice within a 4000ms window
