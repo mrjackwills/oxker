@@ -58,21 +58,20 @@ fn setup_tracing() {
 /// An ENV is set in the ./containerised/Dockerfile, if this is ENV found, then sleep for 250ms, else the container, for as yet unknown reasons, will close immediately
 /// returns a bool, so that the `update_all_containers()` won't bother to check the entry point unless running via a container
 fn check_if_containerised() -> bool {
-    if std::env::vars().any(|x| x == (ENV_KEY.into(), ENV_VALUE.into())) {
-        std::thread::sleep(std::time::Duration::from_millis(250));
-        true
-    } else {
-        false
+    if let Ok(value) = std::env::var(ENV_KEY) {
+        if value == ENV_VALUE {
+            std::thread::sleep(std::time::Duration::from_millis(250));
+            return true;
+        }
     }
+    false
 }
 
 /// Read the optional docker_host path, the cli args take priority over the DOCKER_HOST env
 fn read_docker_host(args: &CliArgs) -> Option<String> {
     args.host.as_ref().map_or_else(
         || {
-            std::env::vars()
-                .find(|x| x.0 == DOCKER_HOST)
-                .map(|(_, val)| val)
+            std::env::var(DOCKER_HOST).ok()
         },
         |x| Some(x.to_string()),
     )
