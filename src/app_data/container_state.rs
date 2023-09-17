@@ -18,18 +18,6 @@ const ONE_GB: f64 = ONE_MB * 1000.0;
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct ContainerId(String);
 
-impl From<String> for ContainerId {
-    fn from(x: String) -> Self {
-        Self(x)
-    }
-}
-
-impl From<&String> for ContainerId {
-    fn from(x: &String) -> Self {
-        Self(x.clone())
-    }
-}
-
 impl From<&str> for ContainerId {
     fn from(x: &str) -> Self {
         Self(x.to_owned())
@@ -152,20 +140,6 @@ impl State {
             Self::Exited => 4,
             Self::Dead => 5,
             Self::Unknown => 6,
-        }
-    }
-}
-
-impl From<String> for State {
-    fn from(input: String) -> Self {
-        match input.as_ref() {
-            "dead" => Self::Dead,
-            "exited" => Self::Exited,
-            "paused" => Self::Paused,
-            "removing" => Self::Removing,
-            "restarting" => Self::Restarting,
-            "running" => Self::Running,
-            _ => Self::Unknown,
         }
     }
 }

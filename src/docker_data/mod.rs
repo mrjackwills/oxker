@@ -216,7 +216,7 @@ impl DockerData {
                     (
                         i.state == Some("running".to_owned())
                             || i.state == Some("restarting".to_owned()),
-                        ContainerId::from(id),
+                        ContainerId::from(id.as_str()),
                     )
                 })
             })
