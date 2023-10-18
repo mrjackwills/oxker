@@ -1,3 +1,16 @@
+### Chores
++ docker-compose Alpine bump, [d46c425fa29f3c1d27bd57764748bae7e0b82f69]
++ dependencies updated, [e6eecbbdce9c0ccff42aa8806dddb6e3364f990c], [ec93115ece83002fa127f3358f573319e29357e1], [b36daa5aeaa354b6c4f45b7ae67ac1a6345ea1c0]
++ Rust 1.73 linting, [21234c66c3935330ccd58543dd3a915a293ac776]
+
+### Docs
++ README.md updated, [3fd3915b3e929742d8007109fd4c7b4a345eb0fa]
+
+### Refactors
++ LogsTZ from `&str`, [44f581f5b3652cc4e623fe145141878754dca292]
++ from string impl, [ca79893df5f05ebf445ce194d578cb8213c9755e]
++ env handling, [18c3ed43376a8b5e2d285d1b34a9f96843357d53]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.3.2'>v0.3.2</a>
 ### 2023-08-28
 
