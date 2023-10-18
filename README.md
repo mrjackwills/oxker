@@ -166,11 +166,11 @@ docker compose -f docker-compose.yml up -d
 or individually
 
 ```shell
-docker run --name redis -d redis:alpine3.17
+docker run --name redis -d redis:alpine3.18
 ```
 
 ```shell
-docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine3.17
+docker run --name postgres -e POSTGRES_PASSWORD=never_use_this_password_in_production -d postgres:alpine3.18
 ```
 
 ```shell
