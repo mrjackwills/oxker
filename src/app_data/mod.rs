@@ -625,7 +625,7 @@ impl AppData {
             let current_len = container.logs.len();
 
             for mut i in logs {
-                let tz = LogsTz::from(&i);
+                let tz = LogsTz::from(i.as_str());
                 // Strip the timestamp if `-t` flag set
                 if !timestamp {
                     i = i.replace(&tz.to_string(), "");

@@ -341,8 +341,8 @@ pub struct LogsTz(String);
 /// The docker log, which should always contain a timestamp, is in the format `2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet`
 /// So just split at the inclusive index of the first space, needs to be inclusive, hence the use of format to at the space, so that we can remove the whole thing when the `-t` flag is set
 /// Need to make sure that this isn't an empty string?!
-impl From<&String> for LogsTz {
-    fn from(value: &String) -> Self {
+impl From<&str> for LogsTz {
+    fn from(value: &str) -> Self {
         Self(value.split_inclusive(' ').take(1).collect::<String>())
     }
 }
