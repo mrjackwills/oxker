@@ -1,6 +1,6 @@
 ### Chores
 + docker-compose Alpine bump, [d46c425fa29f3c1d27bd57764748bae7e0b82f69]
-+ dependencies updated, [e6eecbbdce9c0ccff42aa8806dddb6e3364f990c], [ec93115ece83002fa127f3358f573319e29357e1], [b36daa5aeaa354b6c4f45b7ae67ac1a6345ea1c0]
++ dependencies updated, [e6eecbbdce9c0ccff42aa8806dddb6e3364f990c], [ec93115ece83002fa127f3358f573319e29357e1], [b36daa5aeaa354b6c4f45b7ae67ac1a6345ea1c0], [9c0de1f0feff3165d0f5b6cb5dda843c124bcfa4]
 + Rust 1.73 linting, [21234c66c3935330ccd58543dd3a915a293ac776]
 
 ### Docs
