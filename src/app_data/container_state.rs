@@ -248,7 +248,7 @@ impl PartialEq for CpuStats {
 
 impl PartialOrd for CpuStats {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-		Some(self.cmp(other))
+        Some(self.cmp(other))
     }
 }
 
@@ -291,7 +291,7 @@ impl PartialEq for ByteStats {
 
 impl PartialOrd for ByteStats {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-		Some(self.cmp(other))
+        Some(self.cmp(other))
     }
 }
 

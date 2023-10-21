@@ -569,7 +569,10 @@ impl AppData {
                     .map_or(false, |i| i.starts_with(ENTRY_POINT));
 
                 let state = State::from(i.state.as_ref().map_or("dead", |z| z));
-                let status = i.status.as_ref().map_or(String::new(), std::clone::Clone::clone);
+                let status = i
+                    .status
+                    .as_ref()
+                    .map_or(String::new(), std::clone::Clone::clone);
 
                 let image = i
                     .image
