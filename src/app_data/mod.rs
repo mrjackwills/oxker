@@ -426,7 +426,7 @@ impl AppData {
     /// So can display nicely and evenly
     pub fn get_width(&self) -> Columns {
         let mut columns = Columns::new();
-        let count = |x: &String| u8::try_from(x.chars().count()).unwrap_or(12);
+        let count = |x: &str| u8::try_from(x.chars().count()).unwrap_or(12);
 
         // Should probably find a refactor here somewhere
         for container in &self.containers.items {
@@ -552,9 +552,6 @@ impl AppData {
             }
         }
 
-        // Trim a &String and return String
-        let trim_owned = |x: &String| x.trim().to_owned();
-
         for i in all_containers {
             if let Some(id) = i.id.as_ref() {
                 let name = i.names.as_mut().map_or(String::new(), |names| {
@@ -571,15 +568,18 @@ impl AppData {
                     .as_ref()
                     .map_or(false, |i| i.starts_with(ENTRY_POINT));
 
-                let state = State::from(i.state.as_ref().map_or("dead".to_owned(), trim_owned));
-                let status = i.status.as_ref().map_or(String::new(), trim_owned);
+                let state = State::from(i.state.as_ref().map_or("dead", |z| z));
+                let status = i
+                    .status
+                    .as_ref()
+                    .map_or(String::new(), std::clone::Clone::clone);
 
                 let image = i
                     .image
                     .as_ref()
                     .map_or(String::new(), std::clone::Clone::clone);
 
-                let id = ContainerId::from(id);
+                let id = ContainerId::from(id.as_str());
 
                 let created = i
                     .created
@@ -628,7 +628,7 @@ impl AppData {
             let current_len = container.logs.len();
 
             for mut i in logs {
-                let tz = LogsTz::from(&i);
+                let tz = LogsTz::from(i.as_str());
                 // Strip the timestamp if `-t` flag set
                 if !timestamp {
                     i = i.replace(&tz.to_string(), "");

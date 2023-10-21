@@ -1,15 +1,20 @@
-### 2023-08-28
+### 2023-10-21
 
 ### Chores
-+ dependencies updated, [8ce5a1877a8c56d9bbab560c97e2596ea87cc4c0], [94a20584e6ef0701c9f36838b0dfbcd911698dbe], [29e02e0d1faae4a836c7e5cfd0d791338ff586e3], [8e4c2e686761df56920df2267b765ab1297c9972]
-+ `_typos.toml` added, [84ba1020939606abf4a287cbd1de1f3a10d3f0c0]
++ docker-compose Alpine bump, [d46c425fa29f3c1d27bd57764748bae7e0b82f69]
++ dependencies updated, [e6eecbbdce9c0ccff42aa8806dddb6e3364f990c], [ec93115ece83002fa127f3358f573319e29357e1], [b36daa5aeaa354b6c4f45b7ae67ac1a6345ea1c0], [9c0de1f0feff3165d0f5b6cb5dda843c124bcfa4], [6dd953df458096aee5914411ce40e46c3f600ede]
++ Rust 1.73 linting, [21234c66c3935330ccd58543dd3a915a293ac776]
 
-### Features
-+ Custom hostname. `oxker` will use `$DOCKER_HOST` env if set, or one can use the cli argument `--host`, which takes priority over the `$DOCKER_HOST`, closes #30, [10950787649d2b66fc1e8cd8b85526df51479857]
+### Docs
++ README.md updated, [3fd3915b3e929742d8007109fd4c7b4a345eb0fa]
 
 ### Refactors
-+ `set_error()` takes `gui_state` and error enum, to make sure app_data & gui_state is in sync [62c78dfaa50a8d8c084f7fbf7e203b50aaa731ae]
-+ `fn loading_spin` doesn't need to be async, [2e27462d1b3f0bdb27d7646511e36d0c9af07f3e]
++ LogsTZ from `&str`, [44f581f5b3652cc4e623fe145141878754dca292]
++ from string impl, [ca79893df5f05ebf445ce194d578cb8213c9755e]
++ env handling, [18c3ed43376a8b5e2d285d1b34a9f96843357d53]
++ `parse_args/mod.rs` > `parse_args.rs`, [a6ff4124319ed17d3f1c46c916418f850ef1d3b0]
++ set_info_box take `&str`, [faeaca0cd1bb243c7f4a7112b928be776b877ca1]
++ GitHub action use concurrency matrix, re-roder workflow, [85f1982f4066bfdbc764ab7b88588eded6a17f96]
 
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details

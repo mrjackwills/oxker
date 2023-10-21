@@ -3,69 +3,117 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+
 jobs:
-  deploy:
+
+  #################################################
+  ## Cross platform binary build for release page #
+  #################################################
+
+  cross_platform_build:
+    strategy:
+      matrix:
+        platform:
+          - target: x86_64-unknown-linux-musl
+          - target: aarch64-unknown-linux-musl
+          - target: arm-unknown-linux-musleabihf
+          - target: x86_64-pc-windows-gnu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Install stable rust, and associated tools
+      - name: install rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # Install cross-rs
+      - name: install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      # Set env's
+      - name: set names
+        run: |
+              translate_platform() { case "$1" in x86_64-unknown-linux-musl) echo "linux_x86_64.tar.gz";; aarch64-unknown-linux-musl) echo "linux_aarch64.tar.gz";; arm-unknown-linux-musleabihf) echo "linux_armv6.tar.gz";; x86_64-pc-windows-gnu) echo "windows_x86_64.zip";; *) echo "Error: Unsupported platform $1"; exit 1;; esac; }
+              target_platform="${{ matrix.platform.target }}"
+              output_name=$(translate_platform "$target_platform")
+              echo "TARGET_OUTPUT_NAME=${output_name}" >> $GITHUB_ENV
+              echo "TARGET_PLATFORM=${target_platform}" >> $GITHUB_ENV
+     
+      # Build binary
+      - name: build
+        run: cross build --target "${TARGET_PLATFORM}" --release
+              
+      # Compress, rename, and move
+      - name: compress
+        run: |
+            if [[ $TARGET_PLATFORM == *windows-gnu* ]]; then
+               zip -j "./oxker_${TARGET_OUTPUT_NAME}" target/${TARGET_PLATFORM}/release/oxker.exe
+            else
+              tar -C "target/${TARGET_PLATFORM}/release" -czf "./oxker_${TARGET_OUTPUT_NAME}" oxker
+            fi
+
+      # Upload output for release page
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          if-no-files-found: error
+          name: ${{ env.TARGET_PLATFORM }}
+          path: oxker_${{ env.TARGET_OUTPUT_NAME }}
+          retention-days: 1
+
+  ###################
+  ## Create release #
+  ###################
+
+  create_release:
+    needs: [cross_platform_build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup | Artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Update Release
+        uses: ncipollo/release-action@v1.12.0
+        with:
+          makeLatest: true
+          name: ${{ github.ref_name }}
+          tag: ${{ github.ref }}
+          bodyFile: ".github/release-body.md"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: |
+            **/oxker_*.zip
+            **/oxker_*.tar.gz
+
+  #########################
+  ## Publish to crates.io #
+  #########################
+  
+  cargo_publish:
+    needs: [create_release]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-
-      #########################
-      ## Publish to crates.io #
-      #########################
+        uses: actions/checkout@v4
 
       - name: publish to crates.io
         uses: katyo/publish-crates@v1
         with:
           registry-token: ${{ secrets.CRATES_IO_TOKEN }}
 
-      ####################################
-      ## Build binaries for release page #
-      ####################################
-      
-      # Install stable rust, and associated tools
-      - name: install rust
-        uses: dtolnay/rust-toolchain@stable
+  #########################################
+  ## Build images for Dockerhub & ghcr.io #
+  #########################################
 
-      # Setup caching - not sure if will have any effect
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-
-      # Install cross-rs
-      - name: install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
-
-      # Build for linux x86 musl
-      - name: build x86_64-unknown-linux-musl
-        run: cross build --target x86_64-unknown-linux-musl --release
-      # Compress output into tar
-      - name: compress aarch64 binary
-        run: tar -C target/x86_64-unknown-linux-musl/release -czf ./oxker_linux_x86_64.tar.gz oxker
-
-      # Build for linux aarch64, aka 64 bit pi 4
-      - name: build aarch64-unknown-linux-musl
-        run: cross build --target aarch64-unknown-linux-musl --release
-      # Compress output into tar
-      - name: compress aarch64 binary
-        run: tar -C target/aarch64-unknown-linux-musl/release -czf ./oxker_linux_aarch64.tar.gz oxker
-
-      # Build for linux armv6, aka 32 bit pi zero w
-      - name: build arm-unknown-linux-musleabihf
-        run: cross build --target arm-unknown-linux-musleabihf --release
-      # Compress output into tar
-      - name: compress armv6 binary
-        run: tar -C target/arm-unknown-linux-musleabihf/release -czf ./oxker_linux_armv6.tar.gz oxker
-
-      # Build for windows
-      - name: build release windows_x86_64
-        run: cross build --target x86_64-pc-windows-gnu --release
-      # Compress output into zip
-      - name: compress windows_x86_64 binary
-        run: zip -j ./oxker_windows_x86_64.zip target/x86_64-pc-windows-gnu/release/oxker.exe
-
-      #########################################
-      ## Build images for Dockerhub & ghcr.io #
-      #########################################
+  image_build:
+    needs: [cargo_publish]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -100,21 +148,4 @@ jobs:
           --push \
           -f containerised/Dockerfile .
 
-      ###################
-      ## Create release #
-      ###################
-      
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref }}
-          name: ${{ github.ref_name }}
-          body_path: ".github/release-body.md"
-          draft: false
-          files: |
-             oxker_linux_x86_64.tar.gz
-             oxker_linux_aarch64.tar.gz
-             oxker_linux_armv6.tar.gz
-             oxker_windows_x86_64.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

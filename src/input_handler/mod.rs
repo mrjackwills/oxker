@@ -91,7 +91,7 @@ impl InputHandler {
             if execute!(std::io::stdout(), DisableMouseCapture).is_ok() {
                 self.gui_state
                     .lock()
-                    .set_info_box("✖ mouse capture disabled".to_owned());
+                    .set_info_box("✖ mouse capture disabled");
             } else {
                 self.app_data.lock().set_error(
                     AppError::MouseCapture(false),
@@ -102,7 +102,7 @@ impl InputHandler {
         } else if Ui::enable_mouse_capture().is_ok() {
             self.gui_state
                 .lock()
-                .set_info_box("✓ mouse capture enabled".to_owned());
+                .set_info_box("✓ mouse capture enabled");
         } else {
             self.app_data.lock().set_error(
                 AppError::MouseCapture(true),

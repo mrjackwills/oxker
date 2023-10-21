@@ -304,8 +304,8 @@ impl GuiState {
     }
 
     /// Set info box content
-    pub fn set_info_box(&mut self, text: String) {
-        self.info_box_text = Some(text);
+    pub fn set_info_box(&mut self, text: &str) {
+        self.info_box_text = Some(text.to_owned());
     }
 
     /// Remove info box content
