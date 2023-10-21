@@ -69,12 +69,9 @@ fn check_if_containerised() -> bool {
 
 /// Read the optional docker_host path, the cli args take priority over the DOCKER_HOST env
 fn read_docker_host(args: &CliArgs) -> Option<String> {
-    args.host.as_ref().map_or_else(
-        || {
-            std::env::var(DOCKER_HOST).ok()
-        },
-        |x| Some(x.to_string()),
-    )
+    args.host
+        .as_ref()
+        .map_or_else(|| std::env::var(DOCKER_HOST).ok(), |x| Some(x.to_string()))
 }
 
 /// Create docker daemon handler, and only spawn up the docker data handler if a ping returns non-error
