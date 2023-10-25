@@ -1,6 +1,5 @@
 use parking_lot::Mutex;
 use ratatui::{
-    backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     symbols,
@@ -85,10 +84,10 @@ fn generate_block<'a>(
 }
 
 /// Draw the command panel
-pub fn commands<B: Backend>(
+pub fn commands(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
-    f: &mut Frame<'_, B>,
+    f: &mut Frame,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = || generate_block(app_data, area, gui_state, SelectablePanel::Commands);
@@ -120,10 +119,10 @@ pub fn commands<B: Backend>(
 }
 
 /// Draw the containers panel
-pub fn containers<B: Backend>(
+pub fn containers(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
-    f: &mut Frame<'_, B>,
+    f: &mut Frame,
     gui_state: &Arc<Mutex<GuiState>>,
     widths: &Columns,
 ) {
@@ -219,10 +218,10 @@ pub fn containers<B: Backend>(
 }
 
 /// Draw the logs panel
-pub fn logs<B: Backend>(
+pub fn logs(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
-    f: &mut Frame<'_, B>,
+    f: &mut Frame,
     gui_state: &Arc<Mutex<GuiState>>,
     loading_icon: &str,
 ) {
@@ -256,7 +255,7 @@ pub fn logs<B: Backend>(
 }
 
 /// Draw the cpu + mem charts
-pub fn chart<B: Backend>(f: &mut Frame<'_, B>, area: Rect, app_data: &Arc<Mutex<AppData>>) {
+pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
     if let Some((cpu, mem)) = app_data.lock().get_chart_data() {
         let area = Layout::default()
             .direction(Direction::Horizontal)
@@ -337,10 +336,10 @@ fn make_chart<'a, T: Stats + Display>(
 /// Draw heading bar at top of program, always visible
 /// TODO Should separate into loading icon/headers/help functions
 #[allow(clippy::too_many_lines)]
-pub fn heading_bar<B: Backend>(
+pub fn heading_bar(
     area: Rect,
     columns: &Columns,
-    f: &mut Frame<'_, B>,
+    f: &mut Frame,
     has_containers: bool,
     loading_icon: &str,
     sorted_by: Option<(Header, SortedOrder)>,
@@ -646,7 +645,7 @@ impl HelpInfo {
 }
 
 /// Draw the help box in the centre of the screen
-pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
+pub fn help_box(f: &mut Frame) {
     let title = format!(" {VERSION} ");
 
     let name_info = HelpInfo::gen_name();
@@ -725,8 +724,8 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
 
 /// Draw the delete confirm box in the centre of the screen
 /// take in container id and container name here?
-pub fn delete_confirm<B: Backend>(
-    f: &mut Frame<'_, B>,
+pub fn delete_confirm(
+    f: &mut Frame,
     gui_state: &Arc<Mutex<GuiState>>,
     name: &str,
 ) {
@@ -834,7 +833,7 @@ pub fn delete_confirm<B: Backend>(
 }
 
 /// Draw an error popup over whole screen
-pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<u8>) {
+pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
     let block = Block::default()
         .title(" Error ")
         .border_type(BorderType::Rounded)
@@ -876,7 +875,7 @@ pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<
 }
 
 /// Draw info box in one of the 9 BoxLocations
-pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
+pub fn info(f: &mut Frame, text: String) {
     let block = Block::default()
         .title("")
         .title_alignment(Alignment::Center)
@@ -928,7 +927,7 @@ fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocatio
 }
 
 // Draw nothing, as in a blank screen
-// pub fn nothing<B: Backend>(f: &mut Frame<'_, B>) {
+// pub fn nothing(f: &mut Frame) {
 //     let whole_layout = Layout::default()
 //         .direction(Direction::Vertical)
 //         .constraints([Constraint::Min(100)].as_ref())

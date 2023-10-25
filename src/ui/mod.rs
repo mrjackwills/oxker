@@ -6,7 +6,7 @@ use crossterm::{
 };
 use parking_lot::Mutex;
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
+    backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     Frame, Terminal,
 };
@@ -208,8 +208,8 @@ macro_rules! value_capture {
 
 /// Draw the main ui to a frame of the terminal
 /// TODO add a single line area for debug message - if not in release mode?
-fn draw_frame<B: Backend>(
-    f: &mut Frame<'_, B>,
+fn draw_frame(
+    f: &mut Frame,
     app_data: &Arc<Mutex<AppData>>,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
