@@ -25,13 +25,13 @@ use super::gui_state::{BoxLocation, DeleteButton, Region};
 use super::{GuiState, SelectablePanel};
 
 const NAME_TEXT: &str = r#"
-                          88                               
-                          88                               
-                          88                               
+                          88
+                          88
+                          88
  ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,
 a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8
-8b       d8     )888(     8888[      8PP"""""""  88        
-"8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88        
+8b       d8     )888(     8888[      8PP"""""""  88
+"8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88
  `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88        "#;
 
 const NAME: &str = env!("CARGO_PKG_NAME");
@@ -445,7 +445,7 @@ pub fn heading_bar<B: Backend>(
 
     let split_bar = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(splits.as_ref())
+        .constraints(splits)
         .split(area);
     if has_containers {
         // Draw loading icon, or not, and a prefix with a single space
@@ -458,7 +458,7 @@ pub fn heading_bar<B: Backend>(
         let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
         let headers_section = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(container_splits.as_ref())
+            .constraints(container_splits)
             .split(split_bar[1]);
 
         // draw the actual header blocks
