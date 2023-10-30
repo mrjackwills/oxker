@@ -250,7 +250,7 @@ fn draw_frame(
     // Containers + docker commands
     let top_panel = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(top_split.as_ref())
+        .constraints(top_split)
         .split(upper_main[0]);
 
     let lower_split = if has_containers {
@@ -262,7 +262,7 @@ fn draw_frame(
     // Split into 2, logs, and optional charts
     let lower_main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(lower_split.as_ref())
+        .constraints(lower_split)
         .split(upper_main[1]);
 
     draw_blocks::containers(app_data, top_panel[0], f, gui_state, &column_widths);

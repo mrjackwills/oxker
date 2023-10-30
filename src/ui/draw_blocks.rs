@@ -444,7 +444,7 @@ pub fn heading_bar(
 
     let split_bar = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(splits.as_ref())
+        .constraints(splits)
         .split(area);
     if has_containers {
         // Draw loading icon, or not, and a prefix with a single space
@@ -457,7 +457,7 @@ pub fn heading_bar(
         let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
         let headers_section = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(container_splits.as_ref())
+            .constraints(container_splits)
             .split(split_bar[1]);
 
         // draw the actual header blocks
