@@ -24,7 +24,6 @@ use crate::{
 use super::gui_state::{BoxLocation, DeleteButton, Region};
 use super::{GuiState, SelectablePanel};
 
-#[rustfmt::skip]
 const NAME_TEXT: &str = r#"
                           88                               
                           88                               
