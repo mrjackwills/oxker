@@ -27,10 +27,13 @@ pub use self::color_match::*;
 pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
 use crate::{
     app_data::AppData, app_error::AppError, docker_data::DockerMessage,
-    input_handler::InputMessages,
+    input_handler::InputMessages, parse_args::CliArgs,
 };
 
+pub const DOCKER_COMMAND: &str = "docker";
+
 pub struct Ui {
+    args: CliArgs,
     app_data: Arc<Mutex<AppData>>,
     docker_sx: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
@@ -63,7 +66,9 @@ impl Ui {
         sender: Sender<InputMessages>,
     ) {
         if let Ok(terminal) = Self::setup_terminal() {
+            let args = app_data.lock().args.clone();
             let mut ui = Self {
+                args,
                 app_data,
                 docker_sx,
                 gui_state,
@@ -86,19 +91,17 @@ impl Ui {
 
     /// Setup the terminal for full-screen drawing mode, with mouse capture
     fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
-        enable_raw_mode()?;
-        let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen)?;
-        Self::enable_mouse_capture()?;
+        let stdout = Self::init_terminal()?;
         let backend = CrosstermBackend::new(stdout);
         Ok(Terminal::new(backend)?)
     }
 
-    /// This is a fix for mouse-events being printed to screen, read an event and do nothing with it
-    fn nullify_event_read(&self) {
-        if crossterm::event::poll(self.input_poll_rate).unwrap_or(true) {
-            event::read().ok();
-        }
+    fn init_terminal() -> Result<Stdout> {
+        enable_raw_mode()?;
+        let mut stdout = io::stdout();
+        execute!(stdout, EnterAlternateScreen)?;
+        Self::enable_mouse_capture()?;
+        Ok(stdout)
     }
 
     /// reset the terminal back to default settings
@@ -137,12 +140,48 @@ impl Ui {
         Ok(())
     }
 
+    /// Use exeternal docker cli to exec into a container
+    fn exec(&mut self) {
+        let id = self.app_data.lock().get_selected_container_id();
+
+        if let Some(id) = id {
+            // if Self::can_exec(&id).is_some() {
+            if let Ok(mut child) = std::process::Command::new(DOCKER_COMMAND)
+                .args(["exec", "-it", id.get(), "sh"])
+                .stdin(std::process::Stdio::inherit())
+                .stdout(std::process::Stdio::inherit())
+                .stderr(std::process::Stdio::inherit())
+                .spawn()
+            {
+                self.reset_terminal().ok();
+                child.wait().ok();
+                if child.kill().is_err() {
+                    std::process::exit(1)
+                }
+                // }
+            }
+        }
+
+        self.terminal.clear().ok();
+        self.reset_terminal().ok();
+        Self::init_terminal().ok();
+        self.gui_state.lock().status_del(Status::Exec);
+    }
+
     /// The loop for drawing the main UI to the terminal
     async fn gui_loop(&mut self) -> Result<(), AppError> {
         let update_duration =
-            std::time::Duration::from_millis(u64::from(self.app_data.lock().args.docker_interval));
+            std::time::Duration::from_millis(u64::from(self.args.docker_interval));
 
         while self.is_running.load(Ordering::SeqCst) {
+            let exec = self.gui_state.lock().status_contains(&[Status::Exec]);
+
+            if exec {
+                self.exec();
+                self.docker_sx.send(DockerMessage::Update).await.ok();
+                continue;
+            }
+
             if self
                 .terminal
                 .draw(|frame| draw_frame(frame, &self.app_data, &self.gui_state))
@@ -150,6 +189,7 @@ impl Ui {
             {
                 return Err(AppError::Terminal);
             }
+
             if crossterm::event::poll(self.input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
@@ -173,6 +213,7 @@ impl Ui {
                 }
             }
 
+            // Should this be done in the docker thread instead?
             if self.now.elapsed() >= update_duration {
                 self.docker_sx.send(DockerMessage::Update).await.ok();
                 self.now = Instant::now();
@@ -192,7 +233,6 @@ impl Ui {
         } else {
             self.gui_loop().await?;
         }
-        self.nullify_event_read();
         Ok(())
     }
 }
@@ -208,11 +248,7 @@ macro_rules! value_capture {
 
 /// Draw the main ui to a frame of the terminal
 /// TODO add a single line area for debug message - if not in release mode?
-fn draw_frame(
-    f: &mut Frame,
-    app_data: &Arc<Mutex<AppData>>,
-    gui_state: &Arc<Mutex<GuiState>>,
-) {
+fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mutex<GuiState>>) {
     value_capture!(height, app_data.lock().get_container_len());
     value_capture!(column_widths, app_data.lock().get_width());
     value_capture!(has_containers, app_data.lock().get_container_len() > 0);

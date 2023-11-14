@@ -1,12 +1,28 @@
+################
+## MUSL SETUP ##
+################
+
+FROM alpine:3.18 as MUSL_SETUP
+
+RUN apk add --update --no-cache docker-cli upx
+
+# Copy application binary from builder image
+RUN upx -9 /usr/bin/docker
+
 #############
 ## Runtime ##
 #############
-FROM scratch
 
-# Set env that we're running in a container, so that the application can sleep for 250ms at start
+FROM alpine:3.18 as RUNTIME
+
+# Set an ENV that we're running in a container, so that the application can sleep for 250ms at start
 ENV OXKER_RUNTIME=container
 
-# Copy application binary from builder image
+COPY --from=MUSL_SETUP /usr/bin/docker /usr/bin/
+
+
+RUN rm /bin/sh /bin/busybox
+
 COPY ./target/x86_64-unknown-linux-musl/release/oxker /app/
 
 # Run the application

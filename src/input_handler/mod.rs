@@ -13,16 +13,19 @@ use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
 };
+use uuid::Uuid;
 
 mod message;
 use crate::{
     app_data::{AppData, DockerControls, Header},
     app_error::AppError,
     docker_data::DockerMessage,
-    ui::{DeleteButton, GuiState, SelectablePanel, Status, Ui},
+    ui::{DeleteButton, GuiState, SelectablePanel, Status, Ui, DOCKER_COMMAND},
     value_capture,
 };
 pub use message::InputMessages;
+
+const OCI_ERROR: &str = "OCI runtime exec failed";
 
 /// Handle all input events
 #[derive(Debug)]
@@ -161,6 +164,42 @@ impl InputHandler {
         self.gui_state.lock().set_delete_container(None);
     }
 
+    /// Validate that one can exec into a Docker container
+    fn e_key(&self) {
+        let is_oxker = self.app_data.lock().is_oxker();
+        if !is_oxker {
+            let uuid = Uuid::new_v4();
+            let handle = GuiState::start_loading_animation(&self.gui_state, uuid);
+            let mut exec_err = Some(());
+
+            let id = self.app_data.lock().get_selected_container_id();
+
+            if let Some(id) = id {
+                if let Ok(output) = std::process::Command::new(DOCKER_COMMAND)
+                    .args(["exec", id.get(), "pwd"])
+                    .output()
+                {
+                    if let Ok(output) = String::from_utf8(output.stdout) {
+                        if !output.starts_with(OCI_ERROR) {
+                            exec_err = None;
+                        }
+                    }
+                }
+
+                if exec_err.is_some() {
+                    self.app_data.lock().set_error(
+                        AppError::DockerExec,
+                        &self.gui_state,
+                        Status::Error,
+                    );
+                } else {
+                    self.gui_state.lock().status_push(Status::Exec);
+                }
+            }
+            self.gui_state.lock().stop_loading_animation(&handle, uuid);
+        }
+    }
+
     /// Handle any keyboard button events
     #[allow(clippy::too_many_lines)]
     async fn button_press(&mut self, key_code: KeyCode, key_modififer: KeyModifiers) {
@@ -171,153 +210,161 @@ impl InputHandler {
                 .status_contains(&[Status::DeleteConfirm])
         );
 
-        value_capture!(
-            contains_error,
-            self.gui_state.lock().status_contains(&[Status::Error])
-        );
-        value_capture!(
-            contains_help,
-            self.gui_state.lock().status_contains(&[Status::Help])
-        );
+        let contains = |s: Status| self.gui_state.lock().status_contains(&[s]);
 
-        // Always just quit on Ctrl + c/C or q/Q
-        let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
-        let is_q = || key_code == KeyCode::Char('q') || key_code == KeyCode::Char('Q');
-        if key_modififer == KeyModifiers::CONTROL && is_c() || is_q() {
-            self.quit().await;
-        }
+        let contains_error = contains(Status::Error);
+        let contains_help = contains(Status::Help);
+        let contains_exec = contains(Status::Exec);
 
-        if contains_error {
-            if let KeyCode::Char('c' | 'C') = key_code {
-                self.app_data.lock().remove_error();
-                self.gui_state.lock().status_del(Status::Error);
+        if !contains_exec {
+            // Always just quit on Ctrl + c/C or q/Q
+            let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
+            let is_q = || key_code == KeyCode::Char('q') || key_code == KeyCode::Char('Q');
+            if key_modififer == KeyModifiers::CONTROL && is_c() || is_q() {
+                self.quit().await;
             }
-        } else if contains_help {
-            match key_code {
-                KeyCode::Char('h' | 'H') => self.gui_state.lock().status_del(Status::Help),
-                KeyCode::Char('m' | 'M') => self.m_key(),
-                _ => (),
-            }
-        } else if contains_delete {
-            match key_code {
-                KeyCode::Char('y' | 'Y') => self.confirm_delete().await,
-                KeyCode::Char('n' | 'N') => self.clear_delete(),
-                _ => (),
-            }
-        } else {
-            match key_code {
-                KeyCode::Char('0') => self.app_data.lock().reset_sorted(),
-                KeyCode::Char('1') => self.sort(Header::State),
-                KeyCode::Char('2') => self.sort(Header::Status),
-                KeyCode::Char('3') => self.sort(Header::Cpu),
-                KeyCode::Char('4') => self.sort(Header::Memory),
-                KeyCode::Char('5') => self.sort(Header::Id),
-                KeyCode::Char('6') => self.sort(Header::Name),
-                KeyCode::Char('7') => self.sort(Header::Image),
-                KeyCode::Char('8') => self.sort(Header::Rx),
-                KeyCode::Char('9') => self.sort(Header::Tx),
-                KeyCode::Char('h' | 'H') => self.gui_state.lock().status_push(Status::Help),
-                KeyCode::Char('m' | 'M') => self.m_key(),
-                KeyCode::Tab => {
-                    // Skip control panel if no containers, could be refactored
-                    let is_containers =
-                        self.gui_state.lock().selected_panel == SelectablePanel::Containers;
-                    let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
-                        2
-                    } else {
-                        1
-                    };
-                    for _ in 0..count {
-                        self.gui_state.lock().next_panel();
-                    }
-                }
-                KeyCode::BackTab => {
-                    // Skip control panel if no containers, could be refactored
-                    let is_containers =
-                        self.gui_state.lock().selected_panel == SelectablePanel::Logs;
-                    let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
-                        2
-                    } else {
-                        1
-                    };
-                    for _ in 0..count {
-                        self.gui_state.lock().previous_panel();
-                    }
-                }
-                KeyCode::Home => {
-                    let mut locked_data = self.app_data.lock();
-                    let selected_panel = self.gui_state.lock().selected_panel;
-                    match selected_panel {
-                        SelectablePanel::Containers => locked_data.containers_start(),
-                        SelectablePanel::Logs => locked_data.log_start(),
-                        SelectablePanel::Commands => locked_data.docker_command_start(),
-                    }
-                }
-                KeyCode::End => {
-                    let mut locked_data = self.app_data.lock();
-                    let selected_panel = self.gui_state.lock().selected_panel;
-                    match selected_panel {
-                        SelectablePanel::Containers => locked_data.containers_end(),
-                        SelectablePanel::Logs => locked_data.log_end(),
-                        SelectablePanel::Commands => locked_data.docker_command_end(),
-                    }
-                }
-                KeyCode::Up | KeyCode::Char('k' | 'K') => self.previous(),
-                KeyCode::PageUp => {
-                    for _ in 0..=6 {
-                        self.previous();
-                    }
-                }
-                KeyCode::Down | KeyCode::Char('j' | 'J') => self.next(),
-                KeyCode::PageDown => {
-                    for _ in 0..=6 {
-                        self.next();
-                    }
-                }
-                KeyCode::Enter => {
-                    // This isn't great, just means you can't send docker commands before full initialization of the program
-                    let panel = self.gui_state.lock().selected_panel;
-                    if panel == SelectablePanel::Commands {
-                        let option_command = self.app_data.lock().selected_docker_command();
 
-                        if let Some(command) = option_command {
-                            let option_id = self.app_data.lock().get_selected_container_id();
-                            // Poor way of disallowing commands to be sent to a containerised okxer
-                            if self.app_data.lock().is_oxker() {
-                                return;
+            if contains_error {
+                if let KeyCode::Char('c' | 'C') = key_code {
+                    self.app_data.lock().remove_error();
+                    self.gui_state.lock().status_del(Status::Error);
+                }
+            } else if contains_help {
+                match key_code {
+                    KeyCode::Char('h' | 'H') => self.gui_state.lock().status_del(Status::Help),
+                    KeyCode::Char('m' | 'M') => self.m_key(),
+                    _ => (),
+                }
+            } else if contains_delete {
+                match key_code {
+                    KeyCode::Char('y' | 'Y') => self.confirm_delete().await,
+                    KeyCode::Char('n' | 'N') => self.clear_delete(),
+                    _ => (),
+                }
+            } else {
+                match key_code {
+                    KeyCode::Char('0') => self.app_data.lock().reset_sorted(),
+                    KeyCode::Char('1') => self.sort(Header::State),
+                    KeyCode::Char('2') => self.sort(Header::Status),
+                    KeyCode::Char('3') => self.sort(Header::Cpu),
+                    KeyCode::Char('4') => self.sort(Header::Memory),
+                    KeyCode::Char('5') => self.sort(Header::Id),
+                    KeyCode::Char('6') => self.sort(Header::Name),
+                    KeyCode::Char('7') => self.sort(Header::Image),
+                    KeyCode::Char('8') => self.sort(Header::Rx),
+                    KeyCode::Char('9') => self.sort(Header::Tx),
+                    KeyCode::Char('e' | 'E') => self.e_key(),
+                    KeyCode::Char('h' | 'H') => self.gui_state.lock().status_push(Status::Help),
+                    KeyCode::Char('m' | 'M') => self.m_key(),
+                    KeyCode::Tab => {
+                        // Skip control panel if no containers, could be refactored
+                        let is_containers =
+                            self.gui_state.lock().selected_panel == SelectablePanel::Containers;
+                        let count =
+                            if self.app_data.lock().get_container_len() == 0 && is_containers {
+                                2
+                            } else {
+                                1
                             };
-                            if let Some(id) = option_id {
-                                match command {
-                                    DockerControls::Delete => self
-                                        .docker_sender
-                                        .send(DockerMessage::ConfirmDelete(id))
-                                        .await
-                                        .ok(),
-                                    DockerControls::Pause => {
-                                        self.docker_sender.send(DockerMessage::Pause(id)).await.ok()
-                                    }
-                                    DockerControls::Unpause => self
-                                        .docker_sender
-                                        .send(DockerMessage::Unpause(id))
-                                        .await
-                                        .ok(),
-                                    DockerControls::Start => {
-                                        self.docker_sender.send(DockerMessage::Start(id)).await.ok()
-                                    }
-                                    DockerControls::Stop => {
-                                        self.docker_sender.send(DockerMessage::Stop(id)).await.ok()
-                                    }
-                                    DockerControls::Restart => self
-                                        .docker_sender
-                                        .send(DockerMessage::Restart(id))
-                                        .await
-                                        .ok(),
+                        for _ in 0..count {
+                            self.gui_state.lock().next_panel();
+                        }
+                    }
+                    KeyCode::BackTab => {
+                        // Skip control panel if no containers, could be refactored
+                        let is_containers =
+                            self.gui_state.lock().selected_panel == SelectablePanel::Logs;
+                        let count =
+                            if self.app_data.lock().get_container_len() == 0 && is_containers {
+                                2
+                            } else {
+                                1
+                            };
+                        for _ in 0..count {
+                            self.gui_state.lock().previous_panel();
+                        }
+                    }
+                    KeyCode::Home => {
+                        let mut locked_data = self.app_data.lock();
+                        let selected_panel = self.gui_state.lock().selected_panel;
+                        match selected_panel {
+                            SelectablePanel::Containers => locked_data.containers_start(),
+                            SelectablePanel::Logs => locked_data.log_start(),
+                            SelectablePanel::Commands => locked_data.docker_command_start(),
+                        }
+                    }
+                    KeyCode::End => {
+                        let mut locked_data = self.app_data.lock();
+                        let selected_panel = self.gui_state.lock().selected_panel;
+                        match selected_panel {
+                            SelectablePanel::Containers => locked_data.containers_end(),
+                            SelectablePanel::Logs => locked_data.log_end(),
+                            SelectablePanel::Commands => locked_data.docker_command_end(),
+                        }
+                    }
+                    KeyCode::Up | KeyCode::Char('k' | 'K') => self.previous(),
+                    KeyCode::PageUp => {
+                        for _ in 0..=6 {
+                            self.previous();
+                        }
+                    }
+                    KeyCode::Down | KeyCode::Char('j' | 'J') => self.next(),
+                    KeyCode::PageDown => {
+                        for _ in 0..=6 {
+                            self.next();
+                        }
+                    }
+                    KeyCode::Enter => {
+                        // This isn't great, just means you can't send docker commands before full initialization of the program
+                        let panel = self.gui_state.lock().selected_panel;
+                        if panel == SelectablePanel::Commands {
+                            let option_command = self.app_data.lock().selected_docker_command();
+
+                            if let Some(command) = option_command {
+                                // Poor way of disallowing commands to be sent to a containerised okxer
+                                if self.app_data.lock().is_oxker() {
+                                    return;
                                 };
+                                let option_id = self.app_data.lock().get_selected_container_id();
+                                if let Some(id) = option_id {
+                                    match command {
+                                        DockerControls::Delete => self
+                                            .docker_sender
+                                            .send(DockerMessage::ConfirmDelete(id))
+                                            .await
+                                            .ok(),
+                                        DockerControls::Pause => self
+                                            .docker_sender
+                                            .send(DockerMessage::Pause(id))
+                                            .await
+                                            .ok(),
+                                        DockerControls::Unpause => self
+                                            .docker_sender
+                                            .send(DockerMessage::Unpause(id))
+                                            .await
+                                            .ok(),
+                                        DockerControls::Start => self
+                                            .docker_sender
+                                            .send(DockerMessage::Start(id))
+                                            .await
+                                            .ok(),
+                                        DockerControls::Stop => self
+                                            .docker_sender
+                                            .send(DockerMessage::Stop(id))
+                                            .await
+                                            .ok(),
+                                        DockerControls::Restart => self
+                                            .docker_sender
+                                            .send(DockerMessage::Restart(id))
+                                            .await
+                                            .ok(),
+                                    };
+                                }
                             }
                         }
                     }
+                    _ => (),
                 }
-                _ => (),
             }
         }
     }

@@ -1,5 +1,10 @@
+use parking_lot::Mutex;
 use ratatui::layout::{Constraint, Rect};
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use crate::app_data::{ContainerId, Header};
@@ -150,11 +155,12 @@ const FRAMES_LEN: u8 = 9;
 /// Various functions (e.g input handler), operate differently depending upon current Status
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Status {
-    Init,
-    Help,
-    DockerConnect,
+    Exec,
     DeleteConfirm,
+    DockerConnect,
     Error,
+    Help,
+    Init,
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
@@ -296,11 +302,32 @@ impl GuiState {
     }
 
     /// Remove a loading_uuid from the is_loading HashSet, if empty, reset loading_index to 0
-    pub fn remove_loading(&mut self, uuid: Uuid) {
+    fn remove_loading(&mut self, uuid: Uuid) {
         self.is_loading.remove(&uuid);
         if self.is_loading.is_empty() {
             self.loading_index = 0;
         }
+    }
+
+    /// Animate the loading icon in its own Tokio thread
+    pub fn start_loading_animation(
+        gui_state: &Arc<Mutex<Self>>,
+        loading_uuid: Uuid,
+    ) -> JoinHandle<()> {
+		gui_state.lock().next_loading(loading_uuid);
+		let gui_state = Arc::clone(gui_state);
+        tokio::spawn(async move {
+            loop {
+				tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                gui_state.lock().next_loading(loading_uuid);
+            }
+        })
+    }
+
+    /// Stop the loading_spin function, and reset gui loading status
+    pub fn stop_loading_animation(&mut self, handle: &JoinHandle<()>, loading_uuid: Uuid) {
+        handle.abort();
+        self.remove_loading(loading_uuid);
     }
 
     /// Set info box content

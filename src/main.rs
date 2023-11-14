@@ -55,18 +55,6 @@ fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 }
 
-/// An ENV is set in the ./containerised/Dockerfile, if this is ENV found, then sleep for 250ms, else the container, for as yet unknown reasons, will close immediately
-/// returns a bool, so that the `update_all_containers()` won't bother to check the entry point unless running via a container
-fn check_if_containerised() -> bool {
-    if let Ok(value) = std::env::var(ENV_KEY) {
-        if value == ENV_VALUE {
-            std::thread::sleep(std::time::Duration::from_millis(250));
-            return true;
-        }
-    }
-    false
-}
-
 /// Read the optional docker_host path, the cli args take priority over the DOCKER_HOST env
 fn read_docker_host(args: &CliArgs) -> Option<String> {
     args.host
@@ -77,7 +65,6 @@ fn read_docker_host(args: &CliArgs) -> Option<String> {
 /// Create docker daemon handler, and only spawn up the docker data handler if a ping returns non-error
 async fn docker_init(
     app_data: &Arc<Mutex<AppData>>,
-    containerised: bool,
     docker_rx: Receiver<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
     is_running: &Arc<AtomicBool>,
@@ -93,12 +80,7 @@ async fn docker_init(
             let gui_state = Arc::clone(gui_state);
             let is_running = Arc::clone(is_running);
             tokio::spawn(DockerData::init(
-                app_data,
-                containerised,
-                docker,
-                docker_rx,
-                gui_state,
-                is_running,
+                app_data, docker, docker_rx, gui_state, is_running,
             ));
         } else {
             app_data
@@ -134,8 +116,6 @@ fn handler_init(
 
 #[tokio::main]
 async fn main() {
-    let containerised = check_if_containerised();
-
     setup_tracing();
 
     let args = CliArgs::new();
@@ -146,15 +126,7 @@ async fn main() {
     let is_running = Arc::new(AtomicBool::new(true));
     let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(32);
 
-    docker_init(
-        &app_data,
-        containerised,
-        docker_rx,
-        &gui_state,
-        &is_running,
-        host,
-    )
-    .await;
+    docker_init(&app_data, docker_rx, &gui_state, &is_running, host).await;
 
     if args.gui {
         let (input_sx, input_rx) = tokio::sync::mpsc::channel(32);

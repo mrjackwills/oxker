@@ -54,7 +54,6 @@ pub struct DockerData {
     app_data: Arc<Mutex<AppData>>,
     args: CliArgs,
     binate: Binate,
-    containerised: bool,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
     is_running: Arc<AtomicBool>,
@@ -101,6 +100,7 @@ impl DockerData {
         spawn_id: SpawnId,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
     ) {
+
         let mut stream = docker
             .stats(
                 id.get(),
@@ -191,7 +191,7 @@ impl DockerData {
             .into_iter()
             .filter_map(|f| match f.id {
                 Some(_) => {
-                    if self.containerised
+                    if self.args.in_container
                         && f.command
                             .as_ref()
                             .map_or(false, |c| c.starts_with(ENTRY_POINT))
@@ -286,32 +286,12 @@ impl DockerData {
         self.app_data.lock().sort_containers();
     }
 
-    /// Animate the loading icon
-    fn loading_spin(loading_uuid: Uuid, gui_state: &Arc<Mutex<GuiState>>) -> JoinHandle<()> {
-        let gui_state = Arc::clone(gui_state);
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                gui_state.lock().next_loading(loading_uuid);
-            }
-        })
-    }
-
-    /// Stop the loading_spin function, and reset gui loading status
-    fn stop_loading_spin(
-        gui_state: &Arc<Mutex<GuiState>>,
-        handle: &JoinHandle<()>,
-        loading_uuid: Uuid,
-    ) {
-        handle.abort();
-        gui_state.lock().remove_loading(loading_uuid);
-    }
-
     /// Initialize docker container data, before any messages are received
     async fn initialise_container_data(&mut self) {
         self.gui_state.lock().status_push(Status::Init);
         let loading_uuid = Uuid::new_v4();
-        let loading_spin = Self::loading_spin(loading_uuid, &Arc::clone(&self.gui_state));
+        let loading_handle = GuiState::start_loading_animation(&self.gui_state, loading_uuid);
+        // let handle = self.gui_state.lock().st
 
         let all_ids = self.update_all_containers().await;
 
@@ -323,7 +303,9 @@ impl DockerData {
         while !self.app_data.lock().initialised(&all_ids) {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
-        Self::stop_loading_spin(&self.gui_state, &loading_spin, loading_uuid);
+        self.gui_state
+            .lock()
+            .stop_loading_animation(&loading_handle, loading_uuid);
         self.gui_state.lock().status_del(Status::Init);
     }
 
@@ -350,27 +332,27 @@ impl DockerData {
             match message {
                 DockerMessage::Pause(id) => {
                     tokio::spawn(async move {
-                        let loading_spin = Self::loading_spin(uuid, &gui_state);
+                        let handle = GuiState::start_loading_animation(&gui_state, uuid);
                         if docker.pause_container(id.get()).await.is_err() {
                             Self::set_error(&app_data, DockerControls::Pause, &gui_state);
                         }
-                        Self::stop_loading_spin(&gui_state, &loading_spin, uuid);
+                        gui_state.lock().stop_loading_animation(&handle, uuid);
                     });
                     self.update_everything().await;
                 }
                 DockerMessage::Restart(id) => {
                     tokio::spawn(async move {
-                        let loading_spin = Self::loading_spin(uuid, &gui_state);
+                        let handle = GuiState::start_loading_animation(&gui_state, uuid);
                         if docker.restart_container(id.get(), None).await.is_err() {
                             Self::set_error(&app_data, DockerControls::Restart, &gui_state);
                         }
-                        Self::stop_loading_spin(&gui_state, &loading_spin, uuid);
+                        gui_state.lock().stop_loading_animation(&handle, uuid);
                     });
                     self.update_everything().await;
                 }
                 DockerMessage::Start(id) => {
                     tokio::spawn(async move {
-                        let loading_spin = Self::loading_spin(uuid, &gui_state);
+                        let handle = GuiState::start_loading_animation(&gui_state, uuid);
                         if docker
                             .start_container(id.get(), None::<StartContainerOptions<String>>)
                             .await
@@ -378,33 +360,33 @@ impl DockerData {
                         {
                             Self::set_error(&app_data, DockerControls::Start, &gui_state);
                         }
-                        Self::stop_loading_spin(&gui_state, &loading_spin, uuid);
+                        gui_state.lock().stop_loading_animation(&handle, uuid);
                     });
                     self.update_everything().await;
                 }
                 DockerMessage::Stop(id) => {
                     tokio::spawn(async move {
-                        let loading_spin = Self::loading_spin(uuid, &gui_state);
+                        let handle = GuiState::start_loading_animation(&gui_state, uuid);
                         if docker.stop_container(id.get(), None).await.is_err() {
                             Self::set_error(&app_data, DockerControls::Stop, &gui_state);
                         }
-                        Self::stop_loading_spin(&gui_state, &loading_spin, uuid);
+                        gui_state.lock().stop_loading_animation(&handle, uuid);
                     });
                     self.update_everything().await;
                 }
                 DockerMessage::Unpause(id) => {
                     tokio::spawn(async move {
-                        let loading_spin = Self::loading_spin(uuid, &gui_state);
+                        let handle = GuiState::start_loading_animation(&gui_state, uuid);
                         if docker.unpause_container(id.get()).await.is_err() {
                             Self::set_error(&app_data, DockerControls::Unpause, &gui_state);
                         }
-                        Self::stop_loading_spin(&gui_state, &loading_spin, uuid);
+                        gui_state.lock().stop_loading_animation(&handle, uuid);
                     });
                     self.update_everything().await;
                 }
                 DockerMessage::Delete(id) => {
                     tokio::spawn(async move {
-                        let loading_spin = Self::loading_spin(uuid, &gui_state);
+                        let handle = GuiState::start_loading_animation(&gui_state, uuid);
                         if docker
                             .remove_container(
                                 id.get(),
@@ -419,7 +401,7 @@ impl DockerData {
                         {
                             Self::set_error(&app_data, DockerControls::Stop, &gui_state);
                         }
-                        Self::stop_loading_spin(&gui_state, &loading_spin, uuid);
+                        gui_state.lock().stop_loading_animation(&handle, uuid);
                     });
                     self.update_everything().await;
                     self.gui_state.lock().set_delete_container(None);
@@ -443,7 +425,6 @@ impl DockerData {
     /// Initialise self, and start the message receiving loop
     pub async fn init(
         app_data: Arc<Mutex<AppData>>,
-        containerised: bool,
         docker: Docker,
         docker_rx: Receiver<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
@@ -453,7 +434,6 @@ impl DockerData {
         if app_data.lock().get_error().is_none() {
             let mut inner = Self {
                 app_data,
-                containerised,
                 args,
                 binate: Binate::One,
                 docker: Arc::new(docker),

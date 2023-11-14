@@ -563,6 +563,8 @@ impl AppData {
                     })
                 });
 
+                let id = ContainerId::from(id.as_str());
+
                 let is_oxker = i
                     .command
                     .as_ref()
@@ -578,8 +580,6 @@ impl AppData {
                     .image
                     .as_ref()
                     .map_or(String::new(), std::clone::Clone::clone);
-
-                let id = ContainerId::from(id.as_str());
 
                 let created = i
                     .created
@@ -624,31 +624,33 @@ impl AppData {
         let timestamp = self.args.timestamp;
 
         if let Some(container) = self.get_container_by_id(id) {
-            container.last_updated = Self::get_systemtime();
-            let current_len = container.logs.len();
+            if !container.is_oxker {
+                container.last_updated = Self::get_systemtime();
+                let current_len = container.logs.len();
 
-            for mut i in logs {
-                let tz = LogsTz::from(i.as_str());
-                // Strip the timestamp if `-t` flag set
-                if !timestamp {
-                    i = i.replace(&tz.to_string(), "");
+                for mut i in logs {
+                    let tz = LogsTz::from(i.as_str());
+                    // Strip the timestamp if `-t` flag set
+                    if !timestamp {
+                        i = i.replace(&tz.to_string(), "");
+                    }
+                    let lines = if color {
+                        log_sanitizer::colorize_logs(&i)
+                    } else if raw {
+                        log_sanitizer::raw(&i)
+                    } else {
+                        log_sanitizer::remove_ansi(&i)
+                    };
+                    container.logs.insert(ListItem::new(lines), tz);
                 }
-                let lines = if color {
-                    log_sanitizer::colorize_logs(&i)
-                } else if raw {
-                    log_sanitizer::raw(&i)
-                } else {
-                    log_sanitizer::remove_ansi(&i)
-                };
-                container.logs.insert(ListItem::new(lines), tz);
-            }
 
-            // Set the logs selected row for each container
-            // Either when no long currently selected, or currently selected (before updated) is already at end
-            if container.logs.state().selected().is_none()
-                || container.logs.state().selected().map_or(1, |f| f + 1) == current_len
-            {
-                container.logs.end();
+                // Set the logs selected row for each container
+                // Either when no long currently selected, or currently selected (before updated) is already at end
+                if container.logs.state().selected().is_none()
+                    || container.logs.state().selected().map_or(1, |f| f + 1) == current_len
+                {
+                    container.logs.end();
+                }
             }
         }
     }

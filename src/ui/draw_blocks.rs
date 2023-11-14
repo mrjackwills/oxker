@@ -586,6 +586,11 @@ impl HelpInfo {
                 button_item("enter"),
                 button_desc("to send docker container command"),
             ]),
+			Line::from(vec![
+                space(),
+                button_item("e"),
+                button_desc("exec into a container"),
+            ]),
             Line::from(vec![
                 space(),
                 button_item("h"),
@@ -724,11 +729,7 @@ pub fn help_box(f: &mut Frame) {
 
 /// Draw the delete confirm box in the centre of the screen
 /// take in container id and container name here?
-pub fn delete_confirm(
-    f: &mut Frame,
-    gui_state: &Arc<Mutex<GuiState>>,
-    name: &str,
-) {
+pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &str) {
     let block = Block::default()
         .title(" Confirm Delete ")
         .border_type(BorderType::Rounded)

@@ -3,10 +3,12 @@ use std::process;
 use clap::Parser;
 use tracing::error;
 
+use crate::{ENV_KEY, ENV_VALUE};
+
 #[derive(Parser, Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 #[command(version, about)]
-pub struct CliArgs {
+pub struct Args {
     /// Docker update interval in ms, minimum effectively 1000
     #[clap(short = 'd', value_name = "ms", default_value_t = 1000)]
     pub docker_interval: u32,
@@ -36,10 +38,34 @@ pub struct CliArgs {
     pub gui: bool,
 }
 
+#[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct CliArgs {
+    pub in_container: bool,
+    pub color: bool,
+    pub docker_interval: u32,
+    pub gui: bool,
+    pub host: Option<String>,
+    pub raw: bool,
+    pub show_self: bool,
+    pub timestamp: bool,
+}
+
 impl CliArgs {
+    /// An ENV is set in the ./containerised/Dockerfile, if this is ENV found, then sleep for 250ms, else the container, for as yet unknown reasons, will close immediately
+    /// returns a bool, so that the `update_all_containers()` won't bother to check the entry point unless running via a container
+    fn check_if_in_container() -> bool {
+        if let Ok(value) = std::env::var(ENV_KEY) {
+            if value == ENV_VALUE {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Parse cli arguments
     pub fn new() -> Self {
-        let args = Self::parse();
+        let args = Args::parse();
 
         // Quit the program if the docker update argument is 0
         // Should maybe change it to check if less than 100
@@ -50,10 +76,11 @@ impl CliArgs {
         Self {
             color: args.color,
             docker_interval: args.docker_interval,
-            host: args.host,
             gui: !args.gui,
-            show_self: !args.show_self,
+            host: args.host,
+            in_container: Self::check_if_in_container(),
             raw: args.raw,
+            show_self: !args.show_self,
             timestamp: !args.timestamp,
         }
     }
