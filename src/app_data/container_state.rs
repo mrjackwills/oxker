@@ -121,6 +121,9 @@ pub enum State {
 }
 
 impl State {
+    pub const fn is_alive(self) -> bool {
+        matches!(self, Self::Running)
+    }
     pub const fn get_color(self) -> Color {
         match self {
             Self::Paused => Color::Yellow,
@@ -155,6 +158,12 @@ impl From<&str> for State {
             "running" => Self::Running,
             _ => Self::Unknown,
         }
+    }
+}
+
+impl From<Option<String>> for State {
+    fn from(input: Option<String>) -> Self {
+        input.map_or(Self::Unknown, |input| Self::from(input.as_str()))
     }
 }
 
@@ -216,7 +225,7 @@ impl fmt::Display for DockerControls {
             Self::Restart => "restart",
             Self::Start => "start",
             Self::Stop => "stop",
-            Self::Unpause => "unpause",
+            Self::Unpause => "resume",
         };
         write!(f, "{disp}")
     }
