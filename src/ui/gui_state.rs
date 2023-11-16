@@ -166,20 +166,25 @@ pub enum Status {
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug, Default, Clone)]
 pub struct GuiState {
+    delete_container: Option<ContainerId>,
+    delete_map: HashMap<DeleteButton, Rect>,
     heading_map: HashMap<Header, Rect>,
     is_loading: HashSet<Uuid>,
     loading_index: u8,
     panel_map: HashMap<SelectablePanel, Rect>,
-    delete_map: HashMap<DeleteButton, Rect>,
+    selected_panel: SelectablePanel,
     status: HashSet<Status>,
-    delete_container: Option<ContainerId>,
     pub info_box_text: Option<String>,
-    pub selected_panel: SelectablePanel,
 }
 impl GuiState {
     /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
     pub fn clear_area_map(&mut self) {
         self.panel_map.clear();
+    }
+
+    /// Get the currently selected panel
+    pub const fn get_selected_panel(&self) -> SelectablePanel {
+        self.selected_panel
     }
 
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
@@ -293,7 +298,7 @@ impl GuiState {
     }
 
     /// If is_loading has any entries, return the char at FRAMES[index], else an empty char, which needs to take up the same space, hence ' '
-    pub fn get_loading(&mut self) -> char {
+    pub fn get_loading(&self) -> char {
         if self.is_loading.is_empty() {
             ' '
         } else {
@@ -314,11 +319,11 @@ impl GuiState {
         gui_state: &Arc<Mutex<Self>>,
         loading_uuid: Uuid,
     ) -> JoinHandle<()> {
-		gui_state.lock().next_loading(loading_uuid);
-		let gui_state = Arc::clone(gui_state);
+        gui_state.lock().next_loading(loading_uuid);
+        let gui_state = Arc::clone(gui_state);
         tokio::spawn(async move {
             loop {
-				tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 gui_state.lock().next_loading(loading_uuid);
             }
         })

@@ -66,6 +66,7 @@ fn read_docker_host(args: &CliArgs) -> Option<String> {
 async fn docker_init(
     app_data: &Arc<Mutex<AppData>>,
     docker_rx: Receiver<DockerMessage>,
+    docker_tx: Sender<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
     is_running: &Arc<AtomicBool>,
     host: Option<String>,
@@ -79,8 +80,9 @@ async fn docker_init(
             let app_data = Arc::clone(app_data);
             let gui_state = Arc::clone(gui_state);
             let is_running = Arc::clone(is_running);
+
             tokio::spawn(DockerData::init(
-                app_data, docker, docker_rx, gui_state, is_running,
+                app_data, docker, docker_rx, docker_tx, gui_state, is_running,
             ));
         } else {
             app_data
@@ -102,15 +104,15 @@ fn handler_init(
     input_rx: Receiver<InputMessages>,
     is_running: &Arc<AtomicBool>,
 ) {
-    let input_app_data = Arc::clone(app_data);
-    let input_gui_state = Arc::clone(gui_state);
-    let input_is_running = Arc::clone(is_running);
+    let app_data = Arc::clone(app_data);
+    let gui_state = Arc::clone(gui_state);
+    let is_running = Arc::clone(is_running);
     tokio::spawn(input_handler::InputHandler::init(
-        input_app_data,
+        app_data,
         input_rx,
         docker_sx.clone(),
-        input_gui_state,
-        input_is_running,
+        gui_state,
+        is_running,
     ));
 }
 
@@ -124,28 +126,49 @@ async fn main() {
     let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
-    let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(32);
+    let (docker_tx, docker_rx) = tokio::sync::mpsc::channel(32);
 
-    docker_init(&app_data, docker_rx, &gui_state, &is_running, host).await;
+    docker_init(
+        &app_data,
+        docker_rx,
+        docker_tx.clone(),
+        &gui_state,
+        &is_running,
+        host,
+    )
+    .await;
 
     if args.gui {
         let (input_sx, input_rx) = tokio::sync::mpsc::channel(32);
-        handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running);
-        Ui::create(app_data, docker_sx, gui_state, is_running, input_sx).await;
+        handler_init(&app_data, &docker_tx, &gui_state, input_rx, &is_running);
+        Ui::create(app_data, gui_state, is_running, input_sx).await;
     } else {
-        info!("in debug mode");
-        // Debug mode for testing, mostly pointless, doesn't take terminal
+        info!("in debug mode\n");
+        // Debug mode for testing, less pointless now, will diplay some basic information
         while is_running.load(Ordering::SeqCst) {
             loop {
                 if let Some(err) = app_data.lock().get_error() {
                     error!("{}", err);
                     process::exit(1);
                 }
-                docker_sx.send(DockerMessage::Update).await.ok();
                 tokio::time::sleep(std::time::Duration::from_millis(u64::from(
                     args.docker_interval,
                 )))
                 .await;
+                let containers = app_data
+                    .lock()
+                    .get_container_items()
+                    .clone()
+                    .iter()
+                    .map(|i| format!("{i}"))
+                    .collect::<Vec<_>>();
+
+                if !containers.is_empty() {
+                    for item in containers {
+                        info!("{item}");
+                    }
+                    println!();
+                }
             }
         }
     }

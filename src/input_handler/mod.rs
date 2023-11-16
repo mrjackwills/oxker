@@ -21,7 +21,6 @@ use crate::{
     app_error::AppError,
     docker_data::DockerMessage,
     ui::{DeleteButton, GuiState, SelectablePanel, Status, Ui, DOCKER_COMMAND},
-    value_capture,
 };
 pub use message::InputMessages;
 
@@ -201,14 +200,13 @@ impl InputHandler {
     }
 
     /// Handle any keyboard button events
+    // TODO refactor this
     #[allow(clippy::too_many_lines)]
     async fn button_press(&mut self, key_code: KeyCode, key_modififer: KeyModifiers) {
-        value_capture!(
-            contains_delete,
-            self.gui_state
-                .lock()
-                .status_contains(&[Status::DeleteConfirm])
-        );
+        let contains_delete = self
+            .gui_state
+            .lock()
+            .status_contains(&[Status::DeleteConfirm]);
 
         let contains = |s: Status| self.gui_state.lock().status_contains(&[s]);
 
@@ -258,8 +256,8 @@ impl InputHandler {
                     KeyCode::Char('m' | 'M') => self.m_key(),
                     KeyCode::Tab => {
                         // Skip control panel if no containers, could be refactored
-                        let is_containers =
-                            self.gui_state.lock().selected_panel == SelectablePanel::Containers;
+                        let is_containers = self.gui_state.lock().get_selected_panel()
+                            == SelectablePanel::Containers;
                         let count =
                             if self.app_data.lock().get_container_len() == 0 && is_containers {
                                 2
@@ -273,7 +271,7 @@ impl InputHandler {
                     KeyCode::BackTab => {
                         // Skip control panel if no containers, could be refactored
                         let is_containers =
-                            self.gui_state.lock().selected_panel == SelectablePanel::Logs;
+                            self.gui_state.lock().get_selected_panel() == SelectablePanel::Logs;
                         let count =
                             if self.app_data.lock().get_container_len() == 0 && is_containers {
                                 2
@@ -286,7 +284,7 @@ impl InputHandler {
                     }
                     KeyCode::Home => {
                         let mut locked_data = self.app_data.lock();
-                        let selected_panel = self.gui_state.lock().selected_panel;
+                        let selected_panel = self.gui_state.lock().get_selected_panel();
                         match selected_panel {
                             SelectablePanel::Containers => locked_data.containers_start(),
                             SelectablePanel::Logs => locked_data.log_start(),
@@ -295,7 +293,7 @@ impl InputHandler {
                     }
                     KeyCode::End => {
                         let mut locked_data = self.app_data.lock();
-                        let selected_panel = self.gui_state.lock().selected_panel;
+                        let selected_panel = self.gui_state.lock().get_selected_panel();
                         match selected_panel {
                             SelectablePanel::Containers => locked_data.containers_end(),
                             SelectablePanel::Logs => locked_data.log_end(),
@@ -316,7 +314,7 @@ impl InputHandler {
                     }
                     KeyCode::Enter => {
                         // This isn't great, just means you can't send docker commands before full initialization of the program
-                        let panel = self.gui_state.lock().selected_panel;
+                        let panel = self.gui_state.lock().get_selected_panel();
                         if panel == SelectablePanel::Commands {
                             let option_command = self.app_data.lock().selected_docker_command();
 
@@ -417,7 +415,7 @@ impl InputHandler {
     /// Change state to next, depending which panel is currently in focus
     fn next(&mut self) {
         let mut locked_data = self.app_data.lock();
-        let selected_panel = self.gui_state.lock().selected_panel;
+        let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
             SelectablePanel::Containers => locked_data.containers_next(),
             SelectablePanel::Logs => locked_data.log_next(),
@@ -428,7 +426,7 @@ impl InputHandler {
     /// Change state to previous, depending which panel is currently in focus
     fn previous(&mut self) {
         let mut locked_data = self.app_data.lock();
-        let selected_panel = self.gui_state.lock().selected_panel;
+        let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
             SelectablePanel::Containers => locked_data.containers_previous(),
             SelectablePanel::Logs => locked_data.log_previous(),

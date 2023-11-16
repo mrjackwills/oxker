@@ -17,12 +17,24 @@ use crate::{
 };
 pub use container_state::*;
 
+#[cfg(not(debug_assertions))]
 /// Global app_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 pub struct AppData {
     containers: StatefulList<ContainerItem>,
     error: Option<AppError>,
     sorted_by: Option<(Header, SortedOrder)>,
+    pub args: CliArgs,
+}
+
+#[cfg(debug_assertions)]
+/// Global app_state, stored in an Arc<Mutex>
+#[derive(Debug, Clone)]
+pub struct AppData {
+    containers: StatefulList<ContainerItem>,
+    error: Option<AppError>,
+    sorted_by: Option<(Header, SortedOrder)>,
+    debug_string: String,
     pub args: CliArgs,
 }
 
@@ -64,6 +76,17 @@ impl fmt::Display for Header {
 }
 
 impl AppData {
+    #[cfg(debug_assertions)]
+    pub fn get_debug_string(&self) -> &str {
+        &self.debug_string
+    }
+
+    #[cfg(debug_assertions)]
+    #[allow(unused)]
+    pub fn set_debug_string(&mut self, x: &str) {
+        self.debug_string.push_str(x);
+    }
+
     /// Change the sorted order, also set the selected container state to match new order
     fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
@@ -86,12 +109,25 @@ impl AppData {
     }
 
     /// Generate a default app_state
+    #[cfg(not(debug_assertions))]
     pub fn default(args: CliArgs) -> Self {
         Self {
             args,
             containers: StatefulList::new(vec![]),
             error: None,
             sorted_by: None,
+        }
+    }
+
+    /// Generate a default app_state
+    #[cfg(debug_assertions)]
+    pub fn default(args: CliArgs) -> Self {
+        Self {
+            args,
+            containers: StatefulList::new(vec![]),
+            error: None,
+            sorted_by: None,
+            debug_string: String::new(),
         }
     }
 
@@ -408,18 +444,6 @@ impl AppData {
     /// Is a shabby way of implementing this
     pub fn is_oxker(&self) -> bool {
         self.get_selected_container().map_or(false, |i| i.is_oxker)
-    }
-
-    /// Check if the initial parsing has been completed, by making sure that all ids given (which are running) have a non empty cpu_stats vecdec
-    pub fn initialised(&mut self, all_ids: &[(bool, ContainerId)]) -> bool {
-        let count_is_running = all_ids.iter().filter(|i| i.0).count();
-        let number_with_cpu_status = self
-            .containers
-            .items
-            .iter()
-            .filter(|i| !i.cpu_stats.is_empty())
-            .count();
-        count_is_running == number_with_cpu_status
     }
 
     /// Find the widths for the strings in the containers panel.

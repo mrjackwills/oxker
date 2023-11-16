@@ -56,11 +56,6 @@ impl Binate {
     }
 }
 
-// struct Init {
-// 	done: ,
-// 	len:
-// }
-
 pub struct DockerData {
     app_data: Arc<Mutex<AppData>>,
     args: CliArgs,
@@ -113,19 +108,7 @@ impl DockerData {
         spawn_id: SpawnId,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
     ) {
-        // if dead and !init then inspect!
-
         if state.is_alive() || init.is_some() {
-            // // if state == State::Paused && init.is_some()  {
-            // // 	app_data.lock().debug_string.push_str("is paused");
-
-            // // 	if let Ok(result) = docker.inspect_container(id.get(), Some(InspectContainerOptions{size:false})).await {
-            // // 		let mem_limit = format!("{}", result.host_config.map_or(0, |i|i.memory.unwrap_or_default()));
-
-            // // 		app_data.lock().debug_string.push_str(&mem_limit);
-            // // 	}
-
-            // // }else if state.is_alive() || init.is_some() {
             let mut stream = docker
                 .stats(
                     id.get(),
@@ -135,14 +118,6 @@ impl DockerData {
                     }),
                 )
                 .take(1);
-
-            // 		let a = stream.next().await;
-            // 			app_data.lock().debug_string.push_str(&format!("{:?}", a.is_some()));
-            // 			let bb = a.unwrap().unwrap();
-
-            // 		// }
-
-            // app_data.lock().debug_string.push_str("jkl");
 
             while let Some(Ok(stats)) = stream.next().await {
                 let mem_stat = if state.is_alive() {
@@ -186,7 +161,6 @@ impl DockerData {
 
     /// Update all stats, spawn each container into own tokio::spawn thread
     fn update_all_container_stats(&mut self, all_ids: &[(State, ContainerId)]) {
-        // let thing =all_ids.len();
         for (state, id) in all_ids {
             //    let init = self.init.as_ref().map_or_else(|| None, |x| Some((Arc::clone(x), all_ids.len())));
             let docker = Arc::clone(&self.docker);
@@ -308,7 +282,7 @@ impl DockerData {
                 .lock()
                 .entry(SpawnId::Log(container.id.clone()))
                 .or_insert_with(|| {
-                    // TODO make a struct that can create this data
+                    // MAYBE make a struct that can create this data?
                     let app_data = Arc::clone(&self.app_data);
                     let docker = Arc::clone(&self.docker);
                     let id = container.id.clone();
