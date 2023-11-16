@@ -11,7 +11,7 @@ has now grown from ~1.5mb to ~11.5mb. It is possible to use the Rust [bollard](h
 but so far there are multiple issues with this approach - see the feat/tty branch for the current attempt.
 
 ### Fixes
-+ `as_ref()` fixed, #31 merged, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [0e06c9c172629dc7f7e7766f5372da9466e786d8]
++ `as_ref()` fixed, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [0e06c9c172629dc7f7e7766f5372da9466e786d8]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.3.3'>v0.3.3</a>
 ### 2023-10-21
