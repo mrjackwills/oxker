@@ -146,7 +146,6 @@ async fn main() {
         info!("in debug mode\n");
         // Debug mode for testing, less pointless now, will display some basic information
         while is_running.load(Ordering::SeqCst) {
-            loop {
                 if let Some(err) = app_data.lock().get_error() {
                     error!("{}", err);
                     process::exit(1);
@@ -169,7 +168,6 @@ async fn main() {
                     }
                     println!();
                 }
-            }
         }
     }
 }
