@@ -3,11 +3,10 @@
 + dependencies updated, [e301b51891e03ea40b2f904583119da3bc4daf53]
 
 ### Features
-+ Docker exec mode close #28 [c8077bca0b673478cfbb417e677a885136ba9eff]
++ Docker exec mode, closes #28, [c8077bca0b673478cfbb417e677a885136ba9eff]
 
 ### Fixes
-+ `as_ref()` fixed, #31 merged, thanks [Daniel-Boll](https://github.com/Daniel-Boll) [0e06c9c172629dc7f7e7766f5372da9466e786d8]
-
++ `as_ref()` fixed, #31 merged, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [0e06c9c172629dc7f7e7766f5372da9466e786d8]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.3.3'>v0.3.3</a>
 ### 2023-10-21
