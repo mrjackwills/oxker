@@ -5,6 +5,11 @@
 ### Features
 + Docker exec mode, closes #28, [c8077bca0b673478cfbb417e677a885136ba9eff]
 
+You are now able to attempt to exec into a container by pressing the `e` key. This just pipes `docker exec -it [id] sh` into the oxker view.
+As such, the DockerImage now needs docker installed, so the runtime step has switched from scratch to Alpine. Using a multistage build has reduced the size, but the docker image
+has now grown from ~1.5mb to ~11.5mb. It is possible to use the Rust [bollard](https://github.com/fussybeaver/bollard) library to enable this functionality in *pure* Rust,
+but so far there are multiple issues with this approach - see the feat/tty branch for the current attempt.
+
 ### Fixes
 + `as_ref()` fixed, #31 merged, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [0e06c9c172629dc7f7e7766f5372da9466e786d8]
 

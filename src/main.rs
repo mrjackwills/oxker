@@ -144,7 +144,7 @@ async fn main() {
         Ui::create(app_data, gui_state, is_running, input_sx).await;
     } else {
         info!("in debug mode\n");
-        // Debug mode for testing, less pointless now, will diplay some basic information
+        // Debug mode for testing, less pointless now, will display some basic information
         while is_running.load(Ordering::SeqCst) {
             loop {
                 if let Some(err) = app_data.lock().get_error() {
