@@ -146,8 +146,7 @@ checksum = "327762f6e5a765692301e5bb513e0d9fef63be86bbc14528052b1cd3e6f03e07"
 [[package]]
 name = "bollard"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f03db470b3c0213c47e978da93200259a1eb4dae2e5512cba9955e2b540a6fc6"
+source = "git+https://www.github.com/fussybeaver/bollard.git?rev=cef1cd5#cef1cd568684d0c3c497ce56221ff22ca18334f4"
 dependencies = [
  "base64",
  "bollard-stubs",
@@ -175,8 +174,7 @@ dependencies = [
 [[package]]
 name = "bollard-stubs"
 version = "1.43.0-rc.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b58071e8fd9ec1e930efd28e3a90c1251015872a2ce49f81f36421b86466932e"
+source = "git+https://www.github.com/fussybeaver/bollard.git?rev=cef1cd5#cef1cd568684d0c3c497ce56221ff22ca18334f4"
 dependencies = [
  "serde",
  "serde_repr",
