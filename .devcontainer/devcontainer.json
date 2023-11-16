@@ -16,7 +16,7 @@
 		"seccomp=unconfined"
 	],
 
-	"postCreateCommand": "rustup target add x86_64-unknown-linux-musl && cargo install cross typos-cli",
+	"postCreateCommand": "rustup target add x86_64-unknown-linux-musl && cargo install cross typos-cli cargo-expand",
 
 	"mounts": [
 		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly"

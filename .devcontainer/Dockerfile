@@ -9,6 +9,4 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 	&& apt-get -y install --no-install-recommends build-essential pkg-config libssl-dev
 
 USER vscode
-RUN curl --proto '=https' --tlsv1.2 -sSf curl https://sh.rustup.rs | sh -s -- -y
-# RUN rustup target add x86_64-unknown-linux-musl
-
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
