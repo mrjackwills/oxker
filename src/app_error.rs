@@ -27,7 +27,7 @@ impl fmt::Display for AppError {
                 let reason = if *x { "en" } else { "dis" };
                 write!(f, "Unable to {reason}able mouse capture")
             }
-            Self::Terminal => write!(f, "Unable to draw to terminal"),
+            Self::Terminal => write!(f, "Unable to fully render to terminal"),
         }
     }
 }

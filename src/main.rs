@@ -13,7 +13,7 @@
     clippy::similar_names
 )]
 // Only allow when debugging
-// #![allow(unused)]
+#![allow(unused)]
 
 use app_data::AppData;
 use app_error::AppError;
@@ -35,6 +35,7 @@ use tracing::{error, info, Level};
 mod app_data;
 mod app_error;
 mod docker_data;
+mod exec;
 mod input_handler;
 mod parse_args;
 mod ui;
@@ -121,6 +122,10 @@ async fn main() {
     setup_tracing();
 
     let args = CliArgs::new();
+
+    if args.in_container {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
     let host = read_docker_host(&args);
 
     let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
@@ -141,33 +146,33 @@ async fn main() {
     if args.gui {
         let (input_sx, input_rx) = tokio::sync::mpsc::channel(32);
         handler_init(&app_data, &docker_tx, &gui_state, input_rx, &is_running);
-        Ui::create(app_data, gui_state, is_running, input_sx).await;
+        Ui::create(app_data, docker_tx.clone(), gui_state, is_running, input_sx).await;
     } else {
         info!("in debug mode\n");
         // Debug mode for testing, less pointless now, will display some basic information
         while is_running.load(Ordering::SeqCst) {
-                if let Some(err) = app_data.lock().get_error() {
-                    error!("{}", err);
-                    process::exit(1);
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(u64::from(
-                    args.docker_interval,
-                )))
-                .await;
-                let containers = app_data
-                    .lock()
-                    .get_container_items()
-                    .clone()
-                    .iter()
-                    .map(|i| format!("{i}"))
-                    .collect::<Vec<_>>();
+            if let Some(err) = app_data.lock().get_error() {
+                error!("{}", err);
+                process::exit(1);
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(u64::from(
+                args.docker_interval,
+            )))
+            .await;
+            let containers = app_data
+                .lock()
+                .get_container_items()
+                .clone()
+                .iter()
+                .map(|i| format!("{i}"))
+                .collect::<Vec<_>>();
 
-                if !containers.is_empty() {
-                    for item in containers {
-                        info!("{item}");
-                    }
-                    println!();
+            if !containers.is_empty() {
+                for item in containers {
+                    info!("{item}");
                 }
+                println!();
+            }
         }
     }
 }

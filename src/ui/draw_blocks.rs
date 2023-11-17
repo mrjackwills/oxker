@@ -279,6 +279,7 @@ pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
             .data(&mem.0)];
 
         let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
         let cpu_chart = make_chart(cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
         let mem_chart = make_chart(mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
@@ -359,8 +360,8 @@ pub fn heading_bar(
         if let Some((a, b)) = data.sorted_by.as_ref() {
             if x == a {
                 match b {
-                    SortedOrder::Asc => suffix = " ⌃",
-                    SortedOrder::Desc => suffix = " ⌄",
+                    SortedOrder::Asc => suffix = " ▲",
+                    SortedOrder::Desc => suffix = " ▼",
                 }
                 suffix_margin = 2;
                 color = Color::White;

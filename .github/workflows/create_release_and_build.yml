@@ -87,6 +87,7 @@ jobs:
           artifacts: |
             **/oxker_*.zip
             **/oxker_*.tar.gz
+
   #########################
   ## Publish to crates.io #
   #########################
@@ -106,6 +107,7 @@ jobs:
   #########################################
   ## Build images for Dockerhub & ghcr.io #
   #########################################
+  
   image_build:
     needs: [cargo_publish]
     runs-on: ubuntu-latest

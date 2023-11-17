@@ -1,28 +1,12 @@
-################
-## MUSL SETUP ##
-################
-
-FROM alpine:3.18 as MUSL_SETUP
-
-RUN apk add --update --no-cache docker-cli upx
-
-# Copy application binary from builder image
-RUN upx -9 /usr/bin/docker
-
 #############
 ## Runtime ##
 #############
+FROM scratch
 
-FROM alpine:3.18 as RUNTIME
-
-# Set an ENV that we're running in a container, so that the application can sleep for 250ms at start
+# Set env that we're running in a container, so that the application can sleep for 250ms at start
 ENV OXKER_RUNTIME=container
 
-COPY --from=MUSL_SETUP /usr/bin/docker /usr/bin/
-
-
-RUN rm /bin/sh /bin/busybox
-
+# Copy application binary from builder image
 COPY ./target/x86_64-unknown-linux-musl/release/oxker /app/
 
 # Run the application
@@ -44,3 +28,7 @@ ENTRYPOINT [ "/app/oxker"]
 # Buildx command to build musl version for all three platforms, should probably be executed in create_release
 # docker buildx create --use
 # docker buildx build --platform linux/arm/v6,linux/arm64,linux/amd64 -t oxker_dev_all -o type=tar,dest=/tmp/oxker_dev_all.tar -f containerised/Dockerfile .
+
+
+# Build production version for x86 only, then run
+# docker build  --platform linux/amd64 -t oxker_dev -f containerised/Dockerfile . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev

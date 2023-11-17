@@ -330,6 +330,7 @@ impl DockerData {
 
     /// Handle incoming messages, container controls & all container information update
     /// Spawn Docker commands off into own thread
+    #[allow(clippy::too_many_lines)]
     async fn message_handler(&mut self) {
         while let Some(message) = self.receiver.recv().await {
             let docker = Arc::clone(&self.docker);
@@ -338,6 +339,9 @@ impl DockerData {
             let uuid = Uuid::new_v4();
             // TODO need to refactor these
             match message {
+                DockerMessage::Exec(sender) => {
+                    sender.send(Arc::clone(&self.docker)).ok();
+                }
                 DockerMessage::Pause(id) => {
                     tokio::spawn(async move {
                         let handle = GuiState::start_loading_animation(&gui_state, uuid);

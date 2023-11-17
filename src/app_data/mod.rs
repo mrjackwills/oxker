@@ -83,7 +83,7 @@ impl AppData {
 
     #[cfg(debug_assertions)]
     #[allow(unused)]
-    pub fn set_debug_string(&mut self, x: &str) {
+    pub fn push_debug_string(&mut self, x: &str) {
         self.debug_string.push_str(x);
     }
 
@@ -504,6 +504,12 @@ impl AppData {
     /// Only returns None when no containers found.
     pub fn get_selected_container_id(&self) -> Option<ContainerId> {
         self.get_selected_container().map(|i| i.id.clone())
+    }
+
+    /// Get the Id and State for the currently selected container - used by the exec check method
+    pub fn get_selected_container_id_state(&self) -> Option<(ContainerId, State)> {
+        self.get_selected_container()
+            .map(|i| (i.id.clone(), i.state))
     }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once

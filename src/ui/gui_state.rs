@@ -7,7 +7,10 @@ use std::{
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use crate::app_data::{ContainerId, Header};
+use crate::{
+    app_data::{ContainerId, Header},
+    exec::ExecMode,
+};
 
 #[derive(Debug, Default, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SelectablePanel {
@@ -174,6 +177,7 @@ pub struct GuiState {
     panel_map: HashMap<SelectablePanel, Rect>,
     selected_panel: SelectablePanel,
     status: HashSet<Status>,
+    exec_mode: Option<ExecMode>,
     pub info_box_text: Option<String>,
 }
 impl GuiState {
@@ -265,16 +269,41 @@ impl GuiState {
     }
 
     /// Remove a gui_status into the current gui_status HashSet
+    /// Remove exec mode & deleteConfirm is required
     pub fn status_del(&mut self, status: Status) {
         self.status.remove(&status);
-        if status == Status::DeleteConfirm {
-            self.status.remove(&Status::DeleteConfirm);
+        match status {
+            Status::DeleteConfirm => {
+                self.status.remove(&Status::DeleteConfirm);
+            }
+            Status::Exec => {
+                self.exec_mode = None;
+            }
+            _ => (),
         }
     }
 
+    /// Inset the ExecMode into self, and set the Status as exec
+    /// Using StatusPush with Status::Exec won't insert into the hash map
+    /// To force self.exec_mode to be set
+    pub fn set_exec_mode(&mut self, mode: ExecMode) {
+        self.exec_mode = Some(mode);
+        self.status.insert(Status::Exec);
+    }
+
+    pub fn get_exec_mode(&mut self) -> Option<ExecMode> {
+        self.exec_mode.clone()
+    }
+
     /// Insert a gui_status into the current gui_status HashSet
+    /// If the status is Exec, it won't get inserted, set_exec_mode() should be used instead
     pub fn status_push(&mut self, status: Status) {
-        self.status.insert(status);
+        match status {
+            Status::Exec => (),
+            _ => {
+                self.status.insert(status);
+            }
+        }
     }
 
     /// Change to next selectable panel

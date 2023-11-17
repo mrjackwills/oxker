@@ -21,10 +21,6 @@ pub struct Args {
     #[clap(short = 'c', conflicts_with = "raw")]
     pub color: bool,
 
-    /// Docker host, defaults to `/var/run/docker.sock`
-    #[clap(long, short = None)]
-    pub host: Option<String>,
-
     /// Show raw logs, default is to remove ansi formatting, conflicts with "-c"
     #[clap(short = 'r', conflicts_with = "color")]
     pub raw: bool,
@@ -36,16 +32,25 @@ pub struct Args {
     /// Don't draw gui - for debugging - mostly pointless
     #[clap(short = 'g')]
     pub gui: bool,
+
+    /// Docker host, defaults to `/var/run/docker.sock`
+    #[clap(long, short = None)]
+    pub host: Option<String>,
+
+    /// Use "docker" cli for execing
+    #[clap(long="use-cli", short = None)]
+    pub use_cli: bool,
 }
 
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct CliArgs {
-    pub in_container: bool,
     pub color: bool,
     pub docker_interval: u32,
+    pub use_cli: bool,
     pub gui: bool,
     pub host: Option<String>,
+    pub in_container: bool,
     pub raw: bool,
     pub show_self: bool,
     pub timestamp: bool,
@@ -76,6 +81,7 @@ impl CliArgs {
         Self {
             color: args.color,
             docker_interval: args.docker_interval,
+            use_cli: args.use_cli,
             gui: !args.gui,
             host: args.host,
             in_container: Self::check_if_in_container(),

@@ -45,31 +45,16 @@ RUN cargo build --release --target $(cat /.platform)
 
 RUN cp /usr/src/oxker/target/$(cat /.platform)/release/oxker /
 
-################
-## MUSL SETUP ##
-################
-
-FROM alpine:3.18 as MUSL_SETUP
-
-RUN apk add --update --no-cache docker-cli upx
-
-# Compress the docker executable, to reduce final image size
-RUN upx -9 /usr/bin/docker
-
 #############
 ## Runtime ##
 #############
 
-FROM alpine:3.18 as RUNTIME
+FROM scratch as RUNTIME
 
 # Set an ENV to indicate that we're running in a container
 ENV OXKER_RUNTIME=container
 
 COPY --from=BUILDER /oxker /app/
-COPY --from=MUSL_SETUP /usr/bin/docker /usr/bin/
-
-# remove sh and busybox, probably pointless
-RUN rm /bin/sh /bin/busybox
 
 # Run the application
 # this is used in the application itself so DO NOT EDIT
