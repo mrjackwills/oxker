@@ -1,6 +1,6 @@
 ### Chores
 + workflow dependencies updated, [6a4cf6490d08b976734e2bc8186d94c095700558]
-+ dependencies updated, [e301b51891e03ea40b2f904583119da3bc4daf53]
++ dependencies updated, [e301b51891e03ea40b2f904583119da3bc4daf53], [81d5b326db8881263f2c9072e1426948e41b4a0f]
 
 ### Features
 + Docker exec mode - you are now able to attempt to exec into a container by pressing the `e` key - closes #28, [c8077bca0b673478cfbb417e677a885136ba9eff], [0e5ee143b008c9d0ee0b681231a1568be227150b]
