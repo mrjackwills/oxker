@@ -1,4 +1,5 @@
 use anyhow::Result;
+use bollard::Docker;
 use crossterm::{
     event::{self, DisableMouseCapture, Event},
     execute,
@@ -28,20 +29,20 @@ pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
 use crate::{
     app_data::{AppData, Columns, ContainerId, Header, SortedOrder},
     app_error::AppError,
+    docker_data::DockerMessage,
     input_handler::InputMessages,
 };
 
-pub const DOCKER_COMMAND: &str = "docker";
-
 pub struct Ui {
-    // args: CliArgs,
     app_data: Arc<Mutex<AppData>>,
+    docker_sx: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
     input_poll_rate: Duration,
     is_running: Arc<AtomicBool>,
     now: Instant,
     sender: Sender<InputMessages>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
+    cursor_position: (u16, u16),
 }
 
 impl Ui {
@@ -60,20 +61,24 @@ impl Ui {
     /// Create a new Ui struct, and execute the drawing loop
     pub async fn create(
         app_data: Arc<Mutex<AppData>>,
+        docker_sx: Sender<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
         is_running: Arc<AtomicBool>,
         sender: Sender<InputMessages>,
     ) {
-        if let Ok(terminal) = Self::setup_terminal() {
+        if let Ok(mut terminal) = Self::setup_terminal() {
             // let args = app_data.lock().args.clone();
+            let cursor_position = terminal.get_cursor().unwrap_or_default();
             let mut ui = Self {
                 app_data,
+                docker_sx,
                 gui_state,
                 input_poll_rate: std::time::Duration::from_millis(100),
                 is_running,
                 now: Instant::now(),
                 sender,
                 terminal,
+                cursor_position,
             };
             if let Err(e) = ui.draw_ui().await {
                 error!("{e}");
@@ -111,6 +116,9 @@ impl Ui {
             DisableMouseCapture
         )?;
         disable_raw_mode()?;
+        self.terminal.clear().ok();
+        self.terminal
+            .set_cursor(self.cursor_position.0, self.cursor_position.1)?;
         Ok(self.terminal.show_cursor()?)
     }
 
@@ -138,24 +146,17 @@ impl Ui {
     }
 
     /// Use exeternal docker cli to exec into a container
-    fn exec(&mut self) {
-        let id = self.app_data.lock().get_selected_container_id();
+    async fn exec(&mut self) {
+        let mut exec_mode = self.gui_state.lock().get_exec_mode();
 
-        if let Some(id) = id {
-            // if Self::can_exec(&id).is_some() {
-            if let Ok(mut child) = std::process::Command::new(DOCKER_COMMAND)
-                .args(["exec", "-it", id.get(), "sh"])
-                .stdin(std::process::Stdio::inherit())
-                .stdout(std::process::Stdio::inherit())
-                .stderr(std::process::Stdio::inherit())
-                .spawn()
-            {
-                self.reset_terminal().ok();
-                child.wait().ok();
-                if child.kill().is_err() {
-                    std::process::exit(1)
-                }
-            }
+        if let Some(mode) = exec_mode {
+            self.reset_terminal().ok();
+            self.terminal.clear().ok();
+            if let Err(e) = mode.run(&self.app_data, &self.gui_state).await {
+                self.app_data
+                    .lock()
+                    .set_error(e, &self.gui_state, Status::Error);
+            };
         }
         self.terminal.clear().ok();
         self.reset_terminal().ok();
@@ -168,7 +169,7 @@ impl Ui {
         while self.is_running.load(Ordering::SeqCst) {
             let exec = self.gui_state.lock().status_contains(&[Status::Exec]);
             if exec {
-                self.exec();
+                self.exec().await;
             }
 
             if self
@@ -219,15 +220,6 @@ impl Ui {
         Ok(())
     }
 }
-
-// #[macro_export]
-// /// This macro simplifies the definition and evaluation of variables by capturing and immediately evaluating an expression.
-// macro_rules! value_capture {
-//     ($name:ident, $lock_expr:expr) => {
-//         let $name = || $lock_expr;
-//         let $name = $name();
-//     };
-// }
 
 #[cfg(not(debug_assertions))]
 fn get_wholelayout(f: &Frame) -> std::rc::Rc<[ratatui::layout::Rect]> {

@@ -3,6 +3,7 @@ use std::sync::{
     Arc,
 };
 
+use bollard::Docker;
 use crossterm::{
     event::{DisableMouseCapture, KeyCode, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
     execute,
@@ -20,11 +21,10 @@ use crate::{
     app_data::{AppData, DockerControls, Header},
     app_error::AppError,
     docker_data::DockerMessage,
-    ui::{DeleteButton, GuiState, SelectablePanel, Status, Ui, DOCKER_COMMAND},
+    exec::{tty_readable, ExecMode},
+    ui::{DeleteButton, GuiState, SelectablePanel, Status, Ui},
 };
 pub use message::InputMessages;
-
-const OCI_ERROR: &str = "OCI runtime exec failed";
 
 /// Handle all input events
 #[derive(Debug)]
@@ -164,36 +164,28 @@ impl InputHandler {
     }
 
     /// Validate that one can exec into a Docker container
-    fn e_key(&self) {
+    async fn e_key(&self) {
         let is_oxker = self.app_data.lock().is_oxker();
-        if !is_oxker {
+        let mut exec_err = Some(());
+        if !is_oxker && tty_readable() {
             let uuid = Uuid::new_v4();
             let handle = GuiState::start_loading_animation(&self.gui_state, uuid);
-            let mut exec_err = Some(());
+            let (sx, rx) = tokio::sync::oneshot::channel::<Arc<Docker>>();
+            self.docker_sender.send(DockerMessage::Exec(sx)).await.ok();
 
-            let id = self.app_data.lock().get_selected_container_id();
-
-            if let Some(id) = id {
-                if let Ok(output) = std::process::Command::new(DOCKER_COMMAND)
-                    .args(["exec", id.get(), "pwd"])
-                    .output()
-                {
-                    if let Ok(output) = String::from_utf8(output.stdout) {
-                        if !output.starts_with(OCI_ERROR) {
-                            exec_err = None;
-                        }
-                    }
-                }
-
-                if exec_err.is_some() {
-                    self.app_data.lock().set_error(
-                        AppError::DockerExec,
-                        &self.gui_state,
-                        Status::Error,
-                    );
-                } else {
-                    self.gui_state.lock().status_push(Status::Exec);
-                }
+            if let Ok(docker) = rx.await {
+                (ExecMode::new(&self.app_data, &docker).await).map_or_else(
+                    || {
+                        self.app_data.lock().set_error(
+                            AppError::DockerExec,
+                            &self.gui_state,
+                            Status::Error,
+                        );
+                    },
+                    |mode| {
+                        self.gui_state.lock().set_exec_mode(mode);
+                    },
+                );
             }
             self.gui_state.lock().stop_loading_animation(&handle, uuid);
         }
@@ -251,7 +243,7 @@ impl InputHandler {
                     KeyCode::Char('7') => self.sort(Header::Image),
                     KeyCode::Char('8') => self.sort(Header::Rx),
                     KeyCode::Char('9') => self.sort(Header::Tx),
-                    KeyCode::Char('e' | 'E') => self.e_key(),
+                    KeyCode::Char('e' | 'E') => self.e_key().await,
                     KeyCode::Char('h' | 'H') => self.gui_state.lock().status_push(Status::Help),
                     KeyCode::Char('m' | 'M') => self.m_key(),
                     KeyCode::Tab => {

@@ -106,13 +106,14 @@ In application controls
 Available command line arguments
 | argument|result|
 |--|--|
-|```-d [number > 0]```| set the minimum update interval for docker information, in ms, defaults to 1000 (1 second) |
-|```--host [hostname]```| connect to Docker with a custom hostname, defaults to `/var/run/docker.sock`, will use `$DOCKER_HOST` env if set |
-|```-r```| show raw logs, by default oxker will remove ANSI formatting (conflicts with -c) |
-|```-c```| attempt to color the logs (conflicts with -r) |
-|```-t```| remove timestamps from each log entry |
-|```-s```| if running via docker, will show the oxker container |
-|```-g```| no tui, basically a pointless debugging mode, for now |
+|```-d [number > 0]```| Set the minimum update interval for docker information in milliseconds. Defaults to 1000 (1 second).|
+|```--host [hostname]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
+|```--use-cli```| When executing into a container, use the external Docker CLI application.|
+|```-r```| Show raw logs. By default, removes ANSI formatting (conflicts with `-c`).|
+|```-c```| Attempt to color the logs (conflicts with `-r`).|
+|```-t```| Remove timestamps from each log entry.|
+|```-s```| If running via Docker, will display the oxker container.|
+|```-g```| No TUI, essentially a debugging mode with limited functionality, for now.|
 
 ## Build step
 
