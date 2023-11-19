@@ -164,10 +164,10 @@ impl AppData {
                 match head {
                     Header::State => match ord {
                         SortedOrder::Asc => {
-                            a.status.cmp(&b.status).then_with(|| a.name.cmp(&b.name))
+                            a.state.order().cmp(&b.state.order()).then_with(|| a.name.cmp(&b.name))
                         }
                         SortedOrder::Desc => {
-                            b.status.cmp(&a.status).then_with(|| b.name.cmp(&a.name))
+                            b.state.order().cmp(&a.state.order()).then_with(|| b.name.cmp(&a.name))
                         }
                     },
                     Header::Status => match ord {
@@ -213,8 +213,8 @@ impl AppData {
                         }
                     },
                     Header::Name => match ord {
-                        SortedOrder::Asc => a.name.cmp(&b.name).then_with(|| a.name.cmp(&b.name)),
-                        SortedOrder::Desc => b.name.cmp(&a.name).then_with(|| b.name.cmp(&a.name)),
+                        SortedOrder::Asc => a.name.cmp(&b.name).then_with(|| a.id.cmp(&b.id)),
+                        SortedOrder::Desc => b.name.cmp(&a.name).then_with(|| b.id.cmp(&a.id)),
                     },
                     Header::Rx => match ord {
                         SortedOrder::Asc => a.rx.cmp(&b.rx).then_with(|| a.name.cmp(&b.name)),
