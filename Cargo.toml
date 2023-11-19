@@ -11,6 +11,20 @@ readme = "README.md"
 keywords = ["docker", "tui", "tokio", "terminal", "podman"]
 categories = ["command-line-utilities"]
 
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+expect_used = "warn"
+nursery = "warn"
+pedantic ="warn"
+todo = "warn"
+unused_async = "warn"
+unwrap_used = "warn"
+module_name_repetitions = "allow"
+doc_markdown = "allow"
+similar_names = "allow"
+
 [dependencies]
 anyhow = "1.0"
 # bollard = "0.15"
