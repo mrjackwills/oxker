@@ -247,7 +247,7 @@ pub struct FrameData {
     height: u16,
     help_visible: bool,
     init: bool,
-    info_text: Option<String>,
+    info_text: Option<(String, Instant)>,
     loading_icon: String,
     selected_panel: SelectablePanel,
     sorted_by: Option<(Header, SortedOrder)>,
@@ -347,8 +347,8 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
         draw_blocks::chart(f, lower_main[1], app_data);
     }
 
-    if let Some(info) = fd.info_text {
-        draw_blocks::info(f, &info);
+    if let Some((text, instant)) = fd.info_text {
+        draw_blocks::info(f, &text, instant, gui_state);
     }
 
     // Check if error, and show popup if so

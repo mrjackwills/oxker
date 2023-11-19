@@ -3,6 +3,7 @@ use ratatui::layout::{Constraint, Rect};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
+    time::Instant,
 };
 use tokio::task::JoinHandle;
 use uuid::Uuid;
@@ -158,12 +159,13 @@ const FRAMES_LEN: u8 = 9;
 /// Various functions (e.g input handler), operate differently depending upon current Status
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Status {
-    Exec,
     DeleteConfirm,
     DockerConnect,
     Error,
+    Exec,
     Help,
     Init,
+    Logs,
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
@@ -178,7 +180,7 @@ pub struct GuiState {
     selected_panel: SelectablePanel,
     status: HashSet<Status>,
     exec_mode: Option<ExecMode>,
-    pub info_box_text: Option<String>,
+    pub info_box_text: Option<(String, Instant)>,
 }
 impl GuiState {
     /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
@@ -366,7 +368,7 @@ impl GuiState {
 
     /// Set info box content
     pub fn set_info_box(&mut self, text: &str) {
-        self.info_box_text = Some(text.to_owned());
+        self.info_box_text = Some((text.to_owned(), std::time::Instant::now()));
     }
 
     /// Remove info box content

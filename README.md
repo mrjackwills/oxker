@@ -92,28 +92,30 @@ oxker
 In application controls
 | button| result|
 |--|--|
-| ```( tab )``` or ```( shift+tab )``` | change panel, clicking on a panel also changes the selected panel|
-| ```( ↑ ↓ )``` or ```( j k )``` or ```( PgUp PgDown )``` or ```( Home End )```| change selected line in selected panel, mouse scroll also changes selected line |
-| ```( enter )```| execute selected docker command|
-| ```( 1-9 )``` | sort containers by heading, clicking on headings also sorts the selected column |
-| ```( 0 )``` | stop sorting |
-| ```( e )``` | (attempt) to exec into the selected container |
-| ```( h )``` | toggle help menu |
-| ```( m )``` | toggle mouse capture - if disabled, text on screen can be selected|
-| ```( q )``` | to quit at any time |
+| ```( tab )``` or ```( shift+tab )``` | Change panel, clicking on a panel also changes the selected panel.|
+| ```( ↑ ↓ )``` or ```( j k )``` or ```( PgUp PgDown )``` or ```( Home End )```| Change selected line in selected panel, mouse scroll also changes selected line.|
+| ```( enter )```| Run selected docker command.|
+| ```( 1-9 )``` | Sort containers by heading, clicking on headings also sorts the selected column. |
+| ```( 0 )``` | Stop sorting.|
+| ```( e )``` | Attempt to exec into the selected container.|
+| ```( h )``` | Toggle help menu.|
+| ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
+| ```( q )``` | Quit.|
+| ```( s )``` | Save logs to `$HOME/[container_name]_[timestamp].log`, or the directory set by `--logs-dir`.|
 
 
 Available command line arguments
 | argument|result|
 |--|--|
 |```-d [number > 0]```| Set the minimum update interval for docker information in milliseconds. Defaults to 1000 (1 second).|
-|```--host [hostname]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
-|```--use-cli```| When executing into a container, use the external Docker CLI application.|
 |```-r```| Show raw logs. By default, removes ANSI formatting (conflicts with `-c`).|
 |```-c```| Attempt to color the logs (conflicts with `-r`).|
 |```-t```| Remove timestamps from each log entry.|
 |```-s```| If running via Docker, will display the oxker container.|
 |```-g```| No TUI, essentially a debugging mode with limited functionality, for now.|
+|```--host [hostname]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
+|```--use-cli```| When executing into a container, use the external Docker CLI application.|
+|```--logs-dir```| Set a custom location to save exportings logs into. Defaults to `$HOME`.|
 
 ## Build step
 

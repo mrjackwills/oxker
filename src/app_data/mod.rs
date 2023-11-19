@@ -510,9 +510,9 @@ impl AppData {
     }
 
     /// Get the Id and State for the currently selected container - used by the exec check method
-    pub fn get_selected_container_id_state(&self) -> Option<(ContainerId, State)> {
+    pub fn get_selected_container_id_state_name(&self) -> Option<(ContainerId, State, String)> {
         self.get_selected_container()
-            .map(|i| (i.id.clone(), i.state))
+            .map(|i| (i.id.clone(), i.state, i.name.clone()))
     }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once

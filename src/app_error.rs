@@ -7,6 +7,7 @@ use std::fmt;
 pub enum AppError {
     DockerCommand(DockerControls),
     DockerExec,
+    DockerLogs,
     DockerConnect,
     DockerInterval,
     InputPoll,
@@ -20,6 +21,7 @@ impl fmt::Display for AppError {
         match self {
             Self::DockerCommand(s) => write!(f, "Unable to {s} container"),
             Self::DockerExec => write!(f, "Unable to exec into container"),
+            Self::DockerLogs => write!(f, "Unable to save logs"),
             Self::DockerConnect => write!(f, "Unable to access docker daemon"),
             Self::DockerInterval => write!(f, "Docker update interval needs to be greater than 0"),
             Self::InputPoll => write!(f, "Unable to poll user input"),
