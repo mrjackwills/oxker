@@ -133,9 +133,9 @@ impl ExecMode {
         }
 
         let use_cli = app_data.lock().args.use_cli;
-        let container = app_data.lock().get_selected_container_id_state();
+        let container = app_data.lock().get_selected_container_id_state_name();
 
-        if let Some((id, state)) = container {
+        if let Some((id, state, _)) = container {
             if state == State::Running {
                 if tty_readable() && !use_cli {
                     if let Ok(exec) = docker

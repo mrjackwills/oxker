@@ -1,4 +1,4 @@
-use std::process;
+use std::{path::PathBuf, process};
 
 use clap::Parser;
 use tracing::error;
@@ -40,6 +40,10 @@ pub struct Args {
     /// Use "docker" cli for execing
     #[clap(long="use-cli", short = None)]
     pub use_cli: bool,
+
+    /// Directory for exporting logs, defaults to `$HOME`
+    #[clap(long="logs-dir", short = None)]
+    pub logs_dir: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -47,13 +51,14 @@ pub struct Args {
 pub struct CliArgs {
     pub color: bool,
     pub docker_interval: u32,
-    pub use_cli: bool,
     pub gui: bool,
     pub host: Option<String>,
     pub in_container: bool,
+    pub logs_dir: Option<PathBuf>,
     pub raw: bool,
     pub show_self: bool,
     pub timestamp: bool,
+    pub use_cli: bool,
 }
 
 impl CliArgs {
@@ -72,6 +77,11 @@ impl CliArgs {
     pub fn new() -> Self {
         let args = Args::parse();
 
+        let logs_dir = args.logs_dir.map_or_else(
+            || directories::BaseDirs::new().map(|base_dirs| base_dirs.home_dir().to_owned()),
+            |logs_dir| Some(std::path::Path::new(&logs_dir).to_owned()),
+        );
+
         // Quit the program if the docker update argument is 0
         // Should maybe change it to check if less than 100
         if args.docker_interval == 0 {
@@ -85,6 +95,7 @@ impl CliArgs {
             gui: !args.gui,
             host: args.host,
             in_container: Self::check_if_in_container(),
+            logs_dir,
             raw: args.raw,
             show_self: !args.show_self,
             timestamp: !args.timestamp,

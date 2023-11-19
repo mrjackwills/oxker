@@ -1,13 +1,21 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::{
+    fs::OpenOptions,
+    io::{BufWriter, Write},
+    path::Path,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::SystemTime,
 };
 
-use bollard::Docker;
+use bollard::{container::LogsOptions, Docker};
+use cansi::v3::categorise_text;
 use crossterm::{
     event::{DisableMouseCapture, KeyCode, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
     execute,
 };
+use futures_util::StreamExt;
 use parking_lot::Mutex;
 use ratatui::layout::Rect;
 use tokio::{
@@ -87,48 +95,6 @@ impl InputHandler {
         }
     }
 
-    /// Toggle the mouse capture (via input of the 'm' key)
-    fn m_key(&mut self) {
-        if self.mouse_capture {
-            if execute!(std::io::stdout(), DisableMouseCapture).is_ok() {
-                self.gui_state
-                    .lock()
-                    .set_info_box("✖ mouse capture disabled");
-            } else {
-                self.app_data.lock().set_error(
-                    AppError::MouseCapture(false),
-                    &self.gui_state,
-                    Status::Error,
-                );
-            }
-        } else if Ui::enable_mouse_capture().is_ok() {
-            self.gui_state
-                .lock()
-                .set_info_box("✓ mouse capture enabled");
-        } else {
-            self.app_data.lock().set_error(
-                AppError::MouseCapture(true),
-                &self.gui_state,
-                Status::Error,
-            );
-        };
-
-        // If the info box sleep handle is currently being executed, as in 'm' is pressed twice within a 4000ms window
-        // then cancel the first handle, as a new handle will be invoked
-        if let Some(info_sleep_timer) = self.info_sleep.as_ref() {
-            info_sleep_timer.abort();
-        }
-
-        let gui_state = Arc::clone(&self.gui_state);
-        // Show the info box - with "mouse capture enabled / disabled", for 4000 ms
-        self.info_sleep = Some(tokio::spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_millis(4000)).await;
-            gui_state.lock().reset_info_box();
-        }));
-
-        self.mouse_capture = !self.mouse_capture;
-    }
-
     /// Sort the containers by a given header
     fn sort(&self, selected_header: Header) {
         self.app_data.lock().set_sort_by_header(selected_header);
@@ -191,9 +157,216 @@ impl InputHandler {
         }
     }
 
-    /// Handle any keyboard button events
-    // TODO refactor this
-    #[allow(clippy::too_many_lines)]
+    /// Toggle the mouse capture (via input of the 'm' key)
+    fn m_key(&mut self) {
+        if self.mouse_capture {
+            if execute!(std::io::stdout(), DisableMouseCapture).is_ok() {
+                self.gui_state
+                    .lock()
+                    .set_info_box("✖ mouse capture disabled");
+            } else {
+                self.app_data.lock().set_error(
+                    AppError::MouseCapture(false),
+                    &self.gui_state,
+                    Status::Error,
+                );
+            }
+        } else if Ui::enable_mouse_capture().is_ok() {
+            self.gui_state
+                .lock()
+                .set_info_box("✓ mouse capture enabled");
+        } else {
+            self.app_data.lock().set_error(
+                AppError::MouseCapture(true),
+                &self.gui_state,
+                Status::Error,
+            );
+        };
+
+        self.mouse_capture = !self.mouse_capture;
+    }
+
+    /// Save the currently selected containers logs into a `[container_name]_[timestamp].log` file
+    async fn s_key(&mut self) {
+        /// This is the inner workings, *inlined* here to return a Result
+        async fn save_logs(
+            app_data: &Arc<Mutex<AppData>>,
+            gui_state: &Arc<Mutex<GuiState>>,
+            docker_sender: &Sender<DockerMessage>,
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let args = app_data.lock().args.clone();
+            let container = app_data.lock().get_selected_container_id_state_name();
+            if let Some((id, _, name)) = container {
+                if let Some(log_path) = args.logs_dir {
+                    let (sx, rx) = tokio::sync::oneshot::channel::<Arc<Docker>>();
+                    docker_sender.send(DockerMessage::Exec(sx)).await?;
+
+                    let now = SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .map_or(0, |i| i.as_secs());
+
+                    let path = log_path.join(format!("{name}_{now}.log"));
+
+                    let docker = rx.await?;
+                    let options = Some(LogsOptions::<String> {
+                        stdout: true,
+                        timestamps: args.timestamp,
+                        since: 0,
+                        ..Default::default()
+                    });
+                    let mut logs = docker.logs(id.get(), options);
+                    let mut output = vec![];
+
+                    while let Some(Ok(value)) = logs.next().await {
+                        let data = value.to_string();
+                        if !data.trim().is_empty() {
+                            output.push(
+                                categorise_text(&data)
+                                    .into_iter()
+                                    .map(|i| i.text)
+                                    .collect::<String>(),
+                            );
+                        }
+                    }
+                    if !output.is_empty() {
+                        let mut stream = BufWriter::new(
+                            OpenOptions::new()
+                                .read(true)
+                                .write(true)
+                                .create(true)
+                                .open(&path)?,
+                        );
+
+                        for line in &output {
+                            stream.write_all(line.as_bytes())?;
+                        }
+                        stream.flush()?;
+
+                        gui_state
+                            .lock()
+                            .set_info_box(&format!("logs saved to {}", path.display()));
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        let log_status = Status::Logs;
+        let status = self.gui_state.lock().status_contains(&[log_status]);
+        if !status {
+            self.gui_state.lock().status_push(log_status);
+
+            let uuid = Uuid::new_v4();
+            let handle = GuiState::start_loading_animation(&self.gui_state, uuid);
+            if save_logs(&self.app_data, &self.gui_state, &self.docker_sender)
+                .await
+                .is_err()
+            {
+                self.app_data.lock().set_error(
+                    AppError::DockerLogs,
+                    &self.gui_state,
+                    Status::Error,
+                );
+            }
+            self.gui_state.lock().status_del(log_status);
+            self.gui_state.lock().stop_loading_animation(&handle, uuid);
+        }
+    }
+
+    /// Send docker command, if the Commands panel is selected
+    async fn enter_key(&mut self) {
+        // This isn't great, just means you can't send docker commands before full initialization of the program
+        let panel = self.gui_state.lock().get_selected_panel();
+        if panel == SelectablePanel::Commands {
+            let option_command = self.app_data.lock().selected_docker_command();
+
+            if let Some(command) = option_command {
+                // Poor way of disallowing commands to be sent to a containerised okxer
+                if self.app_data.lock().is_oxker() {
+                    return;
+                };
+                let option_id = self.app_data.lock().get_selected_container_id();
+                if let Some(id) = option_id {
+                    match command {
+                        DockerControls::Delete => self
+                            .docker_sender
+                            .send(DockerMessage::ConfirmDelete(id))
+                            .await
+                            .ok(),
+                        DockerControls::Pause => {
+                            self.docker_sender.send(DockerMessage::Pause(id)).await.ok()
+                        }
+                        DockerControls::Unpause => self
+                            .docker_sender
+                            .send(DockerMessage::Unpause(id))
+                            .await
+                            .ok(),
+                        DockerControls::Start => {
+                            self.docker_sender.send(DockerMessage::Start(id)).await.ok()
+                        }
+                        DockerControls::Stop => {
+                            self.docker_sender.send(DockerMessage::Stop(id)).await.ok()
+                        }
+                        DockerControls::Restart => self
+                            .docker_sender
+                            .send(DockerMessage::Restart(id))
+                            .await
+                            .ok(),
+                    };
+                }
+            }
+        }
+    }
+
+    /// Change the the "next" seletable panel
+    fn tab_key(&mut self) {
+        let is_containers =
+            self.gui_state.lock().get_selected_panel() == SelectablePanel::Containers;
+        let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
+            2
+        } else {
+            1
+        };
+        for _ in 0..count {
+            self.gui_state.lock().next_panel();
+        }
+    }
+
+    /// Change to previously selected panel
+    fn back_tab_key(&mut self) {
+        let is_containers = self.gui_state.lock().get_selected_panel() == SelectablePanel::Logs;
+        let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
+            2
+        } else {
+            1
+        };
+        for _ in 0..count {
+            self.gui_state.lock().previous_panel();
+        }
+    }
+
+    fn home_key(&mut self) {
+        let mut locked_data = self.app_data.lock();
+        let selected_panel = self.gui_state.lock().get_selected_panel();
+        match selected_panel {
+            SelectablePanel::Containers => locked_data.containers_start(),
+            SelectablePanel::Logs => locked_data.log_start(),
+            SelectablePanel::Commands => locked_data.docker_command_start(),
+        }
+    }
+
+    /// Go to end of the list of the currently selected panel
+    fn end_key(&mut self) {
+        let mut locked_data = self.app_data.lock();
+        let selected_panel = self.gui_state.lock().get_selected_panel();
+        match selected_panel {
+            SelectablePanel::Containers => locked_data.containers_end(),
+            SelectablePanel::Logs => locked_data.log_end(),
+            SelectablePanel::Commands => locked_data.docker_command_end(),
+        }
+    }
+
+    /// Handle keyboard button events
     async fn button_press(&mut self, key_code: KeyCode, key_modififer: KeyModifiers) {
         let contains_delete = self
             .gui_state
@@ -246,52 +419,11 @@ impl InputHandler {
                     KeyCode::Char('e' | 'E') => self.e_key().await,
                     KeyCode::Char('h' | 'H') => self.gui_state.lock().status_push(Status::Help),
                     KeyCode::Char('m' | 'M') => self.m_key(),
-                    KeyCode::Tab => {
-                        // Skip control panel if no containers, could be refactored
-                        let is_containers = self.gui_state.lock().get_selected_panel()
-                            == SelectablePanel::Containers;
-                        let count =
-                            if self.app_data.lock().get_container_len() == 0 && is_containers {
-                                2
-                            } else {
-                                1
-                            };
-                        for _ in 0..count {
-                            self.gui_state.lock().next_panel();
-                        }
-                    }
-                    KeyCode::BackTab => {
-                        // Skip control panel if no containers, could be refactored
-                        let is_containers =
-                            self.gui_state.lock().get_selected_panel() == SelectablePanel::Logs;
-                        let count =
-                            if self.app_data.lock().get_container_len() == 0 && is_containers {
-                                2
-                            } else {
-                                1
-                            };
-                        for _ in 0..count {
-                            self.gui_state.lock().previous_panel();
-                        }
-                    }
-                    KeyCode::Home => {
-                        let mut locked_data = self.app_data.lock();
-                        let selected_panel = self.gui_state.lock().get_selected_panel();
-                        match selected_panel {
-                            SelectablePanel::Containers => locked_data.containers_start(),
-                            SelectablePanel::Logs => locked_data.log_start(),
-                            SelectablePanel::Commands => locked_data.docker_command_start(),
-                        }
-                    }
-                    KeyCode::End => {
-                        let mut locked_data = self.app_data.lock();
-                        let selected_panel = self.gui_state.lock().get_selected_panel();
-                        match selected_panel {
-                            SelectablePanel::Containers => locked_data.containers_end(),
-                            SelectablePanel::Logs => locked_data.log_end(),
-                            SelectablePanel::Commands => locked_data.docker_command_end(),
-                        }
-                    }
+                    KeyCode::Char('s' | 'S') => self.s_key().await,
+                    KeyCode::Tab => self.tab_key(),
+                    KeyCode::BackTab => self.back_tab_key(),
+                    KeyCode::Home => self.home_key(),
+                    KeyCode::End => self.end_key(),
                     KeyCode::Up | KeyCode::Char('k' | 'K') => self.previous(),
                     KeyCode::PageUp => {
                         for _ in 0..=6 {
@@ -304,55 +436,7 @@ impl InputHandler {
                             self.next();
                         }
                     }
-                    KeyCode::Enter => {
-                        // This isn't great, just means you can't send docker commands before full initialization of the program
-                        let panel = self.gui_state.lock().get_selected_panel();
-                        if panel == SelectablePanel::Commands {
-                            let option_command = self.app_data.lock().selected_docker_command();
-
-                            if let Some(command) = option_command {
-                                // Poor way of disallowing commands to be sent to a containerised okxer
-                                if self.app_data.lock().is_oxker() {
-                                    return;
-                                };
-                                let option_id = self.app_data.lock().get_selected_container_id();
-                                if let Some(id) = option_id {
-                                    match command {
-                                        DockerControls::Delete => self
-                                            .docker_sender
-                                            .send(DockerMessage::ConfirmDelete(id))
-                                            .await
-                                            .ok(),
-                                        DockerControls::Pause => self
-                                            .docker_sender
-                                            .send(DockerMessage::Pause(id))
-                                            .await
-                                            .ok(),
-                                        DockerControls::Unpause => self
-                                            .docker_sender
-                                            .send(DockerMessage::Unpause(id))
-                                            .await
-                                            .ok(),
-                                        DockerControls::Start => self
-                                            .docker_sender
-                                            .send(DockerMessage::Start(id))
-                                            .await
-                                            .ok(),
-                                        DockerControls::Stop => self
-                                            .docker_sender
-                                            .send(DockerMessage::Stop(id))
-                                            .await
-                                            .ok(),
-                                        DockerControls::Restart => self
-                                            .docker_sender
-                                            .send(DockerMessage::Restart(id))
-                                            .await
-                                            .ok(),
-                                    };
-                                }
-                            }
-                        }
-                    }
+                    KeyCode::Enter => self.enter_key().await,
                     _ => (),
                 }
             }

@@ -10,7 +10,7 @@ use ratatui::{
     },
     Frame,
 };
-use std::default::Default;
+use std::{default::Default, time::Instant};
 use std::{fmt::Display, sync::Arc};
 
 use crate::app_data::{ContainerItem, Header, SortedOrder};
@@ -20,7 +20,7 @@ use crate::{
 };
 
 use super::{
-    gui_state::{BoxLocation, DeleteButton, Region},
+    gui_state::{self, BoxLocation, DeleteButton, Region},
     FrameData,
 };
 use super::{GuiState, SelectablePanel};
@@ -877,7 +877,7 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
 }
 
 /// Draw info box in one of the 9 BoxLocations
-pub fn info(f: &mut Frame, text: &str) {
+pub fn info(f: &mut Frame, text: &str, instant: Instant, gui_state: &Arc<Mutex<GuiState>>) {
     let block = Block::default()
         .title("")
         .title_alignment(Alignment::Center)
@@ -898,6 +898,9 @@ pub fn info(f: &mut Frame, text: &str) {
     let area = popup(lines, max_line_width, f.size(), BoxLocation::BottomRight);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
+    if instant.elapsed().as_millis() > 4000 {
+        gui_state.lock().reset_info_box();
+    }
 }
 
 /// draw a box in the one of the BoxLocations, based on max line width + number of lines
