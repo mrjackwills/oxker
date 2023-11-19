@@ -21,9 +21,6 @@
 	"mounts": [
 		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly"
 	],
-	"containerEnv": {
-		"CARGO_REGISTRIES_CRATES_IO_PROTOCOL": "sparse"
-	},
 
 	"customizations": {
 		"vscode": {
