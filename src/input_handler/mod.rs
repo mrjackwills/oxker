@@ -34,7 +34,7 @@ pub use message::InputMessages;
 #[derive(Debug)]
 pub struct InputHandler {
     app_data: Arc<Mutex<AppData>>,
-    docker_sender: Sender<DockerMessage>,
+    docker_tx: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
     is_running: Arc<AtomicBool>,
     mouse_capture: bool,
@@ -46,13 +46,13 @@ impl InputHandler {
     pub async fn init(
         app_data: Arc<Mutex<AppData>>,
         rec: Receiver<InputMessages>,
-        docker_sender: Sender<DockerMessage>,
+        docker_tx: Sender<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
         is_running: Arc<AtomicBool>,
     ) {
         let mut inner = Self {
             app_data,
-            docker_sender,
+            docker_tx,
             gui_state,
             is_running,
             rec,
@@ -101,7 +101,7 @@ impl InputHandler {
             .gui_state
             .lock()
             .status_contains(&[Status::Error, Status::Init]);
-        if error_init || self.docker_sender.send(DockerMessage::Quit).await.is_err() {
+        if error_init || self.docker_tx.send(DockerMessage::Quit).await.is_err() {
             self.is_running
                 .store(false, std::sync::atomic::Ordering::SeqCst);
         }
@@ -111,10 +111,7 @@ impl InputHandler {
     async fn confirm_delete(&self) {
         let id = self.gui_state.lock().get_delete_container();
         if let Some(id) = id {
-            self.docker_sender
-                .send(DockerMessage::Delete(id))
-                .await
-                .ok();
+            self.docker_tx.send(DockerMessage::Delete(id)).await.ok();
         }
     }
 
@@ -130,7 +127,7 @@ impl InputHandler {
             let uuid = Uuid::new_v4();
             let handle = GuiState::start_loading_animation(&self.gui_state, uuid);
             let (sx, rx) = tokio::sync::oneshot::channel::<Arc<Docker>>();
-            self.docker_sender.send(DockerMessage::Exec(sx)).await.ok();
+            self.docker_tx.send(DockerMessage::Exec(sx)).await.ok();
 
             if let Ok(docker) = rx.await {
                 (ExecMode::new(&self.app_data, &docker).await).map_or_else(
@@ -185,14 +182,14 @@ impl InputHandler {
         async fn save_logs(
             app_data: &Arc<Mutex<AppData>>,
             gui_state: &Arc<Mutex<GuiState>>,
-            docker_sender: &Sender<DockerMessage>,
+            docker_tx: &Sender<DockerMessage>,
         ) -> Result<(), Box<dyn std::error::Error>> {
             let args = app_data.lock().args.clone();
             let container = app_data.lock().get_selected_container_id_state_name();
             if let Some((id, _, name)) = container {
                 if let Some(log_path) = args.logs_dir {
                     let (sx, rx) = tokio::sync::oneshot::channel::<Arc<Docker>>();
-                    docker_sender.send(DockerMessage::Exec(sx)).await?;
+                    docker_tx.send(DockerMessage::Exec(sx)).await?;
 
                     let now = SystemTime::now()
                         .duration_since(SystemTime::UNIX_EPOCH)
@@ -251,7 +248,7 @@ impl InputHandler {
 
             let uuid = Uuid::new_v4();
             let handle = GuiState::start_loading_animation(&self.gui_state, uuid);
-            if save_logs(&self.app_data, &self.gui_state, &self.docker_sender)
+            if save_logs(&self.app_data, &self.gui_state, &self.docker_tx)
                 .await
                 .is_err()
             {
@@ -282,29 +279,25 @@ impl InputHandler {
                 if let Some(id) = option_id {
                     match command {
                         DockerControls::Delete => self
-                            .docker_sender
+                            .docker_tx
                             .send(DockerMessage::ConfirmDelete(id))
                             .await
                             .ok(),
                         DockerControls::Pause => {
-                            self.docker_sender.send(DockerMessage::Pause(id)).await.ok()
+                            self.docker_tx.send(DockerMessage::Pause(id)).await.ok()
                         }
-                        DockerControls::Unpause => self
-                            .docker_sender
-                            .send(DockerMessage::Unpause(id))
-                            .await
-                            .ok(),
+                        DockerControls::Unpause => {
+                            self.docker_tx.send(DockerMessage::Unpause(id)).await.ok()
+                        }
                         DockerControls::Start => {
-                            self.docker_sender.send(DockerMessage::Start(id)).await.ok()
+                            self.docker_tx.send(DockerMessage::Start(id)).await.ok()
                         }
                         DockerControls::Stop => {
-                            self.docker_sender.send(DockerMessage::Stop(id)).await.ok()
+                            self.docker_tx.send(DockerMessage::Stop(id)).await.ok()
                         }
-                        DockerControls::Restart => self
-                            .docker_sender
-                            .send(DockerMessage::Restart(id))
-                            .await
-                            .ok(),
+                        DockerControls::Restart => {
+                            self.docker_tx.send(DockerMessage::Restart(id)).await.ok()
+                        }
                     };
                 }
             }

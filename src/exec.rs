@@ -297,9 +297,7 @@ impl ExecMode {
     }
 
     // RESET TERMINAL BEFROEHAND
-    pub async fn run(
-        &self,
-    ) -> Result<(), AppError> {
+    pub async fn run(&self) -> Result<(), AppError> {
         match self {
             Self::External(id) => {
                 Self::exec_external(id);

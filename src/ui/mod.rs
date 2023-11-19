@@ -35,9 +35,9 @@ pub struct Ui {
     app_data: Arc<Mutex<AppData>>,
     gui_state: Arc<Mutex<GuiState>>,
     input_poll_rate: Duration,
+    input_tx: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
     now: Instant,
-    sender: Sender<InputMessages>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
     cursor_position: (u16, u16),
 }
@@ -59,21 +59,21 @@ impl Ui {
     pub async fn create(
         app_data: Arc<Mutex<AppData>>,
         gui_state: Arc<Mutex<GuiState>>,
+        input_tx: Sender<InputMessages>,
         is_running: Arc<AtomicBool>,
-        sender: Sender<InputMessages>,
     ) {
         if let Ok(mut terminal) = Self::setup_terminal() {
             // let args = app_data.lock().args.clone();
             let cursor_position = terminal.get_cursor().unwrap_or_default();
             let mut ui = Self {
                 app_data,
+                cursor_position,
                 gui_state,
                 input_poll_rate: std::time::Duration::from_millis(100),
+                input_tx,
                 is_running,
                 now: Instant::now(),
-                sender,
                 terminal,
-                cursor_position,
             };
             if let Err(e) = ui.draw_ui().await {
                 error!("{e}");
@@ -178,7 +178,7 @@ impl Ui {
             if crossterm::event::poll(self.input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
-                        self.sender
+                        self.input_tx
                             .send(InputMessages::ButtonPress((key.code, key.modifiers)))
                             .await
                             .ok();
@@ -187,7 +187,7 @@ impl Ui {
                             event::MouseEventKind::Down(_)
                             | event::MouseEventKind::ScrollDown
                             | event::MouseEventKind::ScrollUp => {
-                                self.sender.send(InputMessages::MouseEvent(m)).await.ok();
+                                self.input_tx.send(InputMessages::MouseEvent(m)).await.ok();
                             }
                             _ => (),
                         }

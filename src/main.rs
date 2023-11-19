@@ -109,8 +109,8 @@ async fn main() {
 
     let args = CliArgs::new();
 
-	// If running via Docker image, need to sleep else program will just quit straight away, no real idea why
-	// So just sleep for small while
+    // If running via Docker image, need to sleep else program will just quit straight away, no real idea why
+    // So just sleep for small while
     if args.in_container {
         std::thread::sleep(std::time::Duration::from_millis(250));
     }
@@ -132,9 +132,9 @@ async fn main() {
     .await;
 
     if args.gui {
-        let (sx, input_rx) = tokio::sync::mpsc::channel(32);
+        let (input_tx, input_rx) = tokio::sync::mpsc::channel(32);
         handler_init(&app_data, &docker_tx, &gui_state, input_rx, &is_running);
-        Ui::create(app_data,  gui_state, is_running, sx).await;
+        Ui::create(app_data, gui_state, input_tx, is_running).await;
     } else {
         info!("in debug mode\n");
         // Debug mode for testing, less pointless now, will display some basic information

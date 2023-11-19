@@ -339,8 +339,8 @@ impl DockerData {
             let uuid = Uuid::new_v4();
             // TODO need to refactor these
             match message {
-                DockerMessage::Exec(sender) => {
-                    sender.send(Arc::clone(&self.docker)).ok();
+                DockerMessage::Exec(docker_tx) => {
+                    docker_tx.send(Arc::clone(&self.docker)).ok();
                 }
                 DockerMessage::Pause(id) => {
                     tokio::spawn(async move {

@@ -163,12 +163,16 @@ impl AppData {
             let sort_closure = |a: &ContainerItem, b: &ContainerItem| -> std::cmp::Ordering {
                 match head {
                     Header::State => match ord {
-                        SortedOrder::Asc => {
-                            a.state.order().cmp(&b.state.order()).then_with(|| a.name.cmp(&b.name))
-                        }
-                        SortedOrder::Desc => {
-                            b.state.order().cmp(&a.state.order()).then_with(|| b.name.cmp(&a.name))
-                        }
+                        SortedOrder::Asc => a
+                            .state
+                            .order()
+                            .cmp(&b.state.order())
+                            .then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b
+                            .state
+                            .order()
+                            .cmp(&a.state.order())
+                            .then_with(|| b.name.cmp(&a.name)),
                     },
                     Header::Status => match ord {
                         SortedOrder::Asc => {
