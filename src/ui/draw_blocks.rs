@@ -20,7 +20,7 @@ use crate::{
 };
 
 use super::{
-    gui_state::{self, BoxLocation, DeleteButton, Region},
+    gui_state::{BoxLocation, DeleteButton, Region},
     FrameData,
 };
 use super::{GuiState, SelectablePanel};

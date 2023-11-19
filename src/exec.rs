@@ -1,12 +1,9 @@
 use std::{
-    fmt,
-    hash::{Hash, Hasher},
     io::{Read, Write},
     sync::{atomic::AtomicBool, Arc},
 };
 
 use bollard::{
-    container,
     exec::{CreateExecOptions, StartExecOptions, StartExecResults},
     Docker,
 };
@@ -18,8 +15,6 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::{
     app_data::{AppData, ContainerId, State},
     app_error::AppError,
-    parse_args::CliArgs,
-    ui::{GuiState, Status},
 };
 
 /// TTY location
@@ -304,8 +299,6 @@ impl ExecMode {
     // RESET TERMINAL BEFROEHAND
     pub async fn run(
         &self,
-        app_data: &Arc<Mutex<AppData>>,
-        gui_state: &Arc<Mutex<GuiState>>,
     ) -> Result<(), AppError> {
         match self {
             Self::External(id) => {

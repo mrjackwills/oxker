@@ -1,7 +1,6 @@
 use std::{
     fs::OpenOptions,
     io::{BufWriter, Write},
-    path::Path,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -18,10 +17,7 @@ use crossterm::{
 use futures_util::StreamExt;
 use parking_lot::Mutex;
 use ratatui::layout::Rect;
-use tokio::{
-    sync::mpsc::{Receiver, Sender},
-    task::JoinHandle,
-};
+use tokio::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
 mod message;
@@ -40,7 +36,6 @@ pub struct InputHandler {
     app_data: Arc<Mutex<AppData>>,
     docker_sender: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
-    info_sleep: Option<JoinHandle<()>>,
     is_running: Arc<AtomicBool>,
     mouse_capture: bool,
     rec: Receiver<InputMessages>,
@@ -62,7 +57,6 @@ impl InputHandler {
             is_running,
             rec,
             mouse_capture: true,
-            info_sleep: None,
         };
         inner.start().await;
     }
@@ -132,7 +126,6 @@ impl InputHandler {
     /// Validate that one can exec into a Docker container
     async fn e_key(&self) {
         let is_oxker = self.app_data.lock().is_oxker();
-        let mut exec_err = Some(());
         if !is_oxker && tty_readable() {
             let uuid = Uuid::new_v4();
             let handle = GuiState::start_loading_animation(&self.gui_state, uuid);

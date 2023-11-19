@@ -1,5 +1,4 @@
 use anyhow::Result;
-use bollard::Docker;
 use crossterm::{
     event::{self, DisableMouseCapture, Event},
     execute,
@@ -29,13 +28,11 @@ pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
 use crate::{
     app_data::{AppData, Columns, ContainerId, Header, SortedOrder},
     app_error::AppError,
-    docker_data::DockerMessage,
     input_handler::InputMessages,
 };
 
 pub struct Ui {
     app_data: Arc<Mutex<AppData>>,
-    docker_sx: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
     input_poll_rate: Duration,
     is_running: Arc<AtomicBool>,
@@ -61,7 +58,6 @@ impl Ui {
     /// Create a new Ui struct, and execute the drawing loop
     pub async fn create(
         app_data: Arc<Mutex<AppData>>,
-        docker_sx: Sender<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
         is_running: Arc<AtomicBool>,
         sender: Sender<InputMessages>,
@@ -71,7 +67,6 @@ impl Ui {
             let cursor_position = terminal.get_cursor().unwrap_or_default();
             let mut ui = Self {
                 app_data,
-                docker_sx,
                 gui_state,
                 input_poll_rate: std::time::Duration::from_millis(100),
                 is_running,
@@ -147,12 +142,12 @@ impl Ui {
 
     /// Use exeternal docker cli to exec into a container
     async fn exec(&mut self) {
-        let mut exec_mode = self.gui_state.lock().get_exec_mode();
+        let exec_mode = self.gui_state.lock().get_exec_mode();
 
         if let Some(mode) = exec_mode {
             self.reset_terminal().ok();
             self.terminal.clear().ok();
-            if let Err(e) = mode.run(&self.app_data, &self.gui_state).await {
+            if let Err(e) = mode.run().await {
                 self.app_data
                     .lock()
                     .set_error(e, &self.gui_state, Status::Error);
