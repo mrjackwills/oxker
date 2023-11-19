@@ -156,78 +156,81 @@ impl AppData {
         self.sorted_by
     }
 
-    /// Sort the containers vec, based on a heading, either ascending or descending,
+    /// Sort the containers vec, based on a heading (and if clash, then by name), either ascending or descending,
     /// If not sort set, then sort by created time
     pub fn sort_containers(&mut self) {
         if let Some((head, ord)) = self.sorted_by {
-            match head {
-                Header::State => match ord {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.state.order().cmp(&a.state.order())),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.state.order().cmp(&b.state.order())),
-                },
-                Header::Status => match ord {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.status.cmp(&b.status)),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.status.cmp(&a.status)),
-                },
-                Header::Cpu => match ord {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.cpu_stats.back().cmp(&b.cpu_stats.back())),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.cpu_stats.back().cmp(&a.cpu_stats.back())),
-                },
-                Header::Memory => match ord {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.mem_stats.back().cmp(&b.mem_stats.back())),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.mem_stats.back().cmp(&a.mem_stats.back())),
-                },
-                Header::Id => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.id.cmp(&b.id)),
-                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.id.cmp(&a.id)),
-                },
-                Header::Image => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.image.cmp(&b.image)),
-                    SortedOrder::Desc => {
-                        self.containers.items.sort_by(|a, b| b.image.cmp(&a.image));
-                    }
-                },
-                Header::Name => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.name.cmp(&b.name)),
-                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.name.cmp(&a.name)),
-                },
-                Header::Rx => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.rx.cmp(&b.rx)),
-                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.rx.cmp(&a.rx)),
-                },
-                Header::Tx => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.tx.cmp(&b.tx)),
-                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.tx.cmp(&a.tx)),
-                },
-            }
+            let sort_closure = |a: &ContainerItem, b: &ContainerItem| -> std::cmp::Ordering {
+                match head {
+                    Header::State => match ord {
+                        SortedOrder::Asc => {
+                            a.status.cmp(&b.status).then_with(|| a.name.cmp(&b.name))
+                        }
+                        SortedOrder::Desc => {
+                            b.status.cmp(&a.status).then_with(|| b.name.cmp(&a.name))
+                        }
+                    },
+                    Header::Status => match ord {
+                        SortedOrder::Asc => {
+                            a.status.cmp(&b.status).then_with(|| a.name.cmp(&b.name))
+                        }
+                        SortedOrder::Desc => {
+                            b.status.cmp(&a.status).then_with(|| b.name.cmp(&a.name))
+                        }
+                    },
+                    Header::Cpu => match ord {
+                        SortedOrder::Asc => a
+                            .cpu_stats
+                            .back()
+                            .cmp(&b.cpu_stats.back())
+                            .then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b
+                            .cpu_stats
+                            .back()
+                            .cmp(&a.cpu_stats.back())
+                            .then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Memory => match ord {
+                        SortedOrder::Asc => a
+                            .mem_stats
+                            .back()
+                            .cmp(&b.mem_stats.back())
+                            .then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b
+                            .mem_stats
+                            .back()
+                            .cmp(&a.mem_stats.back())
+                            .then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Id => match ord {
+                        SortedOrder::Asc => a.id.cmp(&b.id).then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b.id.cmp(&a.id).then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Image => match ord {
+                        SortedOrder::Asc => a.image.cmp(&b.image).then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => {
+                            b.image.cmp(&a.image).then_with(|| b.name.cmp(&a.name))
+                        }
+                    },
+                    Header::Name => match ord {
+                        SortedOrder::Asc => a.name.cmp(&b.name).then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b.name.cmp(&a.name).then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Rx => match ord {
+                        SortedOrder::Asc => a.rx.cmp(&b.rx).then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b.rx.cmp(&a.rx).then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Tx => match ord {
+                        SortedOrder::Asc => a.tx.cmp(&b.tx).then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b.tx.cmp(&a.tx).then_with(|| b.name.cmp(&a.name)),
+                    },
+                }
+            };
+            self.containers.items.sort_by(sort_closure);
         } else {
             self.containers
                 .items
-                .sort_by(|a, b| a.created.cmp(&b.created));
+                .sort_by(|a, b| a.created.cmp(&b.created).then_with(|| a.name.cmp(&b.name)));
         }
     }
 
