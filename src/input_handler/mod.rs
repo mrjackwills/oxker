@@ -234,7 +234,7 @@ impl InputHandler {
 
                         gui_state
                             .lock()
-                            .set_info_box(&format!("logs saved to {}", path.display()));
+                            .set_info_box(&format!("saved to {}", path.display()));
                     }
                 }
             }
