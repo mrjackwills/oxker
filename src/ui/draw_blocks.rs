@@ -569,7 +569,7 @@ impl HelpInfo {
                 button_item("tab"),
                 or(),
                 button_item("shift+tab"),
-                button_desc("to change panels"),
+                button_desc("change panels"),
             ]),
             Line::from(vec![
                 space(),
@@ -580,12 +580,12 @@ impl HelpInfo {
                 button_item("PgUp PgDown"),
                 or(),
                 button_item("Home End"),
-                button_desc("to change selected line"),
+                button_desc("change selected line"),
             ]),
             Line::from(vec![
                 space(),
                 button_item("enter"),
-                button_desc("to send docker container command"),
+                button_desc("send docker container command"),
             ]),
             Line::from(vec![
                 space(),
@@ -595,21 +595,21 @@ impl HelpInfo {
             Line::from(vec![
                 space(),
                 button_item("h"),
-                button_desc("to toggle this help information"),
+                button_desc("toggle this help information"),
             ]),
             Line::from(vec![
                 space(),
                 button_item("s"),
-                button_desc("Save logs of selected container to file"),
+                button_desc("save logs to file"),
             ]),
             Line::from(vec![
 				space(),
 				button_item("m"),
 				button_desc(
-					"to toggle mouse capture - if disabled, text on screen can be selected & copied",
+					"toggle mouse capture - if disabled, text on screen can be selected & copied",
 				),
 			]),
-            Line::from(vec![space(), button_item("0"), button_desc("to stop sort")]),
+            Line::from(vec![space(), button_item("0"), button_desc("stop sort")]),
             Line::from(vec![
                 space(),
                 button_item("1 - 9"),
@@ -618,7 +618,7 @@ impl HelpInfo {
             Line::from(vec![
                 space(),
                 button_item("q"),
-                button_desc("to quit at any time"),
+                button_desc("quit at any time"),
             ]),
         ];
 
@@ -856,7 +856,7 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
                 seconds.unwrap_or(5)
             )
         }
-        _ => String::from("\n\n ( c ) to clear error\n ( q ) to quit oxker"),
+        _ => String::from("\n\n ( c ) clear error\n ( q ) quit oxker "),
     };
 
     let mut text = format!("\n{error}");
