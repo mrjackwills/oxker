@@ -15,6 +15,10 @@
 	</a>
 </p>
 
+- [Download & install](#download--install)
+- [Run](#run)
+- [Build step](#build-step)
+- [Tests](#tests)
 
 ## Download & install
 
