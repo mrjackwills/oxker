@@ -1,9 +1,9 @@
-### Fixes
+### (Quick) Fixes
 + Bollard dependency fix, [1702414f922d87ff1cb6654128c09c0074870123]
 + GitHub workflow, cargo publish before create release, [ae4ce3b549c40cc8bd713f375f030b185179a6e2]
 + `as_ref()` fixed, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [77fbaa8b1669286369b6ec1edd80220c808b628f]
 
-See [https://github.com/mrjackwills/oxker/releases/tag/v0.4.0](https://github.com/mrjackwills/oxker/releases/tag/v0.4.0) for v0.4.0 release notes
+See [https://github.com/mrjackwills/oxker/releases/tag/v0.4.0](https://github.com/mrjackwills/oxker/releases/tag/v0.4.0) for more detailed v0.4.0 release notes
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.4.0'>v0.4.0</a>
 ### 2023-11-20
