@@ -1,6 +1,6 @@
 [package]
 name = "oxker"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 authors = ["Jack Wills <email@mrjackwills.com>"]
 description = "A simple tui to view & control docker containers"
@@ -27,8 +27,7 @@ similar_names = "allow"
 
 [dependencies]
 anyhow = "1.0"
-# bollard = "0.15"
-bollard = { git = "https://www.github.com/fussybeaver/bollard.git", rev = "cef1cd5" }
+bollard = "0.15"
 cansi = "2.2"
 clap = { version = "4.4", features = ["derive", "unicode", "color"] }
 crossterm = "0.27"

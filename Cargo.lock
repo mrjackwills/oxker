@@ -146,7 +146,8 @@ checksum = "327762f6e5a765692301e5bb513e0d9fef63be86bbc14528052b1cd3e6f03e07"
 [[package]]
 name = "bollard"
 version = "0.15.0"
-source = "git+https://www.github.com/fussybeaver/bollard.git?rev=cef1cd5#cef1cd568684d0c3c497ce56221ff22ca18334f4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f03db470b3c0213c47e978da93200259a1eb4dae2e5512cba9955e2b540a6fc6"
 dependencies = [
  "base64",
  "bollard-stubs",
@@ -174,7 +175,8 @@ dependencies = [
 [[package]]
 name = "bollard-stubs"
 version = "1.43.0-rc.2"
-source = "git+https://www.github.com/fussybeaver/bollard.git?rev=cef1cd5#cef1cd568684d0c3c497ce56221ff22ca18334f4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b58071e8fd9ec1e930efd28e3a90c1251015872a2ce49f81f36421b86466932e"
 dependencies = [
  "serde",
  "serde_repr",
@@ -781,7 +783,7 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
 name = "oxker"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "bollard",
@@ -1418,9 +1420,9 @@ checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 
 [[package]]
 name = "uuid"
-version = "1.6.0"
+version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c58fe91d841bc04822c9801002db4ea904b9e4b8e6bbad25127b46eff8dc516b"
+checksum = "5e395fcf16a7a3d8127ec99782007af141946b4795001f876d54fb0d55978560"
 dependencies = [
  "getrandom",
  "rand",

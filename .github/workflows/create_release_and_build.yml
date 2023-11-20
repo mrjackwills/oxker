@@ -6,11 +6,28 @@ on:
 
 jobs:
 
+  #########################
+  ## Publish to crates.io #
+  #########################
+  
+  cargo_publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: publish to crates.io
+        uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
+
+
   #################################################
   ## Cross platform binary build for release page #
   #################################################
 
   cross_platform_build:
+   needs: [cargo_publish]
     strategy:
       matrix:
         platform:
@@ -88,28 +105,14 @@ jobs:
             **/oxker_*.zip
             **/oxker_*.tar.gz
 
-  #########################
-  ## Publish to crates.io #
-  #########################
-  
-  cargo_publish:
-    needs: [create_release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: publish to crates.io
-        uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
           
   #########################################
   ## Build images for Dockerhub & ghcr.io #
   #########################################
   
   image_build:
-    needs: [cargo_publish]
+    needs: [create_release]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
