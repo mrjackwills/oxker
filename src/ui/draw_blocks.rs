@@ -597,11 +597,10 @@ impl HelpInfo {
                 button_item("h"),
                 button_desc("to toggle this help information"),
             ]),
-            Line::from(vec![space(), button_item("0"), button_desc("to stop sort")]),
             Line::from(vec![
                 space(),
-                button_item("1 - 9"),
-                button_desc("sort by header - or click header"),
+                button_item("s"),
+                button_desc("Save logs of selected container to file"),
             ]),
             Line::from(vec![
 				space(),
@@ -610,6 +609,12 @@ impl HelpInfo {
 					"to toggle mouse capture - if disabled, text on screen can be selected & copied",
 				),
 			]),
+            Line::from(vec![space(), button_item("0"), button_desc("to stop sort")]),
+            Line::from(vec![
+                space(),
+                button_item("1 - 9"),
+                button_desc("sort by header - or click header"),
+            ]),
             Line::from(vec![
                 space(),
                 button_item("q"),
