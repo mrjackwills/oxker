@@ -603,12 +603,12 @@ impl HelpInfo {
                 button_desc("save logs to file"),
             ]),
             Line::from(vec![
-				space(),
-				button_item("m"),
-				button_desc(
-					"toggle mouse capture - if disabled, text on screen can be selected & copied",
-				),
-			]),
+                space(),
+                button_item("m"),
+                button_desc(
+                    "toggle mouse capture - if disabled, text on screen can be selected & copied",
+                ),
+            ]),
             Line::from(vec![space(), button_item("0"), button_desc("stop sort")]),
             Line::from(vec![
                 space(),
