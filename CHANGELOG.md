@@ -1,3 +1,10 @@
+### Fixes
++ Bollard dependency fix, [1702414f922d87ff1cb6654128c09c0074870123]
++ GitHub workflow, cargo publish before create release, [ae4ce3b549c40cc8bd713f375f030b185179a6e2]
++ `as_ref()` fixed, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [77fbaa8b1669286369b6ec1edd80220c808b628f]
+
+See [https://github.com/mrjackwills/oxker/releases/tag/v0.4.0](https://github.com/mrjackwills/oxker/releases/tag/v0.4.0) for v0.4.0 release notes
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.4.0'>v0.4.0</a>
 ### 2023-11-20
 
@@ -12,7 +19,6 @@
 + Export logs feature, press `s` to save logs, use `--save-dir` cli-arg to customise output location, closes [#1](https://github.com/mrjackwills/oxker/issues/1), [a15da5ed](https://github.com/mrjackwills/oxker/commit/a15da5ed43d07852504a4dd1884a189e3f5b9d84)
 
 ### Fixes
-+ `as_ref()` fixed, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [0e06c9c1](https://github.com/mrjackwills/oxker/commit/0e06c9c172629dc7f7e7766f5372da9466e786d8)
 + sorted created_at clash, closes [#22](https://github.com/mrjackwills/oxker/issues/22), [3a648939](https://github.com/mrjackwills/oxker/commit/3a6489396e87702ce94b349a7f47028ece7922f6)
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.3.3'>v0.3.3</a>
