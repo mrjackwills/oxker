@@ -187,7 +187,7 @@ impl InputHandler {
             let args = app_data.lock().args.clone();
             let container = app_data.lock().get_selected_container_id_state_name();
             if let Some((id, _, name)) = container {
-                if let Some(log_path) = args.logs_dir {
+                if let Some(log_path) = args.save_dir {
                     let (sx, rx) = tokio::sync::oneshot::channel::<Arc<Docker>>();
                     docker_tx.send(DockerMessage::Exec(sx)).await?;
 

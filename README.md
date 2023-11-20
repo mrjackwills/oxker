@@ -101,7 +101,7 @@ In application controls
 | ```( h )``` | Toggle help menu.|
 | ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
 | ```( q )``` | Quit.|
-| ```( s )``` | Save logs to `$HOME/[container_name]_[timestamp].log`, or the directory set by `--logs-dir`.|
+| ```( s )``` | Save logs to `$HOME/oxker_[container_name].log`, or the directory set by `--save-dir`.|
 
 
 Available command line arguments
@@ -114,8 +114,8 @@ Available command line arguments
 |```-s```| If running via Docker, will display the oxker container.|
 |```-g```| No TUI, essentially a debugging mode with limited functionality, for now.|
 |```--host [hostname]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
-|```--use-cli```| When executing into a container, use the external Docker CLI application.|
-|```--logs-dir```| Set a custom location to save exportings logs into. Defaults to `$HOME`.|
+|```--save-dir```| Set a custom location to save exported logs into. Defaults to `$HOME`.|
+|```--use-cli```| When executing into a container, force use of the external Docker CLI application.|
 
 ## Build step
 

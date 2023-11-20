@@ -28,6 +28,7 @@ pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
 use crate::{
     app_data::{AppData, Columns, ContainerId, Header, SortedOrder},
     app_error::AppError,
+    exec::TerminalSize,
     input_handler::InputMessages,
 };
 
@@ -147,7 +148,7 @@ impl Ui {
         if let Some(mode) = exec_mode {
             self.reset_terminal().ok();
             self.terminal.clear().ok();
-            if let Err(e) = mode.run().await {
+            if let Err(e) = mode.run(TerminalSize::new(&self.terminal)).await {
                 self.app_data
                     .lock()
                     .set_error(e, &self.gui_state, Status::Error);

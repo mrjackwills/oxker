@@ -1,15 +1,16 @@
 use std::{
-    io::{Read, Write},
+    io::{Read, Stdout, Write},
     sync::{atomic::AtomicBool, Arc},
 };
 
 use bollard::{
-    exec::{CreateExecOptions, StartExecOptions, StartExecResults},
+    exec::{CreateExecOptions, ResizeExecOptions, StartExecOptions, StartExecResults},
     Docker,
 };
 use crossterm::terminal::enable_raw_mode;
 use futures_util::StreamExt;
 use parking_lot::Mutex;
+use ratatui::{backend::CrosstermBackend, Terminal};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::{
@@ -24,7 +25,7 @@ const TTY: &str = "/dev/tty";
 const OCI_ERROR: &str = "OCI runtime exec failed";
 
 /// Set the cursor position on the screen to (0,0)
-pub const CURSOR_POS: &str = "\x1B[J\x1B[H";
+const CURSOR_POS: &str = "\x1B[J\x1B[H";
 
 /// This needs to be written to stdout when exiting the exec mode, else the input handler thread gets confused,
 /// see https://sw.kovidgoyal.net/kitty/keyboard-protocol/#progressive-enhancement
@@ -110,6 +111,24 @@ struct AsyncTTY {
     rx: std::sync::mpsc::Receiver<u8>,
 }
 
+/// This is used to set the terminal size when exec via the Internal method
+#[derive(Debug, Clone)]
+pub struct TerminalSize {
+    width: u16,
+    height: u16,
+}
+
+impl TerminalSize {
+    pub fn new(terminal: &Terminal<CrosstermBackend<Stdout>>) -> Option<Self> {
+        terminal.size().map_or(None, |i| {
+            Some(Self {
+                width: i.width,
+                height: i.height,
+            })
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ExecMode {
     // use Bollard Rust library
@@ -192,7 +211,12 @@ impl ExecMode {
 
     /// Exec into the container via the Bollard library, stdout & stdin on different threads
     /// Have to deal with strange output once dropped, hence the use of internal_cleanup() method
-    async fn exec_internal(&self, id: &ContainerId, docker: &Arc<Docker>) -> Result<(), AppError> {
+    async fn exec_internal(
+        &self,
+        id: &ContainerId,
+        docker: &Arc<Docker>,
+        terminal_size: Option<TerminalSize>,
+    ) -> Result<(), AppError> {
         let run = Arc::new(AtomicBool::new(true));
 
         if let Ok(exec_result) = docker
@@ -239,6 +263,19 @@ impl ExecMode {
                         }
                     });
 
+                    if let Some(terminal_size) = terminal_size {
+                        docker
+                            .resize_exec(
+                                &exec_result.id,
+                                ResizeExecOptions {
+                                    height: terminal_size.height,
+                                    width: terminal_size.width,
+                                },
+                            )
+                            .await
+                            .ok();
+                    }
+
                     while let Ok(x) = async_tty.rx.recv() {
                         input.write(&[x]).await.ok();
                     }
@@ -263,7 +300,6 @@ impl ExecMode {
                 let waiting_thread = Arc::clone(&waiting);
 
                 std::thread::spawn(move || {
-                    // At the moment the known max length is 26
                     let mut bytes = Vec::with_capacity(26);
                     while waiting_thread.load(std::sync::atomic::Ordering::SeqCst) {
                         let mut buf = [0];
@@ -296,15 +332,14 @@ impl ExecMode {
         }
     }
 
-    // RESET TERMINAL BEFROEHAND
-    pub async fn run(&self) -> Result<(), AppError> {
+    pub async fn run(&self, tty_size: Option<TerminalSize>) -> Result<(), AppError> {
         match self {
             Self::External(id) => {
                 Self::exec_external(id);
                 Ok(())
             }
 
-            Self::Internal((id, docker)) => self.exec_internal(id, docker).await,
+            Self::Internal((id, docker)) => self.exec_internal(id, docker, tty_size).await,
         }
     }
 }

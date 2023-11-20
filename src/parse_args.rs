@@ -37,13 +37,13 @@ pub struct Args {
     #[clap(long, short = None)]
     pub host: Option<String>,
 
-    /// Use "docker" cli for execing
+    /// Force use of docker cli when execing into containers
     #[clap(long="use-cli", short = None)]
     pub use_cli: bool,
 
-    /// Directory for exporting logs, defaults to `$HOME`
-    #[clap(long="logs-dir", short = None)]
-    pub logs_dir: Option<String>,
+    /// Directory for saving exported logs, defaults to `$HOME`
+    #[clap(long="save-dir", short = None)]
+    pub save_dir: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,7 +54,7 @@ pub struct CliArgs {
     pub gui: bool,
     pub host: Option<String>,
     pub in_container: bool,
-    pub logs_dir: Option<PathBuf>,
+    pub save_dir: Option<PathBuf>,
     pub raw: bool,
     pub show_self: bool,
     pub timestamp: bool,
@@ -77,7 +77,7 @@ impl CliArgs {
     pub fn new() -> Self {
         let args = Args::parse();
 
-        let logs_dir = args.logs_dir.map_or_else(
+        let logs_dir = args.save_dir.map_or_else(
             || directories::BaseDirs::new().map(|base_dirs| base_dirs.home_dir().to_owned()),
             |logs_dir| Some(std::path::Path::new(&logs_dir).to_owned()),
         );
@@ -95,7 +95,7 @@ impl CliArgs {
             gui: !args.gui,
             host: args.host,
             in_container: Self::check_if_in_container(),
-            logs_dir,
+            save_dir: logs_dir,
             raw: args.raw,
             show_self: !args.show_self,
             timestamp: !args.timestamp,
