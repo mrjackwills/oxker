@@ -115,7 +115,7 @@ Available command line arguments
 |```-g```| No TUI, essentially a debugging mode with limited functionality, for now.|
 |```--host [hostname]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
 |```--save-dir [directory]```| Save exported logs into a custom directory. Defaults to `$HOME`.|
-|```--use-cli```| When executing into a container, force use of the external Docker CLI application.|
+|```--use-cli```| When executing into a container, force use of the external Docker CLI application, instead of by the Docker api.|
 
 ## Build step
 
