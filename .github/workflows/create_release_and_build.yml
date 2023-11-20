@@ -27,7 +27,7 @@ jobs:
   #################################################
 
   cross_platform_build:
-   needs: [cargo_publish]
+    needs: [cargo_publish]
     strategy:
       matrix:
         platform:
