@@ -28,6 +28,11 @@ impl ContainerId {
     pub fn get(&self) -> &str {
         self.0.as_str()
     }
+
+    /// Only return first 8 chars of id, is usually more than enough for uniqueness
+    pub fn get_short(&self) -> String {
+        self.0.chars().take(8).collect::<String>()
+    }
 }
 
 impl Ord for ContainerId {
@@ -121,6 +126,9 @@ pub enum State {
 }
 
 impl State {
+    pub const fn is_alive(self) -> bool {
+        matches!(self, Self::Running)
+    }
     pub const fn get_color(self) -> Color {
         match self {
             Self::Paused => Color::Yellow,
@@ -155,6 +163,12 @@ impl From<&str> for State {
             "running" => Self::Running,
             _ => Self::Unknown,
         }
+    }
+}
+
+impl From<Option<String>> for State {
+    fn from(input: Option<String>) -> Self {
+        input.map_or(Self::Unknown, |input| Self::from(input.as_str()))
     }
 }
 
@@ -216,7 +230,7 @@ impl fmt::Display for DockerControls {
             Self::Restart => "restart",
             Self::Start => "start",
             Self::Stop => "stop",
-            Self::Unpause => "unpause",
+            Self::Unpause => "resume",
         };
         write!(f, "{disp}")
     }
@@ -432,6 +446,20 @@ pub struct ContainerItem {
     pub status: String,
     pub tx: ByteStats,
     pub is_oxker: bool,
+}
+
+/// Basic display information, for when running in debug mode
+impl fmt::Display for ContainerItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}, {}, {}, {}",
+            self.id.get_short(),
+            self.name,
+            self.cpu_stats.back().unwrap_or(&CpuStats::new(0.0)),
+            self.mem_stats.back().unwrap_or(&ByteStats::new(0))
+        )
+    }
 }
 
 impl ContainerItem {

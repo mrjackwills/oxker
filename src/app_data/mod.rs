@@ -17,12 +17,24 @@ use crate::{
 };
 pub use container_state::*;
 
+#[cfg(not(debug_assertions))]
 /// Global app_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 pub struct AppData {
     containers: StatefulList<ContainerItem>,
     error: Option<AppError>,
     sorted_by: Option<(Header, SortedOrder)>,
+    pub args: CliArgs,
+}
+
+#[cfg(debug_assertions)]
+/// Global app_state, stored in an Arc<Mutex>
+#[derive(Debug, Clone)]
+pub struct AppData {
+    containers: StatefulList<ContainerItem>,
+    error: Option<AppError>,
+    sorted_by: Option<(Header, SortedOrder)>,
+    debug_string: String,
     pub args: CliArgs,
 }
 
@@ -64,6 +76,17 @@ impl fmt::Display for Header {
 }
 
 impl AppData {
+    #[cfg(debug_assertions)]
+    pub fn get_debug_string(&self) -> &str {
+        &self.debug_string
+    }
+
+    #[cfg(debug_assertions)]
+    #[allow(unused)]
+    pub fn push_debug_string(&mut self, x: &str) {
+        self.debug_string.push_str(x);
+    }
+
     /// Change the sorted order, also set the selected container state to match new order
     fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
@@ -86,12 +109,25 @@ impl AppData {
     }
 
     /// Generate a default app_state
+    #[cfg(not(debug_assertions))]
     pub fn default(args: CliArgs) -> Self {
         Self {
             args,
             containers: StatefulList::new(vec![]),
             error: None,
             sorted_by: None,
+        }
+    }
+
+    /// Generate a default app_state
+    #[cfg(debug_assertions)]
+    pub fn default(args: CliArgs) -> Self {
+        Self {
+            args,
+            containers: StatefulList::new(vec![]),
+            error: None,
+            sorted_by: None,
+            debug_string: String::new(),
         }
     }
 
@@ -120,78 +156,85 @@ impl AppData {
         self.sorted_by
     }
 
-    /// Sort the containers vec, based on a heading, either ascending or descending,
+    /// Sort the containers vec, based on a heading (and if clash, then by name), either ascending or descending,
     /// If not sort set, then sort by created time
     pub fn sort_containers(&mut self) {
         if let Some((head, ord)) = self.sorted_by {
-            match head {
-                Header::State => match ord {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.state.order().cmp(&a.state.order())),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.state.order().cmp(&b.state.order())),
-                },
-                Header::Status => match ord {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.status.cmp(&b.status)),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.status.cmp(&a.status)),
-                },
-                Header::Cpu => match ord {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.cpu_stats.back().cmp(&b.cpu_stats.back())),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.cpu_stats.back().cmp(&a.cpu_stats.back())),
-                },
-                Header::Memory => match ord {
-                    SortedOrder::Asc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| a.mem_stats.back().cmp(&b.mem_stats.back())),
-                    SortedOrder::Desc => self
-                        .containers
-                        .items
-                        .sort_by(|a, b| b.mem_stats.back().cmp(&a.mem_stats.back())),
-                },
-                Header::Id => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.id.cmp(&b.id)),
-                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.id.cmp(&a.id)),
-                },
-                Header::Image => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.image.cmp(&b.image)),
-                    SortedOrder::Desc => {
-                        self.containers.items.sort_by(|a, b| b.image.cmp(&a.image));
-                    }
-                },
-                Header::Name => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.name.cmp(&b.name)),
-                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.name.cmp(&a.name)),
-                },
-                Header::Rx => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.rx.cmp(&b.rx)),
-                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.rx.cmp(&a.rx)),
-                },
-                Header::Tx => match ord {
-                    SortedOrder::Asc => self.containers.items.sort_by(|a, b| a.tx.cmp(&b.tx)),
-                    SortedOrder::Desc => self.containers.items.sort_by(|a, b| b.tx.cmp(&a.tx)),
-                },
-            }
+            let sort_closure = |a: &ContainerItem, b: &ContainerItem| -> std::cmp::Ordering {
+                match head {
+                    Header::State => match ord {
+                        SortedOrder::Asc => a
+                            .state
+                            .order()
+                            .cmp(&b.state.order())
+                            .then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b
+                            .state
+                            .order()
+                            .cmp(&a.state.order())
+                            .then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Status => match ord {
+                        SortedOrder::Asc => {
+                            a.status.cmp(&b.status).then_with(|| a.name.cmp(&b.name))
+                        }
+                        SortedOrder::Desc => {
+                            b.status.cmp(&a.status).then_with(|| b.name.cmp(&a.name))
+                        }
+                    },
+                    Header::Cpu => match ord {
+                        SortedOrder::Asc => a
+                            .cpu_stats
+                            .back()
+                            .cmp(&b.cpu_stats.back())
+                            .then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b
+                            .cpu_stats
+                            .back()
+                            .cmp(&a.cpu_stats.back())
+                            .then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Memory => match ord {
+                        SortedOrder::Asc => a
+                            .mem_stats
+                            .back()
+                            .cmp(&b.mem_stats.back())
+                            .then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b
+                            .mem_stats
+                            .back()
+                            .cmp(&a.mem_stats.back())
+                            .then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Id => match ord {
+                        SortedOrder::Asc => a.id.cmp(&b.id).then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b.id.cmp(&a.id).then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Image => match ord {
+                        SortedOrder::Asc => a.image.cmp(&b.image).then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => {
+                            b.image.cmp(&a.image).then_with(|| b.name.cmp(&a.name))
+                        }
+                    },
+                    Header::Name => match ord {
+                        SortedOrder::Asc => a.name.cmp(&b.name).then_with(|| a.id.cmp(&b.id)),
+                        SortedOrder::Desc => b.name.cmp(&a.name).then_with(|| b.id.cmp(&a.id)),
+                    },
+                    Header::Rx => match ord {
+                        SortedOrder::Asc => a.rx.cmp(&b.rx).then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b.rx.cmp(&a.rx).then_with(|| b.name.cmp(&a.name)),
+                    },
+                    Header::Tx => match ord {
+                        SortedOrder::Asc => a.tx.cmp(&b.tx).then_with(|| a.name.cmp(&b.name)),
+                        SortedOrder::Desc => b.tx.cmp(&a.tx).then_with(|| b.name.cmp(&a.name)),
+                    },
+                }
+            };
+            self.containers.items.sort_by(sort_closure);
         } else {
             self.containers
                 .items
-                .sort_by(|a, b| a.created.cmp(&b.created));
+                .sort_by(|a, b| a.created.cmp(&b.created).then_with(|| a.name.cmp(&b.name)));
         }
     }
 
@@ -410,18 +453,6 @@ impl AppData {
         self.get_selected_container().map_or(false, |i| i.is_oxker)
     }
 
-    /// Check if the initial parsing has been completed, by making sure that all ids given (which are running) have a non empty cpu_stats vecdec
-    pub fn initialised(&mut self, all_ids: &[(bool, ContainerId)]) -> bool {
-        let count_is_running = all_ids.iter().filter(|i| i.0).count();
-        let number_with_cpu_status = self
-            .containers
-            .items
-            .iter()
-            .filter(|i| !i.cpu_stats.is_empty())
-            .count();
-        count_is_running == number_with_cpu_status
-    }
-
     /// Find the widths for the strings in the containers panel.
     /// So can display nicely and evenly
     pub fn get_width(&self) -> Columns {
@@ -480,6 +511,12 @@ impl AppData {
     /// Only returns None when no containers found.
     pub fn get_selected_container_id(&self) -> Option<ContainerId> {
         self.get_selected_container().map(|i| i.id.clone())
+    }
+
+    /// Get the Id and State for the currently selected container - used by the exec check method
+    pub fn get_selected_container_id_state_name(&self) -> Option<(ContainerId, State, String)> {
+        self.get_selected_container()
+            .map(|i| (i.id.clone(), i.state, i.name.clone()))
     }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
@@ -563,6 +600,8 @@ impl AppData {
                     })
                 });
 
+                let id = ContainerId::from(id.as_str());
+
                 let is_oxker = i
                     .command
                     .as_ref()
@@ -578,8 +617,6 @@ impl AppData {
                     .image
                     .as_ref()
                     .map_or(String::new(), std::clone::Clone::clone);
-
-                let id = ContainerId::from(id.as_str());
 
                 let created = i
                     .created
@@ -624,31 +661,33 @@ impl AppData {
         let timestamp = self.args.timestamp;
 
         if let Some(container) = self.get_container_by_id(id) {
-            container.last_updated = Self::get_systemtime();
-            let current_len = container.logs.len();
+            if !container.is_oxker {
+                container.last_updated = Self::get_systemtime();
+                let current_len = container.logs.len();
 
-            for mut i in logs {
-                let tz = LogsTz::from(i.as_str());
-                // Strip the timestamp if `-t` flag set
-                if !timestamp {
-                    i = i.replace(&tz.to_string(), "");
+                for mut i in logs {
+                    let tz = LogsTz::from(i.as_str());
+                    // Strip the timestamp if `-t` flag set
+                    if !timestamp {
+                        i = i.replace(&tz.to_string(), "");
+                    }
+                    let lines = if color {
+                        log_sanitizer::colorize_logs(&i)
+                    } else if raw {
+                        log_sanitizer::raw(&i)
+                    } else {
+                        log_sanitizer::remove_ansi(&i)
+                    };
+                    container.logs.insert(ListItem::new(lines), tz);
                 }
-                let lines = if color {
-                    log_sanitizer::colorize_logs(&i)
-                } else if raw {
-                    log_sanitizer::raw(&i)
-                } else {
-                    log_sanitizer::remove_ansi(&i)
-                };
-                container.logs.insert(ListItem::new(lines), tz);
-            }
 
-            // Set the logs selected row for each container
-            // Either when no long currently selected, or currently selected (before updated) is already at end
-            if container.logs.state().selected().is_none()
-                || container.logs.state().selected().map_or(1, |f| f + 1) == current_len
-            {
-                container.logs.end();
+                // Set the logs selected row for each container
+                // Either when no long currently selected, or currently selected (before updated) is already at end
+                if container.logs.state().selected().is_none()
+                    || container.logs.state().selected().map_or(1, |f| f + 1) == current_len
+                {
+                    container.logs.end();
+                }
             }
         }
     }

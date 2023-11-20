@@ -1,6 +1,5 @@
 use parking_lot::Mutex;
 use ratatui::{
-    backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     symbols,
@@ -11,17 +10,19 @@ use ratatui::{
     },
     Frame,
 };
-use std::default::Default;
+use std::{default::Default, time::Instant};
 use std::{fmt::Display, sync::Arc};
 
-use crate::app_data::{Header, SortedOrder};
-use crate::ui::Status;
+use crate::app_data::{ContainerItem, Header, SortedOrder};
 use crate::{
     app_data::{AppData, ByteStats, Columns, CpuStats, State, Stats},
     app_error::AppError,
 };
 
-use super::gui_state::{BoxLocation, DeleteButton, Region};
+use super::{
+    gui_state::{BoxLocation, DeleteButton, Region},
+    FrameData,
+};
 use super::{GuiState, SelectablePanel};
 
 const NAME_TEXT: &str = r#"
@@ -40,7 +41,7 @@ const REPO: &str = env!("CARGO_PKG_REPOSITORY");
 const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 const ORANGE: Color = Color::Rgb(255, 178, 36);
 const MARGIN: &str = "   ";
-const ARROW: &str = "▶ ";
+const RIGHT_ARROW: &str = "▶ ";
 const CIRCLE: &str = "⚪ ";
 
 /// From a given &str, return the maximum number of chars on a single line
@@ -56,6 +57,7 @@ fn max_line_width(text: &str) -> usize {
 fn generate_block<'a>(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
+    fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
     panel: SelectablePanel,
 ) -> Block<'a> {
@@ -78,20 +80,21 @@ fn generate_block<'a>(
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .title(title);
-    if gui_state.lock().selected_panel == panel {
+    if fd.selected_panel == panel {
         block = block.border_style(Style::default().fg(Color::LightCyan));
     }
     block
 }
 
 /// Draw the command panel
-pub fn commands<B: Backend>(
+pub fn commands(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
-    f: &mut Frame<'_, B>,
+    f: &mut Frame,
+    fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = || generate_block(app_data, area, gui_state, SelectablePanel::Commands);
+    let block = || generate_block(app_data, area, fd, gui_state, SelectablePanel::Commands);
     let items = app_data.lock().get_control_items().map_or(vec![], |i| {
         i.iter()
             .map(|c| {
@@ -107,7 +110,7 @@ pub fn commands<B: Backend>(
     let items = List::new(items)
         .block(block())
         .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-        .highlight_symbol(ARROW);
+        .highlight_symbol(RIGHT_ARROW);
 
     if let Some(i) = app_data.lock().get_control_state() {
         f.render_stateful_widget(items, area, i);
@@ -119,88 +122,91 @@ pub fn commands<B: Backend>(
     }
 }
 
+/// Format the container data to display nicely on the screen
+fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
+    let state_style = Style::default().fg(i.state.get_color());
+    let blue = Style::default().fg(Color::Blue);
+
+    Line::from(vec![
+        Span::styled(
+            format!(
+                "{:<width$}",
+                i.state.to_string(),
+                width = widths.state.1.into()
+            ),
+            state_style,
+        ),
+        Span::styled(
+            format!(
+                "{MARGIN}{:>width$}",
+                i.status,
+                width = &widths.status.1.into()
+            ),
+            state_style,
+        ),
+        Span::styled(
+            format!(
+                "{}{:>width$}",
+                MARGIN,
+                i.cpu_stats.back().unwrap_or(&CpuStats::default()),
+                width = &widths.cpu.1.into()
+            ),
+            state_style,
+        ),
+        Span::styled(
+            format!(
+                "{MARGIN}{:>width_current$} / {:>width_limit$}",
+                i.mem_stats.back().unwrap_or(&ByteStats::default()),
+                i.mem_limit,
+                width_current = &widths.mem.1.into(),
+                width_limit = &widths.mem.2.into()
+            ),
+            state_style,
+        ),
+        Span::styled(
+            format!(
+                "{}{:>width$}",
+                MARGIN,
+                i.id.get_short(),
+                width = &widths.id.1.into()
+            ),
+            blue,
+        ),
+        Span::styled(
+            format!("{MARGIN}{:>width$}", i.name, width = widths.name.1.into()),
+            blue,
+        ),
+        Span::styled(
+            format!("{MARGIN}{:>width$}", i.image, width = widths.image.1.into()),
+            blue,
+        ),
+        Span::styled(
+            format!("{MARGIN}{:>width$}", i.rx, width = widths.net_rx.1.into()),
+            Style::default().fg(Color::Rgb(255, 233, 193)),
+        ),
+        Span::styled(
+            format!("{MARGIN}{:>width$}", i.tx, width = widths.net_tx.1.into()),
+            Style::default().fg(Color::Rgb(205, 140, 140)),
+        ),
+    ])
+}
+
 /// Draw the containers panel
-pub fn containers<B: Backend>(
+pub fn containers(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
-    f: &mut Frame<'_, B>,
+    f: &mut Frame,
+    fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
     widths: &Columns,
 ) {
-    let block = generate_block(app_data, area, gui_state, SelectablePanel::Containers);
+    let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Containers);
 
     let items = app_data
         .lock()
         .get_container_items()
         .iter()
-        .map(|i| {
-            let state_style = Style::default().fg(i.state.get_color());
-            let blue = Style::default().fg(Color::Blue);
-
-            let lines = Line::from(vec![
-                Span::styled(
-                    format!(
-                        "{:<width$}",
-                        i.state.to_string(),
-                        width = widths.state.1.into()
-                    ),
-                    state_style,
-                ),
-                Span::styled(
-                    format!(
-                        "{MARGIN}{:>width$}",
-                        i.status,
-                        width = &widths.status.1.into()
-                    ),
-                    state_style,
-                ),
-                Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        i.cpu_stats.back().unwrap_or(&CpuStats::default()),
-                        width = &widths.cpu.1.into()
-                    ),
-                    state_style,
-                ),
-                Span::styled(
-                    format!(
-                        "{MARGIN}{:>width_current$} / {:>width_limit$}",
-                        i.mem_stats.back().unwrap_or(&ByteStats::default()),
-                        i.mem_limit,
-                        width_current = &widths.mem.1.into(),
-                        width_limit = &widths.mem.2.into()
-                    ),
-                    state_style,
-                ),
-                Span::styled(
-                    format!(
-                        "{}{:>width$}",
-                        MARGIN,
-                        i.id.get().chars().take(8).collect::<String>(),
-                        width = &widths.id.1.into()
-                    ),
-                    blue,
-                ),
-                Span::styled(
-                    format!("{MARGIN}{:>width$}", i.name, width = widths.name.1.into()),
-                    blue,
-                ),
-                Span::styled(
-                    format!("{MARGIN}{:>width$}", i.image, width = widths.image.1.into()),
-                    blue,
-                ),
-                Span::styled(
-                    format!("{MARGIN}{:>width$}", i.rx, width = widths.net_rx.1.into()),
-                    Style::default().fg(Color::Rgb(255, 233, 193)),
-                ),
-                Span::styled(
-                    format!("{MARGIN}{:>width$}", i.tx, width = widths.net_tx.1.into()),
-                    Style::default().fg(Color::Rgb(205, 140, 140)),
-                ),
-            ]);
-            ListItem::new(lines)
-        })
+        .map(|i| ListItem::new(format_containers(i, widths)))
         .collect::<Vec<_>>();
 
     if items.is_empty() {
@@ -213,22 +219,21 @@ pub fn containers<B: Backend>(
             .block(block)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD))
             .highlight_symbol(CIRCLE);
-
         f.render_stateful_widget(items, area, app_data.lock().get_container_state());
     }
 }
 
 /// Draw the logs panel
-pub fn logs<B: Backend>(
+pub fn logs(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
-    f: &mut Frame<'_, B>,
+    f: &mut Frame,
+    fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
-    loading_icon: &str,
 ) {
-    let block = || generate_block(app_data, area, gui_state, SelectablePanel::Logs);
-    if gui_state.lock().status_contains(&[Status::Init]) {
-        let paragraph = Paragraph::new(format!("parsing logs {loading_icon}"))
+    let block = || generate_block(app_data, area, fd, gui_state, SelectablePanel::Logs);
+    if fd.init {
+        let paragraph = Paragraph::new(format!("parsing logs {}", fd.loading_icon))
             .style(Style::default())
             .block(block())
             .alignment(Alignment::Center);
@@ -244,19 +249,18 @@ pub fn logs<B: Backend>(
         } else {
             let items = List::new(logs)
                 .block(block())
-                .highlight_symbol(ARROW)
+                .highlight_symbol(RIGHT_ARROW)
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
-
             // This should always return Some, as logs is not empty
-            if let Some(i) = app_data.lock().get_log_state() {
-                f.render_stateful_widget(items, area, i);
+            if let Some(log_state) = app_data.lock().get_log_state() {
+                f.render_stateful_widget(items, area, log_state);
             }
         }
     }
 }
 
 /// Draw the cpu + mem charts
-pub fn chart<B: Backend>(f: &mut Frame<'_, B>, area: Rect, app_data: &Arc<Mutex<AppData>>) {
+pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
     if let Some((cpu, mem)) = app_data.lock().get_chart_data() {
         let area = Layout::default()
             .direction(Direction::Horizontal)
@@ -275,6 +279,7 @@ pub fn chart<B: Backend>(f: &mut Frame<'_, B>, area: Rect, app_data: &Arc<Mutex<
             .data(&mem.0)];
 
         let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
         let cpu_chart = make_chart(cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
         let mem_chart = make_chart(mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
@@ -337,30 +342,26 @@ fn make_chart<'a, T: Stats + Display>(
 /// Draw heading bar at top of program, always visible
 /// TODO Should separate into loading icon/headers/help functions
 #[allow(clippy::too_many_lines)]
-pub fn heading_bar<B: Backend>(
+pub fn heading_bar(
     area: Rect,
-    columns: &Columns,
-    f: &mut Frame<'_, B>,
-    has_containers: bool,
-    loading_icon: &str,
-    sorted_by: Option<(Header, SortedOrder)>,
+    frame: &mut Frame,
+    data: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = |fg: Color| Block::default().style(Style::default().bg(Color::Magenta).fg(fg));
-    let help_visible = gui_state.lock().status_contains(&[Status::Help]);
 
-    f.render_widget(block(Color::Black), area);
+    frame.render_widget(block(Color::Black), area);
 
     // Generate a block for the header, if the header is currently being used to sort a column, then highlight it white
     let header_block = |x: &Header| {
         let mut color = Color::Black;
         let mut suffix = "";
         let mut suffix_margin = 0;
-        if let Some((a, b)) = sorted_by.as_ref() {
+        if let Some((a, b)) = data.sorted_by.as_ref() {
             if x == a {
                 match b {
-                    SortedOrder::Asc => suffix = " ⌃",
-                    SortedOrder::Desc => suffix = " ⌄",
+                    SortedOrder::Asc => suffix = " ▲",
+                    SortedOrder::Desc => suffix = " ▼",
                 }
                 suffix_margin = 2;
                 color = Color::White;
@@ -408,15 +409,15 @@ pub fn heading_bar<B: Backend>(
 
     // Meta data to iterate over to create blocks with correct widths
     let header_meta = [
-        (Header::State, columns.state.1),
-        (Header::Status, columns.status.1),
-        (Header::Cpu, columns.cpu.1),
-        (Header::Memory, columns.mem.1 + columns.mem.2 + 3),
-        (Header::Id, columns.id.1),
-        (Header::Name, columns.name.1),
-        (Header::Image, columns.image.1),
-        (Header::Rx, columns.net_rx.1),
-        (Header::Tx, columns.net_tx.1),
+        (Header::State, data.columns.state.1),
+        (Header::Status, data.columns.status.1),
+        (Header::Cpu, data.columns.cpu.1),
+        (Header::Memory, data.columns.mem.1 + data.columns.mem.2 + 3),
+        (Header::Id, data.columns.id.1),
+        (Header::Name, data.columns.name.1),
+        (Header::Image, data.columns.image.1),
+        (Header::Rx, data.columns.net_rx.1),
+        (Header::Tx, data.columns.net_tx.1),
     ];
 
     let header_data = header_meta
@@ -427,13 +428,13 @@ pub fn heading_bar<B: Backend>(
         })
         .collect::<Vec<_>>();
 
-    let suffix = if help_visible { "exit" } else { "show" };
+    let suffix = if data.help_visible { "exit" } else { "show" };
     let info_text = format!("( h ) {suffix} help {MARGIN}",);
     let info_width = info_text.chars().count();
 
     let column_width = usize::from(area.width).saturating_sub(info_width);
     let column_width = if column_width > 0 { column_width } else { 1 };
-    let splits = if has_containers {
+    let splits = if data.has_containers {
         vec![
             Constraint::Min(2),
             Constraint::Min(column_width.try_into().unwrap_or_default()),
@@ -445,20 +446,19 @@ pub fn heading_bar<B: Backend>(
 
     let split_bar = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(splits.as_ref())
+        .constraints(splits)
         .split(area);
-    if has_containers {
+    if data.has_containers {
         // Draw loading icon, or not, and a prefix with a single space
-        let loading_icon = format!("{loading_icon:>2}");
-        let loading_paragraph = Paragraph::new(loading_icon)
+        let loading_paragraph = Paragraph::new(format!("{:>2}", data.loading_icon))
             .block(block(Color::White))
             .alignment(Alignment::Center);
-        f.render_widget(loading_paragraph, split_bar[0]);
+        frame.render_widget(loading_paragraph, split_bar[0]);
 
         let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
         let headers_section = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(container_splits.as_ref())
+            .constraints(container_splits)
             .split(split_bar[1]);
 
         // draw the actual header blocks
@@ -467,12 +467,12 @@ pub fn heading_bar<B: Backend>(
             gui_state
                 .lock()
                 .update_region_map(Region::Header(header), rect);
-            f.render_widget(paragraph, rect);
+            frame.render_widget(paragraph, rect);
         }
     }
 
     // show/hide help
-    let color = if help_visible {
+    let color = if data.help_visible {
         Color::Black
     } else {
         Color::White
@@ -482,8 +482,8 @@ pub fn heading_bar<B: Backend>(
         .alignment(Alignment::Right);
 
     // If no containers, don't display the headers, could maybe do this first?
-    let help_index = if has_containers { 2 } else { 0 };
-    f.render_widget(help_paragraph, split_bar[help_index]);
+    let help_index = if data.has_containers { 2 } else { 0 };
+    frame.render_widget(help_paragraph, split_bar[help_index]);
 }
 
 /// Help popup box needs these three pieces of information
@@ -569,7 +569,7 @@ impl HelpInfo {
                 button_item("tab"),
                 or(),
                 button_item("shift+tab"),
-                button_desc("to change panels"),
+                button_desc("change panels"),
             ]),
             Line::from(vec![
                 space(),
@@ -580,35 +580,45 @@ impl HelpInfo {
                 button_item("PgUp PgDown"),
                 or(),
                 button_item("Home End"),
-                button_desc("to change selected line"),
+                button_desc("change selected line"),
             ]),
             Line::from(vec![
                 space(),
                 button_item("enter"),
-                button_desc("to send docker container command"),
+                button_desc("send docker container command"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("e"),
+                button_desc("exec into a container"),
             ]),
             Line::from(vec![
                 space(),
                 button_item("h"),
-                button_desc("to toggle this help information"),
+                button_desc("toggle this help information"),
             ]),
-            Line::from(vec![space(), button_item("0"), button_desc("to stop sort")]),
+            Line::from(vec![
+                space(),
+                button_item("s"),
+                button_desc("save logs to file"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("m"),
+                button_desc(
+                    "toggle mouse capture - if disabled, text on screen can be selected & copied",
+                ),
+            ]),
+            Line::from(vec![space(), button_item("0"), button_desc("stop sort")]),
             Line::from(vec![
                 space(),
                 button_item("1 - 9"),
                 button_desc("sort by header - or click header"),
             ]),
             Line::from(vec![
-				space(),
-				button_item("m"),
-				button_desc(
-					"to toggle mouse capture - if disabled, text on screen can be selected & copied",
-				),
-			]),
-            Line::from(vec![
                 space(),
                 button_item("q"),
-                button_desc("to quit at any time"),
+                button_desc("quit at any time"),
             ]),
         ];
 
@@ -646,7 +656,7 @@ impl HelpInfo {
 }
 
 /// Draw the help box in the centre of the screen
-pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
+pub fn help_box(f: &mut Frame) {
     let title = format!(" {VERSION} ");
 
     let name_info = HelpInfo::gen_name();
@@ -725,11 +735,7 @@ pub fn help_box<B: Backend>(f: &mut Frame<'_, B>) {
 
 /// Draw the delete confirm box in the centre of the screen
 /// take in container id and container name here?
-pub fn delete_confirm<B: Backend>(
-    f: &mut Frame<'_, B>,
-    gui_state: &Arc<Mutex<GuiState>>,
-    name: &str,
-) {
+pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &str) {
     let block = Block::default()
         .title(" Confirm Delete ")
         .border_type(BorderType::Rounded)
@@ -834,7 +840,7 @@ pub fn delete_confirm<B: Backend>(
 }
 
 /// Draw an error popup over whole screen
-pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<u8>) {
+pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
     let block = Block::default()
         .title(" Error ")
         .border_type(BorderType::Rounded)
@@ -850,7 +856,7 @@ pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<
                 seconds.unwrap_or(5)
             )
         }
-        _ => String::from("\n\n ( c ) to clear error\n ( q ) to quit oxker"),
+        _ => String::from("\n\n ( c ) clear error\n ( q ) quit oxker "),
     };
 
     let mut text = format!("\n{error}");
@@ -876,13 +882,13 @@ pub fn error<B: Backend>(f: &mut Frame<'_, B>, error: AppError, seconds: Option<
 }
 
 /// Draw info box in one of the 9 BoxLocations
-pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
+pub fn info(f: &mut Frame, text: &str, instant: Instant, gui_state: &Arc<Mutex<GuiState>>) {
     let block = Block::default()
         .title("")
         .title_alignment(Alignment::Center)
         .borders(Borders::NONE);
 
-    let mut max_line_width = max_line_width(&text);
+    let mut max_line_width = max_line_width(text);
     let mut lines = text.lines().count();
 
     // Add some horizontal & vertical margins
@@ -897,6 +903,9 @@ pub fn info<B: Backend>(f: &mut Frame<'_, B>, text: String) {
     let area = popup(lines, max_line_width, f.size(), BoxLocation::BottomRight);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
+    if instant.elapsed().as_millis() > 4000 {
+        gui_state.lock().reset_info_box();
+    }
 }
 
 /// draw a box in the one of the BoxLocations, based on max line width + number of lines
@@ -927,8 +936,18 @@ fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocatio
         .split(popup_layout[indexes.0])[indexes.1]
 }
 
+#[cfg(debug_assertions)]
+// Single row at the top of the screen for debugging
+pub fn debug_bar(area: Rect, f: &mut Frame, debug_string: &str) {
+    let block = Block::default().style(Style::default().bg(Color::Red));
+    let paragraph = Paragraph::new(debug_string)
+        .style(Style::default().fg(Color::White))
+        .block(block);
+    f.render_widget(paragraph, area);
+}
+
 // Draw nothing, as in a blank screen
-// pub fn nothing<B: Backend>(f: &mut Frame<'_, B>) {
+// pub fn nothing(f: &mut Frame) {
 //     let whole_layout = Layout::default()
 //         .direction(Direction::Vertical)
 //         .constraints([Constraint::Min(100)].as_ref())

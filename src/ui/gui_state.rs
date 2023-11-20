@@ -1,8 +1,17 @@
+use parking_lot::Mutex;
 use ratatui::layout::{Constraint, Rect};
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::Instant,
+};
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use crate::app_data::{ContainerId, Header};
+use crate::{
+    app_data::{ContainerId, Header},
+    exec::ExecMode,
+};
 
 #[derive(Debug, Default, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SelectablePanel {
@@ -150,30 +159,38 @@ const FRAMES_LEN: u8 = 9;
 /// Various functions (e.g input handler), operate differently depending upon current Status
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Status {
-    Init,
-    Help,
-    DockerConnect,
     DeleteConfirm,
+    DockerConnect,
     Error,
+    Exec,
+    Help,
+    Init,
+    Logs,
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug, Default, Clone)]
 pub struct GuiState {
+    delete_container: Option<ContainerId>,
+    delete_map: HashMap<DeleteButton, Rect>,
     heading_map: HashMap<Header, Rect>,
     is_loading: HashSet<Uuid>,
     loading_index: u8,
     panel_map: HashMap<SelectablePanel, Rect>,
-    delete_map: HashMap<DeleteButton, Rect>,
+    selected_panel: SelectablePanel,
     status: HashSet<Status>,
-    delete_container: Option<ContainerId>,
-    pub info_box_text: Option<String>,
-    pub selected_panel: SelectablePanel,
+    exec_mode: Option<ExecMode>,
+    pub info_box_text: Option<(String, Instant)>,
 }
 impl GuiState {
     /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
     pub fn clear_area_map(&mut self) {
         self.panel_map.clear();
+    }
+
+    /// Get the currently selected panel
+    pub const fn get_selected_panel(&self) -> SelectablePanel {
+        self.selected_panel
     }
 
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
@@ -254,16 +271,41 @@ impl GuiState {
     }
 
     /// Remove a gui_status into the current gui_status HashSet
+    /// Remove exec mode & deleteConfirm is required
     pub fn status_del(&mut self, status: Status) {
         self.status.remove(&status);
-        if status == Status::DeleteConfirm {
-            self.status.remove(&Status::DeleteConfirm);
+        match status {
+            Status::DeleteConfirm => {
+                self.status.remove(&Status::DeleteConfirm);
+            }
+            Status::Exec => {
+                self.exec_mode = None;
+            }
+            _ => (),
         }
     }
 
+    /// Inset the ExecMode into self, and set the Status as exec
+    /// Using StatusPush with Status::Exec won't insert into the hash map
+    /// To force self.exec_mode to be set
+    pub fn set_exec_mode(&mut self, mode: ExecMode) {
+        self.exec_mode = Some(mode);
+        self.status.insert(Status::Exec);
+    }
+
+    pub fn get_exec_mode(&mut self) -> Option<ExecMode> {
+        self.exec_mode.clone()
+    }
+
     /// Insert a gui_status into the current gui_status HashSet
+    /// If the status is Exec, it won't get inserted, set_exec_mode() should be used instead
     pub fn status_push(&mut self, status: Status) {
-        self.status.insert(status);
+        match status {
+            Status::Exec => (),
+            _ => {
+                self.status.insert(status);
+            }
+        }
     }
 
     /// Change to next selectable panel
@@ -287,7 +329,7 @@ impl GuiState {
     }
 
     /// If is_loading has any entries, return the char at FRAMES[index], else an empty char, which needs to take up the same space, hence ' '
-    pub fn get_loading(&mut self) -> char {
+    pub fn get_loading(&self) -> char {
         if self.is_loading.is_empty() {
             ' '
         } else {
@@ -296,16 +338,37 @@ impl GuiState {
     }
 
     /// Remove a loading_uuid from the is_loading HashSet, if empty, reset loading_index to 0
-    pub fn remove_loading(&mut self, uuid: Uuid) {
+    fn remove_loading(&mut self, uuid: Uuid) {
         self.is_loading.remove(&uuid);
         if self.is_loading.is_empty() {
             self.loading_index = 0;
         }
     }
 
+    /// Animate the loading icon in its own Tokio thread
+    pub fn start_loading_animation(
+        gui_state: &Arc<Mutex<Self>>,
+        loading_uuid: Uuid,
+    ) -> JoinHandle<()> {
+        gui_state.lock().next_loading(loading_uuid);
+        let gui_state = Arc::clone(gui_state);
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                gui_state.lock().next_loading(loading_uuid);
+            }
+        })
+    }
+
+    /// Stop the loading_spin function, and reset gui loading status
+    pub fn stop_loading_animation(&mut self, handle: &JoinHandle<()>, loading_uuid: Uuid) {
+        handle.abort();
+        self.remove_loading(loading_uuid);
+    }
+
     /// Set info box content
     pub fn set_info_box(&mut self, text: &str) {
-        self.info_box_text = Some(text.to_owned());
+        self.info_box_text = Some((text.to_owned(), std::time::Instant::now()));
     }
 
     /// Remove info box content

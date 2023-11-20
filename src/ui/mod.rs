@@ -4,9 +4,9 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use parking_lot::Mutex;
+use parking_lot::{Mutex, MutexGuard};
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
+    backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     Frame, Terminal,
 };
@@ -26,19 +26,21 @@ mod gui_state;
 pub use self::color_match::*;
 pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
 use crate::{
-    app_data::AppData, app_error::AppError, docker_data::DockerMessage,
+    app_data::{AppData, Columns, ContainerId, Header, SortedOrder},
+    app_error::AppError,
+    exec::TerminalSize,
     input_handler::InputMessages,
 };
 
 pub struct Ui {
     app_data: Arc<Mutex<AppData>>,
-    docker_sx: Sender<DockerMessage>,
     gui_state: Arc<Mutex<GuiState>>,
     input_poll_rate: Duration,
+    input_tx: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
     now: Instant,
-    sender: Sender<InputMessages>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
+    cursor_position: (u16, u16),
 }
 
 impl Ui {
@@ -57,20 +59,21 @@ impl Ui {
     /// Create a new Ui struct, and execute the drawing loop
     pub async fn create(
         app_data: Arc<Mutex<AppData>>,
-        docker_sx: Sender<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
+        input_tx: Sender<InputMessages>,
         is_running: Arc<AtomicBool>,
-        sender: Sender<InputMessages>,
     ) {
-        if let Ok(terminal) = Self::setup_terminal() {
+        if let Ok(mut terminal) = Self::setup_terminal() {
+            // let args = app_data.lock().args.clone();
+            let cursor_position = terminal.get_cursor().unwrap_or_default();
             let mut ui = Self {
                 app_data,
-                docker_sx,
+                cursor_position,
                 gui_state,
                 input_poll_rate: std::time::Duration::from_millis(100),
+                input_tx,
                 is_running,
                 now: Instant::now(),
-                sender,
                 terminal,
             };
             if let Err(e) = ui.draw_ui().await {
@@ -86,19 +89,17 @@ impl Ui {
 
     /// Setup the terminal for full-screen drawing mode, with mouse capture
     fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
-        enable_raw_mode()?;
-        let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen)?;
-        Self::enable_mouse_capture()?;
+        let stdout = Self::init_terminal()?;
         let backend = CrosstermBackend::new(stdout);
         Ok(Terminal::new(backend)?)
     }
 
-    /// This is a fix for mouse-events being printed to screen, read an event and do nothing with it
-    fn nullify_event_read(&self) {
-        if crossterm::event::poll(self.input_poll_rate).unwrap_or(true) {
-            event::read().ok();
-        }
+    fn init_terminal() -> Result<Stdout> {
+        enable_raw_mode()?;
+        let mut stdout = io::stdout();
+        execute!(stdout, EnterAlternateScreen)?;
+        Self::enable_mouse_capture()?;
+        Ok(stdout)
     }
 
     /// reset the terminal back to default settings
@@ -111,6 +112,9 @@ impl Ui {
             DisableMouseCapture
         )?;
         disable_raw_mode()?;
+        self.terminal.clear().ok();
+        self.terminal
+            .set_cursor(self.cursor_position.0, self.cursor_position.1)?;
         Ok(self.terminal.show_cursor()?)
     }
 
@@ -137,12 +141,33 @@ impl Ui {
         Ok(())
     }
 
+    /// Use exeternal docker cli to exec into a container
+    async fn exec(&mut self) {
+        let exec_mode = self.gui_state.lock().get_exec_mode();
+
+        if let Some(mode) = exec_mode {
+            self.reset_terminal().ok();
+            self.terminal.clear().ok();
+            if let Err(e) = mode.run(TerminalSize::new(&self.terminal)).await {
+                self.app_data
+                    .lock()
+                    .set_error(e, &self.gui_state, Status::Error);
+            };
+        }
+        self.terminal.clear().ok();
+        self.reset_terminal().ok();
+        Self::init_terminal().ok();
+        self.gui_state.lock().status_del(Status::Exec);
+    }
+
     /// The loop for drawing the main UI to the terminal
     async fn gui_loop(&mut self) -> Result<(), AppError> {
-        let update_duration =
-            std::time::Duration::from_millis(u64::from(self.app_data.lock().args.docker_interval));
-
         while self.is_running.load(Ordering::SeqCst) {
+            let exec = self.gui_state.lock().status_contains(&[Status::Exec]);
+            if exec {
+                self.exec().await;
+            }
+
             if self
                 .terminal
                 .draw(|frame| draw_frame(frame, &self.app_data, &self.gui_state))
@@ -150,10 +175,11 @@ impl Ui {
             {
                 return Err(AppError::Terminal);
             }
+
             if crossterm::event::poll(self.input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
-                        self.sender
+                        self.input_tx
                             .send(InputMessages::ButtonPress((key.code, key.modifiers)))
                             .await
                             .ok();
@@ -162,7 +188,7 @@ impl Ui {
                             event::MouseEventKind::Down(_)
                             | event::MouseEventKind::ScrollDown
                             | event::MouseEventKind::ScrollUp => {
-                                self.sender.send(InputMessages::MouseEvent(m)).await.ok();
+                                self.input_tx.send(InputMessages::MouseEvent(m)).await.ok();
                             }
                             _ => (),
                         }
@@ -171,11 +197,6 @@ impl Ui {
                         self.terminal.autoresize().ok();
                     }
                 }
-            }
-
-            if self.now.elapsed() >= update_duration {
-                self.docker_sx.send(DockerMessage::Update).await.ok();
-                self.now = Instant::now();
             }
         }
         Ok(())
@@ -192,57 +213,89 @@ impl Ui {
         } else {
             self.gui_loop().await?;
         }
-        self.nullify_event_read();
         Ok(())
     }
 }
 
-#[macro_export]
-/// This macro simplifies the definition and evaluation of variables by capturing and immediately evaluating an expression.
-macro_rules! value_capture {
-    ($name:ident, $lock_expr:expr) => {
-        let $name = || $lock_expr;
-        let $name = $name();
-    };
+#[cfg(not(debug_assertions))]
+fn get_wholelayout(f: &Frame) -> std::rc::Rc<[ratatui::layout::Rect]> {
+    Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Min(100)].as_ref())
+        .split(f.size())
+}
+
+#[cfg(debug_assertions)]
+fn get_wholelayout(f: &Frame) -> std::rc::Rc<[ratatui::layout::Rect]> {
+    Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Min(1), Constraint::Min(100)].as_ref())
+        .split(f.size())
+}
+
+/// Frequent data required by multiple framde drawing functions, can reduce mutex reads by placing it all in here
+#[derive(Debug)]
+pub struct FrameData {
+    columns: Columns,
+    delete_confirm: Option<ContainerId>,
+    has_containers: bool,
+    has_error: Option<AppError>,
+    height: u16,
+    help_visible: bool,
+    init: bool,
+    info_text: Option<(String, Instant)>,
+    loading_icon: String,
+    selected_panel: SelectablePanel,
+    sorted_by: Option<(Header, SortedOrder)>,
+}
+
+impl From<(MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)> for FrameData {
+    fn from(data: (MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)) -> Self {
+        // set max height for container section, needs +5 to deal with docker commands list and borders
+        let height = data.0.get_container_len();
+        let height = if height < 12 {
+            u16::try_from(height + 5).unwrap_or_default()
+        } else {
+            12
+        };
+
+        Self {
+            columns: data.0.get_width(),
+            delete_confirm: data.1.get_delete_container(),
+            has_containers: data.0.get_container_len() > 1,
+            has_error: data.0.get_error(),
+            height,
+            help_visible: data.1.status_contains(&[Status::Help]),
+            init: data.1.status_contains(&[Status::Init]),
+            info_text: data.1.info_box_text.clone(),
+            loading_icon: data.1.get_loading().to_string(),
+            selected_panel: data.1.get_selected_panel(),
+            sorted_by: data.0.get_sorted(),
+        }
+    }
 }
 
 /// Draw the main ui to a frame of the terminal
-/// TODO add a single line area for debug message - if not in release mode?
-fn draw_frame<B: Backend>(
-    f: &mut Frame<'_, B>,
-    app_data: &Arc<Mutex<AppData>>,
-    gui_state: &Arc<Mutex<GuiState>>,
-) {
-    value_capture!(height, app_data.lock().get_container_len());
-    value_capture!(column_widths, app_data.lock().get_width());
-    value_capture!(has_containers, app_data.lock().get_container_len() > 0);
-    value_capture!(sorted_by, app_data.lock().get_sorted());
-    value_capture!(delete_confirm, gui_state.lock().get_delete_container());
-    value_capture!(has_error, app_data.lock().get_error());
-    value_capture!(info_text, gui_state.lock().info_box_text.clone());
-    value_capture!(loading_icon, gui_state.lock().get_loading().to_string());
+fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mutex<GuiState>>) {
+    let fd = FrameData::from((app_data.lock(), gui_state.lock()));
 
-    // set max height for container section, needs +5 to deal with docker commands list and borders
-    let height = if height < 12 { height + 5 } else { 12 };
+    let whole_layout = get_wholelayout(f);
+    #[cfg(debug_assertions)]
+    draw_blocks::debug_bar(whole_layout[0], f, app_data.lock().get_debug_string());
 
-    let whole_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(1), Constraint::Min(100)].as_ref())
-        .split(f.size());
+    #[cfg(debug_assertions)]
+    let whole_layout_split = (1, 2);
+
+    #[cfg(not(debug_assertions))]
+    let whole_layout_split = (0, 1);
 
     // Split into 3, containers+controls, logs, then graphs
     let upper_main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Max(height.try_into().unwrap_or_default()),
-                Constraint::Percentage(50),
-            ]
-            .as_ref(),
-        )
-        .split(whole_layout[1]);
+        .constraints([Constraint::Max(fd.height), Constraint::Percentage(50)].as_ref())
+        .split(whole_layout[whole_layout_split.1]);
 
-    let top_split = if has_containers {
+    let top_split = if fd.has_containers {
         vec![Constraint::Percentage(90), Constraint::Percentage(10)]
     } else {
         vec![Constraint::Percentage(100)]
@@ -250,10 +303,10 @@ fn draw_frame<B: Backend>(
     // Containers + docker commands
     let top_panel = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(top_split.as_ref())
+        .constraints(top_split)
         .split(upper_main[0]);
 
-    let lower_split = if has_containers {
+    let lower_split = if fd.has_containers {
         vec![Constraint::Percentage(75), Constraint::Percentage(25)]
     } else {
         vec![Constraint::Percentage(100)]
@@ -262,25 +315,17 @@ fn draw_frame<B: Backend>(
     // Split into 2, logs, and optional charts
     let lower_main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(lower_split.as_ref())
+        .constraints(lower_split)
         .split(upper_main[1]);
 
-    draw_blocks::containers(app_data, top_panel[0], f, gui_state, &column_widths);
+    draw_blocks::containers(app_data, top_panel[0], f, &fd, gui_state, &fd.columns);
 
-    draw_blocks::logs(app_data, lower_main[0], f, gui_state, &loading_icon);
+    draw_blocks::logs(app_data, lower_main[0], f, &fd, gui_state);
 
-    draw_blocks::heading_bar(
-        whole_layout[0],
-        &column_widths,
-        f,
-        has_containers,
-        &loading_icon,
-        sorted_by,
-        gui_state,
-    );
+    draw_blocks::heading_bar(whole_layout[whole_layout_split.0], f, &fd, gui_state);
 
-    if let Some(id) = delete_confirm {
-        app_data.lock().get_container_name_by_id(&id).map_or_else(
+    if let Some(id) = fd.delete_confirm.as_ref() {
+        app_data.lock().get_container_name_by_id(id).map_or_else(
             || {
                 // If a container is deleted outside of oxker but whilst the Delete Confirm dialog is open, it can get caught in kind of a dead lock situation
                 // so if in that unique situation, just clear the delete_container id
@@ -293,21 +338,21 @@ fn draw_frame<B: Backend>(
     }
 
     // only draw commands + charts if there are containers
-    if has_containers {
-        draw_blocks::commands(app_data, top_panel[1], f, gui_state);
+    if fd.has_containers {
+        draw_blocks::commands(app_data, top_panel[1], f, &fd, gui_state);
         draw_blocks::chart(f, lower_main[1], app_data);
     }
 
-    if let Some(info) = info_text {
-        draw_blocks::info(f, info);
+    if let Some((text, instant)) = fd.info_text {
+        draw_blocks::info(f, &text, instant, gui_state);
     }
 
     // Check if error, and show popup if so
-    if gui_state.lock().status_contains(&[Status::Help]) {
+    if fd.help_visible {
         draw_blocks::help_box(f);
     }
 
-    if let Some(error) = has_error {
+    if let Some(error) = fd.has_error {
         draw_blocks::error(f, error, None);
     }
 }

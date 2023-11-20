@@ -16,14 +16,11 @@
 		"seccomp=unconfined"
 	],
 
-	"postCreateCommand": "rustup target add x86_64-unknown-linux-musl && cargo install cross typos-cli",
+	"postCreateCommand": "rustup target add x86_64-unknown-linux-musl && cargo install cross typos-cli cargo-expand",
 
 	"mounts": [
 		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly"
 	],
-	"containerEnv": {
-		"CARGO_REGISTRIES_CRATES_IO_PROTOCOL": "sparse"
-	},
 
 	"customizations": {
 		"vscode": {
@@ -34,7 +31,6 @@
 				"ms-vscode.live-server",
 				"mutantdino.resourcemonitor",
 				"rangav.vscode-thunder-client",
-				"redhat.vscode-yaml",
 				"redhat.vscode-yaml",
 				"rust-lang.rust-analyzer",
 				"serayuzgur.crates",

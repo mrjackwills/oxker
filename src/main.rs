@@ -1,17 +1,3 @@
-#![forbid(unsafe_code)]
-#![warn(
-    clippy::expect_used,
-    clippy::nursery,
-    clippy::pedantic,
-    clippy::todo,
-    clippy::unused_async,
-    clippy::unwrap_used
-)]
-#![allow(
-    clippy::module_name_repetitions,
-    clippy::doc_markdown,
-    clippy::similar_names
-)]
 // Only allow when debugging
 // #![allow(unused)]
 
@@ -35,6 +21,7 @@ use tracing::{error, info, Level};
 mod app_data;
 mod app_error;
 mod docker_data;
+mod exec;
 mod input_handler;
 mod parse_args;
 mod ui;
@@ -55,18 +42,6 @@ fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 }
 
-/// An ENV is set in the ./containerised/Dockerfile, if this is ENV found, then sleep for 250ms, else the container, for as yet unknown reasons, will close immediately
-/// returns a bool, so that the `update_all_containers()` won't bother to check the entry point unless running via a container
-fn check_if_containerised() -> bool {
-    if let Ok(value) = std::env::var(ENV_KEY) {
-        if value == ENV_VALUE {
-            std::thread::sleep(std::time::Duration::from_millis(250));
-            return true;
-        }
-    }
-    false
-}
-
 /// Read the optional docker_host path, the cli args take priority over the DOCKER_HOST env
 fn read_docker_host(args: &CliArgs) -> Option<String> {
     args.host
@@ -77,8 +52,8 @@ fn read_docker_host(args: &CliArgs) -> Option<String> {
 /// Create docker daemon handler, and only spawn up the docker data handler if a ping returns non-error
 async fn docker_init(
     app_data: &Arc<Mutex<AppData>>,
-    containerised: bool,
     docker_rx: Receiver<DockerMessage>,
+    docker_tx: Sender<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
     is_running: &Arc<AtomicBool>,
     host: Option<String>,
@@ -92,13 +67,9 @@ async fn docker_init(
             let app_data = Arc::clone(app_data);
             let gui_state = Arc::clone(gui_state);
             let is_running = Arc::clone(is_running);
+
             tokio::spawn(DockerData::init(
-                app_data,
-                containerised,
-                docker,
-                docker_rx,
-                gui_state,
-                is_running,
+                app_data, docker, docker_rx, docker_tx, gui_state, is_running,
             ));
         } else {
             app_data
@@ -120,36 +91,40 @@ fn handler_init(
     input_rx: Receiver<InputMessages>,
     is_running: &Arc<AtomicBool>,
 ) {
-    let input_app_data = Arc::clone(app_data);
-    let input_gui_state = Arc::clone(gui_state);
-    let input_is_running = Arc::clone(is_running);
+    let app_data = Arc::clone(app_data);
+    let gui_state = Arc::clone(gui_state);
+    let is_running = Arc::clone(is_running);
     tokio::spawn(input_handler::InputHandler::init(
-        input_app_data,
+        app_data,
         input_rx,
         docker_sx.clone(),
-        input_gui_state,
-        input_is_running,
+        gui_state,
+        is_running,
     ));
 }
 
 #[tokio::main]
 async fn main() {
-    let containerised = check_if_containerised();
-
     setup_tracing();
 
     let args = CliArgs::new();
+
+    // If running via Docker image, need to sleep else program will just quit straight away, no real idea why
+    // So just sleep for small while
+    if args.in_container {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
     let host = read_docker_host(&args);
 
     let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
-    let (docker_sx, docker_rx) = tokio::sync::mpsc::channel(32);
+    let (docker_tx, docker_rx) = tokio::sync::mpsc::channel(32);
 
     docker_init(
         &app_data,
-        containerised,
         docker_rx,
+        docker_tx.clone(),
         &gui_state,
         &is_running,
         host,
@@ -157,23 +132,34 @@ async fn main() {
     .await;
 
     if args.gui {
-        let (input_sx, input_rx) = tokio::sync::mpsc::channel(32);
-        handler_init(&app_data, &docker_sx, &gui_state, input_rx, &is_running);
-        Ui::create(app_data, docker_sx, gui_state, is_running, input_sx).await;
+        let (input_tx, input_rx) = tokio::sync::mpsc::channel(32);
+        handler_init(&app_data, &docker_tx, &gui_state, input_rx, &is_running);
+        Ui::create(app_data, gui_state, input_tx, is_running).await;
     } else {
-        info!("in debug mode");
-        // Debug mode for testing, mostly pointless, doesn't take terminal
+        info!("in debug mode\n");
+        // Debug mode for testing, less pointless now, will display some basic information
         while is_running.load(Ordering::SeqCst) {
-            loop {
-                if let Some(err) = app_data.lock().get_error() {
-                    error!("{}", err);
-                    process::exit(1);
+            if let Some(err) = app_data.lock().get_error() {
+                error!("{}", err);
+                process::exit(1);
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(u64::from(
+                args.docker_interval,
+            )))
+            .await;
+            let containers = app_data
+                .lock()
+                .get_container_items()
+                .clone()
+                .iter()
+                .map(|i| format!("{i}"))
+                .collect::<Vec<_>>();
+
+            if !containers.is_empty() {
+                for item in containers {
+                    info!("{item}");
                 }
-                docker_sx.send(DockerMessage::Update).await.ok();
-                tokio::time::sleep(std::time::Duration::from_millis(u64::from(
-                    args.docker_interval,
-                )))
-                .await;
+                println!();
             }
         }
     }

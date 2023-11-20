@@ -49,14 +49,13 @@ RUN cp /usr/src/oxker/target/$(cat /.platform)/release/oxker /
 ## Runtime ##
 #############
 
-FROM scratch AS RUNTIME
+FROM scratch as RUNTIME
 
-# Set an ENV that we're running in a container, so that the application can sleep for 250ms at start
+# Set an ENV to indicate that we're running in a container
 ENV OXKER_RUNTIME=container
 
-# Copy application binary from builder image
 COPY --from=BUILDER /oxker /app/
 
 # Run the application
-# this is used in the application itself, to stop itself from listing itself, so DO NOT EDIT
+# this is used in the application itself so DO NOT EDIT
 ENTRYPOINT [ "/app/oxker"]

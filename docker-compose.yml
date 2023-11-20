@@ -16,7 +16,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 1024M
   redis:
     image: redis:alpine3.18
     container_name: redis
@@ -27,7 +27,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 16M
+          memory: 384M
   rabbitmq:
     image: rabbitmq:3
     container_name: rabbitmq
@@ -38,6 +38,6 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 512M
 
 

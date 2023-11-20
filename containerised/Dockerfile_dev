@@ -28,3 +28,23 @@ ENTRYPOINT [ "/app/oxker"]
 # Buildx command to build musl version for all three platforms, should probably be executed in create_release
 # docker buildx create --use
 # docker buildx build --platform linux/arm/v6,linux/arm64,linux/amd64 -t oxker_dev_all -o type=tar,dest=/tmp/oxker_dev_all.tar -f containerised/Dockerfile .
+
+
+# Build production version for x86 only, then run
+# docker build  --platform linux/amd64 -t oxker_dev -f containerised/Dockerfile . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
+
+# docker build  --platform linux/arm/v6 -t oxker_dev -f containerised/Dockerfile . 
+
+### Build docker files and save to .tar file
+
+# docker build  --platform linux/amd64 -t oxker_dev_amd64 -f containerised/Dockerfile .; docker save -o ./oxker_dev_amd64.tar oxker_dev_amd64
+# docker load -i oxker_dev_amd64.tar
+# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev_amd64
+
+# docker build  --platform linux/arm64 -t oxker_dev_arm64 -f containerised/Dockerfile .; docker save -o ./oxker_dev_arm64.tar oxker_dev_arm64
+# docker load -i oxker_dev_arm64.tar
+# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev oxker_dev_arm64
+
+# docker build  --platform linux/arm/v6 -t oxker_dev_armv6 -f containerised/Dockerfile .; docker save -o ./oxker_dev_armv6.tar oxker_dev_armv6
+# docker load -i oxker_dev_armv6.tar
+# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev_armv6
