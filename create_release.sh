@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # rust create_release
-# v0.3.0
+# v0.3.1
 
 STAR_LINE='****************************************'
 CWD=$(pwd)
@@ -170,6 +170,12 @@ cargo_test () {
 	ask_continue
 }
 
+# Simulate publishing to crates.io
+cargo_publish () {
+	cargo publish --dry-run
+	ask_continue
+}
+
 # Build all releases that GitHub workflow would
 # This will download GB's of docker images
 cargo_build () {
@@ -221,6 +227,7 @@ release_flow() {
 
 	cargo_test
 	cargo_build
+	cargo_publish
 
 	cd "${CWD}" || error_close "Can't find ${CWD}"
 	check_tag

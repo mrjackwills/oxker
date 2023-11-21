@@ -117,8 +117,8 @@ Available command line arguments
 |```-t```| Remove timestamps from each log entry.|
 |```-s```| If running via Docker, will display the oxker container.|
 |```-g```| No TUI, essentially a debugging mode with limited functionality, for now.|
-|```--host [hostname]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
-|```--save-dir [directory]```| Save exported logs into a custom directory. Defaults to `$HOME`.|
+|```--host [string]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
+|```--save-dir [string]```| Save exported logs into a custom directory. Defaults to `$HOME`.|
 |```--use-cli```| Use the Docker application when exec-ing into a container, instead of the Docker API.|
 
 ## Build step
