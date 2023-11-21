@@ -1,6 +1,6 @@
 ### Chores
 + workflow dependencies updated, [6a4cf6490d08b976734e2bc8186d94c095700558]
-+ dependencies updated, [e301b51891e03ea40b2f904583119da3bc4daf53] [81d5b326db8881263f2c9072e1426948e41b4a0f], [294cc2684f42daab9d51601e235a384f55617678]
++ dependencies updated, [e301b51891e03ea40b2f904583119da3bc4daf53], [81d5b326db8881263f2c9072e1426948e41b4a0f], [294cc2684f42daab9d51601e235a384f55617678]
 + lints moved from main.rs to Cargo.toml, [2de76e2f358be9c1500ca3dc4f9df0979ed8ed28]
 + .devcontainer updated, [37d2ee915625806dd11c2cc816a892aae12a777c]
 
@@ -13,7 +13,7 @@
 + sorted created_at clash, closes #22, [3a6489396e87702ce94b349a7f47028ece7922f6]
 + `as_ref()` fixed, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [77fbaa8b1669286369b6ec1edd80220c808b628f]
 
-lets not talk about the attempt v0.4.0 and v0.4.1 releases
+Lets not talk about the attempted v0.4.0 and v0.4.1 release
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.3.3'>v0.3.3</a>
 ### 2023-10-21
