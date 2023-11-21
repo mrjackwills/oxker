@@ -13,8 +13,6 @@
 + sorted created_at clash, closes #22, [3a6489396e87702ce94b349a7f47028ece7922f6]
 + `as_ref()` fixed, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [77fbaa8b1669286369b6ec1edd80220c808b628f]
 
-Let's not talk about v0.4.0 or v4.0.1
-
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.3.3'>v0.3.3</a>
 ### 2023-10-21
 
