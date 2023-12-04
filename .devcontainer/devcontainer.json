@@ -19,7 +19,8 @@
 	"postCreateCommand": "rustup target add x86_64-unknown-linux-musl && cargo install cross typos-cli cargo-expand",
 
 	"mounts": [
-		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly"
+		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly",
+		"source=/run/shm,target=/dev/shm,type=bind"
 	],
 
 	"customizations": {
@@ -28,9 +29,7 @@
 			"extensions": [
 				"bmuskalla.vscode-tldr",
 				"christian-kohler.path-intellisense",
-				"ms-vscode.live-server",
 				"mutantdino.resourcemonitor",
-				"rangav.vscode-thunder-client",
 				"redhat.vscode-yaml",
 				"rust-lang.rust-analyzer",
 				"serayuzgur.crates",
