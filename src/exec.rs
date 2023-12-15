@@ -21,7 +21,7 @@ use crate::{
 /// TTY location
 const TTY: &str = "/dev/tty";
 
-/// This will be the start of a docker exec emssage if one is unable to actually exec into the container
+/// This will be the start of a docker exec message if one is unable to actually exec into the container
 const OCI_ERROR: &str = "OCI runtime exec failed";
 
 /// Set the cursor position on the screen to (0,0)
