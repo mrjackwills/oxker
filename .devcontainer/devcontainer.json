@@ -29,6 +29,7 @@
 			"extensions": [
 				"bmuskalla.vscode-tldr",
 				"christian-kohler.path-intellisense",
+				"foxundermoon.shell-format",
 				"mutantdino.resourcemonitor",
 				"redhat.vscode-yaml",
 				"rust-lang.rust-analyzer",
