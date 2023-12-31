@@ -2,10 +2,9 @@ name: Release CI
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-
   #################################################
   ## Cross platform binary build for release page #
   #################################################
@@ -34,24 +33,24 @@ jobs:
       # Set env's
       - name: set names
         run: |
-              translate_platform() { case "$1" in x86_64-unknown-linux-musl) echo "linux_x86_64.tar.gz";; aarch64-unknown-linux-musl) echo "linux_aarch64.tar.gz";; arm-unknown-linux-musleabihf) echo "linux_armv6.tar.gz";; x86_64-pc-windows-gnu) echo "windows_x86_64.zip";; *) echo "Error: Unsupported platform $1"; exit 1;; esac; }
-              target_platform="${{ matrix.platform.target }}"
-              output_name=$(translate_platform "$target_platform")
-              echo "TARGET_OUTPUT_NAME=${output_name}" >> $GITHUB_ENV
-              echo "TARGET_PLATFORM=${target_platform}" >> $GITHUB_ENV
-     
+          translate_platform() { case "$1" in x86_64-unknown-linux-musl) echo "linux_x86_64.tar.gz";; aarch64-unknown-linux-musl) echo "linux_aarch64.tar.gz";; arm-unknown-linux-musleabihf) echo "linux_armv6.tar.gz";; x86_64-pc-windows-gnu) echo "windows_x86_64.zip";; *) echo "Error: Unsupported platform $1"; exit 1;; esac; }
+          target_platform="${{ matrix.platform.target }}"
+          output_name=$(translate_platform "$target_platform")
+          echo "TARGET_OUTPUT_NAME=${output_name}" >> $GITHUB_ENV
+          echo "TARGET_PLATFORM=${target_platform}" >> $GITHUB_ENV
+
       # Build binary
       - name: build
         run: cross build --target "${TARGET_PLATFORM}" --release
-              
+
       # Compress, rename, and move
       - name: compress
         run: |
-            if [[ $TARGET_PLATFORM == *windows-gnu* ]]; then
-               zip -j "./oxker_${TARGET_OUTPUT_NAME}" target/${TARGET_PLATFORM}/release/oxker.exe
-            else
-              tar -C "target/${TARGET_PLATFORM}/release" -czf "./oxker_${TARGET_OUTPUT_NAME}" oxker
-            fi
+          if [[ $TARGET_PLATFORM == *windows-gnu* ]]; then
+             zip -j "./oxker_${TARGET_OUTPUT_NAME}" target/${TARGET_PLATFORM}/release/oxker.exe
+          else
+            tar -C "target/${TARGET_PLATFORM}/release" -czf "./oxker_${TARGET_OUTPUT_NAME}" oxker
+          fi
 
       # Upload output for release page
       - name: Upload Artifacts
@@ -91,7 +90,7 @@ jobs:
   ##################
   ## Cargo publish #
   ##################
-  
+
   cargo_publish:
     needs: [create_release]
     runs-on: ubuntu-latest
@@ -103,12 +102,11 @@ jobs:
         uses: katyo/publish-crates@v1
         with:
           registry-token: ${{ secrets.CRATES_IO_TOKEN }}
-          
 
   #########################################
   ## Build images for Dockerhub & ghcr.io #
   #########################################
-  
+
   image_build:
     needs: [cargo_publish]
     runs-on: ubuntu-latest
@@ -138,7 +136,7 @@ jobs:
         id: buildx
         with:
           install: true
-      - name: Build for Dockerhub & ghcr.io 
+      - name: Build for Dockerhub & ghcr.io
         run: |
           docker build --platform linux/arm/v6,linux/arm64,linux/amd64 \
           -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:latest \
