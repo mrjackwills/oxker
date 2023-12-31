@@ -36,7 +36,7 @@ parking_lot = { version= "0.12" }
 tokio = { version = "1.35", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
-ratatui = "0.24"
+ratatui = "0.25"
 uuid = { version = "1.6", features = ["v4", "fast-rng"] }
 directories = "5.0"
 

@@ -12,26 +12,26 @@ pub mod log_sanitizer {
             categorise_text(input)
                 .iter()
                 .map(|i| {
-                    let style = Style::default()
+                    let mut style = Style::default()
                         .bg(color_ansi_to_tui(i.bg.unwrap_or(CansiColor::Black)))
                         .fg(color_ansi_to_tui(i.fg.unwrap_or(CansiColor::White)));
                     if i.blink.is_some() {
-                        style.add_modifier(Modifier::SLOW_BLINK);
+                        style = style.add_modifier(Modifier::SLOW_BLINK);
                     }
                     if i.underline.is_some() {
-                        style.add_modifier(Modifier::UNDERLINED);
+                        style = style.add_modifier(Modifier::UNDERLINED);
                     }
                     if i.reversed.is_some() {
-                        style.add_modifier(Modifier::REVERSED);
+                        style = style.add_modifier(Modifier::REVERSED);
                     }
                     if i.intensity == Some(Intensity::Bold) {
-                        style.add_modifier(Modifier::BOLD);
+                        style = style.add_modifier(Modifier::BOLD);
                     }
                     if i.hidden.is_some() {
-                        style.add_modifier(Modifier::HIDDEN);
+                        style = style.add_modifier(Modifier::HIDDEN);
                     }
                     if i.strikethrough.is_some() {
-                        style.add_modifier(Modifier::CROSSED_OUT);
+                        style = style.add_modifier(Modifier::CROSSED_OUT);
                     }
                     Span::styled(i.text.to_owned(), style)
                 })
