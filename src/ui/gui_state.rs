@@ -200,7 +200,7 @@ impl GuiState {
             .iter()
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
-            .get(0)
+            .first()
         {
             self.selected_panel = *data.0;
         }
@@ -212,7 +212,7 @@ impl GuiState {
             .iter()
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
-            .get(0)
+            .first()
             .map(|data| *data.0)
     }
 
@@ -222,7 +222,7 @@ impl GuiState {
             .iter()
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
-            .get(0)
+            .first()
             .map(|data| *data.0)
     }
 
