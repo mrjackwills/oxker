@@ -13,7 +13,7 @@ use ratatui::{
 use std::{default::Default, time::Instant};
 use std::{fmt::Display, sync::Arc};
 
-use crate::app_data::{ContainerItem, Header, SortedOrder};
+use crate::app_data::{ContainerItem, Header, SortedOrder, ContainerName};
 use crate::{
     app_data::{AppData, ByteStats, Columns, CpuStats, State, Stats},
     app_error::AppError,
@@ -127,10 +127,19 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
     let state_style = Style::default().fg(i.state.get_color());
     let blue = Style::default().fg(Color::Blue);
 
+    // Truncate?
     Line::from(vec![
         Span::styled(
             format!(
-                "{:<width$}",
+                "{:>width$}",
+                i.name.to_string(),
+                width = widths.name.1.into()
+            ),
+            blue,
+        ),
+        Span::styled(
+            format!(
+                "{MARGIN}{:<width$}",
                 i.state.to_string(),
                 width = widths.state.1.into()
             ),
@@ -173,11 +182,11 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
             blue,
         ),
         Span::styled(
-            format!("{MARGIN}{:>width$}", i.name, width = widths.name.1.into()),
-            blue,
-        ),
-        Span::styled(
-            format!("{MARGIN}{:>width$}", i.image, width = widths.image.1.into()),
+            format!(
+                "{MARGIN}{:>width$}",
+                i.image.to_string(),
+                width = widths.image.1.into()
+            ),
             blue,
         ),
         Span::styled(
@@ -378,9 +387,16 @@ pub fn heading_bar(
     // width is dependant on it that column is selected to sort - or not
     let gen_header = |header: &Header, width: usize| {
         let block = header_block(header);
+        // Yes this is a mess, needs documenting correctly
         let text = match header {
             Header::State => format!(
-                "{:>width$}{ic}",
+                " {:>width$}{ic}",
+                header,
+                ic = block.1,
+                width = width - block.2,
+            ),
+            Header::Name => format!(
+                "  {:>width$}{ic}",
                 header,
                 ic = block.1,
                 width = width - block.2,
@@ -409,12 +425,12 @@ pub fn heading_bar(
 
     // Meta data to iterate over to create blocks with correct widths
     let header_meta = [
+        (Header::Name, data.columns.name.1),
         (Header::State, data.columns.state.1),
         (Header::Status, data.columns.status.1),
         (Header::Cpu, data.columns.cpu.1),
         (Header::Memory, data.columns.mem.1 + data.columns.mem.2 + 3),
         (Header::Id, data.columns.id.1),
-        (Header::Name, data.columns.name.1),
         (Header::Image, data.columns.image.1),
         (Header::Rx, data.columns.net_rx.1),
         (Header::Tx, data.columns.net_tx.1),
@@ -735,7 +751,7 @@ pub fn help_box(f: &mut Frame) {
 
 /// Draw the delete confirm box in the centre of the screen
 /// take in container id and container name here?
-pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &str) {
+pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &ContainerName) {
     let block = Block::default()
         .title(" Confirm Delete ")
         .border_type(BorderType::Rounded)
@@ -746,7 +762,7 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &st
     let confirm = Line::from(vec![
         Span::from("Are you sure you want to delete container: "),
         Span::styled(
-            name,
+            name.to_string(),
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
         ),
     ]);

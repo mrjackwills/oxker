@@ -428,6 +428,51 @@ impl Logs {
     }
 }
 
+/// ContainerName and ContainerImage are simple structs, used so can implement custom fmt functions to them
+macro_rules! string_wrapper {
+    ($name:ident) => {
+        #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+        pub struct $name(String);
+
+        impl From<String> for $name {
+            fn from(value: String) -> Self {
+                Self(value)
+            }
+        }
+
+        impl$name {
+            pub fn get(&self) -> String {
+                self.0.clone()
+            }
+
+            pub fn set(&mut self, value: String) {
+                self.0 = value;
+            }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                if self.0.chars().count() >= 30 {
+                    write!(
+                        f,
+                        "{}…",
+                        self.0.chars().take(29).collect::<String>()
+                    )
+                } else {
+                    write!(
+                        f,
+                        "{}",
+                        self.0
+                    )
+                }
+            }
+        }
+    };
+}
+
+string_wrapper!(ContainerName);
+string_wrapper!(ContainerImage);
+
 /// Info for each container
 #[derive(Debug, Clone)]
 pub struct ContainerItem {
@@ -435,12 +480,12 @@ pub struct ContainerItem {
     pub cpu_stats: VecDeque<CpuStats>,
     pub docker_controls: StatefulList<DockerControls>,
     pub id: ContainerId,
-    pub image: String,
+    pub image: ContainerImage,
     pub last_updated: u64,
     pub logs: Logs,
     pub mem_limit: ByteStats,
     pub mem_stats: VecDeque<ByteStats>,
-    pub name: String,
+    pub name: ContainerName,
     pub rx: ByteStats,
     pub state: State,
     pub status: String,
@@ -480,13 +525,13 @@ impl ContainerItem {
             cpu_stats: VecDeque::with_capacity(60),
             docker_controls,
             id,
-            image,
+            image: image.into(),
             is_oxker,
             last_updated: 0,
             logs: Logs::default(),
             mem_limit: ByteStats::default(),
             mem_stats: VecDeque::with_capacity(60),
-            name,
+            name: name.into(),
             rx: ByteStats::default(),
             state,
             status,
@@ -550,12 +595,12 @@ impl ContainerItem {
 /// Container information panel headings + widths, for nice pretty formatting
 #[derive(Debug, Clone, Copy)]
 pub struct Columns {
+    pub name: (Header, u8),
     pub state: (Header, u8),
     pub status: (Header, u8),
     pub cpu: (Header, u8),
     pub mem: (Header, u8, u8),
     pub id: (Header, u8),
-    pub name: (Header, u8),
     pub image: (Header, u8),
     pub net_rx: (Header, u8),
     pub net_tx: (Header, u8),
@@ -565,12 +610,12 @@ impl Columns {
     /// (Column titles, minimum header string length)
     pub const fn new() -> Self {
         Self {
+            name: (Header::Name, 4),
             state: (Header::State, 11),
             status: (Header::Status, 16),
             cpu: (Header::Cpu, 7),
             mem: (Header::Memory, 7, 7),
             id: (Header::Id, 8),
-            name: (Header::Name, 4),
             image: (Header::Image, 5),
             net_rx: (Header::Rx, 7),
             net_tx: (Header::Tx, 7),

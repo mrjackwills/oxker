@@ -306,6 +306,7 @@ impl DockerData {
         self.init_all_logs(&all_ids);
 
         while let Some(x) = self.init.as_ref() {
+            self.app_data.lock().sort_containers();
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             if x.load(std::sync::atomic::Ordering::SeqCst) == all_ids.len() {
                 self.init = None;
