@@ -10,7 +10,7 @@
 + comment typo, [0ad1ec9d85d6f0cac743b4421d0ad03432c9d717]
 
 ### Features
-+ re-arrange columns + ContainerName + ContainerImage, closes #32, [e936bb4b78980d0e34a1ef5e9f6f82a9ed0ddc7f]
++ re-arrange columns, container name is now the first column, added a ContainerName & ContainerImage struct via `string_wrapper` macro, closes #32, [e936bb4b78980d0e34a1ef5e9f6f82a9ed0ddc7f]
 
 ### Fixes
 + Docker Commands hidden, [4301e4709f99fc23ee438bf345b0dc698a05dc4e]
