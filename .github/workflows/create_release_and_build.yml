@@ -12,11 +12,19 @@ jobs:
   cross_platform_build:
     strategy:
       matrix:
-        platform:
+        include:
           - target: x86_64-unknown-linux-musl
+            output_name: linux_x86_64.tar.gz
+
           - target: aarch64-unknown-linux-musl
+            output_name: linux_aarch64.tar.gz
+
           - target: arm-unknown-linux-musleabihf
+            output_name: linux_armv6.tar.gz
+
           - target: x86_64-pc-windows-gnu
+            output_name: windows_x86_64.zip
+
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -30,35 +38,29 @@ jobs:
       - name: install cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
-      # Set env's
-      - name: set names
-        run: |
-          translate_platform() { case "$1" in x86_64-unknown-linux-musl) echo "linux_x86_64.tar.gz";; aarch64-unknown-linux-musl) echo "linux_aarch64.tar.gz";; arm-unknown-linux-musleabihf) echo "linux_armv6.tar.gz";; x86_64-pc-windows-gnu) echo "windows_x86_64.zip";; *) echo "Error: Unsupported platform $1"; exit 1;; esac; }
-          target_platform="${{ matrix.platform.target }}"
-          output_name=$(translate_platform "$target_platform")
-          echo "TARGET_OUTPUT_NAME=${output_name}" >> $GITHUB_ENV
-          echo "TARGET_PLATFORM=${target_platform}" >> $GITHUB_ENV
-
       # Build binary
       - name: build
-        run: cross build --target "${TARGET_PLATFORM}" --release
+        run: cross build --target ${{ matrix.target }} --release
 
-      # Compress, rename, and move
-      - name: compress
+      # Compress the output
+      - name: compress windows
+        if: matrix.target == 'x86_64-pc-windows-gnu'
         run: |
-          if [[ $TARGET_PLATFORM == *windows-gnu* ]]; then
-             zip -j "./oxker_${TARGET_OUTPUT_NAME}" target/${TARGET_PLATFORM}/release/oxker.exe
-          else
-            tar -C "target/${TARGET_PLATFORM}/release" -czf "./oxker_${TARGET_OUTPUT_NAME}" oxker
-          fi
+          zip -j "./oxker_${{ matrix.output_name }}" target/${{ matrix.target }}/release/oxker.exe
+
+      # Compress the output
+      - name: compress linux
+        if: matrix.target != 'x86_64-pc-windows-gnu'
+        run: |
+          tar -C "target/${{ matrix.target }}/release" -czf "./oxker_${{ matrix.output_name }}" oxker
 
       # Upload output for release page
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           if-no-files-found: error
-          name: ${{ env.TARGET_PLATFORM }}
-          path: oxker_${{ env.TARGET_OUTPUT_NAME }}
+          name: ${{ matrix.target }}
+          path: oxker_${{ matrix.output_name }}
           retention-days: 1
 
   ###################
