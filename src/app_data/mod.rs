@@ -171,52 +171,52 @@ impl AppData {
                         .state
                         .order()
                         .cmp(&item_ord.1.state.order())
-                        .then_with(|| item_ord.0.name.get().cmp(&item_ord.1.name.get())),
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
                     Header::Status => item_ord
                         .0
                         .status
                         .cmp(&item_ord.1.status)
-                        .then_with(|| item_ord.0.name.get().cmp(&item_ord.1.name.get())),
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
                     Header::Cpu => item_ord
                         .0
                         .cpu_stats
                         .back()
                         .cmp(&item_ord.1.cpu_stats.back())
-                        .then_with(|| item_ord.0.name.get().cmp(&item_ord.1.name.get())),
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
                     Header::Memory => item_ord
                         .0
                         .mem_stats
                         .back()
                         .cmp(&item_ord.1.mem_stats.back())
-                        .then_with(|| item_ord.0.name.get().cmp(&item_ord.1.name.get())),
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
 
                     Header::Id => item_ord
                         .0
                         .id
                         .cmp(&item_ord.1.id)
-                        .then_with(|| item_ord.0.name.get().cmp(&item_ord.1.name.get())),
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
                     Header::Image => item_ord
                         .0
                         .image
                         .get()
-                        .cmp(&item_ord.1.image.get())
-                        .then_with(|| item_ord.0.name.get().cmp(&item_ord.1.name.get())),
+                        .cmp(item_ord.1.image.get())
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
                     Header::Rx => item_ord
                         .0
                         .rx
                         .cmp(&item_ord.1.rx)
-                        .then_with(|| item_ord.0.name.get().cmp(&item_ord.1.name.get())),
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
                     Header::Tx => item_ord
                         .0
                         .tx
                         .cmp(&item_ord.1.tx)
-                        .then_with(|| item_ord.0.name.get().cmp(&item_ord.1.name.get())),
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
 
                     Header::Name => item_ord
                         .0
                         .name
                         .get()
-                        .cmp(&item_ord.1.name.get())
+                        .cmp(item_ord.1.name.get())
                         .then_with(|| item_ord.0.id.cmp(&item_ord.1.id)),
                 }
             };
@@ -225,7 +225,7 @@ impl AppData {
             self.containers.items.sort_by(|a, b| {
                 a.created
                     .cmp(&b.created)
-                    .then_with(|| a.name.get().cmp(&b.name.get()))
+                    .then_with(|| a.name.get().cmp(b.name.get()))
             });
         }
     }
@@ -509,7 +509,7 @@ impl AppData {
     /// Get the Id and State for the currently selected container - used by the exec check method
     pub fn get_selected_container_id_state_name(&self) -> Option<(ContainerId, State, String)> {
         self.get_selected_container()
-            .map(|i| (i.id.clone(), i.state, i.name.get()))
+            .map(|i| (i.id.clone(), i.state, i.name.get().to_owned()))
     }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once

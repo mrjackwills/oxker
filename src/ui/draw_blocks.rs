@@ -13,7 +13,7 @@ use ratatui::{
 use std::{default::Default, time::Instant};
 use std::{fmt::Display, sync::Arc};
 
-use crate::app_data::{ContainerItem, Header, SortedOrder, ContainerName};
+use crate::app_data::{ContainerItem, ContainerName, Header, SortedOrder};
 use crate::{
     app_data::{AppData, ByteStats, Columns, CpuStats, State, Stats},
     app_error::AppError,

@@ -47,6 +47,52 @@ impl PartialOrd for ContainerId {
     }
 }
 
+/// TODO - use string_wrapper for ContainerId?
+/// ContainerName and ContainerImage are simple structs, used so can implement custom fmt functions to them
+macro_rules! string_wrapper {
+    ($name:ident) => {
+        #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+        pub struct $name(String);
+
+        impl From<String> for $name {
+            fn from(value: String) -> Self {
+                Self(value)
+            }
+        }
+
+        impl$name {
+            pub fn get(&self) -> &str {
+                self.0.as_str()
+            }
+
+            pub fn set(&mut self, value: String) {
+                self.0 = value;
+            }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                if self.0.chars().count() >= 30 {
+                    write!(
+                        f,
+                        "{}…",
+                        self.0.chars().take(29).collect::<String>()
+                    )
+                } else {
+                    write!(
+                        f,
+                        "{}",
+                        self.0
+                    )
+                }
+            }
+        }
+    };
+}
+
+string_wrapper!(ContainerName);
+string_wrapper!(ContainerImage);
+
 #[derive(Debug, Clone)]
 pub struct StatefulList<T> {
     pub state: ListState,
@@ -427,51 +473,6 @@ impl Logs {
         &mut self.logs.state
     }
 }
-
-/// ContainerName and ContainerImage are simple structs, used so can implement custom fmt functions to them
-macro_rules! string_wrapper {
-    ($name:ident) => {
-        #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-        pub struct $name(String);
-
-        impl From<String> for $name {
-            fn from(value: String) -> Self {
-                Self(value)
-            }
-        }
-
-        impl$name {
-            pub fn get(&self) -> String {
-                self.0.clone()
-            }
-
-            pub fn set(&mut self, value: String) {
-                self.0 = value;
-            }
-        }
-
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                if self.0.chars().count() >= 30 {
-                    write!(
-                        f,
-                        "{}…",
-                        self.0.chars().take(29).collect::<String>()
-                    )
-                } else {
-                    write!(
-                        f,
-                        "{}",
-                        self.0
-                    )
-                }
-            }
-        }
-    };
-}
-
-string_wrapper!(ContainerName);
-string_wrapper!(ContainerImage);
 
 /// Info for each container
 #[derive(Debug, Clone)]
