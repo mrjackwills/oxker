@@ -262,7 +262,7 @@ impl From<(MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)> for FrameData {
         Self {
             columns: data.0.get_width(),
             delete_confirm: data.1.get_delete_container(),
-            has_containers: data.0.get_container_len() > 1,
+            has_containers: data.0.get_container_len() > 0,
             has_error: data.0.get_error(),
             height,
             help_visible: data.1.status_contains(&[Status::Help]),

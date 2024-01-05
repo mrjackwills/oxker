@@ -393,12 +393,12 @@ impl InputHandler {
             } else {
                 match key_code {
                     KeyCode::Char('0') => self.app_data.lock().reset_sorted(),
-                    KeyCode::Char('1') => self.sort(Header::State),
-                    KeyCode::Char('2') => self.sort(Header::Status),
-                    KeyCode::Char('3') => self.sort(Header::Cpu),
-                    KeyCode::Char('4') => self.sort(Header::Memory),
-                    KeyCode::Char('5') => self.sort(Header::Id),
-                    KeyCode::Char('6') => self.sort(Header::Name),
+                    KeyCode::Char('1') => self.sort(Header::Name),
+                    KeyCode::Char('2') => self.sort(Header::State),
+                    KeyCode::Char('3') => self.sort(Header::Status),
+                    KeyCode::Char('4') => self.sort(Header::Cpu),
+                    KeyCode::Char('5') => self.sort(Header::Memory),
+                    KeyCode::Char('6') => self.sort(Header::Id),
                     KeyCode::Char('7') => self.sort(Header::Image),
                     KeyCode::Char('8') => self.sort(Header::Rx),
                     KeyCode::Char('9') => self.sort(Header::Tx),

@@ -161,80 +161,72 @@ impl AppData {
     pub fn sort_containers(&mut self) {
         if let Some((head, ord)) = self.sorted_by {
             let sort_closure = |a: &ContainerItem, b: &ContainerItem| -> std::cmp::Ordering {
+                let item_ord = match ord {
+                    SortedOrder::Asc => (a, b),
+                    SortedOrder::Desc => (b, a),
+                };
                 match head {
-                    Header::State => match ord {
-                        SortedOrder::Asc => a
-                            .state
-                            .order()
-                            .cmp(&b.state.order())
-                            .then_with(|| a.name.cmp(&b.name)),
-                        SortedOrder::Desc => b
-                            .state
-                            .order()
-                            .cmp(&a.state.order())
-                            .then_with(|| b.name.cmp(&a.name)),
-                    },
-                    Header::Status => match ord {
-                        SortedOrder::Asc => {
-                            a.status.cmp(&b.status).then_with(|| a.name.cmp(&b.name))
-                        }
-                        SortedOrder::Desc => {
-                            b.status.cmp(&a.status).then_with(|| b.name.cmp(&a.name))
-                        }
-                    },
-                    Header::Cpu => match ord {
-                        SortedOrder::Asc => a
-                            .cpu_stats
-                            .back()
-                            .cmp(&b.cpu_stats.back())
-                            .then_with(|| a.name.cmp(&b.name)),
-                        SortedOrder::Desc => b
-                            .cpu_stats
-                            .back()
-                            .cmp(&a.cpu_stats.back())
-                            .then_with(|| b.name.cmp(&a.name)),
-                    },
-                    Header::Memory => match ord {
-                        SortedOrder::Asc => a
-                            .mem_stats
-                            .back()
-                            .cmp(&b.mem_stats.back())
-                            .then_with(|| a.name.cmp(&b.name)),
-                        SortedOrder::Desc => b
-                            .mem_stats
-                            .back()
-                            .cmp(&a.mem_stats.back())
-                            .then_with(|| b.name.cmp(&a.name)),
-                    },
-                    Header::Id => match ord {
-                        SortedOrder::Asc => a.id.cmp(&b.id).then_with(|| a.name.cmp(&b.name)),
-                        SortedOrder::Desc => b.id.cmp(&a.id).then_with(|| b.name.cmp(&a.name)),
-                    },
-                    Header::Image => match ord {
-                        SortedOrder::Asc => a.image.cmp(&b.image).then_with(|| a.name.cmp(&b.name)),
-                        SortedOrder::Desc => {
-                            b.image.cmp(&a.image).then_with(|| b.name.cmp(&a.name))
-                        }
-                    },
-                    Header::Name => match ord {
-                        SortedOrder::Asc => a.name.cmp(&b.name).then_with(|| a.id.cmp(&b.id)),
-                        SortedOrder::Desc => b.name.cmp(&a.name).then_with(|| b.id.cmp(&a.id)),
-                    },
-                    Header::Rx => match ord {
-                        SortedOrder::Asc => a.rx.cmp(&b.rx).then_with(|| a.name.cmp(&b.name)),
-                        SortedOrder::Desc => b.rx.cmp(&a.rx).then_with(|| b.name.cmp(&a.name)),
-                    },
-                    Header::Tx => match ord {
-                        SortedOrder::Asc => a.tx.cmp(&b.tx).then_with(|| a.name.cmp(&b.name)),
-                        SortedOrder::Desc => b.tx.cmp(&a.tx).then_with(|| b.name.cmp(&a.name)),
-                    },
+                    Header::State => item_ord
+                        .0
+                        .state
+                        .order()
+                        .cmp(&item_ord.1.state.order())
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
+                    Header::Status => item_ord
+                        .0
+                        .status
+                        .cmp(&item_ord.1.status)
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
+                    Header::Cpu => item_ord
+                        .0
+                        .cpu_stats
+                        .back()
+                        .cmp(&item_ord.1.cpu_stats.back())
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
+                    Header::Memory => item_ord
+                        .0
+                        .mem_stats
+                        .back()
+                        .cmp(&item_ord.1.mem_stats.back())
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
+
+                    Header::Id => item_ord
+                        .0
+                        .id
+                        .cmp(&item_ord.1.id)
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
+                    Header::Image => item_ord
+                        .0
+                        .image
+                        .get()
+                        .cmp(item_ord.1.image.get())
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
+                    Header::Rx => item_ord
+                        .0
+                        .rx
+                        .cmp(&item_ord.1.rx)
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
+                    Header::Tx => item_ord
+                        .0
+                        .tx
+                        .cmp(&item_ord.1.tx)
+                        .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
+
+                    Header::Name => item_ord
+                        .0
+                        .name
+                        .get()
+                        .cmp(item_ord.1.name.get())
+                        .then_with(|| item_ord.0.id.cmp(&item_ord.1.id)),
                 }
             };
             self.containers.items.sort_by(sort_closure);
         } else {
-            self.containers
-                .items
-                .sort_by(|a, b| a.created.cmp(&b.created).then_with(|| a.name.cmp(&b.name)));
+            self.containers.items.sort_by(|a, b| {
+                a.created
+                    .cmp(&b.created)
+                    .then_with(|| a.name.get().cmp(b.name.get()))
+            });
         }
     }
 
@@ -359,12 +351,12 @@ impl AppData {
     pub fn get_log_title(&self) -> String {
         self.get_selected_container().map_or_else(String::new, |y| {
             let logs_len = y.logs.get_state_title();
-            let mut name = y.name.clone();
-            name.truncate(32);
+            // let mut name = y.name.clone();
+            // name.truncate(32);
             if logs_len.is_empty() {
-                format!("- {name} ")
+                format!("- {} ", y.name)
             } else {
-                format!("{logs_len} - {name}")
+                format!("{logs_len} - {}", y.name.get())
             }
         })
     }
@@ -477,11 +469,12 @@ impl AppData {
                     .to_string(),
             );
 
+            // Issue here!
             columns.cpu.1 = columns.cpu.1.max(cpu_count);
-            columns.image.1 = columns.image.1.max(count(&container.image));
+            columns.image.1 = columns.image.1.max(count(&container.image.to_string()));
             columns.mem.1 = columns.mem.1.max(mem_current_count);
             columns.mem.2 = columns.mem.2.max(count(&container.mem_limit.to_string()));
-            columns.name.1 = columns.name.1.max(count(&container.name));
+            columns.name.1 = columns.name.1.max(count(&container.name.to_string()));
             columns.net_rx.1 = columns.net_rx.1.max(count(&container.rx.to_string()));
             columns.net_tx.1 = columns.net_tx.1.max(count(&container.tx.to_string()));
             columns.state.1 = columns.state.1.max(count(&container.state.to_string()));
@@ -497,8 +490,8 @@ impl AppData {
         self.containers.items.iter_mut().find(|i| &i.id == id)
     }
 
-    /// return a mutable container by given id
-    pub fn get_container_name_by_id(&mut self, id: &ContainerId) -> Option<String> {
+    /// Get the ContainerName of by ID
+    pub fn get_container_name_by_id(&mut self, id: &ContainerId) -> Option<ContainerName> {
         self.containers
             .items
             .iter_mut()
@@ -516,7 +509,7 @@ impl AppData {
     /// Get the Id and State for the currently selected container - used by the exec check method
     pub fn get_selected_container_id_state_name(&self) -> Option<(ContainerId, State, String)> {
         self.get_selected_container()
-            .map(|i| (i.id.clone(), i.state, i.name.clone()))
+            .map(|i| (i.id.clone(), i.state, i.name.get().to_owned()))
     }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
@@ -623,8 +616,8 @@ impl AppData {
                     .map_or(0, |i| u64::try_from(i).unwrap_or_default());
                 // If container info already in containers Vec, then just update details
                 if let Some(item) = self.get_container_by_id(&id) {
-                    if item.name != name {
-                        item.name = name;
+                    if item.name.get() != name {
+                        item.name.set(name);
                     };
                     if item.status != status {
                         item.status = status;
@@ -640,8 +633,8 @@ impl AppData {
                         };
                         item.state = state;
                     };
-                    if item.image != image {
-                        item.image = image;
+                    if item.image.get() != image {
+                        item.image.set(image);
                     };
                 } else {
                     // container not known, so make new ContainerItem and push into containers Vec

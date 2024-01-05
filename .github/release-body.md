@@ -1,18 +1,26 @@
-### 2023-11-21
+### 2024-01-05
 
 ### Chores
-+ workflow dependencies updated, [6a4cf6490d08b976734e2bc8186d94c095700558]
-+ dependencies updated, [e301b51891e03ea40b2f904583119da3bc4daf53], [81d5b326db8881263f2c9072e1426948e41b4a0f], [294cc2684f42daab9d51601e235a384f55617678]
-+ lints moved from main.rs to Cargo.toml, [2de76e2f358be9c1500ca3dc4f9df0979ed8ed28]
-+ .devcontainer updated, [37d2ee915625806dd11c2cc816a892aae12a777c]
++ .devcontainer updated, [2313618eb1493ce41d70847b888c32b65fdc40ea], [5af6b8bcd31c3c38ff5a5799c76dc1cbe1167763], [9b0b6b10c3a0c1d5095490cfd3cda18d252f38f5]
++ alpine version bump, [061de032dad935c56c6caab419ecb5c9bbac4c7e]
++ dependencies updated, [0890991ff1a239fe2d556a0c4eac6ae05beb9b50], [0a7b266b2a358a4788ae877ca8a97f08eac4eef2], [333621f1a7321c1fdf73fd35dd7f3ab165a9dc64], [3e51889cd8a552b1da463ae6a40d5de6eec188f5], [a179bb6f6a7e076269fa830f56c0d4a31cf8488a]
++ file formatting, [eb5e74ae67d815bf49f241d2baf319e41cf9adf8]
++ Rust 1.75.0 linting, [81be75f27fd32a59ebff57e44c5022ff862df84b]
+
+### Docs
++ screenshot updated, [0231d1bdcda304300d289243a95044ab3bdce85c]
++ comment typo, [0ad1ec9d85d6f0cac743b4421d0ad03432c9d717]
 
 ### Features
-+ Docker exec mode - you are now able to attempt to exec into a container by pressing the `e` key, closes #28, [c8077bca0b673478cfbb417e677a885136ba9eff], [0e5ee143b008c9d0ee0b681231a1568be227150b], [0e5ee143b008c9d0ee0b681231a1568be227150b]
-+ Export logs feature, press `s` to save logs, use `--save-dir` cli-arg to customise output location, closes #1, [a15da5ed43d07852504a4dd1884a189e3f5b9d84]
++ re-arrange columns, container name is now the first column, added a ContainerName & ContainerImage struct via `string_wrapper` macro, closes #32, [e936bb4b78980d0e34a1ef5e9f6f82a9ed0ddc7f]
 
 ### Fixes
-+ GitHub workflow, cargo publish before create release, [ae4ce3b549c40cc8bd713f375f030b185179a6e2]
-+ sorted created_at clash, closes #22, [3a6489396e87702ce94b349a7f47028ece7922f6]
-+ `as_ref()` fixed, thanks [Daniel-Boll](https://github.com/Daniel-Boll), [77fbaa8b1669286369b6ec1edd80220c808b628f]
++ Docker Commands hidden, [4301e4709f99fc23ee438bf345b0dc698a05dc4e]
++ .gitattributes, [1234ea53897b2ed6ada0eb18cd81b8783a5dc5f5]
+
+### Refactors
++ GitHub workflow action improved, [04b66af2b60c96cfbece0b13109e30b08ef35cc4]
++ sort_containers, [ccf8b55a7495982f72b4fb3af6e11a9bd7465216]
++ string_wrapper .get() return `&str`, [a722731c6a77e00d1fb13967b51400aa34e72213]
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details

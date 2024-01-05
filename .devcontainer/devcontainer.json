@@ -15,22 +15,18 @@
 		"--security-opt",
 		"seccomp=unconfined"
 	],
-
 	"postCreateCommand": "rustup target add x86_64-unknown-linux-musl && cargo install cross typos-cli cargo-expand",
-
 	"mounts": [
-		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly"
+		"source=/run/shm,target=/dev/shm,type=bind"
 	],
-
 	"customizations": {
 		"vscode": {
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
 				"bmuskalla.vscode-tldr",
 				"christian-kohler.path-intellisense",
-				"ms-vscode.live-server",
+				"foxundermoon.shell-format",
 				"mutantdino.resourcemonitor",
-				"rangav.vscode-thunder-client",
 				"redhat.vscode-yaml",
 				"rust-lang.rust-analyzer",
 				"serayuzgur.crates",
@@ -38,7 +34,6 @@
 				"timonwong.shellcheck",
 				"vadimcn.vscode-lldb"
 			],
-			
 			// Set *default* container specific settings.json values on container create.
 			"settings": {
 				"lldb.executable": "/usr/bin/lldb",
@@ -56,10 +51,10 @@
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {
 			"version": "latest",
 			"moby": true,
-			"dockerDashComposeVersion":"v2"
+			"dockerDashComposeVersion": "v2"
 		},
 		"ghcr.io/devcontainers/features/git:1": {
-				"version":"os-provided"
-			}
+			"version": "os-provided"
+		}
 	}
 }
