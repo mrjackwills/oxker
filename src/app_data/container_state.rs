@@ -49,7 +49,7 @@ impl PartialOrd for ContainerId {
 
 /// TODO - use string_wrapper for ContainerId?
 /// ContainerName and ContainerImage are simple structs, used so can implement custom fmt functions to them
-macro_rules! string_wrapper {
+macro_rules! unit_struct {
     ($name:ident) => {
         #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
         pub struct $name(String);
@@ -90,8 +90,8 @@ macro_rules! string_wrapper {
     };
 }
 
-string_wrapper!(ContainerName);
-string_wrapper!(ContainerImage);
+unit_struct!(ContainerName);
+unit_struct!(ContainerImage);
 
 #[derive(Debug, Clone)]
 pub struct StatefulList<T> {
