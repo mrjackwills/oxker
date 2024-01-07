@@ -364,22 +364,22 @@ pub fn heading_bar(
     // Generate a block for the header, if the header is currently being used to sort a column, then highlight it white
     let header_block = |x: &Header| {
         let mut color = Color::Black;
-        let mut suffix = "";
-        let mut suffix_margin = 0;
+        let mut prefix = "";
+        let mut prefix_margin = 0;
         if let Some((a, b)) = data.sorted_by.as_ref() {
             if x == a {
                 match b {
-                    SortedOrder::Asc => suffix = " ▲",
-                    SortedOrder::Desc => suffix = " ▼",
+                    SortedOrder::Asc => prefix = "▲ ",
+                    SortedOrder::Desc => prefix = "▼ ",
                 }
-                suffix_margin = 2;
+                prefix_margin = 2;
                 color = Color::White;
             };
         };
         (
             Block::default().style(Style::default().bg(Color::Magenta).fg(color)),
-            suffix,
-            suffix_margin,
+            prefix,
+            prefix_margin,
         )
     };
 
@@ -390,30 +390,26 @@ pub fn heading_bar(
         // Yes this is a mess, needs documenting correctly
         let text = match header {
             Header::State => format!(
-                " {:>width$}{ic}",
-                header,
-                ic = block.1,
-                width = width - block.2,
+                " {x:>width$}",
+                x = format!("{ic}{header}", ic = block.1),
+                width = width
             ),
             Header::Name => format!(
-                "  {:>width$}{ic}",
-                header,
-                ic = block.1,
-                width = width - block.2,
+                "  {x:>width$}",
+                x = format!("{ic}{header}", ic = block.1),
+                width = width
             ),
             Header::Status => format!(
-                "{}  {:>width$}{ic}",
+                "{}  {x:>width$}",
                 MARGIN,
-                header,
-                ic = block.1,
-                width = width - block.2
+                x = format!("{ic}{header}", ic = block.1),
+                width = width
             ),
             _ => format!(
-                "{}{:>width$}{ic}",
+                "{}{x:>width$}",
                 MARGIN,
-                header,
-                ic = block.1,
-                width = width - block.2
+                x = format!("{ic}{header}", ic = block.1),
+                width = width
             ),
         };
         let count = u16::try_from(text.chars().count()).unwrap_or_default();
