@@ -3,16 +3,18 @@ networks:
   oxker-example-net:
     name: oxker-examaple-net
 services:
-  postgres:
-    image: postgres:alpine3.19
-    container_name: postgres
+  postgres_but_with_a_longer_container_name:
+    container_name: postgres_but_with_a_longer_container_name
+    build:
+       dockerfile: ./postgres.Dockerfile
+       context: "."
     environment: 
-     - POSTGRES_PASSWORD=never_use_this_password_in_production
+      - POSTGRES_PASSWORD=never_use_this_password_in_production
     ipc: private
     restart: always
     shm_size: 256MB
     networks:
-      - oxker-example-net
+         - oxker-example-net
     deploy:
       resources:
         limits:
@@ -39,5 +41,3 @@ services:
       resources:
         limits:
           memory: 512M
-
-
