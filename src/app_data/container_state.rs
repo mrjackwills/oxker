@@ -60,6 +60,13 @@ macro_rules! unit_struct {
             }
         }
 
+        #[cfg(test)]
+        impl From<&str> for $name {
+            fn from(value: &str) -> Self {
+                Self(value.to_owned())
+            }
+        }
+
         impl$name {
             pub fn get(&self) -> &str {
                 self.0.as_str()
@@ -93,7 +100,7 @@ macro_rules! unit_struct {
 unit_struct!(ContainerName);
 unit_struct!(ContainerImage);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StatefulList<T> {
     pub state: ListState,
     pub items: Vec<T>,
@@ -234,7 +241,7 @@ impl fmt::Display for State {
 }
 
 /// Items for the container control list
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DockerControls {
     Pause,
     Restart,
@@ -416,7 +423,7 @@ impl fmt::Display for LogsTz {
 /// Store the logs alongside a HashSet, each log *should* generate a unique timestamp,
 /// so if we store the timestamp separately in a HashSet, we can then check if we should insert a log line into the
 /// stateful list dependent on whethere the timestamp is in the HashSet or not
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Logs {
     logs: StatefulList<ListItem<'static>>,
     tz: HashSet<LogsTz>,
@@ -475,7 +482,7 @@ impl Logs {
 }
 
 /// Info for each container
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContainerItem {
     pub created: u64,
     pub cpu_stats: VecDeque<CpuStats>,
@@ -594,7 +601,7 @@ impl ContainerItem {
 }
 
 /// Container information panel headings + widths, for nice pretty formatting
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Columns {
     pub name: (Header, u8),
     pub state: (Header, u8),

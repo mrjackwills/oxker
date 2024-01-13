@@ -150,7 +150,7 @@ impl DockerData {
 
                 app_data
                     .lock()
-                    .update_stats(&id, cpu_stats, mem_stat, mem_limit, rx, tx);
+                    .update_stats_by_id(&id, cpu_stats, mem_stat, mem_limit, rx, tx);
             }
         }
         spawns.lock().remove(&spawn_id);
