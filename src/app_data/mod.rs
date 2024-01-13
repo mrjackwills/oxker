@@ -470,6 +470,12 @@ impl AppData {
         self.get_selected_container().map_or(false, |i| i.is_oxker)
     }
 
+    /// Check if selected container is oxker and also that oxker is being run in a container
+    pub fn is_oxker_in_container(&self) -> bool {
+        self.get_selected_container()
+            .map_or(false, |i| i.is_oxker && self.args.in_container)
+    }
+
     /// Find the widths for the strings in the containers panel.
     /// So can display nicely and evenly
     pub fn get_width(&self) -> Columns {
@@ -1815,12 +1821,11 @@ mod tests {
             },
         ];
 
-		app_data.update_containers(&mut input);
-		let result_post = app_data.get_container_items();
-		assert_ne!(&result_pre, result_post);
+        app_data.update_containers(&mut input);
+        let result_post = app_data.get_container_items();
+        assert_ne!(&result_pre, result_post);
         assert_eq!(result_post[0].state, State::Paused);
-		assert_eq!(result_post[1].state, State::Dead);
-
+        assert_eq!(result_post[1].state, State::Dead);
     }
 
     #[test]
