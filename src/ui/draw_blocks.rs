@@ -988,8 +988,9 @@ mod tests {
 
     #[test]
     // Test that the error popup is centered, red background, white border, white text, and displays the correct text
-    fn test_draw_blocks_error() {
-        let backend = TestBackend::new(46, 9);
+    fn test_draw_blocks_docker_connect_error() {
+		let (w,h) = (46,9);
+        let backend = TestBackend::new(w, h);
         let mut terminal = Terminal::new(backend).unwrap();
 
         terminal
@@ -1013,15 +1014,63 @@ mod tests {
 
         for (row_index, row) in expected.iter().enumerate() {
             for (char_index, char) in row.chars().enumerate() {
-                let index = row_index * 46 + char_index;
-                let result_char = &terminal.backend().buffer().content[index];
-                assert_eq!(char.to_string(), result_char.symbol());
-                if (1..=7).contains(&row_index) && (1..=44).contains(&char_index) {
-                    assert_eq!(result_char.bg, Color::Red);
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &terminal.backend().buffer().content[index];
+                assert_eq!(char.to_string(), result_cell.symbol());
+                if (1..=usize::from(h)-2).contains(&row_index) && (1..=usize::from(w)-2).contains(&char_index) {
+                    assert_eq!(result_cell.bg, Color::Red);
                 }
-				if result_char.symbol().chars().next().unwrap().is_alphanumeric() {
-					assert_eq!(result_char.fg, Color::White);
-				}
+                if result_cell
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap()
+                    .is_alphanumeric()
+                {
+                    assert_eq!(result_cell.fg, Color::White);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Test that the clearable error popup is centered, red background, white border, white text, and displays the correct text
+    fn test_draw_blocks_clearable_error() {
+		let (w,h) = (39, 10);
+        let backend = TestBackend::new(w, h);
+        let mut terminal = Terminal::new(backend).unwrap();
+
+        terminal
+            .draw(|f| {
+                let block = super::gen_error(f, AppError::DockerExec, Some(4));
+                f.render_widget(block.0, block.1);
+            })
+            .unwrap();
+
+        let mut expected = [
+			"                                       ",
+			" ╭────────────── Error ──────────────╮ ",
+			" │                                   │ ",
+			" │   Unable to exec into container   │ ",
+			" │                                   │ ",
+			" │         ( c ) clear error         │ ",
+			" │         ( q ) quit oxker          │ ",
+			" │                                   │ ",
+			" ╰───────────────────────────────────╯ ",
+			"                                       ",
+        ];
+
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &terminal.backend().buffer().content[index];
+                assert_eq!(char.to_string(), result_cell.symbol());
+                if (1..=usize::from(h)-2).contains(&row_index) && (1..=usize::from(w)-2).contains(&char_index) {
+                    assert_eq!(result_cell.bg, Color::Red);
+                }
+        		if result_cell.symbol().chars().next().unwrap().is_alphanumeric() || ["(", ")"].contains(&result_cell.symbol()) {
+        			assert_eq!(result_cell.fg, Color::White);
+        		}
             }
         }
     }
