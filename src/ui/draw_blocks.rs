@@ -851,8 +851,7 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
         .update_region_map(Region::Delete(DeleteButton::Yes), yes_area);
 }
 
-/// Draw an error popup over whole screen
-pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
+fn gen_error<'f>(f: &mut Frame, error: AppError, seconds: Option<u8>) -> (Paragraph<'f>, Rect) {
     let block = Block::default()
         .title(" Error ")
         .border_type(BorderType::Rounded)
@@ -889,6 +888,13 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
         .alignment(Alignment::Center);
 
     let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
+    (paragraph, area)
+    // area
+}
+
+/// Draw an error popup over whole screen
+pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
+    let (paragraph, area) = gen_error(f, error, seconds);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
@@ -969,3 +975,73 @@ pub fn debug_bar(area: Rect, f: &mut Frame, debug_string: &str) {
 //         .borders(Borders::NONE);
 //     f.render_widget(block, whole_layout[0]);
 // }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::many_single_char_names, unused)]
+mod tests {
+
+    use std::collections::VecDeque;
+
+    use ratatui::{backend::TestBackend, buffer::Buffer, Terminal};
+
+    use super::*;
+
+    #[test]
+    // Test that the error popup is centered, red background, white border, white text, and displays the correct text
+    fn test_draw_blocks_error() {
+        let backend = TestBackend::new(46, 9);
+        let mut terminal = Terminal::new(backend).unwrap();
+
+        terminal
+            .draw(|f| {
+                let block = super::gen_error(f, AppError::DockerConnect, Some(4));
+                f.render_widget(block.0, block.1);
+            })
+            .unwrap();
+
+        let mut expected = vec![
+            "                                              ".to_owned(),
+            " ╭───────────────── Error ──────────────────╮ ".to_owned(),
+            " │                                          │ ".to_owned(),
+            " │      Unable to access docker daemon      │ ".to_owned(),
+            " │                                          │ ".to_owned(),
+            format!(" │    oxker::v{VERSION} closing in 04 seconds   │ "),
+            " │                                          │ ".to_owned(),
+            " ╰──────────────────────────────────────────╯ ".to_owned(),
+            "                                              ".to_owned(),
+        ];
+
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, char) in row.chars().enumerate() {
+                let index = row_index * 46 + char_index;
+                let result_char = &terminal.backend().buffer().content[index];
+                assert_eq!(char.to_string(), result_char.symbol());
+                if (1..=7).contains(&row_index) && (1..=44).contains(&char_index) {
+                    assert_eq!(result_char.bg, Color::Red);
+                }
+				if result_char.symbol().chars().next().unwrap().is_alphanumeric() {
+					assert_eq!(result_char.fg, Color::White);
+				}
+            }
+        }
+    }
+    // let result = &terminal.backend().buffer().content.iter().map(|i|i.symbol().to_owned()).collect::<Vec<_>>();
+    // println!("{expected:?}");
+    // println!("{:?}", terminal.backend().buffer().content);
+    // // let mut expected = Buffer::with_lines(vec![
+    // //     "┌Title─┐  ",
+    // //     "│      │  ",
+    // //     "│      │  ",
+    // //     "│      │  ",
+    // //     "│      │  ",
+    // //     "│      │  ",
+    // //     "│      │  ",
+    // //     "└──────┘  ",
+    // //     "          ",
+    // //     "          ",
+    // // ]);
+    // // for x in 1..=5 {
+    // //     expected.get_mut(x, 0).set_fg(Color::LightBlue);
+    // // }
+    // terminal.backend().assert_buffer(&expected);
+}
