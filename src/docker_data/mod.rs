@@ -71,6 +71,7 @@ pub struct DockerData {
 impl DockerData {
     /// Use docker stats to calculate current cpu usage
     #[allow(clippy::cast_precision_loss)]
+    // FIX: this can overflow
     fn calculate_usage(stats: &Stats) -> f64 {
         let mut cpu_percentage = 0.0;
         let previous_cpu = stats.precpu_stats.cpu_usage.total_usage;
@@ -162,7 +163,6 @@ impl DockerData {
     /// Update all stats, spawn each container into own tokio::spawn thread
     fn update_all_container_stats(&mut self, all_ids: &[(State, ContainerId)]) {
         for (state, id) in all_ids {
-            //    let init = self.init.as_ref().map_or_else(|| None, |x| Some((Arc::clone(x), all_ids.len())));
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);
             let spawns = Arc::clone(&self.spawns);
@@ -436,7 +436,7 @@ impl DockerData {
     }
 
     /// Send an update message every x ms, where x is the args.docker_interval
-    fn croner(args: &CliArgs, docker_tx: Sender<DockerMessage>) {
+    fn scheduler(args: &CliArgs, docker_tx: Sender<DockerMessage>) {
         let update_duration = std::time::Duration::from_millis(u64::from(args.docker_interval));
         let mut now = std::time::Instant::now();
         tokio::spawn(async move {
@@ -472,10 +472,152 @@ impl DockerData {
                 spawns: Arc::new(Mutex::new(HashMap::new())),
             };
             inner.initialise_container_data().await;
-            Self::croner(&args, docker_tx);
+            Self::scheduler(&args, docker_tx);
             inner.message_handler().await;
         }
     }
 }
 
 // tests, use redis-test container, check logs exists, and selector of logs, and that it increases, and matches end, when you run restart on the docker containers
+#[cfg(test)]
+mod tests {
+    use bollard::container::{
+        BlkioStats, CPUStats, CPUUsage, MemoryStats, PidsStats, StorageStats, ThrottlingData,
+    };
+
+    use super::*;
+
+    #[allow(clippy::too_many_lines)]
+    fn gen_stats(x: u64, y: u64) -> Stats {
+        Stats {
+            read: String::new(),
+            preread: String::new(),
+            num_procs: 0,
+            pids_stats: PidsStats {
+                current: None,
+                limit: None,
+            },
+            network: None,
+            networks: None,
+            memory_stats: MemoryStats {
+                stats: None,
+                max_usage: None,
+                usage: None,
+                failcnt: None,
+                limit: None,
+                commit: None,
+                commit_peak: None,
+                commitbytes: None,
+                commitpeakbytes: None,
+                privateworkingset: None,
+            },
+            blkio_stats: BlkioStats {
+                io_service_bytes_recursive: None,
+                io_serviced_recursive: None,
+                io_queue_recursive: None,
+                io_service_time_recursive: None,
+                io_wait_time_recursive: None,
+                io_merged_recursive: None,
+                io_time_recursive: None,
+                sectors_recursive: None,
+            },
+            cpu_stats: CPUStats {
+                cpu_usage: CPUUsage {
+                    percpu_usage: Some(vec![
+                        291_593_800,
+                        182_192_900,
+                        195_048_700,
+                        23_032_300,
+                        132_928_700,
+                        235_555_600,
+                        120_225_700,
+                        175_752_000,
+                        213_060_300,
+                        95_321_600,
+                        226_821_000,
+                        0,
+                        109_151_300,
+                        0,
+                        86_240_200,
+                        1_884_400,
+                        59_077_300,
+                        23_224_900,
+                        95_386_300,
+                        144_987_400,
+                    ]),
+                    total_usage: 250_000_000,
+                    usage_in_usermode: 1_020_000_000,
+                    usage_in_kernelmode: 1_030_000_000,
+                },
+                system_cpu_usage: Some(x),
+                online_cpus: Some(1),
+                throttling_data: ThrottlingData {
+                    periods: 0,
+                    throttled_periods: 0,
+                    throttled_time: 0,
+                },
+            },
+            precpu_stats: CPUStats {
+                cpu_usage: CPUUsage {
+                    percpu_usage: Some(vec![
+                        291_593_800,
+                        182_192_900,
+                        195_048_700,
+                        23_032_300,
+                        132_928_700,
+                        235_555_600,
+                        120_225_700,
+                        175_752_000,
+                        213_060_300,
+                        95_321_600,
+                        226_821_000,
+                        0,
+                        109_151_300,
+                        0,
+                        86_240_200,
+                        1_884_400,
+                        59_077_300,
+                        23_224_900,
+                        93_831_100,
+                        144_987_400,
+                    ]),
+                    total_usage: 200_000_000,
+                    usage_in_usermode: 1_020_000_000,
+                    usage_in_kernelmode: 1_020_000_000,
+                },
+                system_cpu_usage: Some(y),
+                online_cpus: Some(1),
+                throttling_data: ThrottlingData {
+                    periods: 0,
+                    throttled_periods: 0,
+                    throttled_time: 0,
+                },
+            },
+            storage_stats: StorageStats {
+                read_count_normalized: None,
+                read_size_bytes: None,
+                write_count_normalized: None,
+                write_size_bytes: None,
+            },
+            name: "/container_1".to_owned(),
+            id: "1".to_owned(),
+        }
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    /// Test the stats calculator, had to cheat here to get round input/outputs
+    fn test_calculate_usage_no_previous_cpu() {
+        let stats = gen_stats(1_000_000_000, 900_000_000);
+        let result = DockerData::calculate_usage(&stats);
+        assert_eq!(result, 50.0);
+
+        let stats = gen_stats(1_000_000_000, 800_000_000);
+        let result = DockerData::calculate_usage(&stats);
+        assert_eq!(result, 25.0);
+
+        let stats = gen_stats(1_000_000_000, 750_000_000);
+        let result = DockerData::calculate_usage(&stats);
+        assert_eq!(result, 20.00);
+    }
+}

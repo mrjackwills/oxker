@@ -157,7 +157,8 @@ see <a href="https://forums.raspberrypi.com/viewtopic.php?t=203128" target='_bla
 
 ## Tests
 
-As of yet untested, needs work
+~~As of yet untested, needs work~~
+The work has been done
 
 ```shell
 cargo test -- --test-threads=1

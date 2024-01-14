@@ -161,7 +161,7 @@ impl<T> StatefulList<T> {
                 .state
                 .selected()
                 .map_or(0, |value| if len > 0 { value + 1 } else { value });
-            format!("{c}/{}", self.items.len())
+            format!(" {c}/{}", self.items.len())
         }
     }
 }
@@ -628,5 +628,100 @@ impl Columns {
             net_rx: (Header::Rx, 7),
             net_tx: (Header::Tx, 7),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ratatui::widgets::ListItem;
+
+    use crate::{
+        app_data::{ContainerImage, Logs},
+        ui::log_sanitizer,
+    };
+
+    use super::{ByteStats, ContainerName, CpuStats, LogsTz};
+
+    #[test]
+    // Display CpuStats as a string
+    fn test_container_state_cpustats_to_string() {
+        let test = |f: f64, s: &str| {
+            assert_eq!(CpuStats::new(f).to_string(), s);
+        };
+
+        test(0.0, "00.00%");
+        test(1.5, "01.50%");
+        test(15.15, "15.15%");
+        test(150.15, "150.15%");
+    }
+
+    #[test]
+    // Display bytestats as a string, convert into correct data unit (Kb, MB, GB)
+    fn test_container_state_bytestats_to_string() {
+        let test = |u: u64, s: &str| {
+            assert_eq!(ByteStats::new(u).to_string(), s);
+        };
+
+        test(0, "0.00 kB");
+        test(150, "0.15 kB");
+        test(1500, "1.50 kB");
+        test(150_000, "150.00 kB");
+        test(1_500_000, "1.50 MB");
+        test(15_000_000, "15.00 MB");
+        test(150_000_000, "150.00 MB");
+        test(1_500_000_000, "1.50 GB");
+        test(15_000_000_000, "15.00 GB");
+        test(150_000_000_000, "150.00 GB");
+    }
+
+    #[test]
+    /// ContainerName as string truncated correctly
+    fn test_container_state_container_name_to_string() {
+        let result = ContainerName::from("name_01");
+        assert_eq!(result.to_string(), "name_01");
+
+        let result = ContainerName::from("name_01_name_01_name_01_name_01_");
+        assert_eq!(result.to_string(), "name_01_name_01_name_01_name_…");
+
+        let result = result.get();
+        assert_eq!(result, "name_01_name_01_name_01_name_01_");
+    }
+
+    #[test]
+    /// ContainerImage as string truncated correctly
+    fn test_container_state_container_image() {
+        let result = ContainerImage::from("name_01");
+        assert_eq!(result.to_string(), "name_01");
+
+        let result = ContainerImage::from("name_01_name_01_name_01_name_01_");
+        assert_eq!(result.to_string(), "name_01_name_01_name_01_name_…");
+
+        let result = result.get();
+        assert_eq!(result, "name_01_name_01_name_01_name_01_");
+    }
+
+    #[test]
+    /// Logs can only contain 1 entry per LogzTz
+    fn test_container_state_logz() {
+        let input = "2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet";
+        let tz = LogsTz::from(input);
+        let mut logs = Logs::default();
+        let line = log_sanitizer::remove_ansi(input);
+
+        logs.insert(ListItem::new(line.clone()), tz.clone());
+        logs.insert(ListItem::new(line.clone()), tz.clone());
+        logs.insert(ListItem::new(line), tz);
+
+        assert_eq!(logs.logs.items.len(), 1);
+
+        let input = "2023-01-15T19:13:30.783138328Z Lorem ipsum dolor sit amet";
+        let tz = LogsTz::from(input);
+        let line = log_sanitizer::remove_ansi(input);
+
+        logs.insert(ListItem::new(line.clone()), tz.clone());
+        logs.insert(ListItem::new(line.clone()), tz.clone());
+        logs.insert(ListItem::new(line), tz);
+
+        assert_eq!(logs.logs.items.len(), 2);
     }
 }

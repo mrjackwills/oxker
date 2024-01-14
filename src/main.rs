@@ -164,3 +164,82 @@ async fn main() {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::many_single_char_names, unused)]
+mod tests {
+    use bollard::service::ContainerSummary;
+
+    use crate::{
+        app_data::{AppData, ContainerId, ContainerItem, State, StatefulList},
+        parse_args::CliArgs,
+    };
+
+    pub const fn gen_args() -> CliArgs {
+        CliArgs {
+            color: false,
+            docker_interval: 1000,
+            gui: true,
+            host: None,
+            in_container: false,
+            save_dir: None,
+            raw: false,
+            show_self: false,
+            timestamp: false,
+            use_cli: false,
+        }
+    }
+
+    pub fn gen_item(id: &ContainerId, index: usize) -> ContainerItem {
+        ContainerItem::new(
+            u64::try_from(index).unwrap(),
+            id.clone(),
+            format!("image_{index}"),
+            false,
+            format!("container_{index}"),
+            State::Running,
+            format!("Up {index} hour"),
+        )
+    }
+
+    pub fn gen_appdata(containers: &[ContainerItem]) -> AppData {
+        AppData {
+            containers: StatefulList::new(containers.to_vec()),
+            error: None,
+            sorted_by: None,
+            args: gen_args(),
+        }
+    }
+
+    pub fn gen_containers() -> (Vec<ContainerId>, Vec<ContainerItem>) {
+        let ids = (1..=3)
+            .map(|i| ContainerId::from(format!("{i}").as_str()))
+            .collect::<Vec<_>>();
+        let containers = ids
+            .iter()
+            .enumerate()
+            .map(|(index, id)| gen_item(id, index + 1))
+            .collect::<Vec<_>>();
+        (ids, containers)
+    }
+
+    pub fn gen_container_summary(index: usize, state: &str) -> ContainerSummary {
+        ContainerSummary {
+            id: Some(format!("{index}")),
+            names: Some(vec![format!("container_{}", index)]),
+            image: Some(format!("image_{index}")),
+            image_id: Some(format!("{index}")),
+            command: None,
+            created: Some(i64::try_from(index).unwrap()),
+            ports: None,
+            size_rw: None,
+            size_root_fs: None,
+            labels: None,
+            state: Some(state.to_owned()),
+            status: Some(format!("Up {index} hour")),
+            host_config: None,
+            network_settings: None,
+            mounts: None,
+        }
+    }
+}

@@ -54,9 +54,9 @@ impl fmt::Display for Header {
     }
 }
 
-#[cfg(not(debug_assertions))]
 /// Global app_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
+#[cfg(not(test))]
 pub struct AppData {
     containers: StatefulList<ContainerItem>,
     error: Option<AppError>,
@@ -64,49 +64,23 @@ pub struct AppData {
     pub args: CliArgs,
 }
 
-#[cfg(debug_assertions)]
-/// Global app_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
+#[cfg(test)]
 pub struct AppData {
-    containers: StatefulList<ContainerItem>,
-    error: Option<AppError>,
-    sorted_by: Option<(Header, SortedOrder)>,
-    debug_string: String,
+    pub containers: StatefulList<ContainerItem>,
+    pub error: Option<AppError>,
+    pub sorted_by: Option<(Header, SortedOrder)>,
     pub args: CliArgs,
 }
 
 impl AppData {
-    #[cfg(debug_assertions)]
-    pub fn get_debug_string(&self) -> &str {
-        &self.debug_string
-    }
-
-    #[cfg(debug_assertions)]
-    #[allow(unused)]
-    pub fn push_debug_string(&mut self, x: &str) {
-        self.debug_string.push_str(x);
-    }
-
     /// Generate a default app_state
-    #[cfg(not(debug_assertions))]
     pub fn default(args: CliArgs) -> Self {
         Self {
             args,
             containers: StatefulList::new(vec![]),
             error: None,
             sorted_by: None,
-        }
-    }
-
-    /// Generate a default app_state
-    #[cfg(debug_assertions)]
-    pub fn default(args: CliArgs) -> Self {
-        Self {
-            args,
-            containers: StatefulList::new(vec![]),
-            error: None,
-            sorted_by: None,
-            debug_string: String::new(),
         }
     }
 
@@ -380,7 +354,7 @@ impl AppData {
             .map_or_else(String::new, |ci| {
                 let logs_len = ci.logs.get_state_title();
                 let prefix = if logs_len.is_empty() {
-                    String::new()
+                    String::from(" ")
                 } else {
                     format!("{logs_len} ")
                 };
@@ -690,70 +664,21 @@ impl AppData {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::many_single_char_names, unused)]
+#[allow(clippy::unwrap_used, clippy::many_single_char_names)]
 mod tests {
 
+    use super::*;
+    use crate::tests::{gen_appdata, gen_container_summary, gen_containers};
     use std::collections::VecDeque;
 
-    use super::*;
-
-    const fn gen_args() -> CliArgs {
-        CliArgs {
-            color: false,
-            docker_interval: 1000,
-            gui: true,
-            host: None,
-            in_container: false,
-            save_dir: None,
-            raw: false,
-            show_self: false,
-            timestamp: false,
-            use_cli: false,
-        }
-    }
-
-    fn gen_item(id: &ContainerId, index: usize) -> ContainerItem {
-        ContainerItem::new(
-            u64::try_from(index).unwrap(),
-            id.clone(),
-            format!("image_{index}"),
-            false,
-            format!("container_{index}"),
-            State::Running,
-            format!("Up {index} hour"),
-        )
-    }
-
-    fn gen_appdata(containers: &[ContainerItem]) -> AppData {
-        AppData {
-            containers: StatefulList::new(containers.to_vec()),
-            error: None,
-            sorted_by: None,
-            debug_string: String::new(),
-            args: gen_args(),
-        }
-    }
-
-    fn gen_containers() -> (Vec<ContainerId>, Vec<ContainerItem>) {
-        let ids = (1..=3)
-            .map(|i| ContainerId::from(format!("{i}").as_str()))
-            .collect::<Vec<_>>();
-        let containers = ids
-            .iter()
-            .enumerate()
-            .map(|(index, id)| gen_item(id, index + 1))
-            .collect::<Vec<_>>();
-        (ids, containers)
-    }
-
-    // ******** //
-    // Sort by  //
-    // ******** //
+    // ******* //
+    // Sort by //
+    // ******* //
 
     #[test]
     /// Sort by header: name
     fn test_app_data_set_sort_by_header_name() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -780,7 +705,7 @@ mod tests {
     #[test]
     /// Sort by header: state
     fn test_app_data_set_sort_by_header_state() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -817,7 +742,7 @@ mod tests {
     #[test]
     /// Sort by header: status
     fn test_app_data_set_sort_by_header_status() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -853,7 +778,7 @@ mod tests {
     #[test]
     /// Sort by header: cpu
     fn test_app_data_set_sort_by_header_cpu() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -890,7 +815,7 @@ mod tests {
     #[test]
     /// Sort by header: memory
     fn test_app_data_set_sort_by_header_mem() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -927,7 +852,7 @@ mod tests {
     #[test]
     /// Sort by header: id
     fn test_app_data_set_sort_by_header_id() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -954,7 +879,7 @@ mod tests {
     #[test]
     /// Sort by header: image
     fn test_app_data_set_sort_by_header_image() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -981,7 +906,7 @@ mod tests {
     #[test]
     /// Sort by header: rx
     fn test_app_data_set_sort_by_header_rx() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -1018,7 +943,7 @@ mod tests {
     #[test]
     /// Sort by header: tx
     fn test_app_data_set_sort_by_header_tx() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -1055,7 +980,7 @@ mod tests {
     #[test]
     /// Sort by header when selected headers match
     fn test_app_data_set_sort_by_header_match() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -1082,7 +1007,7 @@ mod tests {
     #[test]
     /// reset sorted
     fn test_app_data_reset_sorted() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
 
@@ -1121,18 +1046,18 @@ mod tests {
     #[test]
     /// Get len of current containers vec
     fn test_app_data_get_container_len() {
-        let (ids, containers) = gen_containers();
-        let mut app_data = gen_appdata(&containers);
+        let (_ids, containers) = gen_containers();
+        let app_data = gen_appdata(&containers);
         assert_eq!(app_data.get_container_len(), 3);
     }
 
     #[test]
     /// Select the first container
     fn test_app_data_containers_start() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
-        /// No container selected
+        // No container selected
         let result = app_data.get_container_state();
         assert_eq!(result.selected(), None);
         assert_eq!(result.offset(), 0);
@@ -1174,7 +1099,7 @@ mod tests {
     /// advance container list state by one
     /// get get_selected_container_id() & get_selected_container_id_state_name() return valid Some data
     fn test_app_data_containers_next() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
         // Advance list state by 1
@@ -1202,7 +1127,7 @@ mod tests {
     /// advance container list state to the end
     /// get get_selected_container_id() & get_selected_container_id_state_name() return valid Some data
     fn test_app_data_containers_end() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
         app_data.containers_end();
@@ -1240,7 +1165,7 @@ mod tests {
     #[test]
     /// go to previous container
     fn test_app_data_containers_prev() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
         app_data.containers_end();
@@ -1253,7 +1178,7 @@ mod tests {
     #[test]
     // Get the currently selected container
     fn test_app_data_get_selected_container() {
-        let (ids, mut containers) = gen_containers();
+        let (_ids, mut containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
         let result = app_data.get_selected_container();
@@ -1265,7 +1190,7 @@ mod tests {
         let result = app_data.get_selected_container();
         assert_eq!(result, Some(&containers[1]));
 
-        /// As above, but now as mut
+        // As above, but now as mut
         let result = app_data.get_mut_selected_container();
         assert_eq!(result, Some(&mut containers[1]));
     }
@@ -1273,7 +1198,7 @@ mod tests {
     #[test]
     // Get mut container by id
     fn test_app_data_get_container_by_id() {
-        let (ids, mut containers) = gen_containers();
+        let (_ids, mut containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
         let result = app_data.get_container_by_id(&ContainerId::from("2"));
@@ -1283,7 +1208,7 @@ mod tests {
     #[test]
     // Get just the containers name by id
     fn test_app_data_get_container_name_by_id() {
-        let (ids, mut containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
         let result = app_data.get_container_name_by_id(&ContainerId::from("2"));
@@ -1293,7 +1218,7 @@ mod tests {
     #[test]
     // Get the id of the currently selected container
     fn test_app_data_get_selected_container_id() {
-        let (ids, mut containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
         app_data.containers_end();
 
@@ -1303,7 +1228,7 @@ mod tests {
 
     #[test]
     fn test_app_data_get_selected_container_id_state_name() {
-        let (ids, mut containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
         app_data.containers_end();
 
@@ -1325,7 +1250,7 @@ mod tests {
     #[test]
     /// Docker commands returned correctly
     fn test_app_data_selected_docker_command() {
-        let (ids, mut containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
         // No commands when no container selected
@@ -1343,7 +1268,7 @@ mod tests {
     #[test]
     /// Docker command next works
     fn test_app_data_selected_docker_command_next() {
-        let (ids, mut containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
         app_data.containers_start();
         app_data.docker_controls_start();
@@ -1356,7 +1281,7 @@ mod tests {
     #[test]
     /// Dockercommand end works, and next has no effect when at end
     fn test_app_data_selected_docker_command_end() {
-        let (ids, mut containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
         app_data.containers_start();
         app_data.docker_controls_end();
@@ -1364,7 +1289,7 @@ mod tests {
         let result = app_data.selected_docker_controls();
         assert_eq!(result, Some(DockerControls::Delete));
 
-        /// Next has no effect when at end
+        // Next has no effect when at end
         app_data.docker_controls_next();
         let result = app_data.selected_docker_controls();
         assert_eq!(result, Some(DockerControls::Delete));
@@ -1373,7 +1298,7 @@ mod tests {
     #[test]
     /// Docker commands previous works, and has no effect when at start
     fn test_app_data_selected_docker_command_previous() {
-        let (ids, mut containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
         app_data.containers_start();
         app_data.docker_controls_end();
@@ -1382,7 +1307,7 @@ mod tests {
         let result = app_data.selected_docker_controls();
         assert_eq!(result, Some(DockerControls::Stop));
 
-        /// previous has no effect when at start
+        // previous has no effect when at start
         app_data.docker_controls_start();
         app_data.docker_controls_previous();
         let result = app_data.selected_docker_controls();
@@ -1471,18 +1396,18 @@ mod tests {
         // No logs
         app_data.containers.start();
         let result = app_data.get_log_title();
-        assert_eq!(result, "- container_1");
+        assert_eq!(result, " - container_1");
 
         // On last line of logs
         let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[0]);
         let result = app_data.get_log_title();
-        assert_eq!(result, "3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1");
 
         // Change log state to no longer be at the end
         app_data.log_previous();
         let result = app_data.get_log_title();
-        assert_eq!(result, "2/3 - container_1");
+        assert_eq!(result, " 2/3 - container_1");
     }
 
     #[test]
@@ -1498,23 +1423,23 @@ mod tests {
         app_data.containers_start();
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "- container_1");
+        assert_eq!(result, " - container_1");
 
         // change container
         app_data.containers_next();
         let result = app_data.get_log_title();
-        assert_eq!(result, "- container_2");
+        assert_eq!(result, " - container_2");
 
         // On last line of logs
         let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[1]);
         let result = app_data.get_log_title();
-        assert_eq!(result, "3/3 - container_2");
+        assert_eq!(result, " 3/3 - container_2");
 
         // Change log state to no longer be at the end
         app_data.log_previous();
         let result = app_data.get_log_title();
-        assert_eq!(result, "2/3 - container_2");
+        assert_eq!(result, " 2/3 - container_2");
     }
 
     #[test]
@@ -1542,7 +1467,7 @@ mod tests {
         assert_eq!(result.len(), 3);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1");
     }
 
     #[test]
@@ -1562,7 +1487,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1");
     }
 
     #[test]
@@ -1582,7 +1507,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1");
 
         app_data.log_end();
         let result = app_data.get_log_state();
@@ -1591,7 +1516,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1");
     }
 
     #[test]
@@ -1612,7 +1537,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1");
 
         app_data.log_next();
 
@@ -1622,7 +1547,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "2/3 - container_1");
+        assert_eq!(result, " 2/3 - container_1");
 
         app_data.log_next();
         let result = app_data.get_log_state();
@@ -1631,7 +1556,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1");
         app_data.log_next();
 
         let result = app_data.get_log_state();
@@ -1640,7 +1565,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1");
     }
 
     #[test]
@@ -1661,7 +1586,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, "3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1");
 
         app_data.log_previous();
 
@@ -1670,7 +1595,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(1));
         assert_eq!(result.unwrap().offset(), 0);
         let result = app_data.get_log_title();
-        assert_eq!(result, "2/3 - container_1");
+        assert_eq!(result, " 2/3 - container_1");
 
         app_data.log_previous();
         let result = app_data.get_log_state();
@@ -1678,7 +1603,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
         assert_eq!(result.unwrap().offset(), 0);
         let result = app_data.get_log_title();
-        assert_eq!(result, "1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1");
 
         app_data.log_previous();
         let result = app_data.get_log_state();
@@ -1686,7 +1611,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
         assert_eq!(result.unwrap().offset(), 0);
         let result = app_data.get_log_title();
-        assert_eq!(result, "1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1");
     }
 
     // ********** //
@@ -1696,7 +1621,7 @@ mod tests {
     #[test]
     /// Chart data returned correctly
     fn test_app_data_get_chart_data() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
         let result = app_data.get_chart_data();
@@ -1734,8 +1659,8 @@ mod tests {
     #[test]
     /// Header widths return correctly
     fn test_app_data_get_width() {
-        let (ids, containers) = gen_containers();
-        let mut app_data = gen_appdata(&containers);
+        let (_ids, containers) = gen_containers();
+        let app_data = gen_appdata(&containers);
 
         let result = app_data.get_width();
         let expected = Columns {
@@ -1780,45 +1705,12 @@ mod tests {
     #[test]
     /// Update stats functioning
     fn test_app_data_update_containers() {
-        let (ids, containers) = gen_containers();
+        let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
         let result_pre = app_data.get_container_items().clone();
-
         let mut input = vec![
-            ContainerSummary {
-                id: Some("1".to_owned()),
-                names: Some(vec!["container_1".to_owned()]),
-                image: Some("image_1".to_owned()),
-                image_id: Some("1".to_owned()),
-                command: None,
-                created: Some(1),
-                ports: None,
-                size_rw: None,
-                size_root_fs: None,
-                labels: None,
-                state: Some("paused".to_owned()),
-                status: Some("Up 1 hour".to_owned()),
-                host_config: None,
-                network_settings: None,
-                mounts: None,
-            },
-            ContainerSummary {
-                id: Some("2".to_owned()),
-                names: Some(vec!["container_2".to_owned()]),
-                image: Some("image_2".to_owned()),
-                image_id: Some("2".to_owned()),
-                command: None,
-                created: Some(2),
-                ports: None,
-                size_rw: None,
-                size_root_fs: None,
-                labels: None,
-                state: Some("dead".to_owned()),
-                status: Some("Up 2 hour".to_owned()),
-                host_config: None,
-                network_settings: None,
-                mounts: None,
-            },
+            gen_container_summary(1, "paused"),
+            gen_container_summary(2, "dead"),
         ];
 
         app_data.update_containers(&mut input);
