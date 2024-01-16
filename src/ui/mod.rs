@@ -217,22 +217,6 @@ impl Ui {
     }
 }
 
-#[cfg(not(debug_assertions))]
-fn get_wholelayout(f: &Frame) -> std::rc::Rc<[ratatui::layout::Rect]> {
-    Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(1), Constraint::Min(100)].as_ref())
-        .split(f.size())
-}
-
-#[cfg(debug_assertions)]
-fn get_wholelayout(f: &Frame) -> std::rc::Rc<[ratatui::layout::Rect]> {
-    Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(1), Constraint::Min(1), Constraint::Min(100)].as_ref())
-        .split(f.size())
-}
-
 /// Frequent data required by multiple framde drawing functions, can reduce mutex reads by placing it all in here
 #[derive(Debug)]
 pub struct FrameData {
@@ -279,21 +263,16 @@ impl From<(MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)> for FrameData {
 fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mutex<GuiState>>) {
     let fd = FrameData::from((app_data.lock(), gui_state.lock()));
 
-    let whole_layout = get_wholelayout(f);
-    #[cfg(debug_assertions)]
-    draw_blocks::debug_bar(whole_layout[0], f, app_data.lock().get_debug_string());
-
-    #[cfg(debug_assertions)]
-    let whole_layout_split = (1, 2);
-
-    #[cfg(not(debug_assertions))]
-    let whole_layout_split = (0, 1);
+    let whole_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Min(100)].as_ref())
+        .split(f.size());
 
     // Split into 3, containers+controls, logs, then graphs
     let upper_main = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Max(fd.height), Constraint::Percentage(50)].as_ref())
-        .split(whole_layout[whole_layout_split.1]);
+        .split(whole_layout[1]);
 
     let top_split = if fd.has_containers {
         vec![Constraint::Percentage(90), Constraint::Percentage(10)]
@@ -318,11 +297,11 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
         .constraints(lower_split)
         .split(upper_main[1]);
 
-    draw_blocks::containers(app_data, top_panel[0], f, &fd, gui_state, &fd.columns);
+    draw_blocks::containers(app_data, top_panel[0], f, &fd, gui_state);
 
     draw_blocks::logs(app_data, lower_main[0], f, &fd, gui_state);
 
-    draw_blocks::heading_bar(whole_layout[whole_layout_split.0], f, &fd, gui_state);
+    draw_blocks::heading_bar(whole_layout[0], f, &fd, gui_state);
 
     if let Some(id) = fd.delete_confirm.as_ref() {
         app_data.lock().get_container_name_by_id(id).map_or_else(
