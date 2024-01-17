@@ -1,12 +1,16 @@
 ### Chores
 + dependencies updated, [53b4bafbe53312fe41608ddf33e865d474222aaa], [58ef151600e362048a607c8ae61a5edfe80ab1dd]
 + files formatted, [1806165c3e266876b2d1806f7b662d09705f3aad]
++ create_release.sh check for unused lint, [d0b27211928f93f8455e1ee5a6a6485c6a21d382]
 
 ### Fixes
 + sort arrow now on left of header, [40ddcb727d2c1758d6dd26a58507b85b219f51e2]
 
 ### Refactos
 + rename string_wrapper > unit_struct, [27cf53e41f8b379f606c1c27620ee08e79bac57e]
+
+### Tests
++ Finally have tests, currently for layout and associated methods. Running the tests will not interfere with any running Docker containers, [4bcf77db776a36e0a8151ecfbda722a66c4ba46c]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.5.0'>v0.5.0</a>
 ### 2024-01-05

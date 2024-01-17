@@ -2369,7 +2369,7 @@ mod tests {
     // Help popup //
     // ********** //
     #[test]
-    // This will cause issues onces the version has more than the current 5 chars (0.5.0)
+    // This will cause issues once the version has more than the current 5 chars (0.5.0)
     // Help  popup is drawn correctly
     fn test_draw_blocks_help() {
         let (w, h) = (87, 30);
