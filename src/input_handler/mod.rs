@@ -286,8 +286,8 @@ impl InputHandler {
                         DockerControls::Pause => {
                             self.docker_tx.send(DockerMessage::Pause(id)).await.ok()
                         }
-                        DockerControls::Unpause => {
-                            self.docker_tx.send(DockerMessage::Unpause(id)).await.ok()
+                        DockerControls::Resume => {
+                            self.docker_tx.send(DockerMessage::Resume(id)).await.ok()
                         }
                         DockerControls::Start => {
                             self.docker_tx.send(DockerMessage::Start(id)).await.ok()

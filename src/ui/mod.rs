@@ -286,7 +286,7 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
         .split(upper_main[0]);
 
     let lower_split = if fd.has_containers {
-        vec![Constraint::Percentage(75), Constraint::Percentage(25)]
+        vec![Constraint::Percentage(70), Constraint::Percentage(20)]
     } else {
         vec![Constraint::Percentage(100)]
     };
@@ -319,7 +319,18 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
     // only draw commands + charts if there are containers
     if fd.has_containers {
         draw_blocks::commands(app_data, top_panel[1], f, &fd, gui_state);
-        draw_blocks::chart(f, lower_main[1], app_data);
+
+        // Can calculate the max string length here, and then use that to keep the ports section as small as possible (+4 for some padding + border)
+        let max_lens = app_data.lock().get_longest_port();
+        let ports_len = u16::try_from(max_lens.0 + max_lens.1 + max_lens.2 + 2).unwrap_or(26);
+
+        let lower = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Min(1), Constraint::Max(ports_len)])
+            .split(lower_main[1]);
+
+        draw_blocks::chart(f, lower[0], app_data);
+        draw_blocks::ports(f, lower[1], app_data, max_lens);
     }
 
     if let Some((text, instant)) = fd.info_text {
