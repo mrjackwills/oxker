@@ -72,3 +72,79 @@ pub mod log_sanitizer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ratatui::{
+        style::{Color, Style},
+        text::{Line, Span},
+    };
+
+    use super::log_sanitizer;
+
+    // This spells out "oxker", with each char having a foreground and background colour
+    const INPUT: &str = "\x1b[31;47mo\x1b[32;40mx\x1b[33;41mk\x1b[34;42me\x1b[35;43mr\x1b[0m";
+
+    #[test]
+    /// Return test raw, as in show escape codes
+    fn color_match_raw() {
+        let result = log_sanitizer::raw(INPUT);
+        let expected = vec![Line {
+            spans: [Span {
+                content: std::borrow::Cow::Borrowed(
+                    "\x1b[31;47mo\x1b[32;40mx\x1b[33;41mk\x1b[34;42me\x1b[35;43mr\x1b[0m",
+                ),
+                style: Style::default(),
+            }]
+            .to_vec(),
+            alignment: None,
+        }];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    // Use the escape codes to colorize the text
+    fn color_match_colorize() {
+        let result = log_sanitizer::colorize_logs(INPUT);
+        let expected = vec![Line {
+            spans: vec![
+                Span {
+                    content: std::borrow::Cow::Borrowed("o"),
+                    style: Style::default().fg(Color::Red).bg(Color::White),
+                },
+                Span {
+                    content: std::borrow::Cow::Borrowed("x"),
+                    style: Style::default().fg(Color::Green).bg(Color::Black),
+                },
+                Span {
+                    content: std::borrow::Cow::Borrowed("k"),
+                    style: Style::default().fg(Color::Yellow).bg(Color::Red),
+                },
+                Span {
+                    content: std::borrow::Cow::Borrowed("e"),
+                    style: Style::default().fg(Color::Blue).bg(Color::Green),
+                },
+                Span {
+                    content: std::borrow::Cow::Borrowed("r"),
+                    style: Style::default().fg(Color::Magenta).bg(Color::Yellow),
+                },
+            ],
+            alignment: None,
+        }];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    // Remove all escape ansi codes from given input
+    fn color_match_remove_ansi() {
+        let result = log_sanitizer::remove_ansi(INPUT);
+        let expected = vec![Line {
+            spans: vec![Span {
+                content: std::borrow::Cow::Borrowed("oxker"),
+                style: Style::default(),
+            }],
+            alignment: None,
+        }];
+        assert_eq!(result, expected);
+    }
+}

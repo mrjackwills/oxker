@@ -11,6 +11,8 @@ services:
     ipc: private
     restart: always
     shm_size: 256MB
+    ports:
+      - "127.0.0.1:4040:4040"
     networks:
       - oxker-example-net
     deploy:

@@ -1,7 +1,7 @@
 use parking_lot::Mutex;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Color, Modifier, Style, Stylize},
     symbols,
     text::{Line, Span},
     widgets::{
@@ -66,10 +66,10 @@ fn generate_block<'a>(
         .update_region_map(Region::Panel(panel), area);
     let mut title = match panel {
         SelectablePanel::Containers => {
-            format!("{} {}", panel.title(), app_data.lock().container_title())
+            format!("{}{}", panel.title(), app_data.lock().container_title())
         }
         SelectablePanel::Logs => {
-            format!("{} {}", panel.title(), app_data.lock().get_log_title())
+            format!("{}{}", panel.title(), app_data.lock().get_log_title())
         }
         SelectablePanel::Commands => String::new(),
     };
@@ -95,6 +95,7 @@ pub fn commands(
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = || generate_block(app_data, area, fd, gui_state, SelectablePanel::Commands);
+    // let block = block();
     let items = app_data.lock().get_control_items().map_or(vec![], |i| {
         i.iter()
             .map(|c| {
@@ -115,6 +116,7 @@ pub fn commands(
     if let Some(i) = app_data.lock().get_control_state() {
         f.render_stateful_widget(items, area, i);
     } else {
+        let block = || generate_block(app_data, area, fd, gui_state, SelectablePanel::Commands);
         let paragraph = Paragraph::new("")
             .block(block())
             .alignment(Alignment::Center);
@@ -207,7 +209,6 @@ pub fn containers(
     f: &mut Frame,
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
-    widths: &Columns,
 ) {
     let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Containers);
 
@@ -215,7 +216,7 @@ pub fn containers(
         .lock()
         .get_container_items()
         .iter()
-        .map(|i| ListItem::new(format_containers(i, widths)))
+        .map(|i| ListItem::new(format_containers(i, &fd.columns)))
         .collect::<Vec<_>>();
 
     if items.is_empty() {
@@ -268,6 +269,65 @@ pub fn logs(
     }
 }
 
+// Display the ports in a formatted list
+pub fn ports(
+    f: &mut Frame,
+    area: Rect,
+    app_data: &Arc<Mutex<AppData>>,
+    max_lens: (usize, usize, usize),
+) {
+    if let Some(ports) = app_data.lock().get_selected_ports() {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .title_alignment(Alignment::Center)
+            .title(Span::styled(
+                " ports ",
+                Style::default()
+                    .fg(ports.1.get_color())
+                    .add_modifier(Modifier::BOLD),
+            ));
+
+        let (ip, private, public) = max_lens;
+
+        if ports.0.is_empty() {
+            let text = match ports.1 {
+                State::Running | State::Paused | State::Restarting => "no ports",
+                _ => "",
+            };
+            let paragraph = Paragraph::new(Span::from(text).add_modifier(Modifier::BOLD))
+                .alignment(Alignment::Center)
+                .block(block);
+            f.render_widget(paragraph, area);
+        } else {
+            let mut output = vec![Line::from(
+                Span::from(format!(
+                    "{:>ip$}{:>private$}{:>public$}",
+                    "ip", "private", "public"
+                ))
+                .fg(Color::Yellow),
+            )];
+            for (index, item) in ports.0.iter().enumerate() {
+                let fg = if index % 2 == 0 {
+                    Color::White
+                } else {
+                    Color::Magenta
+                };
+                let strings = item.print();
+
+                let line = vec![
+                    Span::from(format!("{:>ip$}", strings.0)).fg(fg),
+                    Span::from(format!("{:>private$}", strings.1)).fg(fg),
+                    Span::from(format!("{:>public$}", strings.2)).fg(fg),
+                ];
+                output.push(Line::from(line));
+            }
+            let paragraph = Paragraph::new(output).block(block);
+            f.render_widget(paragraph, area);
+        }
+    }
+}
+
 /// Draw the cpu + mem charts
 pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
     if let Some((cpu, mem)) = app_data.lock().get_chart_data() {
@@ -306,10 +366,7 @@ fn make_chart<'a, T: Stats + Display>(
     current: &'a T,
     max: &'a T,
 ) -> Chart<'a> {
-    let title_color = match state {
-        State::Running => Color::Green,
-        _ => state.get_color(),
-    };
+    let title_color = state.get_color();
     let label_color = match state {
         State::Running => ORANGE,
         _ => state.get_color(),
@@ -364,22 +421,22 @@ pub fn heading_bar(
     // Generate a block for the header, if the header is currently being used to sort a column, then highlight it white
     let header_block = |x: &Header| {
         let mut color = Color::Black;
-        let mut suffix = "";
-        let mut suffix_margin = 0;
+        let mut prefix = "";
+        let mut prefix_margin = 0;
         if let Some((a, b)) = data.sorted_by.as_ref() {
             if x == a {
                 match b {
-                    SortedOrder::Asc => suffix = " ▲",
-                    SortedOrder::Desc => suffix = " ▼",
+                    SortedOrder::Asc => prefix = "▲ ",
+                    SortedOrder::Desc => prefix = "▼ ",
                 }
-                suffix_margin = 2;
+                prefix_margin = 2;
                 color = Color::White;
             };
         };
         (
             Block::default().style(Style::default().bg(Color::Magenta).fg(color)),
-            suffix,
-            suffix_margin,
+            prefix,
+            prefix_margin,
         )
     };
 
@@ -390,30 +447,26 @@ pub fn heading_bar(
         // Yes this is a mess, needs documenting correctly
         let text = match header {
             Header::State => format!(
-                " {:>width$}{ic}",
-                header,
-                ic = block.1,
-                width = width - block.2,
+                " {x:>width$}",
+                x = format!("{ic}{header}", ic = block.1),
+                width = width
             ),
             Header::Name => format!(
-                "  {:>width$}{ic}",
-                header,
-                ic = block.1,
-                width = width - block.2,
+                "  {x:>width$}",
+                x = format!("{ic}{header}", ic = block.1),
+                width = width
             ),
             Header::Status => format!(
-                "{}  {:>width$}{ic}",
+                "{}  {x:>width$}",
                 MARGIN,
-                header,
-                ic = block.1,
-                width = width - block.2
+                x = format!("{ic}{header}", ic = block.1),
+                width = width
             ),
             _ => format!(
-                "{}{:>width$}{ic}",
+                "{}{x:>width$}",
                 MARGIN,
-                header,
-                ic = block.1,
-                width = width - block.2
+                x = format!("{ic}{header}", ic = block.1),
+                width = width
             ),
         };
         let count = u16::try_from(text.chars().count()).unwrap_or_default();
@@ -738,7 +791,7 @@ pub fn help_box(f: &mut Frame) {
         .title(title)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(Color::Black));
+        .border_style(Style::default().fg(Color::Black).bg(Color::Magenta));
 
     // Order is important here
     f.render_widget(Clear, area);
@@ -763,7 +816,10 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
         Span::from("Are you sure you want to delete container: "),
         Span::styled(
             name.to_string(),
-            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Red)
+                .bg(Color::White)
+                .add_modifier(Modifier::BOLD),
         ),
     ]);
 
@@ -780,19 +836,22 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
         Block::default()
             .border_type(BorderType::Rounded)
             .borders(Borders::ALL)
+            .style(Style::default().bg(Color::White))
     };
 
     let yes_para = Paragraph::new(yes_text)
         .alignment(Alignment::Center)
         .block(button_block());
+
     // Need to add some padding for the borders
-    let yes_chars = u16::try_from(yes_text.chars().count() + 2).unwrap_or(9);
+    let _yes_chars = u16::try_from(yes_text.chars().count() + 2).unwrap_or(9);
 
     let no_para = Paragraph::new(no_text)
         .alignment(Alignment::Center)
         .block(button_block());
+
     // Need to add some padding for the borders
-    let no_chars = u16::try_from(no_text.chars().count() + 2).unwrap_or(8);
+    // let no_chars = u16::try_from(no_text.chars().count() + 2).unwrap_or(8);
 
     let area = popup(
         lines,
@@ -815,23 +874,15 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
         )
         .split(area);
 
-    // Should maybe have a differenet button_space IF the f.width() is within 2 chars of no_chars + yes_chars?
-    let button_spacing = (max_line_width - no_chars - yes_chars) / 3;
-
-    let button_spacing = if (button_spacing + max_line_width) > f.size().width {
-        1
-    } else {
-        button_spacing
-    };
     let split_buttons = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
             [
-                Constraint::Max(button_spacing),
-                Constraint::Min(no_chars),
-                Constraint::Max(button_spacing),
-                Constraint::Min(yes_chars),
-                Constraint::Max(button_spacing),
+                Constraint::Percentage(10),
+                Constraint::Percentage(35),
+                Constraint::Percentage(10),
+                Constraint::Percentage(35),
+                Constraint::Percentage(10),
             ]
             .as_ref(),
         )
@@ -893,6 +944,8 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
         .alignment(Alignment::Center);
 
     let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
+
+    // let (paragraph, area) = gen_error(f, error, seconds);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
@@ -952,24 +1005,2051 @@ fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocatio
         .split(popup_layout[indexes.0])[indexes.1]
 }
 
-#[cfg(debug_assertions)]
-// Single row at the top of the screen for debugging
-pub fn debug_bar(area: Rect, f: &mut Frame, debug_string: &str) {
-    let block = Block::default().style(Style::default().bg(Color::Red));
-    let paragraph = Paragraph::new(debug_string)
-        .style(Style::default().fg(Color::White))
-        .block(block);
-    f.render_widget(paragraph, area);
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::many_single_char_names)]
+mod tests {
+
+    use std::{ops::RangeInclusive, sync::Arc};
+
+    use parking_lot::Mutex;
+    use ratatui::{
+        backend::TestBackend,
+        layout::Rect,
+        style::{Color, Modifier},
+        Terminal,
+    };
+    use uuid::Uuid;
+
+    use crate::{
+        app_data::{
+            AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts, Header,
+            SortedOrder, State, StatefulList,
+        },
+        app_error::AppError,
+        tests::{gen_appdata, gen_container_summary, gen_containers},
+        ui::{draw_frame, GuiState},
+    };
+
+    use super::{FrameData, ORANGE, VERSION};
+
+    struct TuiTestSetup {
+        app_data: Arc<Mutex<AppData>>,
+        gui_state: Arc<Mutex<GuiState>>,
+        fd: FrameData,
+        area: Rect,
+        terminal: Terminal<TestBackend>,
+        ids: Vec<ContainerId>,
+    }
+
+    const BORDER_CHARS: [&str; 6] = ["╭", "╮", "─", "│", "╰", "╯"];
+
+    /// Generate state to be used in *most* gui tests
+    fn test_setup(w: u16, h: u16, control_start: bool, container_start: bool) -> TuiTestSetup {
+        let backend = TestBackend::new(w, h);
+        let terminal = Terminal::new(backend).unwrap();
+
+        let (ids, containers) = gen_containers();
+        let mut app_data = gen_appdata(&containers);
+        if control_start {
+            app_data.docker_controls_start();
+        }
+        if container_start {
+            app_data.containers_start();
+        }
+
+        let gui_state = GuiState::default();
+
+        let app_data = Arc::new(Mutex::new(app_data));
+        let gui_state = Arc::new(Mutex::new(gui_state));
+
+        let fd = FrameData::from((app_data.lock(), gui_state.lock()));
+        let area = Rect::new(0, 0, w, h);
+        TuiTestSetup {
+            app_data,
+            gui_state,
+            fd,
+            area,
+            terminal,
+            ids,
+        }
+    }
+
+    /// Insert some logs into the first container
+    fn insert_logs(setup: &TuiTestSetup) {
+        let logs = (1..=3).map(|i| format!("{i} line {i}")).collect::<Vec<_>>();
+        setup.app_data.lock().update_log_by_id(logs, &setup.ids[0]);
+    }
+
+    // ******************** //
+    // DockerControls panel //
+    // ******************** //
+
+    #[test]
+    // Test that when DockerCommands are available, they are drawn correctly, dependant on container state
+    fn test_draw_blocks_commands_none() {
+        let (w, h) = (12, 6);
+        let mut setup = test_setup(w, h, false, false);
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::commands(&setup.app_data, setup.area, f, &setup.fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭──────────╮",
+            "│          │",
+            "│          │",
+            "│          │",
+            "│          │",
+            "╰──────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                assert_eq!(result_cell.fg, Color::Reset);
+            }
+        }
+    }
+
+    #[test]
+    // Test that when DockerCommands are available, they are drawn correctly, dependant on container state
+    fn test_draw_blocks_commands_some() {
+        let (w, h) = (12, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::commands(&setup.app_data, setup.area, f, &setup.fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭──────────╮",
+            "│▶ pause   │",
+            "│  restart │",
+            "│  stop    │",
+            "│  delete  │",
+            "╰──────────╯",
+        ];
+        let result = &setup.terminal.backend().buffer().content;
+
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                // Check the text color is correct
+                match index {
+                    // pause
+                    15..=19 => {
+                        assert_eq!(result_cell.fg, Color::Yellow);
+                    }
+                    // restart
+                    27..=33 => {
+                        assert_eq!(result_cell.fg, Color::Magenta);
+                    }
+                    // stop
+                    39..=42 => {
+                        assert_eq!(result_cell.fg, Color::Red);
+                    }
+                    // delete
+                    51..=56 => {
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                    // no text
+                    _ => {
+                        assert_eq!(result_cell.fg, Color::Reset);
+                    }
+                }
+                if result_cell.symbol().starts_with('▶') {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+
+        // Change the controls state
+        setup
+            .app_data
+            .lock()
+            .update_containers(&mut vec![gen_container_summary(1, "paused")]);
+        setup.app_data.lock().docker_controls_next();
+
+        let expected = [
+            "╭──────────╮",
+            "│  resume  │",
+            "│▶ stop    │",
+            "│  delete  │",
+            "│          │",
+            "╰──────────╯",
+        ];
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::commands(&setup.app_data, setup.area, f, &setup.fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                // Chceck the text color is correct
+                match index {
+                    // resume
+                    15..=20 => {
+                        assert_eq!(result_cell.fg, Color::Blue);
+                    }
+                    // stop
+                    27..=30 => {
+                        assert_eq!(result_cell.fg, Color::Red);
+                    }
+                    // delete
+                    39..=44 => {
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                    // no text
+                    _ => {
+                        assert_eq!(result_cell.fg, Color::Reset);
+                    }
+                }
+                if result_cell.symbol().starts_with('▶') {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // When control panel is selected, the border is blue, if not then white, selected text is highlighted
+    fn test_draw_blocks_commands_panel_selected_color() {
+        let (w, h) = (12, 6);
+        let mut setup = test_setup(w, h, true, true);
+        let expected = [
+            "╭──────────╮",
+            "│▶ pause   │",
+            "│  restart │",
+            "│  stop    │",
+            "│  delete  │",
+            "╰──────────╯",
+        ];
+
+        // Unselected, has a grey border
+        setup
+            .terminal
+            .draw(|f| {
+                super::commands(&setup.app_data, setup.area, f, &setup.fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                if BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+
+        // Control panel now selected, should have a blue border
+        setup.gui_state.lock().next_panel();
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        setup
+            .terminal
+            .draw(|f| {
+                super::commands(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                if BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::LightCyan);
+                }
+                // Make sure that the selected line has bold text
+                match index {
+                    // pause
+                    13..=22 => {
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    }
+                    _ => {
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                }
+            }
+        }
+    }
+
+    // *********************** //
+    // Container summary panel //
+    // *********************** //
+
+    // Check that the correct solor is applied to the state/status/cpu/memory section
+    fn check_expected(expected: [&str; 6], w: u16, _h: u16, setup: &TuiTestSetup, color: Color) {
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                if (145..=207).contains(&index) {
+                    assert_eq!(result_cell.fg, color);
+                    assert_eq!(result_cell.modifier, Modifier::BOLD);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // No containers, panel unselected, then selected, border color changes correctly
+    fn test_draw_blocks_containers_none() {
+        let (w, h) = (25, 6);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers = StatefulList::new(vec![]);
+
+        let expected = [
+            "╭ Containers ───────────╮",
+            "│ no containers running │",
+            "│                       │",
+            "│                       │",
+            "│                       │",
+            "╰───────────────────────╯",
+        ];
+
+        setup.gui_state.lock().next_panel();
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                assert_eq!(result_cell.fg, Color::Reset);
+            }
+        }
+
+        setup.gui_state.lock().previous_panel();
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                if BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::LightCyan);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Containers panel drawn, selected line is bold, border is blue
+    fn test_draw_blocks_containers_some() {
+        let (w, h) = (130, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+        "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+        "│⚪  container_1   ✓ running            Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+        "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+        "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+        "│                                                                                                                                │",
+        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+    ];
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &setup.fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                // result matches expected
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                // Selected container is bold
+                match index {
+                    131 | 133..=258 => assert_eq!(result_cell.modifier, Modifier::BOLD),
+                    _ => {
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                }
+
+                // Border is blue
+                if BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::LightCyan);
+                }
+            }
+        }
+
+        // Change selected panel, border is now no longer blue
+        setup.gui_state.lock().next_panel();
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                // Border is gray
+                if BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// ALl columns on all rows are coloured correctly
+    fn test_draw_blocks_containers_colors() {
+        let (w, h) = (130, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  container_1   ✓ running            Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        ];
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let index_blue = [
+            134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 208, 209, 210, 211, 212, 213,
+            214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228,
+        ];
+        let index_blue = index_blue
+            .iter()
+            .flat_map(|&x| vec![x, x + 130, x + 260])
+            .collect::<Vec<_>>();
+        let index_green = [
+            145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161,
+            162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178,
+            179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195,
+            196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207,
+        ];
+        let index_green = index_green
+            .iter()
+            .flat_map(|&x| vec![x, x + 130, x + 260])
+            .collect::<Vec<_>>();
+
+        let index_rx = [229, 230, 231, 232, 233, 234, 235, 236, 237, 238];
+        let index_rx = index_rx
+            .iter()
+            .flat_map(|&x| vec![x, x + 130, x + 260])
+            .collect::<Vec<_>>();
+
+        let index_tx = [239, 240, 241, 242, 243, 244, 245, 246, 247, 248];
+        let index_tx = index_tx
+            .iter()
+            .flat_map(|&x| vec![x, x + 130, x + 260])
+            .collect::<Vec<_>>();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+
+                let result_cell = &result[index];
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                match index {
+                    _x if index_blue.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Blue);
+                    }
+                    _x if index_green.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Green);
+                    }
+                    _x if index_rx.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                    }
+                    _x if index_tx.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                    }
+                    (0..=130) | (259..=260) | (389..=390) | (519..=520) | (649..=779) => {
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.fg, Color::Reset);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// When long container/image name, it is truncated correctly
+    fn test_draw_blocks_containers_long_name_image() {
+        let (w, h) = (170, 6);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers.items[0].name =
+            ContainerName::from("a_long_container_name_for_the_purposes_of_this_test");
+        setup.app_data.lock().containers.items[0].image =
+            ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
+
+        let expected = [
+        "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+        "│⚪  a_long_container_name_for_the…   ॥ paused             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB        │",
+        "│                      container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2                          image_2   0.00 kB   0.00 kB        │",
+        "│                      container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3                          image_3   0.00 kB   0.00 kB        │",
+        "│                                                                                                                                                                        │",
+        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        ];
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        setup.app_data.lock().containers.items[0].state = State::Paused;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+            }
+        }
+
+        // THis char: …
+    }
+
+    #[test]
+    /// When container is paused, correct colors displayed
+    fn test_draw_blocks_containers_paused() {
+        let (w, h) = (130, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+        "│⚪  container_1   ॥ paused             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+        "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+        "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+        "│                                                                                                                                │",
+        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        ];
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        setup.app_data.lock().containers.items[0].state = State::Paused;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        check_expected(expected, w, h, &setup, Color::Yellow);
+    }
+
+    #[test]
+    /// When container is dead, correct colors displayed
+    fn test_draw_blocks_containers_dead() {
+        let (w, h) = (130, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  container_1   ✖ dead               Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        ];
+        setup.app_data.lock().containers.items[0].state = State::Dead;
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+        check_expected(expected, w, h, &setup, Color::Red);
+    }
+
+    #[test]
+    /// When container is exited, correct colors displayed
+    fn test_draw_blocks_containers_exited() {
+        let (w, h) = (130, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  container_1   ✖ exited             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        ];
+        setup.app_data.lock().containers.items[0].state = State::Exited;
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        check_expected(expected, w, h, &setup, Color::Red);
+    }
+    #[test]
+    /// When container is paused, correct colors displayed
+    fn test_draw_blocks_containers_removing() {
+        let (w, h) = (130, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  container_1   removing             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        ];
+        setup.app_data.lock().containers.items[0].state = State::Removing;
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        check_expected(expected, w, h, &setup, Color::LightRed);
+    }
+    #[test]
+    /// When container state is restarting, correct colors displayed
+    fn test_draw_blocks_containers_restarting() {
+        let (w, h) = (130, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  container_1   ↻ restarting          Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB         │",
+            "│   container_2   ✓ running             Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB         │",
+            "│   container_3   ✓ running             Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB         │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        ];
+        setup.app_data.lock().containers.items[0].state = State::Restarting;
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        check_expected(expected, w, h, &setup, Color::LightGreen);
+    }
+    #[test]
+    /// When container state is unknown, correct colors displayed
+    fn test_draw_blocks_containers_unknown() {
+        let (w, h) = (130, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  container_1   ? unknown            Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        ];
+        setup.app_data.lock().containers.items[0].state = State::Unknown;
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+        check_expected(expected, w, h, &setup, Color::Red);
+    }
+    // ********** //
+    // Logs panel //
+    // ********** //
+
+    #[test]
+    // No logs, panel unselected, then selected, border color changes correctly
+    fn test_draw_blocks_logs_none() {
+        let (w, h) = (25, 6);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers = StatefulList::new(vec![]);
+
+        let expected = [
+            "╭ Logs ─────────────────╮",
+            "│     no logs found     │",
+            "│                       │",
+            "│                       │",
+            "│                       │",
+            "╰───────────────────────╯",
+        ];
+
+        let _fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::logs(&setup.app_data, setup.area, f, &setup.fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                assert_eq!(result_cell.fg, Color::Reset);
+            }
+        }
+
+        setup.gui_state.lock().next_panel();
+        setup.gui_state.lock().next_panel();
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        // When selected, has a blue border
+        setup
+            .terminal
+            .draw(|f| {
+                super::logs(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                if BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::LightCyan);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Parsing logs, spinner visible, and then animates by one frame
+    fn test_draw_blocks_logs_parsing() {
+        let (w, h) = (25, 6);
+        let mut setup = test_setup(w, h, true, true);
+        let uuid = Uuid::new_v4();
+        setup.gui_state.lock().next_loading(uuid);
+
+        let expected = [
+            "╭ Logs - container_1 ───╮",
+            "│    parsing logs ⠙     │",
+            "│                       │",
+            "│                       │",
+            "│                       │",
+            "╰───────────────────────╯",
+        ];
+
+        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        fd.init = true;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::logs(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let test = |terminal: &Terminal<TestBackend>, expected: [&str; 6]| {
+            let result = &terminal.backend().buffer().content;
+            for (row_index, row) in expected.iter().enumerate() {
+                for (char_index, expected_char) in row.chars().enumerate() {
+                    let index = row_index * usize::from(w) + char_index;
+                    let result_cell = &result[index];
+
+                    assert_eq!(result_cell.symbol(), expected_char.to_string());
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        };
+
+        test(&setup.terminal, expected);
+
+        // animation moved by one frame
+        setup.gui_state.lock().next_loading(uuid);
+
+        let expected = [
+            "╭ Logs - container_1 ───╮",
+            "│    parsing logs ⠹     │",
+            "│                       │",
+            "│                       │",
+            "│                       │",
+            "╰───────────────────────╯",
+        ];
+
+        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        fd.init = true;
+        setup
+            .terminal
+            .draw(|f| {
+                super::logs(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        test(&setup.terminal, expected);
+    }
+
+    #[test]
+    // Logs correct displayed, changing log state also draws correctly
+    fn test_draw_blocks_logs_some() {
+        let (w, h) = (25, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        insert_logs(&setup);
+
+        let test = |terminal: &Terminal<TestBackend>,
+                    expected: [&str; 6],
+                    range: RangeInclusive<usize>| {
+            let result = &terminal.backend().buffer().content;
+
+            for (row_index, row) in expected.iter().enumerate() {
+                for (char_index, expected_char) in row.chars().enumerate() {
+                    let index = row_index * usize::from(w) + char_index;
+                    let result_cell = &result[index];
+
+                    assert_eq!(result_cell.symbol(), expected_char.to_string());
+                    assert_eq!(result_cell.fg, Color::Reset);
+
+                    if range.contains(&index) {
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    } else {
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                }
+            }
+        };
+
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        setup
+            .terminal
+            .draw(|f| {
+                super::logs(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+        let expected = [
+            "╭ Logs 3/3 - container_1╮",
+            "│  line 1               │",
+            "│  line 2               │",
+            "│▶ line 3               │",
+            "│                       │",
+            "╰───────────────────────╯",
+        ];
+        test(&setup.terminal, expected, 76..=98);
+
+        // Change selected log line
+        setup.app_data.lock().log_previous();
+        let _fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::logs(&setup.app_data, setup.area, f, &setup.fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭ Logs 2/3 - container_1╮",
+            "│  line 1               │",
+            "│▶ line 2               │",
+            "│  line 3               │",
+            "│                       │",
+            "╰───────────────────────╯",
+        ];
+        test(&setup.terminal, expected, 51..=73);
+    }
+
+    #[test]
+    // Full (long) name displayed in logs border
+    fn test_draw_blocks_logs_long_name() {
+        let (w, h) = (80, 6);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers.items[0].name =
+            ContainerName::from("a_long_container_name_for_the_purposes_of_this_test");
+        setup.app_data.lock().containers.items[0].image =
+            ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
+
+        insert_logs(&setup);
+
+        let expected = [
+            "╭ Logs 3/3 - a_long_container_name_for_the_purposes_of_this_test ──────────────╮",
+            "│  line 1                                                                      │",
+            "│  line 2                                                                      │",
+            "│▶ line 3                                                                      │",
+            "│                                                                              │",
+            "╰──────────────────────────────────────────────────────────────────────────────╯",
+        ];
+
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        setup
+            .terminal
+            .draw(|f| {
+                super::logs(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+            }
+        }
+    }
+
+    // ************ //
+    // Charts panel //
+    // ************ //
+
+    const EXPECTED: [&str; 10] = [
+        "╭───────────── cpu 03.00% ─────────────╮╭────────── memory 30.00 kB ───────────╮",
+        "│10.00%│    •                          ││100.00 kB│   ••                       │",
+        "│      │   ••                          ││         │   ••                       │",
+        "│      │  •••                          ││         │  • •                       │",
+        "│      │  • •                          ││         │ •  •                       │",
+        "│      │ •   ••                        ││         │••  ••                      │",
+        "│      │•    •                         ││         │•   •                       │",
+        "│      │•    •                         ││         │•   •                       │",
+        "│      │                               ││         │                            │",
+        "╰──────────────────────────────────────╯╰──────────────────────────────────────╯",
+    ];
+    const MEMORY_INDEX: [usize; 16] = [
+        134, 135, 214, 215, 293, 295, 372, 375, 451, 452, 455, 456, 531, 535, 611, 615,
+    ];
+
+    const CPU_INDEX: [usize; 15] = [
+        92, 171, 172, 250, 251, 252, 330, 332, 409, 413, 414, 488, 493, 568, 573,
+    ];
+
+    #[allow(clippy::cast_precision_loss)]
+    // Add fixed data to the cpu & mem vecdeques, that match the above data
+    fn insert_chart_data(setup: &TuiTestSetup) {
+        for i in 1..=10 {
+            setup.app_data.lock().update_stats_by_id(
+                &setup.ids[0],
+                Some(i as f64),
+                Some(i * 10000),
+                i * 10000,
+                i,
+                i,
+            );
+        }
+        for i in 1..=3 {
+            setup.app_data.lock().update_stats_by_id(
+                &setup.ids[0],
+                Some(i as f64),
+                Some(i * 10000),
+                i * 10000,
+                i,
+                i,
+            );
+        }
+    }
+    #[test]
+    // When status is Running, but not data, charts drawn without dots etc
+    fn test_draw_blocks_charts_running_none() {
+        let (w, h) = (80, 10);
+        let mut setup = test_setup(w, h, true, true);
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::chart(f, setup.area, &setup.app_data);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭───────────── cpu 00.00% ─────────────╮╭─────────── memory 0.00 kB ───────────╮",
+            "│00.00%│                               ││0.00 kB│                              │",
+            "│      │                               ││       │                              │",
+            "│      │                               ││       │                              │",
+            "│      │                               ││       │                              │",
+            "│      │                               ││       │                              │",
+            "│      │                               ││       │                              │",
+            "│      │                               ││       │                              │",
+            "│      │                               ││       │                              │",
+            "╰──────────────────────────────────────╯╰──────────────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                match index {
+                    // chart tiles - cpu 03.00% && memory 30.00 kB - are green
+                    14..=25 | 52..=67 => {
+                        assert_eq!(result_cell.fg, Color::Green);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    }
+                    // Cpu & Memory max are orange and bold
+                    81..=86 | 121..=127 => {
+                        assert_eq!(result_cell.fg, ORANGE);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    }
+                    // All others
+                    _ => {
+                        assert_eq!(result_cell.fg, Color::Reset);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    // When status is Running, charts correctly drawn
+    fn test_draw_blocks_charts_running_some() {
+        let (w, h) = (80, 10);
+        let mut setup = test_setup(w, h, true, true);
+
+        insert_chart_data(&setup);
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::chart(f, setup.area, &setup.app_data);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in EXPECTED.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                match index {
+                    // chart tiles - cpu 03.00% && memory 30.00 kB - are green
+                    14..=25 | 51..=67 => {
+                        assert_eq!(result_cell.fg, Color::Green);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    }
+                    // Cpu & Memory max are orange and bold
+                    81..=86 | 121..=129 => {
+                        assert_eq!(result_cell.fg, ORANGE);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    }
+                    // cpu dots are magenta
+                    _x if CPU_INDEX.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Magenta);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                    // memory dots are cyan
+                    _x if MEMORY_INDEX.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Cyan);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                    // All others
+                    _ => {
+                        assert_eq!(result_cell.fg, Color::Reset);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Whens status paused, some text is now Yellow
+    fn test_draw_blocks_charts_paused() {
+        let (w, h) = (80, 10);
+        let mut setup = test_setup(w, h, true, true);
+
+        insert_chart_data(&setup);
+        setup.app_data.lock().containers.items[0].state = State::Paused;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::chart(f, setup.area, &setup.app_data);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in EXPECTED.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                match index {
+                    // Titles and y axis are yellow
+                    14..=25 | 51..=67 | 81..=86 | 121..=129 => {
+                        assert_eq!(result_cell.fg, Color::Yellow);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    }
+                    _x if CPU_INDEX.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Magenta);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                    // memory dots are cyan
+                    _x if MEMORY_INDEX.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Cyan);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                    // All others
+                    _ => {
+                        assert_eq!(result_cell.fg, Color::Reset);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    // When dead, text is read
+    fn test_draw_blocks_charts_dead() {
+        let (w, h) = (80, 10);
+        let mut setup = test_setup(w, h, true, true);
+        insert_chart_data(&setup);
+        setup.app_data.lock().containers.items[0].state = State::Dead;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::chart(f, setup.area, &setup.app_data);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in EXPECTED.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                match index {
+                    // Titles and y axis are red
+                    14..=25 | 51..=67 | 81..=86 | 121..=129 => {
+                        assert_eq!(result_cell.fg, Color::Red);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    }
+                    // cpu dots are magenta
+                    _x if CPU_INDEX.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Magenta);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                    // memory dots are cyan
+                    _x if MEMORY_INDEX.contains(&index) => {
+                        assert_eq!(result_cell.fg, Color::Cyan);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                    // All others
+                    _ => {
+                        assert_eq!(result_cell.fg, Color::Reset);
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                }
+            }
+        }
+    }
+
+    // ******* //
+    // Headers //
+    // ******* //
+
+    #[test]
+    /// Heading back only has show/exit help when no containers, correctly coloured
+    fn test_draw_blocks_headers_no_containers() {
+        let (w, h) = (140, 1);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers = StatefulList::new(vec![]);
+
+        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        let expected =  "                                                                                                                         ( h ) show help    ";
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::heading_bar(setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (index, expected_char) in expected.chars().enumerate() {
+            let result_cell = &result[index];
+
+            assert_eq!(result_cell.symbol(), expected_char.to_string());
+            assert_eq!(result_cell.bg, Color::Magenta);
+            assert_eq!(result_cell.fg, Color::White);
+        }
+
+        fd.help_visible = true;
+        let expected =  "                                                                                                                         ( h ) exit help    ";
+        setup
+            .terminal
+            .draw(|f| {
+                super::heading_bar(setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (index, expected_char) in expected.chars().enumerate() {
+            let result_cell = &result[index];
+
+            assert_eq!(result_cell.symbol(), expected_char.to_string());
+            assert_eq!(result_cell.bg, Color::Magenta);
+            assert_eq!(result_cell.fg, Color::Black);
+        }
+    }
+
+    #[test]
+    /// Show all headings when containers present, colors valid
+    fn test_draw_blocks_headers_some_containers() {
+        let (w, h) = (140, 1);
+        let mut setup = test_setup(w, h, true, true);
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        let expected =   "           name       state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ";
+        setup
+            .terminal
+            .draw(|f| {
+                super::heading_bar(setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (index, expected_char) in expected.chars().enumerate() {
+            let result_cell = &result[index];
+
+            assert_eq!(result_cell.symbol(), expected_char.to_string());
+            assert_eq!(result_cell.bg, Color::Magenta);
+            assert_eq!(
+                result_cell.fg,
+                match index {
+                    (2..=122) => Color::Black,
+                    _ => Color::White,
+                }
+            );
+        }
+    }
+
+    #[test]
+    /// Test all combination of headers & sort by
+    fn test_draw_blocks_headers_sort_containers() {
+        let (w, h) = (140, 1);
+        let mut setup = test_setup(w, h, true, true);
+        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let mut test = |expected: &str, range: RangeInclusive<usize>, x: (Header, SortedOrder)| {
+            fd.sorted_by = Some(x);
+
+            setup
+                .terminal
+                .draw(|f| {
+                    super::heading_bar(setup.area, f, &fd, &setup.gui_state);
+                })
+                .unwrap();
+
+            let result = &setup.terminal.backend().buffer().content;
+            for (index, expected_char) in expected.chars().enumerate() {
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                assert_eq!(result_cell.bg, Color::Magenta);
+                assert_eq!(
+                    result_cell.fg,
+                    match index {
+                        0 | 1 => Color::White,
+                        // given range | help section
+                        x if range.contains(&x) || (123..=139).contains(&x) => Color::White,
+                        _ => Color::Black,
+                    }
+                );
+            }
+        };
+
+        // Name
+        test("         ▲ name       state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 1..=14, (Header::Name, SortedOrder::Asc));
+        test("         ▼ name       state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 1..=14, (Header::Name, SortedOrder::Desc));
+
+        // state
+        test("           name     ▲ state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 15..=26, (Header::State, SortedOrder::Asc));
+        test("           name     ▼ state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 15..=26, (Header::State, SortedOrder::Desc));
+
+        // status
+        test("           name       state             ▲ status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 27..=47, (Header::Status, SortedOrder::Asc));
+        test("           name       state             ▼ status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 27..=47, (Header::Status, SortedOrder::Desc));
+
+        // cpu
+        test("           name       state               status     ▲ cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 48..=57, (Header::Cpu, SortedOrder::Asc));
+        test("           name       state               status     ▼ cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 48..=57, (Header::Cpu, SortedOrder::Desc));
+
+        // mem
+        test("           name       state               status       cpu      ▲ memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 58..=77, (Header::Memory, SortedOrder::Asc));
+        test("           name       state               status       cpu      ▼ memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ", 58..=77, (Header::Memory, SortedOrder::Desc));
+
+        // id
+        test("           name       state               status       cpu        memory/limit       ▲ id     image      ↓ rx      ↑ tx    ( h ) show help  ", 78..=88, (Header::Id, SortedOrder::Asc));
+        test("           name       state               status       cpu        memory/limit       ▼ id     image      ↓ rx      ↑ tx    ( h ) show help  ", 78..=88, (Header::Id, SortedOrder::Desc));
+
+        // image
+        test("           name       state               status       cpu        memory/limit         id   ▲ image      ↓ rx      ↑ tx    ( h ) show help  ", 89..=98, (Header::Image, SortedOrder::Asc));
+        test("           name       state               status       cpu        memory/limit         id   ▼ image      ↓ rx      ↑ tx    ( h ) show help  ", 89..=98, (Header::Image, SortedOrder::Desc));
+
+        // rx
+        test("           name       state               status       cpu        memory/limit         id     image    ▲ ↓ rx      ↑ tx    ( h ) show help  ", 99..=108, (Header::Rx, SortedOrder::Asc));
+        test("           name       state               status       cpu        memory/limit         id     image    ▼ ↓ rx      ↑ tx    ( h ) show help  ", 99..=108, (Header::Rx, SortedOrder::Desc));
+
+        // tx
+        test("           name       state               status       cpu        memory/limit         id     image      ↓ rx    ▲ ↑ tx    ( h ) show help  ", 109..=122, (Header::Tx, SortedOrder::Asc));
+        test("           name       state               status       cpu        memory/limit         id     image      ↓ rx    ▼ ↑ tx    ( h ) show help  ", 109..=122, (Header::Tx, SortedOrder::Desc));
+    }
+
+    #[test]
+    /// Show animation
+    fn test_draw_blocks_headers_animation() {
+        let (w, h) = (140, 1);
+        let mut setup = test_setup(w, h, true, true);
+        let uuid = Uuid::new_v4();
+        setup.gui_state.lock().next_loading(uuid);
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::heading_bar(setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let expected =   " ⠙         name       state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  ";
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (index, expected_char) in expected.chars().enumerate() {
+            let result_cell = &result[index];
+
+            assert_eq!(result_cell.symbol(), expected_char.to_string());
+            assert_eq!(result_cell.bg, Color::Magenta);
+            assert_eq!(
+                result_cell.fg,
+                match index {
+                    (2..=122) => Color::Black,
+                    _ => Color::White,
+                }
+            );
+        }
+    }
+
+    // ********** //
+    // Help popup //
+    // ********** //
+    #[test]
+    // This will cause issues once the version has more than the current 5 chars (0.5.0)
+    // Help  popup is drawn correctly
+    fn test_draw_blocks_help() {
+        let (w, h) = (87, 30);
+        let mut setup = test_setup(w, h, true, true);
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::help_box(f);
+            })
+            .unwrap();
+
+        let expected = [
+                "                                                                                       ".to_owned(),
+                format!(" ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ "),
+                " │                                                                                   │ ".to_owned(),
+                " │                                      88                                           │ ".to_owned(),
+                " │                                      88                                           │ ".to_owned(),
+                " │                                      88                                           │ ".to_owned(),
+                " │             ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,            │ ".to_owned(),
+                r#" │            a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8            │ "#.to_owned(),
+                r#" │            8b       d8     )888(     8888[      8PP"""""""  88                    │ "#.to_owned(),
+                r#" │            "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                    │ "#.to_owned(),
+                r#" │             `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                    │ "#.to_owned(),
+                " │                                                                                   │ ".to_owned(),
+                " │                 A simple tui to view & control docker containers                  │ ".to_owned(),
+                " │                                                                                   │ ".to_owned(),
+                " │ ( tab ) or ( shift+tab ) change panels                                            │ ".to_owned(),
+                " │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) change selected line        │ ".to_owned(),
+                " │ ( enter ) send docker container command                                           │ ".to_owned(),
+                " │ ( e ) exec into a container                                                       │ ".to_owned(),
+                " │ ( h ) toggle this help information                                                │ ".to_owned(),
+                " │ ( s ) save logs to file                                                           │ ".to_owned(),
+                " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ".to_owned(),
+                " │ ( 0 ) stop sort                                                                   │ ".to_owned(),
+                " │ ( 1 - 9 ) sort by header - or click header                                        │ ".to_owned(),
+                " │ ( q ) quit at any time                                                            │ ".to_owned(),
+                " │                                                                                   │ ".to_owned(),
+                " │        currently an early work in progress, all and any input appreciated         │ ".to_owned(),
+                " │                       https://github.com/mrjackwills/oxker                        │ ".to_owned(),
+                " │                                                                                   │ ".to_owned(),
+                " ╰───────────────────────────────────────────────────────────────────────────────────╯ ".to_owned(),
+                "                                                                                       ".to_owned(),
+            ];
+
+        for (row_index, row) in expected.iter().enumerate() {
+            let mut bracket_key = vec![];
+            let mut push_bracket_key = false;
+
+            let result = &setup.terminal.backend().buffer().content;
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+                let result_str = result_cell.symbol();
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                // First and last row, and first char and last char in each row, is empty
+                if row_index == 0
+                    || row_index == usize::from(h - 1)
+                    || char_index == 0
+                    || char_index == usize::from(w - 1)
+                {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                    assert_eq!(result_cell.bg, Color::Reset);
+                // Borders
+                } else if BORDER_CHARS.contains(&result_str) {
+                    assert_eq!(result_cell.fg, Color::Black);
+                    assert_eq!(result_cell.bg, Color::Magenta);
+                // everything else has a magenta background
+                } else {
+                    assert_eq!(result_cell.bg, Color::Magenta);
+                }
+
+                // check that ( [key] ) is white
+                if result_str == "(" {
+                    push_bracket_key = true;
+                    bracket_key.push(result_cell);
+                }
+                if push_bracket_key {
+                    bracket_key.push(result_cell);
+                    if result_str == ")" {
+                        push_bracket_key = false;
+                        for i in &bracket_key {
+                            assert_eq!(i.fg, Color::White);
+                        }
+                        bracket_key.clear();
+                    }
+                }
+                // TODO should really be testing every color of every str here
+            }
+        }
+    }
+
+    // ************ //
+    // Delete popup //
+    // ************ //
+
+    #[test]
+    // Delete container popup is drawn correctly
+    fn test_draw_blocks_delete() {
+        let (w, h) = (82, 10);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "                                                                                  ",
+            "        ╭──────────────────────── Confirm Delete ────────────────────────╮        ",
+            "        │                                                                │        ",
+            "        │     Are you sure you want to delete container: container_1     │        ",
+            "        │                                                                │        ",
+            "        │      ╭─────────────────────╮      ╭─────────────────────╮      │        ",
+            "        │      │        (N)o         │      │        (Y)es        │      │        ",
+            "        │      ╰─────────────────────╯      ╰─────────────────────╯      │        ",
+            "        ╰────────────────────────────────────────────────────────────────╯        ",
+            "                                                                                  ",
+        ];
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::delete_confirm(f, &setup.gui_state, &ContainerName::from("container_1"));
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                if row_index == 0
+                    || row_index == usize::from(h - 1)
+                    || char_index < 8
+                    || char_index > usize::from(w - 9)
+                {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                    assert_eq!(result_cell.bg, Color::Reset);
+                } else {
+                    assert_eq!(result_cell.bg, Color::White);
+                }
+
+                // Borders are black
+                if BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::Black);
+                    // Container name is red
+                } else if row_index == 3 && (57..=67).contains(&char_index) {
+                    assert_eq!(result_cell.fg, Color::Red);
+                    // All other text is black
+                } else if !row_index == 0
+                    && !row_index == usize::from(h - 1)
+                    && !char_index < 8
+                    && !char_index > usize::from(w - 9)
+                {
+                    assert_eq!(result_cell.fg, Color::Black);
+                }
+            }
+        }
+    }
+
+    // ***** //
+    // popup //
+    // ***** //
+
+    #[test]
+    /// Info box drawn in bottom right
+    fn test_draw_blocks_info() {
+        let (w, h) = (45, 9);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "                                             ",
+            "                                             ",
+            "                                             ",
+            "                                             ",
+            "                                             ",
+            "                                             ",
+            "                                             ",
+            "                                    test     ",
+            "                                             ",
+        ];
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::info(f, "test", std::time::Instant::now(), &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+
+                let (fg, bg) = if row_index >= 6 && char_index >= 32 {
+                    (Color::White, Color::Blue)
+                } else {
+                    (Color::Reset, Color::Reset)
+                };
+
+                assert_eq!(result_cell.fg, fg);
+                assert_eq!(result_cell.bg, bg);
+            }
+        }
+    }
+
+    // *********** //
+    // Error popup //
+    // *********** //
+
+    #[test]
+    // Test that the error popup is centered, red background, white border, white text, and displays the correct text
+    fn test_draw_blocks_docker_connect_error() {
+        let (w, h) = (46, 9);
+        let mut setup = test_setup(w, h, true, true);
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::error(f, AppError::DockerConnect, Some(4));
+            })
+            .unwrap();
+
+        let expected = vec![
+            "                                              ".to_owned(),
+            " ╭───────────────── Error ──────────────────╮ ".to_owned(),
+            " │                                          │ ".to_owned(),
+            " │      Unable to access docker daemon      │ ".to_owned(),
+            " │                                          │ ".to_owned(),
+            format!(" │    oxker::v{VERSION} closing in 04 seconds   │ "),
+            " │                                          │ ".to_owned(),
+            " ╰──────────────────────────────────────────╯ ".to_owned(),
+            "                                              ".to_owned(),
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                if (1..=usize::from(h) - 2).contains(&row_index)
+                    && (1..=usize::from(w) - 2).contains(&char_index)
+                {
+                    assert_eq!(result_cell.bg, Color::Red);
+                }
+                if result_cell
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap()
+                    .is_alphanumeric()
+                {
+                    assert_eq!(result_cell.fg, Color::White);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Test that the clearable error popup is centered, red background, white border, white text, and displays the correct text
+    fn test_draw_blocks_clearable_error() {
+        let (w, h) = (39, 10);
+        let mut setup = test_setup(w, h, true, true);
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::error(f, AppError::DockerExec, Some(4));
+            })
+            .unwrap();
+
+        let expected = [
+            "                                       ",
+            " ╭────────────── Error ──────────────╮ ",
+            " │                                   │ ",
+            " │   Unable to exec into container   │ ",
+            " │                                   │ ",
+            " │         ( c ) clear error         │ ",
+            " │         ( q ) quit oxker          │ ",
+            " │                                   │ ",
+            " ╰───────────────────────────────────╯ ",
+            "                                       ",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+                if (1..=usize::from(h) - 2).contains(&row_index)
+                    && (1..=usize::from(w) - 2).contains(&char_index)
+                {
+                    assert_eq!(result_cell.bg, Color::Red);
+                }
+                if result_cell
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap()
+                    .is_alphanumeric()
+                    || ["(", ")"].contains(&result_cell.symbol())
+                {
+                    assert_eq!(result_cell.fg, Color::White);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Port section when container has no ports
+    fn test_draw_blocks_ports_no_ports() {
+        let (w, h) = (30, 8);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers.items[0].ports = vec![];
+
+        let max_lens = setup.app_data.lock().get_longest_port();
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭────────── ports ───────────╮",
+            "│          no ports          │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "╰────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+                if row_index == 0 && !BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::Green);
+                    assert_eq!(result_cell.modifier, Modifier::BOLD);
+                } else {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+
+        // when state is "State::Running | State::Paused | State::Restarting, won't show "no ports"
+        setup.app_data.lock().containers.items[0].state = State::Dead;
+        let max_lens = setup.app_data.lock().get_longest_port();
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭────────── ports ───────────╮",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "╰────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+                if row_index == 0 && !BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::Red);
+                    assert_eq!(result_cell.modifier, Modifier::BOLD);
+                } else {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Port section when container has multiple ports
+    fn test_draw_blocks_ports_multiple_ports() {
+        let (w, h) = (32, 8);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: None,
+                private: 8002,
+                public: None,
+            });
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some("127.0.0.1".to_owned()),
+                private: 8003,
+                public: Some(8003),
+            });
+
+        let max_lens = setup.app_data.lock().get_longest_port();
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭─────────── ports ────────────╮",
+            "│       ip   private   public  │",
+            "│               8001           │",
+            "│               8002           │",
+            "│127.0.0.1      8003     8003  │",
+            "│                              │",
+            "│                              │",
+            "╰──────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+
+                let result_cell_as_char = result_cell
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap()
+                    .is_ascii_alphanumeric();
+                if row_index == 0 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::Green);
+                }
+                if row_index == 1 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::Yellow);
+                }
+                if row_index == 2 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::White);
+                }
+                if row_index == 3 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::Magenta);
+                }
+                if row_index == 4 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::White);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Port section title color correct dependant on state
+    fn test_draw_blocks_ports_container_state() {
+        let (w, h) = (32, 8);
+        let mut setup = test_setup(w, h, true, true);
+        let max_lens = setup.app_data.lock().get_longest_port();
+
+        setup.app_data.lock().containers.items[0].state = State::Paused;
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭─────────── ports ────────────╮",
+            "│   ip   private   public      │",
+            "│           8001               │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "╰──────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+
+                if row_index == 0
+                    && result_cell
+                        .symbol()
+                        .chars()
+                        .next()
+                        .unwrap()
+                        .is_ascii_alphanumeric()
+                {
+                    assert_eq!(result_cell.fg, Color::Yellow);
+                }
+            }
+        }
+
+        setup.app_data.lock().containers.items[0].state = State::Dead;
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭─────────── ports ────────────╮",
+            "│   ip   private   public      │",
+            "│           8001               │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "╰──────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+
+                if row_index == 0
+                    && result_cell
+                        .symbol()
+                        .chars()
+                        .next()
+                        .unwrap()
+                        .is_ascii_alphanumeric()
+                {
+                    assert_eq!(result_cell.fg, Color::Red);
+                }
+            }
+        }
+    }
+
+    // *************** //
+    // The whole layout //
+    // **************** //
+    #[test]
+    // Check that the whole layout is drawn correctly
+    fn test_draw_blocks_whole_layout() {
+        let (w, h) = (160, 30);
+        let mut setup = test_setup(w, h, true, true);
+
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some("127.0.0.1".to_owned()),
+                private: 8003,
+                public: Some(8003),
+            });
+
+        let expected = [
+            "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
+        "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
+        "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
+        "│   container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                      ││  restart     │",
+        "│   container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                      ││  stop        │",
+        "│                                                                                                                                              ││  delete      │",
+        "│                                                                                                                                              ││              │",
+        "│                                                                                                                                              ││              │",
+        "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
+        "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+        "│  line 1                                                                                                                                                      │",
+        "│  line 2                                                                                                                                                      │",
+        "│▶ line 3                                                                                                                                                      │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+		"╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
+        "│10.00%│     ••••                                               ││100.00 kB│     •••                                             ││       ip   private   public│",
+        "│      │  •••   •                                               ││         │  •••  •                                             ││               8001         │",
+        "│      │••       •••                                            ││         │••      •••                                          ││127.0.0.1      8003     8003│",
+        "│      │                                                        ││         │                                                     ││                            │",
+        "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
+        ];
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(f, &setup.app_data, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string(),);
+            }
+        }
+    }
 }
-
-// Draw nothing, as in a blank screen
-// pub fn nothing(f: &mut Frame) {
-//     let whole_layout = Layout::default()
-//         .direction(Direction::Vertical)
-//         .constraints([Constraint::Min(100)].as_ref())
-//         .split(f.size());
-
-//     let block = Block::default()
-//         .borders(Borders::NONE);
-//     f.render_widget(block, whole_layout[0]);
-// }

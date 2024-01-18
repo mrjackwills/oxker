@@ -217,22 +217,6 @@ impl Ui {
     }
 }
 
-#[cfg(not(debug_assertions))]
-fn get_wholelayout(f: &Frame) -> std::rc::Rc<[ratatui::layout::Rect]> {
-    Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(1), Constraint::Min(100)].as_ref())
-        .split(f.size())
-}
-
-#[cfg(debug_assertions)]
-fn get_wholelayout(f: &Frame) -> std::rc::Rc<[ratatui::layout::Rect]> {
-    Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(1), Constraint::Min(1), Constraint::Min(100)].as_ref())
-        .split(f.size())
-}
-
 /// Frequent data required by multiple framde drawing functions, can reduce mutex reads by placing it all in here
 #[derive(Debug)]
 pub struct FrameData {
@@ -279,21 +263,16 @@ impl From<(MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)> for FrameData {
 fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mutex<GuiState>>) {
     let fd = FrameData::from((app_data.lock(), gui_state.lock()));
 
-    let whole_layout = get_wholelayout(f);
-    #[cfg(debug_assertions)]
-    draw_blocks::debug_bar(whole_layout[0], f, app_data.lock().get_debug_string());
-
-    #[cfg(debug_assertions)]
-    let whole_layout_split = (1, 2);
-
-    #[cfg(not(debug_assertions))]
-    let whole_layout_split = (0, 1);
+    let whole_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Min(100)].as_ref())
+        .split(f.size());
 
     // Split into 3, containers+controls, logs, then graphs
     let upper_main = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Max(fd.height), Constraint::Percentage(50)].as_ref())
-        .split(whole_layout[whole_layout_split.1]);
+        .split(whole_layout[1]);
 
     let top_split = if fd.has_containers {
         vec![Constraint::Percentage(90), Constraint::Percentage(10)]
@@ -307,7 +286,7 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
         .split(upper_main[0]);
 
     let lower_split = if fd.has_containers {
-        vec![Constraint::Percentage(75), Constraint::Percentage(25)]
+        vec![Constraint::Percentage(70), Constraint::Percentage(20)]
     } else {
         vec![Constraint::Percentage(100)]
     };
@@ -318,11 +297,11 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
         .constraints(lower_split)
         .split(upper_main[1]);
 
-    draw_blocks::containers(app_data, top_panel[0], f, &fd, gui_state, &fd.columns);
+    draw_blocks::containers(app_data, top_panel[0], f, &fd, gui_state);
 
     draw_blocks::logs(app_data, lower_main[0], f, &fd, gui_state);
 
-    draw_blocks::heading_bar(whole_layout[whole_layout_split.0], f, &fd, gui_state);
+    draw_blocks::heading_bar(whole_layout[0], f, &fd, gui_state);
 
     if let Some(id) = fd.delete_confirm.as_ref() {
         app_data.lock().get_container_name_by_id(id).map_or_else(
@@ -340,7 +319,18 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
     // only draw commands + charts if there are containers
     if fd.has_containers {
         draw_blocks::commands(app_data, top_panel[1], f, &fd, gui_state);
-        draw_blocks::chart(f, lower_main[1], app_data);
+
+        // Can calculate the max string length here, and then use that to keep the ports section as small as possible (+4 for some padding + border)
+        let max_lens = app_data.lock().get_longest_port();
+        let ports_len = u16::try_from(max_lens.0 + max_lens.1 + max_lens.2 + 2).unwrap_or(26);
+
+        let lower = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Min(1), Constraint::Max(ports_len)])
+            .split(lower_main[1]);
+
+        draw_blocks::chart(f, lower[0], app_data);
+        draw_blocks::ports(f, lower[1], app_data, max_lens);
     }
 
     if let Some((text, instant)) = fd.info_text {

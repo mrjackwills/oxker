@@ -14,6 +14,6 @@ pub enum DockerMessage {
     Restart(ContainerId),
     Start(ContainerId),
     Stop(ContainerId),
-    Unpause(ContainerId),
+    Resume(ContainerId),
     Update,
 }

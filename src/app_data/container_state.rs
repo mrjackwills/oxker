@@ -4,6 +4,7 @@ use std::{
     fmt,
 };
 
+use bollard::service::Port;
 use ratatui::{
     style::Color,
     widgets::{ListItem, ListState},
@@ -49,7 +50,7 @@ impl PartialOrd for ContainerId {
 
 /// TODO - use string_wrapper for ContainerId?
 /// ContainerName and ContainerImage are simple structs, used so can implement custom fmt functions to them
-macro_rules! string_wrapper {
+macro_rules! unit_struct {
     ($name:ident) => {
         #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
         pub struct $name(String);
@@ -57,6 +58,13 @@ macro_rules! string_wrapper {
         impl From<String> for $name {
             fn from(value: String) -> Self {
                 Self(value)
+            }
+        }
+
+        #[cfg(test)]
+        impl From<&str> for $name {
+            fn from(value: &str) -> Self {
+                Self(value.to_owned())
             }
         }
 
@@ -90,10 +98,51 @@ macro_rules! string_wrapper {
     };
 }
 
-string_wrapper!(ContainerName);
-string_wrapper!(ContainerImage);
+unit_struct!(ContainerName);
+unit_struct!(ContainerImage);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ContainerPorts {
+    pub ip: Option<String>,
+    pub private: u16,
+    pub public: Option<u16>,
+}
+
+impl From<&Port> for ContainerPorts {
+    fn from(value: &Port) -> Self {
+        Self {
+            ip: value.ip.clone(),
+            private: value.private_port,
+            public: value.public_port,
+        }
+    }
+}
+
+impl ContainerPorts {
+    pub fn len_ip(&self) -> usize {
+        self.ip.as_ref().unwrap_or(&String::new()).chars().count()
+    }
+    pub fn len_private(&self) -> usize {
+        format!("{}", self.private).chars().count()
+    }
+    pub fn len_public(&self) -> usize {
+        format!("{}", self.public.unwrap_or_default())
+            .chars()
+            .count()
+    }
+
+    pub fn print(&self) -> (String, String, String) {
+        (
+            self.ip
+                .as_ref()
+                .map_or(String::new(), std::borrow::ToOwned::to_owned),
+            format!("{}", self.private),
+            self.public.map_or(String::new(), |s| s.to_string()),
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StatefulList<T> {
     pub state: ListState,
     pub items: Vec<T>,
@@ -154,7 +203,7 @@ impl<T> StatefulList<T> {
                 .state
                 .selected()
                 .map_or(0, |value| if len > 0 { value + 1 } else { value });
-            format!("{c}/{}", self.items.len())
+            format!(" {c}/{}", self.items.len())
         }
     }
 }
@@ -234,13 +283,13 @@ impl fmt::Display for State {
 }
 
 /// Items for the container control list
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DockerControls {
     Pause,
     Restart,
     Start,
     Stop,
-    Unpause,
+    Resume,
     Delete,
 }
 
@@ -252,7 +301,7 @@ impl DockerControls {
             Self::Start => Color::Green,
             Self::Stop => Color::Red,
             Self::Delete => Color::Gray,
-            Self::Unpause => Color::Blue,
+            Self::Resume => Color::Blue,
         }
     }
 
@@ -260,7 +309,7 @@ impl DockerControls {
     pub fn gen_vec(state: State) -> Vec<Self> {
         match state {
             State::Dead | State::Exited => vec![Self::Start, Self::Restart, Self::Delete],
-            State::Paused => vec![Self::Unpause, Self::Stop, Self::Delete],
+            State::Paused => vec![Self::Resume, Self::Stop, Self::Delete],
             State::Restarting => vec![Self::Stop, Self::Delete],
             State::Running => vec![Self::Pause, Self::Restart, Self::Stop, Self::Delete],
             _ => vec![Self::Delete],
@@ -276,7 +325,7 @@ impl fmt::Display for DockerControls {
             Self::Restart => "restart",
             Self::Start => "start",
             Self::Stop => "stop",
-            Self::Unpause => "resume",
+            Self::Resume => "resume",
         };
         write!(f, "{disp}")
     }
@@ -416,7 +465,7 @@ impl fmt::Display for LogsTz {
 /// Store the logs alongside a HashSet, each log *should* generate a unique timestamp,
 /// so if we store the timestamp separately in a HashSet, we can then check if we should insert a log line into the
 /// stateful list dependent on whethere the timestamp is in the HashSet or not
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Logs {
     logs: StatefulList<ListItem<'static>>,
     tz: HashSet<LogsTz>,
@@ -475,23 +524,25 @@ impl Logs {
 }
 
 /// Info for each container
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContainerItem {
-    pub created: u64,
     pub cpu_stats: VecDeque<CpuStats>,
+    pub created: u64,
     pub docker_controls: StatefulList<DockerControls>,
     pub id: ContainerId,
     pub image: ContainerImage,
+    pub is_oxker: bool,
     pub last_updated: u64,
     pub logs: Logs,
     pub mem_limit: ByteStats,
     pub mem_stats: VecDeque<ByteStats>,
     pub name: ContainerName,
+    // todo remove option, can be empty vec
+    pub ports: Vec<ContainerPorts>,
     pub rx: ByteStats,
     pub state: State,
     pub status: String,
     pub tx: ByteStats,
-    pub is_oxker: bool,
 }
 
 /// Basic display information, for when running in debug mode
@@ -509,6 +560,7 @@ impl fmt::Display for ContainerItem {
 }
 
 impl ContainerItem {
+    #[allow(clippy::too_many_arguments)]
     /// Create a new container item
     pub fn new(
         created: u64,
@@ -516,14 +568,16 @@ impl ContainerItem {
         image: String,
         is_oxker: bool,
         name: String,
+        ports: Vec<ContainerPorts>,
         state: State,
         status: String,
     ) -> Self {
         let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
+
         Self {
-            created,
             cpu_stats: VecDeque::with_capacity(60),
+            created,
             docker_controls,
             id,
             image: image.into(),
@@ -533,6 +587,7 @@ impl ContainerItem {
             mem_limit: ByteStats::default(),
             mem_stats: VecDeque::with_capacity(60),
             name: name.into(),
+            ports,
             rx: ByteStats::default(),
             state,
             status,
@@ -594,7 +649,7 @@ impl ContainerItem {
 }
 
 /// Container information panel headings + widths, for nice pretty formatting
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Columns {
     pub name: (Header, u8),
     pub state: (Header, u8),
@@ -621,5 +676,100 @@ impl Columns {
             net_rx: (Header::Rx, 7),
             net_tx: (Header::Tx, 7),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ratatui::widgets::ListItem;
+
+    use crate::{
+        app_data::{ContainerImage, Logs},
+        ui::log_sanitizer,
+    };
+
+    use super::{ByteStats, ContainerName, CpuStats, LogsTz};
+
+    #[test]
+    // Display CpuStats as a string
+    fn test_container_state_cpustats_to_string() {
+        let test = |f: f64, s: &str| {
+            assert_eq!(CpuStats::new(f).to_string(), s);
+        };
+
+        test(0.0, "00.00%");
+        test(1.5, "01.50%");
+        test(15.15, "15.15%");
+        test(150.15, "150.15%");
+    }
+
+    #[test]
+    // Display bytestats as a string, convert into correct data unit (Kb, MB, GB)
+    fn test_container_state_bytestats_to_string() {
+        let test = |u: u64, s: &str| {
+            assert_eq!(ByteStats::new(u).to_string(), s);
+        };
+
+        test(0, "0.00 kB");
+        test(150, "0.15 kB");
+        test(1500, "1.50 kB");
+        test(150_000, "150.00 kB");
+        test(1_500_000, "1.50 MB");
+        test(15_000_000, "15.00 MB");
+        test(150_000_000, "150.00 MB");
+        test(1_500_000_000, "1.50 GB");
+        test(15_000_000_000, "15.00 GB");
+        test(150_000_000_000, "150.00 GB");
+    }
+
+    #[test]
+    /// ContainerName as string truncated correctly
+    fn test_container_state_container_name_to_string() {
+        let result = ContainerName::from("name_01");
+        assert_eq!(result.to_string(), "name_01");
+
+        let result = ContainerName::from("name_01_name_01_name_01_name_01_");
+        assert_eq!(result.to_string(), "name_01_name_01_name_01_name_…");
+
+        let result = result.get();
+        assert_eq!(result, "name_01_name_01_name_01_name_01_");
+    }
+
+    #[test]
+    /// ContainerImage as string truncated correctly
+    fn test_container_state_container_image() {
+        let result = ContainerImage::from("name_01");
+        assert_eq!(result.to_string(), "name_01");
+
+        let result = ContainerImage::from("name_01_name_01_name_01_name_01_");
+        assert_eq!(result.to_string(), "name_01_name_01_name_01_name_…");
+
+        let result = result.get();
+        assert_eq!(result, "name_01_name_01_name_01_name_01_");
+    }
+
+    #[test]
+    /// Logs can only contain 1 entry per LogzTz
+    fn test_container_state_logz() {
+        let input = "2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet";
+        let tz = LogsTz::from(input);
+        let mut logs = Logs::default();
+        let line = log_sanitizer::remove_ansi(input);
+
+        logs.insert(ListItem::new(line.clone()), tz.clone());
+        logs.insert(ListItem::new(line.clone()), tz.clone());
+        logs.insert(ListItem::new(line), tz);
+
+        assert_eq!(logs.logs.items.len(), 1);
+
+        let input = "2023-01-15T19:13:30.783138328Z Lorem ipsum dolor sit amet";
+        let tz = LogsTz::from(input);
+        let line = log_sanitizer::remove_ansi(input);
+
+        logs.insert(ListItem::new(line.clone()), tz.clone());
+        logs.insert(ListItem::new(line.clone()), tz.clone());
+        logs.insert(ListItem::new(line), tz);
+
+        assert_eq!(logs.logs.items.len(), 2);
     }
 }

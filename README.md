@@ -157,7 +157,8 @@ see <a href="https://forums.raspberrypi.com/viewtopic.php?t=203128" target='_bla
 
 ## Tests
 
-As of yet untested, needs work
+~~As of yet untested, needs work~~
+The work has been done, sp far the tests don't effect any running containers, but this may change in the future.
 
 ```shell
 cargo test -- --test-threads=1
