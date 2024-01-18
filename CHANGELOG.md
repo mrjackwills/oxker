@@ -7,7 +7,7 @@
 = Readme updated, screenshot added, [7561a93415c1e1f596b15edba95e7b32a939cd90], [4069e5572f81cb689dbb9f735db919e4636cdccc]
 
 ### Features
-+ Ports section added, closes #21, [65a1afcb0605604ede350a5630c775f94ebb74ee]
++ Ports section added, closes #21, [65a1afcb0605604ede350a5630c775f94ebb74ee], [7a096a65c40924021fe643fe0aa1067095832df9]
 
 ### Fixes
 + sort arrow now on left of header, [40ddcb727d2c1758d6dd26a58507b85b219f51e2]
