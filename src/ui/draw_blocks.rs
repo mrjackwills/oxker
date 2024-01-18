@@ -291,7 +291,11 @@ pub fn ports(
         let (ip, private, public) = max_lens;
 
         if ports.0.is_empty() {
-            let paragraph = Paragraph::new(Span::from("no ports").add_modifier(Modifier::BOLD))
+            let text = match ports.1 {
+                State::Running | State::Paused | State::Restarting => "no ports",
+                _ => "",
+            };
+            let paragraph = Paragraph::new(Span::from(text).add_modifier(Modifier::BOLD))
                 .alignment(Alignment::Center)
                 .block(block);
             f.render_widget(paragraph, area);
@@ -2774,6 +2778,43 @@ mod tests {
                 assert_eq!(expected_char.to_string(), result_cell.symbol());
                 if row_index == 0 && !BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::Green);
+                    assert_eq!(result_cell.modifier, Modifier::BOLD);
+                } else {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+
+        // when state is "State::Running | State::Paused | State::Restarting, won't show "no ports"
+        setup.app_data.lock().containers.items[0].state = State::Dead;
+        let max_lens = setup.app_data.lock().get_longest_port();
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭────────── ports ───────────╮",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "╰────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+                if row_index == 0 && !BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::Red);
                     assert_eq!(result_cell.modifier, Modifier::BOLD);
                 } else {
                     assert_eq!(result_cell.fg, Color::Reset);

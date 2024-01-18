@@ -1731,9 +1731,9 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    // ************* //
-    // Header Widths //
-    // ************* //
+    // ***** //
+    // Ports //
+    // ***** //
 
     #[test]
     /// Returns selected containers ports ordered by private ip
