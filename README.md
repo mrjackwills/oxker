@@ -162,7 +162,7 @@ see <a href="https://forums.raspberrypi.com/viewtopic.php?t=203128" target='_bla
 The work has been done, so far the tests don't effect any running containers, but this may change in the future.
 
 ```shell
-cargo test -- --test-threads=1
+cargo test
 ```
 
 Run some example docker images
