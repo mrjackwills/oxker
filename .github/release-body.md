@@ -1,26 +1,23 @@
-### 2024-01-05
+### 2024-01-18
 
 ### Chores
-+ .devcontainer updated, [2313618eb1493ce41d70847b888c32b65fdc40ea], [5af6b8bcd31c3c38ff5a5799c76dc1cbe1167763], [9b0b6b10c3a0c1d5095490cfd3cda18d252f38f5]
-+ alpine version bump, [061de032dad935c56c6caab419ecb5c9bbac4c7e]
-+ dependencies updated, [0890991ff1a239fe2d556a0c4eac6ae05beb9b50], [0a7b266b2a358a4788ae877ca8a97f08eac4eef2], [333621f1a7321c1fdf73fd35dd7f3ab165a9dc64], [3e51889cd8a552b1da463ae6a40d5de6eec188f5], [a179bb6f6a7e076269fa830f56c0d4a31cf8488a]
-+ file formatting, [eb5e74ae67d815bf49f241d2baf319e41cf9adf8]
-+ Rust 1.75.0 linting, [81be75f27fd32a59ebff57e44c5022ff862df84b]
++ dependencies updated, [53b4bafbe53312fe41608ddf33e865d474222aaa], [58ef151600e362048a607c8ae61a5edfe80ab1dd], [b6fd35022a99ec0e982ddb154b0450d49c4840e9], [0438c108bdd9815d7eae1b89c47c4e6438f358d6]
++ files formatted, [1806165c3e266876b2d1806f7b662d09705f3aad]
++ create_release.sh check for unused lint, [d0b27211928f93f8455e1ee5a6a6485c6a21d382]
 
 ### Docs
-+ screenshot updated, [0231d1bdcda304300d289243a95044ab3bdce85c]
-+ comment typo, [0ad1ec9d85d6f0cac743b4421d0ad03432c9d717]
+= Readme updated, screenshot added, [7561a93415c1e1f596b15edba95e7b32a939cd90], [4069e5572f81cb689dbb9f735db919e4636cdccc]
 
 ### Features
-+ re-arrange columns, container name is now the first column, added a ContainerName & ContainerImage struct via `string_wrapper` macro, closes #32, [e936bb4b78980d0e34a1ef5e9f6f82a9ed0ddc7f]
++ Ports section added, closes #21, [65a1afcb0605604ede350a5630c775f94ebb74ee], [7a096a65c40924021fe643fe0aa1067095832df9]
 
 ### Fixes
-+ Docker Commands hidden, [4301e4709f99fc23ee438bf345b0dc698a05dc4e]
-+ .gitattributes, [1234ea53897b2ed6ada0eb18cd81b8783a5dc5f5]
++ sort arrow now on left of header, [40ddcb727d2c1758d6dd26a58507b85b219f51e2]
 
 ### Refactors
-+ GitHub workflow action improved, [04b66af2b60c96cfbece0b13109e30b08ef35cc4]
-+ sort_containers, [ccf8b55a7495982f72b4fb3af6e11a9bd7465216]
-+ string_wrapper .get() return `&str`, [a722731c6a77e00d1fb13967b51400aa34e72213]
++ rename string_wrapper > unit_struct, [27cf53e41f8b379f606c1c27620ee08e79bac57e]
+
+### Tests
++ Finally have tests, currently for layout and associated methods, at the moment running the tests will not interfere with any running Docker containers, [4bcf77db776a36e0a8151ecfbda722a66c4ba46c]
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details
