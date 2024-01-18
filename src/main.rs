@@ -168,10 +168,10 @@ async fn main() {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::many_single_char_names, unused)]
 mod tests {
-    use bollard::service::ContainerSummary;
+    use bollard::service::{ContainerSummary, Port};
 
     use crate::{
-        app_data::{AppData, ContainerId, ContainerItem, State, StatefulList},
+        app_data::{AppData, ContainerId, ContainerItem, ContainerPorts, State, StatefulList},
         parse_args::CliArgs,
     };
 
@@ -197,6 +197,11 @@ mod tests {
             format!("image_{index}"),
             false,
             format!("container_{index}"),
+            vec![ContainerPorts {
+                ip: None,
+                private: u16::try_from(index).unwrap_or(1) + 8000,
+                public: None,
+            }],
             State::Running,
             format!("Up {index} hour"),
         )
@@ -231,7 +236,12 @@ mod tests {
             image_id: Some(format!("{index}")),
             command: None,
             created: Some(i64::try_from(index).unwrap()),
-            ports: None,
+            ports: Some(vec![Port {
+                ip: None,
+                private_port: u16::try_from(index).unwrap_or(1) + 8000,
+                public_port: None,
+                typ: None,
+            }]),
             size_rw: None,
             size_root_fs: None,
             labels: None,

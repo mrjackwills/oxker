@@ -4,6 +4,7 @@ use std::{
     fmt,
 };
 
+use bollard::service::Port;
 use ratatui::{
     style::Color,
     widgets::{ListItem, ListState},
@@ -99,6 +100,47 @@ macro_rules! unit_struct {
 
 unit_struct!(ContainerName);
 unit_struct!(ContainerImage);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ContainerPorts {
+    pub ip: Option<String>,
+    pub private: u16,
+    pub public: Option<u16>,
+}
+
+impl From<&Port> for ContainerPorts {
+    fn from(value: &Port) -> Self {
+        Self {
+            ip: value.ip.clone(),
+            private: value.private_port,
+            public: value.public_port,
+        }
+    }
+}
+
+impl ContainerPorts {
+    pub fn len_ip(&self) -> usize {
+        self.ip.as_ref().unwrap_or(&String::new()).chars().count()
+    }
+    pub fn len_private(&self) -> usize {
+        format!("{}", self.private).chars().count()
+    }
+    pub fn len_public(&self) -> usize {
+        format!("{}", self.public.unwrap_or_default())
+            .chars()
+            .count()
+    }
+
+    pub fn print(&self) -> (String, String, String) {
+        (
+            self.ip
+                .as_ref()
+                .map_or(String::new(), std::borrow::ToOwned::to_owned),
+            format!("{}", self.private),
+            self.public.map_or(String::new(), |s| s.to_string()),
+        )
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StatefulList<T> {
@@ -247,7 +289,7 @@ pub enum DockerControls {
     Restart,
     Start,
     Stop,
-    Unpause,
+    Resume,
     Delete,
 }
 
@@ -259,7 +301,7 @@ impl DockerControls {
             Self::Start => Color::Green,
             Self::Stop => Color::Red,
             Self::Delete => Color::Gray,
-            Self::Unpause => Color::Blue,
+            Self::Resume => Color::Blue,
         }
     }
 
@@ -267,7 +309,7 @@ impl DockerControls {
     pub fn gen_vec(state: State) -> Vec<Self> {
         match state {
             State::Dead | State::Exited => vec![Self::Start, Self::Restart, Self::Delete],
-            State::Paused => vec![Self::Unpause, Self::Stop, Self::Delete],
+            State::Paused => vec![Self::Resume, Self::Stop, Self::Delete],
             State::Restarting => vec![Self::Stop, Self::Delete],
             State::Running => vec![Self::Pause, Self::Restart, Self::Stop, Self::Delete],
             _ => vec![Self::Delete],
@@ -283,7 +325,7 @@ impl fmt::Display for DockerControls {
             Self::Restart => "restart",
             Self::Start => "start",
             Self::Stop => "stop",
-            Self::Unpause => "resume",
+            Self::Resume => "resume",
         };
         write!(f, "{disp}")
     }
@@ -484,21 +526,23 @@ impl Logs {
 /// Info for each container
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContainerItem {
-    pub created: u64,
     pub cpu_stats: VecDeque<CpuStats>,
+    pub created: u64,
     pub docker_controls: StatefulList<DockerControls>,
     pub id: ContainerId,
     pub image: ContainerImage,
+    pub is_oxker: bool,
     pub last_updated: u64,
     pub logs: Logs,
     pub mem_limit: ByteStats,
     pub mem_stats: VecDeque<ByteStats>,
     pub name: ContainerName,
+    // todo remove option, can be empty vec
+    pub ports: Vec<ContainerPorts>,
     pub rx: ByteStats,
     pub state: State,
     pub status: String,
     pub tx: ByteStats,
-    pub is_oxker: bool,
 }
 
 /// Basic display information, for when running in debug mode
@@ -516,6 +560,7 @@ impl fmt::Display for ContainerItem {
 }
 
 impl ContainerItem {
+    #[allow(clippy::too_many_arguments)]
     /// Create a new container item
     pub fn new(
         created: u64,
@@ -523,14 +568,16 @@ impl ContainerItem {
         image: String,
         is_oxker: bool,
         name: String,
+        ports: Vec<ContainerPorts>,
         state: State,
         status: String,
     ) -> Self {
         let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
+
         Self {
-            created,
             cpu_stats: VecDeque::with_capacity(60),
+            created,
             docker_controls,
             id,
             image: image.into(),
@@ -540,6 +587,7 @@ impl ContainerItem {
             mem_limit: ByteStats::default(),
             mem_stats: VecDeque::with_capacity(60),
             name: name.into(),
+            ports,
             rx: ByteStats::default(),
             state,
             status,

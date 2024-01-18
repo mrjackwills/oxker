@@ -387,11 +387,11 @@ impl DockerData {
                     });
                     self.update_everything().await;
                 }
-                DockerMessage::Unpause(id) => {
+                DockerMessage::Resume(id) => {
                     tokio::spawn(async move {
                         let handle = GuiState::start_loading_animation(&gui_state, uuid);
                         if docker.unpause_container(id.get()).await.is_err() {
-                            Self::set_error(&app_data, DockerControls::Unpause, &gui_state);
+                            Self::set_error(&app_data, DockerControls::Resume, &gui_state);
                         }
                         gui_state.lock().stop_loading_animation(&handle, uuid);
                     });

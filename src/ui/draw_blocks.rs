@@ -1,7 +1,7 @@
 use parking_lot::Mutex;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Color, Modifier, Style, Stylize},
     symbols,
     text::{Line, Span},
     widgets::{
@@ -269,6 +269,61 @@ pub fn logs(
     }
 }
 
+// Display the ports in a formatted list
+pub fn ports(
+    f: &mut Frame,
+    area: Rect,
+    app_data: &Arc<Mutex<AppData>>,
+    max_lens: (usize, usize, usize),
+) {
+    if let Some(ports) = app_data.lock().get_selected_ports() {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .title_alignment(Alignment::Center)
+            .title(Span::styled(
+                " ports ",
+                Style::default()
+                    .fg(ports.1.get_color())
+                    .add_modifier(Modifier::BOLD),
+            ));
+
+        let (ip, private, public) = max_lens;
+
+        if ports.0.is_empty() {
+            let paragraph = Paragraph::new(Span::from("no ports").add_modifier(Modifier::BOLD))
+                .alignment(Alignment::Center)
+                .block(block);
+            f.render_widget(paragraph, area);
+        } else {
+            let mut output = vec![Line::from(
+                Span::from(format!(
+                    "{:>ip$}{:>private$}{:>public$}",
+                    "ip", "private", "public"
+                ))
+                .fg(Color::Yellow),
+            )];
+            for (index, item) in ports.0.iter().enumerate() {
+                let fg = if index % 2 == 0 {
+                    Color::White
+                } else {
+                    Color::Magenta
+                };
+                let strings = item.print();
+
+                let line = vec![
+                    Span::from(format!("{:>ip$}", strings.0)).fg(fg),
+                    Span::from(format!("{:>private$}", strings.1)).fg(fg),
+                    Span::from(format!("{:>public$}", strings.2)).fg(fg),
+                ];
+                output.push(Line::from(line));
+            }
+            let paragraph = Paragraph::new(output).block(block);
+            f.render_widget(paragraph, area);
+        }
+    }
+}
+
 /// Draw the cpu + mem charts
 pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
     if let Some((cpu, mem)) = app_data.lock().get_chart_data() {
@@ -307,10 +362,7 @@ fn make_chart<'a, T: Stats + Display>(
     current: &'a T,
     max: &'a T,
 ) -> Chart<'a> {
-    let title_color = match state {
-        State::Running => Color::Green,
-        _ => state.get_color(),
-    };
+    let title_color = state.get_color();
     let label_color = match state {
         State::Running => ORANGE,
         _ => state.get_color(),
@@ -966,8 +1018,8 @@ mod tests {
 
     use crate::{
         app_data::{
-            AppData, ContainerId, ContainerImage, ContainerName, Header, SortedOrder, State,
-            StatefulList,
+            AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts, Header,
+            SortedOrder, State, StatefulList,
         },
         app_error::AppError,
         tests::{gen_appdata, gen_container_summary, gen_containers},
@@ -2687,49 +2739,260 @@ mod tests {
         }
     }
 
+    #[test]
+    // Port section when container has no ports
+    fn test_draw_blocks_ports_no_ports() {
+        let (w, h) = (30, 8);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers.items[0].ports = vec![];
+
+        let max_lens = setup.app_data.lock().get_longest_port();
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭────────── ports ───────────╮",
+            "│          no ports          │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "│                            │",
+            "╰────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+                if row_index == 0 && !BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::Green);
+                    assert_eq!(result_cell.modifier, Modifier::BOLD);
+                } else {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Port section when container has multiple ports
+    fn test_draw_blocks_ports_multiple_ports() {
+        let (w, h) = (32, 8);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: None,
+                private: 8002,
+                public: None,
+            });
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some("127.0.0.1".to_owned()),
+                private: 8003,
+                public: Some(8003),
+            });
+
+        let max_lens = setup.app_data.lock().get_longest_port();
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭─────────── ports ────────────╮",
+            "│       ip   private   public  │",
+            "│               8001           │",
+            "│               8002           │",
+            "│127.0.0.1      8003     8003  │",
+            "│                              │",
+            "│                              │",
+            "╰──────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+
+                let result_cell_as_char = result_cell
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap()
+                    .is_ascii_alphanumeric();
+                if row_index == 0 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::Green);
+                }
+                if row_index == 1 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::Yellow);
+                }
+                if row_index == 2 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::White);
+                }
+                if row_index == 3 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::Magenta);
+                }
+                if row_index == 4 && result_cell_as_char {
+                    assert_eq!(result_cell.fg, Color::White);
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Port section title color correct dependant on state
+    fn test_draw_blocks_ports_container_state() {
+        let (w, h) = (32, 8);
+        let mut setup = test_setup(w, h, true, true);
+        let max_lens = setup.app_data.lock().get_longest_port();
+
+        setup.app_data.lock().containers.items[0].state = State::Paused;
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭─────────── ports ────────────╮",
+            "│   ip   private   public      │",
+            "│           8001               │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "╰──────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+
+                if row_index == 0
+                    && result_cell
+                        .symbol()
+                        .chars()
+                        .next()
+                        .unwrap()
+                        .is_ascii_alphanumeric()
+                {
+                    assert_eq!(result_cell.fg, Color::Yellow);
+                }
+            }
+        }
+
+        setup.app_data.lock().containers.items[0].state = State::Dead;
+        setup
+            .terminal
+            .draw(|f| {
+                super::ports(f, setup.area, &setup.app_data, max_lens);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭─────────── ports ────────────╮",
+            "│   ip   private   public      │",
+            "│           8001               │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "╰──────────────────────────────╯",
+        ];
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(expected_char.to_string(), result_cell.symbol());
+
+                if row_index == 0
+                    && result_cell
+                        .symbol()
+                        .chars()
+                        .next()
+                        .unwrap()
+                        .is_ascii_alphanumeric()
+                {
+                    assert_eq!(result_cell.fg, Color::Red);
+                }
+            }
+        }
+    }
+
     // *************** //
     // The whole layout //
     // **************** //
     #[test]
     // Check that the whole layout is drawn correctly
-    fn test_draw_blocks_the_whole_layout() {
+    fn test_draw_blocks_whole_layout() {
         let (w, h) = (160, 30);
         let mut setup = test_setup(w, h, true, true);
 
         insert_chart_data(&setup);
         insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some("127.0.0.1".to_owned()),
+                private: 8003,
+                public: Some(8003),
+            });
 
         let expected = [
             "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
-            "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
-            "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
-            "│   container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                      ││  restart     │",
-            "│   container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                      ││  stop        │",
-            "│                                                                                                                                              ││  delete      │",
-            "│                                                                                                                                              ││              │",
-            "│                                                                                                                                              ││              │",
-            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
-            "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│  line 1                                                                                                                                                      │",
-            "│  line 2                                                                                                                                                      │",
-            "│▶ line 3                                                                                                                                                      │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-            "╭───────────────────────────────── cpu 03.00% ─────────────────────────────────╮╭────────────────────────────── memory 30.00 kB ───────────────────────────────╮",
-            "│10.00%│     ••••••                                                            ││100.00 kB│     ••••••                                                         │",
-            "│      │•••••      ••••                                                        ││         │•••••      •••                                                      │",
-            "│      │                                                                       ││         │                                                                    │",
-            "╰──────────────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────╯",
+        "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
+        "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
+        "│   container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                      ││  restart     │",
+        "│   container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                      ││  stop        │",
+        "│                                                                                                                                              ││  delete      │",
+        "│                                                                                                                                              ││              │",
+        "│                                                                                                                                              ││              │",
+        "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
+        "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+        "│  line 1                                                                                                                                                      │",
+        "│  line 2                                                                                                                                                      │",
+        "│▶ line 3                                                                                                                                                      │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "│                                                                                                                                                              │",
+        "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+		"╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
+        "│10.00%│     ••••                                               ││100.00 kB│     •••                                             ││       ip   private   public│",
+        "│      │  •••   •                                               ││         │  •••  •                                             ││               8001         │",
+        "│      │••       •••                                            ││         │••      •••                                          ││127.0.0.1      8003     8003│",
+        "│      │                                                        ││         │                                                     ││                            │",
+        "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
         ];
         setup
             .terminal
@@ -2744,7 +3007,7 @@ mod tests {
                 let index = row_index * usize::from(w) + char_index;
                 let result_cell = &result[index];
 
-                assert_eq!(expected_char.to_string(), result_cell.symbol());
+                assert_eq!(result_cell.symbol(), expected_char.to_string(),);
             }
         }
     }

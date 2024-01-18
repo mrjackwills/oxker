@@ -254,6 +254,51 @@ impl AppData {
             .and_then(|i| self.containers.items.get(i))
     }
 
+    /// Find the longest port when it's transformed into a string, defaults are header lens (ip, private, public)
+    pub fn get_longest_port(&self) -> (usize, usize, usize) {
+        let mut longest_ip = 5;
+        let mut longest_private = 10;
+        let mut longest_public = 9;
+
+        for item in &self.containers.items {
+            // if let Some(ports) = item.ports.as_ref() {
+            longest_ip = longest_ip.max(
+                item.ports
+                    .iter()
+                    .map(ContainerPorts::len_ip)
+                    .max()
+                    .unwrap_or(3),
+            );
+            longest_private = longest_private.max(
+                item.ports
+                    .iter()
+                    .map(ContainerPorts::len_private)
+                    .max()
+                    .unwrap_or(8),
+            );
+            longest_public = longest_public.max(
+                item.ports
+                    .iter()
+                    .map(ContainerPorts::len_public)
+                    .max()
+                    .unwrap_or(6),
+            );
+        }
+        // }
+
+        (longest_ip, longest_private, longest_public)
+        // )
+    }
+    /// Get Option of the current selected container's ports, sorted by private port
+    pub fn get_selected_ports(&mut self) -> Option<(Vec<ContainerPorts>, State)> {
+        if let Some(item) = self.get_mut_selected_container() {
+            let mut ports = item.ports.clone();
+            ports.sort_by(|a, b| a.private.cmp(&b.private));
+            return Some((ports, item.state));
+        }
+        None
+    }
+
     /// Get mutable Option of the current selected container
     fn get_mut_selected_container(&mut self) -> Option<&mut ContainerItem> {
         self.containers
@@ -571,6 +616,10 @@ impl AppData {
                     })
                 });
 
+                let ports = i.ports.as_ref().map_or(vec![], |i| {
+                    i.iter().map(ContainerPorts::from).collect::<Vec<_>>()
+                });
+
                 let id = ContainerId::from(id.as_str());
 
                 let is_oxker = i
@@ -611,13 +660,17 @@ impl AppData {
                         };
                         item.state = state;
                     };
+
+                    item.ports = ports;
+
                     if item.image.get() != image {
                         item.image.set(image);
                     };
                 } else {
                     // container not known, so make new ContainerItem and push into containers Vec
-                    let container =
-                        ContainerItem::new(created, id, image, is_oxker, name, state, status);
+                    let container = ContainerItem::new(
+                        created, id, image, is_oxker, name, ports, state, status,
+                    );
                     self.containers.items.push(container);
                 }
             }
@@ -1325,6 +1378,7 @@ mod tests {
                     "image_1".to_owned(),
                     false,
                     "container_1".to_owned(),
+                    vec![],
                     state,
                     "Up 1 hour".to_owned(),
                 )
@@ -1356,7 +1410,7 @@ mod tests {
         test_state(
             State::Paused,
             &mut vec![
-                DockerControls::Unpause,
+                DockerControls::Resume,
                 DockerControls::Stop,
                 DockerControls::Delete,
             ],
@@ -1652,9 +1706,9 @@ mod tests {
         );
     }
 
-    // ********** //
-    // Chart data //
-    // ********** //
+    // ************* //
+    // Header Widths //
+    // ************* //
 
     #[test]
     /// Header widths return correctly
@@ -1675,6 +1729,77 @@ mod tests {
             net_tx: (Header::Tx, 7),
         };
         assert_eq!(result, expected);
+    }
+
+    // ************* //
+    // Header Widths //
+    // ************* //
+
+    #[test]
+    /// Returns selected containers ports ordered by private ip
+    fn test_app_data_get_selected_ports() {
+        let (_ids, containers) = gen_containers();
+        let mut app_data = gen_appdata(&containers);
+
+        app_data.containers.items[0].ports.push(ContainerPorts {
+            ip: None,
+            private: 10,
+            public: Some(1),
+        });
+        app_data.containers.items[0].ports.push(ContainerPorts {
+            ip: None,
+            private: 11,
+            public: Some(3),
+        });
+        app_data.containers.items[0].ports.push(ContainerPorts {
+            ip: None,
+            private: 4,
+            public: Some(2),
+        });
+
+        // No containers selected
+        let result = app_data.get_selected_ports();
+        assert!(result.is_none());
+
+        // Selected container & ports
+        app_data.containers_start();
+        let result = app_data.get_selected_ports();
+
+        assert_eq!(
+            result,
+            Some((
+                vec![
+                    ContainerPorts {
+                        ip: None,
+                        private: 4,
+                        public: Some(2)
+                    },
+                    ContainerPorts {
+                        ip: None,
+                        private: 10,
+                        public: Some(1)
+                    },
+                    ContainerPorts {
+                        ip: None,
+                        private: 11,
+                        public: Some(3)
+                    },
+                    ContainerPorts {
+                        ip: None,
+                        private: 8001,
+                        public: None
+                    }
+                ],
+                State::Running
+            ))
+        );
+
+        // Selected container & no ports
+        app_data.containers_start();
+        app_data.containers.items[0].ports = vec![];
+        let result = app_data.get_selected_ports();
+
+        assert_eq!(result, Some((vec![], State::Running)));
     }
 
     // ************** //
