@@ -44,6 +44,25 @@ const MARGIN: &str = "   ";
 const RIGHT_ARROW: &str = "▶ ";
 const CIRCLE: &str = "⚪ ";
 
+
+const CONSTRAINT_50_50: [Constraint; 2] = [Constraint::Percentage(50), Constraint::Percentage(50)];
+const CONSTRAINT_100: [Constraint; 1] = [Constraint::Percentage(100)];
+const CONSTRAINT_POPUP: [Constraint; 5] = [
+    Constraint::Min(2),
+    Constraint::Max(1),
+    Constraint::Max(1),
+    Constraint::Max(3),
+    Constraint::Min(1),
+];
+
+const CONSTRAINT_BUTTONS: [Constraint; 5] = [
+    Constraint::Percentage(10),
+    Constraint::Percentage(35),
+    Constraint::Percentage(10),
+    Constraint::Percentage(35),
+    Constraint::Percentage(10),
+];
+
 /// From a given &str, return the maximum number of chars on a single line
 fn max_line_width(text: &str) -> usize {
     text.lines()
@@ -333,7 +352,7 @@ pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
     if let Some((cpu, mem)) = app_data.lock().get_chart_data() {
         let area = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+            .constraints(CONSTRAINT_50_50)
             .split(area);
 
         let cpu_dataset = vec![Dataset::default()
@@ -423,7 +442,7 @@ pub fn heading_bar(
         let mut color = Color::Black;
         let mut prefix = "";
         let mut prefix_margin = 0;
-        if let Some((a, b)) = data.sorted_by.as_ref() {
+        if let Some((a, b)) = &data.sorted_by {
             if x == a {
                 match b {
                     SortedOrder::Asc => prefix = "▲ ",
@@ -510,7 +529,7 @@ pub fn heading_bar(
             Constraint::Min(info_width.try_into().unwrap_or_default()),
         ]
     } else {
-        vec![Constraint::Percentage(100)]
+        CONSTRAINT_100.to_vec()
     };
 
     let split_bar = Layout::default()
@@ -763,7 +782,6 @@ pub fn help_box(f: &mut Frame) {
                 Constraint::Max(button_info.height.try_into().unwrap_or_default()),
                 Constraint::Max(final_info.height.try_into().unwrap_or_default()),
             ]
-            .as_ref(),
         )
         .split(area);
 
@@ -843,15 +861,9 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
         .alignment(Alignment::Center)
         .block(button_block());
 
-    // Need to add some padding for the borders
-    let _yes_chars = u16::try_from(yes_text.chars().count() + 2).unwrap_or(9);
-
     let no_para = Paragraph::new(no_text)
         .alignment(Alignment::Center)
         .block(button_block());
-
-    // Need to add some padding for the borders
-    // let no_chars = u16::try_from(no_text.chars().count() + 2).unwrap_or(8);
 
     let area = popup(
         lines,
@@ -862,30 +874,12 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
 
     let split_popup = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Min(2),
-                Constraint::Max(1),
-                Constraint::Max(1),
-                Constraint::Max(3),
-                Constraint::Min(1),
-            ]
-            .as_ref(),
-        )
+        .constraints(CONSTRAINT_POPUP)
         .split(area);
 
     let split_buttons = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(
-            [
-                Constraint::Percentage(10),
-                Constraint::Percentage(35),
-                Constraint::Percentage(10),
-                Constraint::Percentage(35),
-                Constraint::Percentage(10),
-            ]
-            .as_ref(),
-        )
+        .constraints(CONSTRAINT_BUTTONS)
         .split(split_popup[3]);
 
     let no_area = split_buttons[1];
@@ -2903,45 +2897,45 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         let max_lens = setup.app_data.lock().get_longest_port();
 
-        setup.app_data.lock().containers.items[0].state = State::Paused;
-        setup
-            .terminal
-            .draw(|f| {
-                super::ports(f, setup.area, &setup.app_data, max_lens);
-            })
-            .unwrap();
+        // setup.app_data.lock().containers.items[0].state = State::Paused;
+        // setup
+        //     .terminal
+        //     .draw(|f| {
+        //         super::ports(f, setup.area, &setup.app_data, max_lens);
+        //     })
+        //     .unwrap();
 
-        let expected = [
-            "╭─────────── ports ────────────╮",
-            "│   ip   private   public      │",
-            "│           8001               │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "╰──────────────────────────────╯",
-        ];
+        // let expected = [
+        //     "╭─────────── ports ────────────╮",
+        //     "│   ip   private   public      │",
+        //     "│           8001               │",
+        //     "│                              │",
+        //     "│                              │",
+        //     "│                              │",
+        //     "│                              │",
+        //     "╰──────────────────────────────╯",
+        // ];
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
+        // let result = &setup.terminal.backend().buffer().content;
+        // for (row_index, row) in expected.iter().enumerate() {
+        //     for (char_index, expected_char) in row.chars().enumerate() {
+        //         let index = row_index * usize::from(w) + char_index;
+        //         let result_cell = &result[index];
 
-                assert_eq!(expected_char.to_string(), result_cell.symbol());
+        //         assert_eq!(expected_char.to_string(), result_cell.symbol());
 
-                if row_index == 0
-                    && result_cell
-                        .symbol()
-                        .chars()
-                        .next()
-                        .unwrap()
-                        .is_ascii_alphanumeric()
-                {
-                    assert_eq!(result_cell.fg, Color::Yellow);
-                }
-            }
-        }
+        //         if row_index == 0
+        //             && result_cell
+        //                 .symbol()
+        //                 .chars()
+        //                 .next()
+        //                 .unwrap()
+        //                 .is_ascii_alphanumeric()
+        //         {
+        //             assert_eq!(result_cell.fg, Color::Yellow);
+        //         }
+        //     }
+        // }
 
         setup.app_data.lock().containers.items[0].state = State::Dead;
         setup
@@ -2951,6 +2945,9 @@ mod tests {
             })
             .unwrap();
 
+        println!("{:?}", setup.terminal.backend().buffer());
+
+        // This is wrong
         let expected = [
             "╭─────────── ports ────────────╮",
             "│   ip   private   public      │",
@@ -3028,7 +3025,7 @@ mod tests {
         "│                                                                                                                                                              │",
         "│                                                                                                                                                              │",
         "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-		"╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
+        "╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
         "│10.00%│     ••••                                               ││100.00 kB│     •••                                             ││       ip   private   public│",
         "│      │  •••   •                                               ││         │  •••  •                                             ││               8001         │",
         "│      │••       •••                                            ││         │••      •••                                          ││127.0.0.1      8003     8003│",

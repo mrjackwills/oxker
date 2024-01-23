@@ -48,7 +48,6 @@ impl PartialOrd for ContainerId {
     }
 }
 
-/// TODO - use string_wrapper for ContainerId?
 /// ContainerName and ContainerImage are simple structs, used so can implement custom fmt functions to them
 macro_rules! unit_struct {
     ($name:ident) => {
@@ -537,7 +536,6 @@ pub struct ContainerItem {
     pub mem_limit: ByteStats,
     pub mem_stats: VecDeque<ByteStats>,
     pub name: ContainerName,
-    // todo remove option, can be empty vec
     pub ports: Vec<ContainerPorts>,
     pub rx: ByteStats,
     pub state: State,
