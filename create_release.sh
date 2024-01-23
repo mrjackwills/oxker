@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # rust create_release
-# v0.4.1
+# v0.5.1
 
 STAR_LINE='****************************************'
 CWD=$(pwd)
@@ -17,6 +17,11 @@ error_close() {
 	echo -e "\n${RED}ERROR - EXITED: ${YELLOW}$1${RESET}\n"
 	exit 1
 }
+
+# Check that dialog is installed
+if ! [ -x "$(command -v dialog)" ]; then
+	error_close "dialog is not installed"
+fi
 
 # $1 string - question to ask
 ask_yn() {
@@ -173,27 +178,37 @@ cargo_publish() {
 	ask_continue
 }
 
-# Build all releases that GitHub workflow would
-# This will download GB's of docker images
-cargo_build() {
-	cargo install cross
-	cargo_clean
+cargo_build_x86_linux() {
 	echo -e "${YELLOW}cross build --target x86_64-unknown-linux-musl --release${RESET}"
 	cross build --target x86_64-unknown-linux-musl --release
-	ask_continue
-	cargo_clean
+}
+
+cargo_build_aarch64_linux() {
 	echo -e "${YELLOW}cross build --target aarch64-unknown-linux-musl --release${RESET}"
 	cross build --target aarch64-unknown-linux-musl --release
-	ask_continue
-	cargo_clean
+}
+
+cargo_build_armv6_linux() {
 	echo -e "${YELLOW}cross build --target arm-unknown-linux-musleabihf --release${RESET}"
 	cross build --target arm-unknown-linux-musleabihf --release
-	ask_continue
-	cargo_clean
+}
+
+cargo_build_x86_windows() {
 	echo -e "${YELLOW}cross build --target x86_64-pc-windows-gnu --release${RESET}"
 	cross build --target x86_64-pc-windows-gnu --release
+}
+
+# Build all releases that GitHub workflow would
+# This will download GB's of docker images
+cargo_build_all() {
+	cargo install cross
+	cargo_build_armv6_linux
 	ask_continue
-	cargo_clean
+	cargo_build_aarch64_linux
+	ask_continue
+	cargo_build_x86_linux
+	ask_continue
+	cargo_build_x86_windows
 }
 
 # $1 text to colourise
@@ -267,6 +282,9 @@ release_flow() {
 	release_continue "git checkout main"
 	git checkout main
 
+	echo -e "${PURPLE}git pull main${RESET}"
+	git pull origin main
+
 	echo -e "${PURPLE}git merge --no-ff \"${RELEASE_BRANCH}\" -m \"chore: merge ${RELEASE_BRANCH} into main\"${RESET}"
 	git merge --no-ff "$RELEASE_BRANCH" -m "chore: merge ${RELEASE_BRANCH} into main"
 	echo -e "\n${PURPLE}cargo check${RESET}\n"
@@ -289,6 +307,51 @@ release_flow() {
 
 	release_continue "git branch -d \"$RELEASE_BRANCH\""
 	git branch -d "$RELEASE_BRANCH"
+}
+
+build_choice() {
+	cmd=(dialog --backtitle "Choose option" --radiolist "choose" 14 80 16)
+	options=(
+		1 "x86 musl linux" off
+		2 "aarch64 musl linux" off
+		3 "armv6 musl linux" off
+		4 "x86 windows" off
+		5 "all" off
+	)
+	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+	exitStatus=$?
+	clear
+	if [ $exitStatus -ne 0 ]; then
+		exit
+	fi
+	for choice in $choices; do
+		case $choice in
+		0)
+			exit
+			;;
+		1)
+			cargo_build_x86_linux
+			exit
+			;;
+		2)
+			cargo_build_aarch64_linux
+			exit
+			;;
+		3)
+			cargo_build_armv6_linux
+			exit
+			;;
+		4)
+			cargo_build_x86_windows
+			exit
+			;;
+		5)
+			cargo_build_all
+			exit
+			;;
+		esac
+	done
+
 }
 
 main() {
@@ -319,7 +382,7 @@ main() {
 			break
 			;;
 		3)
-			cargo_build
+			build_choice
 			main
 			break
 			;;
