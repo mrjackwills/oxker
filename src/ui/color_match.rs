@@ -95,9 +95,9 @@ mod tests {
                     "\x1b[31;47mo\x1b[32;40mx\x1b[33;41mk\x1b[34;42me\x1b[35;43mr\x1b[0m",
                 ),
                 style: Style::default(),
-            }]
-            .to_vec(),
+            }].to_vec(),
             alignment: None,
+        	style: Style::default()
         }];
         assert_eq!(result, expected);
     }
@@ -130,6 +130,7 @@ mod tests {
                 },
             ],
             alignment: None,
+			style: Style::default()
         }];
         assert_eq!(result, expected);
     }
@@ -143,6 +144,7 @@ mod tests {
                 content: std::borrow::Cow::Borrowed("oxker"),
                 style: Style::default(),
             }],
+            style: Style::default(),
             alignment: None,
         }];
         assert_eq!(result, expected);
