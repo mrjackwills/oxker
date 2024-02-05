@@ -689,7 +689,7 @@ mod tests {
     use super::{ByteStats, ContainerName, CpuStats, LogsTz};
 
     #[test]
-    // Display CpuStats as a string
+    /// Display CpuStats as a string
     fn test_container_state_cpustats_to_string() {
         let test = |f: f64, s: &str| {
             assert_eq!(CpuStats::new(f).to_string(), s);
@@ -702,7 +702,7 @@ mod tests {
     }
 
     #[test]
-    // Display bytestats as a string, convert into correct data unit (Kb, MB, GB)
+    /// Display bytestats as a string, convert into correct data unit (Kb, MB, GB)
     fn test_container_state_bytestats_to_string() {
         let test = |u: u64, s: &str| {
             assert_eq!(ByteStats::new(u).to_string(), s);

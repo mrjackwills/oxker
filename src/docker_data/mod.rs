@@ -71,7 +71,7 @@ pub struct DockerData {
 impl DockerData {
     /// Use docker stats to calculate current cpu usage
     #[allow(clippy::cast_precision_loss)]
-    // FIX: this can overflow
+    // TODO FIX: this can overflow
     fn calculate_usage(stats: &Stats) -> f64 {
         let mut cpu_percentage = 0.0;
         let previous_cpu = stats.precpu_stats.cpu_usage.total_usage;

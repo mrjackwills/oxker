@@ -109,19 +109,19 @@ impl BoxLocation {
     ) -> [Constraint; 3] {
         match self {
             Self::TopLeft | Self::MiddleLeft | Self::BottomLeft => [
-                Constraint::Max(text_width),
+                Constraint::Min(text_width),
                 Constraint::Max(blank_horizontal),
                 Constraint::Max(blank_horizontal),
             ],
             Self::TopCentre | Self::MiddleCentre | Self::BottomCentre => [
                 Constraint::Max(blank_horizontal),
-                Constraint::Max(text_width),
+                Constraint::Min(text_width),
                 Constraint::Max(blank_horizontal),
             ],
             Self::TopRight | Self::MiddleRight | Self::BottomRight => [
                 Constraint::Max(blank_horizontal),
                 Constraint::Max(blank_horizontal),
-                Constraint::Max(text_width),
+                Constraint::Min(text_width),
             ],
         }
     }
@@ -133,19 +133,19 @@ impl BoxLocation {
     ) -> [Constraint; 3] {
         match self {
             Self::TopLeft | Self::TopCentre | Self::TopRight => [
-                Constraint::Max(number_lines),
+                Constraint::Min(number_lines),
                 Constraint::Max(blank_vertical),
                 Constraint::Max(blank_vertical),
             ],
             Self::MiddleLeft | Self::MiddleCentre | Self::MiddleRight => [
                 Constraint::Max(blank_vertical),
-                Constraint::Max(number_lines),
+                Constraint::Min(number_lines),
                 Constraint::Max(blank_vertical),
             ],
             Self::BottomLeft | Self::BottomCentre | Self::BottomRight => [
                 Constraint::Max(blank_vertical),
                 Constraint::Max(blank_vertical),
-                Constraint::Max(number_lines),
+                Constraint::Min(number_lines),
             ],
         }
     }
