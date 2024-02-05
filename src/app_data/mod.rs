@@ -212,7 +212,7 @@ impl AppData {
     }
 
     /// Get all the ContainerItems
-    pub const fn get_container_items(&self) -> &Vec<ContainerItem> {
+    pub fn get_container_items(&self) -> &[ContainerItem] {
         &self.containers.items
     }
 
@@ -383,6 +383,7 @@ impl AppData {
     }
 
     /// Get mutable Option of the currently selected container DockerControls items
+    /// TODO command or control, need a uniform name acorss the application
     pub fn get_control_items(&mut self) -> Option<&mut Vec<DockerControls>> {
         self.get_mut_selected_container()
             .map(|i| &mut i.docker_controls.items)
@@ -1229,7 +1230,7 @@ mod tests {
     }
 
     #[test]
-    // Get the currently selected container
+    /// Get the currently selected container
     fn test_app_data_get_selected_container() {
         let (_ids, mut containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
@@ -1249,7 +1250,7 @@ mod tests {
     }
 
     #[test]
-    // Get mut container by id
+    /// Get mut container by id
     fn test_app_data_get_container_by_id() {
         let (_ids, mut containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
@@ -1259,7 +1260,7 @@ mod tests {
     }
 
     #[test]
-    // Get just the containers name by id
+    /// Get just the containers name by id
     fn test_app_data_get_container_name_by_id() {
         let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
@@ -1269,7 +1270,7 @@ mod tests {
     }
 
     #[test]
-    // Get the id of the currently selected container
+    /// Get the id of the currently selected container
     fn test_app_data_get_selected_container_id() {
         let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
@@ -1832,15 +1833,15 @@ mod tests {
     fn test_app_data_update_containers() {
         let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
-        let result_pre = app_data.get_container_items().clone();
-        let mut input = vec![
+        let result_pre = app_data.get_container_items().to_owned();
+        let mut input = [
             gen_container_summary(1, "paused"),
             gen_container_summary(2, "dead"),
         ];
 
         app_data.update_containers(&mut input);
-        let result_post = app_data.get_container_items();
-        assert_ne!(&result_pre, result_post);
+        let result_post = app_data.get_container_items().to_owned();
+        assert_ne!(result_pre, result_post);
         assert_eq!(result_post[0].state, State::Paused);
         assert_eq!(result_post[1].state, State::Dead);
     }
