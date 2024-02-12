@@ -98,12 +98,13 @@ mod tests {
             }]
             .to_vec(),
             alignment: None,
+            style: Style::default(),
         }];
         assert_eq!(result, expected);
     }
 
     #[test]
-    // Use the escape codes to colorize the text
+    /// Use the escape codes to colorize the text
     fn color_match_colorize() {
         let result = log_sanitizer::colorize_logs(INPUT);
         let expected = vec![Line {
@@ -130,12 +131,13 @@ mod tests {
                 },
             ],
             alignment: None,
+            style: Style::default(),
         }];
         assert_eq!(result, expected);
     }
 
     #[test]
-    // Remove all escape ansi codes from given input
+    /// Remove all escape ansi codes from given input
     fn color_match_remove_ansi() {
         let result = log_sanitizer::remove_ansi(INPUT);
         let expected = vec![Line {
@@ -143,6 +145,7 @@ mod tests {
                 content: std::borrow::Cow::Borrowed("oxker"),
                 style: Style::default(),
             }],
+            style: Style::default(),
             alignment: None,
         }];
         assert_eq!(result, expected);
