@@ -1,7 +1,7 @@
 use bollard::{
     container::{
-        ListContainersOptions, LogsOptions, RemoveContainerOptions, StartContainerOptions, Stats,
-        StatsOptions,
+        ListContainersOptions, LogsOptions, MemoryStatsStats, RemoveContainerOptions,
+        StartContainerOptions, Stats, StatsOptions,
     },
     service::ContainerSummary,
     Docker,
@@ -121,8 +121,19 @@ impl DockerData {
                 .take(1);
 
             while let Some(Ok(stats)) = stream.next().await {
+                // Memory stats are only collected if the container is alive - is this the behaviour we want?
                 let mem_stat = if state.is_alive() {
-                    Some(stats.memory_stats.usage.unwrap_or_default())
+                    let mem_cache = stats.memory_stats.stats.map_or(0, |i| match i {
+                        MemoryStatsStats::V1(x) => x.inactive_file,
+                        MemoryStatsStats::V2(x) => x.inactive_file,
+                    });
+                    Some(
+                        stats
+                            .memory_stats
+                            .usage
+                            .unwrap_or_default()
+                            .saturating_sub(mem_cache),
+                    )
                 } else {
                     None
                 };
