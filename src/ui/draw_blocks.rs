@@ -126,18 +126,14 @@ pub fn commands(
             .collect::<Vec<_>>()
     });
 
-
-
     if let Some(i) = app_data.lock().get_control_state() {
-		let items = List::new(items)
-        .block(block)
-        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-        .highlight_symbol(RIGHT_ARROW);
+        let items = List::new(items)
+            .block(block)
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+            .highlight_symbol(RIGHT_ARROW);
         f.render_stateful_widget(items, area, i);
     } else {
-        let paragraph = Paragraph::new("")
-            .block(block)
-            .alignment(Alignment::Center);
+        let paragraph = Paragraph::new("").block(block).alignment(Alignment::Center);
         f.render_widget(paragraph, area);
     }
 }
@@ -1111,7 +1107,7 @@ mod tests {
         }
     }
 
-	#[test]
+    #[test]
     // Test that when DockerCommands are available, they are drawn correctly, dependant on container state
     fn test_draw_blocks_commands_some() {
         let (w, h) = (12, 6);

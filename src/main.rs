@@ -150,7 +150,6 @@ async fn main() {
             let containers = app_data
                 .lock()
                 .get_container_items()
-                .clone()
                 .iter()
                 .map(|i| format!("{i}"))
                 .collect::<Vec<_>>();
