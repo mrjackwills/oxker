@@ -33,6 +33,14 @@ user_input() {
 	echo "$data"
 }
 
+# ask continue, or quit
+ask_continue() {
+	ask_yn "continue"
+	if [[ ! "$(user_input)" =~ ^y$ ]]; then
+		exit
+	fi
+}
+
 # semver major update
 update_major() {
 	local bumped_major
@@ -253,7 +261,7 @@ release_flow() {
 	get_git_remote_url
 
 	cargo_test
-	cargo_build
+	cargo_build_all
 	cargo_publish
 
 	cd "${CWD}" || error_close "Can't find ${CWD}"
