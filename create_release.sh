@@ -178,6 +178,7 @@ cargo_test() {
 
 # Simulate publishing to crates.io
 cargo_publish() {
+	echo -e "${PURPLE}cargo publish --dry-run${RESET}"
 	cargo publish --dry-run
 	ask_continue
 }
@@ -217,6 +218,7 @@ cargo_build_x86_windows() {
 # Build all releases that GitHub workflow would
 # This will download GB's of docker images
 cargo_build_all() {
+	cargo clean
 	cargo_build_armv6_linux
 	ask_continue
 	cargo_build_aarch64_linux
@@ -224,6 +226,7 @@ cargo_build_all() {
 	cargo_build_x86_linux
 	ask_continue
 	cargo_build_x86_windows
+	ask_continue
 }
 
 # $1 text to colourise
