@@ -2699,7 +2699,6 @@ mod tests {
             })
             .unwrap();
 
-
         let expected = vec![
             "                                              ".to_owned(),
             " ╭───────────────── Error ──────────────────╮ ".to_owned(),
