@@ -1,23 +1,25 @@
-### 2024-01-18
+### 2024-02-14
 
 ### Chores
-+ dependencies updated, [53b4bafbe53312fe41608ddf33e865d474222aaa], [58ef151600e362048a607c8ae61a5edfe80ab1dd], [b6fd35022a99ec0e982ddb154b0450d49c4840e9], [0438c108bdd9815d7eae1b89c47c4e6438f358d6]
-+ files formatted, [1806165c3e266876b2d1806f7b662d09705f3aad]
-+ create_release.sh check for unused lint, [d0b27211928f93f8455e1ee5a6a6485c6a21d382]
++ create_release v0.5.5, [616338b7107036e968f51c3ff80739f9ffb40fbd]
++ update dependencies, [10180d2e0817c00a198e27f7d71080c502639a6b]
++ update to ratatui v0.26.0, [d33dce3eec4c19cc3c3668dab77f7d25d6970c3c]
++ GitHub workflow dependency bump, [0314eac9df6cf9fea1943dcd06bd6a0b27131c16]
 
 ### Docs
-= Readme updated, screenshot added, [7561a93415c1e1f596b15edba95e7b32a939cd90], [4069e5572f81cb689dbb9f735db919e4636cdccc]
-
-### Features
-+ Ports section added, closes #21, [65a1afcb0605604ede350a5630c775f94ebb74ee], [7a096a65c40924021fe643fe0aa1067095832df9]
++ screenshot updated, [fe5ec4f5dd25f11817be37f3f1867a6a2b0afc42]
 
 ### Fixes
-+ sort arrow now on left of header, [40ddcb727d2c1758d6dd26a58507b85b219f51e2]
++ ports all listed in white, [d3b23585b38045eb3bc827367eca90eb7f7a7dd5]
++ use long container name in delete popup, [6202b7bbfdfb04a94959b5143dac3f1aa59cd336]
++ memory display, closes #33, [a182d40a7463164ef5dcac379d1a1768d77209d2]
 
 ### Refactors
-+ rename string_wrapper > unit_struct, [27cf53e41f8b379f606c1c27620ee08e79bac57e]
++ use &[T] instead of &Vec<T>, [76cd08ab2f98687a866a6bbb4fa93bbdedaa7699], [1f62bb50210f2d66bb7215e42e8b21a3c1a6ec06]
++ draw_block constraints into consts, [0436ff1b7356c80532048c7d497c66d331092b01]
 
 ### Tests
-+ Finally have tests, currently for layout and associated methods, at the moment running the tests will not interfere with any running Docker containers, [4bcf77db776a36e0a8151ecfbda722a66c4ba46c]
++ update port test with new colour, [f74ae3f5c34d74b78822078291fed401427c4cba]
++ color match tests updated, [5b287416315942b19c62f8c66348ce28462d894c]
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details

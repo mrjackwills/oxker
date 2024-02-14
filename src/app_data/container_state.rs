@@ -48,7 +48,6 @@ impl PartialOrd for ContainerId {
     }
 }
 
-/// TODO - use string_wrapper for ContainerId?
 /// ContainerName and ContainerImage are simple structs, used so can implement custom fmt functions to them
 macro_rules! unit_struct {
     ($name:ident) => {
@@ -537,7 +536,6 @@ pub struct ContainerItem {
     pub mem_limit: ByteStats,
     pub mem_stats: VecDeque<ByteStats>,
     pub name: ContainerName,
-    // todo remove option, can be empty vec
     pub ports: Vec<ContainerPorts>,
     pub rx: ByteStats,
     pub state: State,
@@ -691,7 +689,7 @@ mod tests {
     use super::{ByteStats, ContainerName, CpuStats, LogsTz};
 
     #[test]
-    // Display CpuStats as a string
+    /// Display CpuStats as a string
     fn test_container_state_cpustats_to_string() {
         let test = |f: f64, s: &str| {
             assert_eq!(CpuStats::new(f).to_string(), s);
@@ -704,7 +702,7 @@ mod tests {
     }
 
     #[test]
-    // Display bytestats as a string, convert into correct data unit (Kb, MB, GB)
+    /// Display bytestats as a string, convert into correct data unit (Kb, MB, GB)
     fn test_container_state_bytestats_to_string() {
         let test = |u: u64, s: &str| {
             assert_eq!(ByteStats::new(u).to_string(), s);

@@ -265,13 +265,14 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
 
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(1), Constraint::Min(100)].as_ref())
+        .constraints([Constraint::Max(1), Constraint::Min(1)].as_ref())
         .split(f.size());
 
     // Split into 3, containers+controls, logs, then graphs
+    // This one is the issue!
     let upper_main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Max(fd.height), Constraint::Percentage(50)].as_ref())
+        .constraints([Constraint::Max(fd.height), Constraint::Min(1)].as_ref())
         .split(whole_layout[1]);
 
     let top_split = if fd.has_containers {
@@ -286,7 +287,7 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
         .split(upper_main[0]);
 
     let lower_split = if fd.has_containers {
-        vec![Constraint::Percentage(70), Constraint::Percentage(20)]
+        vec![Constraint::Percentage(70), Constraint::Percentage(30)]
     } else {
         vec![Constraint::Percentage(100)]
     };

@@ -44,6 +44,24 @@ const MARGIN: &str = "   ";
 const RIGHT_ARROW: &str = "▶ ";
 const CIRCLE: &str = "⚪ ";
 
+const CONSTRAINT_50_50: [Constraint; 2] = [Constraint::Percentage(50), Constraint::Percentage(50)];
+const CONSTRAINT_100: [Constraint; 1] = [Constraint::Percentage(100)];
+const CONSTRAINT_POPUP: [Constraint; 5] = [
+    Constraint::Min(2),
+    Constraint::Max(1),
+    Constraint::Max(1),
+    Constraint::Max(3),
+    Constraint::Min(1),
+];
+
+const CONSTRAINT_BUTTONS: [Constraint; 5] = [
+    Constraint::Percentage(10),
+    Constraint::Percentage(35),
+    Constraint::Percentage(10),
+    Constraint::Percentage(35),
+    Constraint::Percentage(10),
+];
+
 /// From a given &str, return the maximum number of chars on a single line
 fn max_line_width(text: &str) -> usize {
     text.lines()
@@ -94,8 +112,7 @@ pub fn commands(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = || generate_block(app_data, area, fd, gui_state, SelectablePanel::Commands);
-    // let block = block();
+    let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Commands);
     let items = app_data.lock().get_control_items().map_or(vec![], |i| {
         i.iter()
             .map(|c| {
@@ -108,18 +125,14 @@ pub fn commands(
             .collect::<Vec<_>>()
     });
 
-    let items = List::new(items)
-        .block(block())
-        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-        .highlight_symbol(RIGHT_ARROW);
-
     if let Some(i) = app_data.lock().get_control_state() {
+        let items = List::new(items)
+            .block(block)
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+            .highlight_symbol(RIGHT_ARROW);
         f.render_stateful_widget(items, area, i);
     } else {
-        let block = || generate_block(app_data, area, fd, gui_state, SelectablePanel::Commands);
-        let paragraph = Paragraph::new("")
-            .block(block())
-            .alignment(Alignment::Center);
+        let paragraph = Paragraph::new("").block(block).alignment(Alignment::Center);
         f.render_widget(paragraph, area);
     }
 }
@@ -241,11 +254,11 @@ pub fn logs(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = || generate_block(app_data, area, fd, gui_state, SelectablePanel::Logs);
+    let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Logs);
     if fd.init {
         let paragraph = Paragraph::new(format!("parsing logs {}", fd.loading_icon))
             .style(Style::default())
-            .block(block())
+            .block(block)
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
     } else {
@@ -253,12 +266,12 @@ pub fn logs(
 
         if logs.is_empty() {
             let paragraph = Paragraph::new("no logs found")
-                .block(block())
+                .block(block)
                 .alignment(Alignment::Center);
             f.render_widget(paragraph, area);
         } else {
             let items = List::new(logs)
-                .block(block())
+                .block(block)
                 .highlight_symbol(RIGHT_ARROW)
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
             // This should always return Some, as logs is not empty
@@ -307,12 +320,8 @@ pub fn ports(
                 ))
                 .fg(Color::Yellow),
             )];
-            for (index, item) in ports.0.iter().enumerate() {
-                let fg = if index % 2 == 0 {
-                    Color::White
-                } else {
-                    Color::Magenta
-                };
+            for item in &ports.0 {
+                let fg = Color::White;
                 let strings = item.print();
 
                 let line = vec![
@@ -333,7 +342,7 @@ pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
     if let Some((cpu, mem)) = app_data.lock().get_chart_data() {
         let area = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+            .constraints(CONSTRAINT_50_50)
             .split(area);
 
         let cpu_dataset = vec![Dataset::default()
@@ -423,7 +432,7 @@ pub fn heading_bar(
         let mut color = Color::Black;
         let mut prefix = "";
         let mut prefix_margin = 0;
-        if let Some((a, b)) = data.sorted_by.as_ref() {
+        if let Some((a, b)) = &data.sorted_by {
             if x == a {
                 match b {
                     SortedOrder::Asc => prefix = "▲ ",
@@ -505,12 +514,12 @@ pub fn heading_bar(
     let column_width = if column_width > 0 { column_width } else { 1 };
     let splits = if data.has_containers {
         vec![
-            Constraint::Min(2),
+            Constraint::Max(2),
             Constraint::Min(column_width.try_into().unwrap_or_default()),
-            Constraint::Min(info_width.try_into().unwrap_or_default()),
+            Constraint::Max(info_width.try_into().unwrap_or_default()),
         ]
     } else {
-        vec![Constraint::Percentage(100)]
+        CONSTRAINT_100.to_vec()
     };
 
     let split_bar = Layout::default()
@@ -756,15 +765,12 @@ pub fn help_box(f: &mut Frame) {
 
     let split_popup = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Max(name_info.height.try_into().unwrap_or_default()),
-                Constraint::Max(description_info.height.try_into().unwrap_or_default()),
-                Constraint::Max(button_info.height.try_into().unwrap_or_default()),
-                Constraint::Max(final_info.height.try_into().unwrap_or_default()),
-            ]
-            .as_ref(),
-        )
+        .constraints([
+            Constraint::Max(name_info.height.try_into().unwrap_or_default()),
+            Constraint::Max(description_info.height.try_into().unwrap_or_default()),
+            Constraint::Max(button_info.height.try_into().unwrap_or_default()),
+            Constraint::Min(final_info.height.try_into().unwrap_or_default()),
+        ])
         .split(area);
 
     let name_paragraph = Paragraph::new(name_info.lines)
@@ -815,7 +821,7 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
     let confirm = Line::from(vec![
         Span::from("Are you sure you want to delete container: "),
         Span::styled(
-            name.to_string(),
+            name.get(),
             Style::default()
                 .fg(Color::Red)
                 .bg(Color::White)
@@ -843,15 +849,9 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
         .alignment(Alignment::Center)
         .block(button_block());
 
-    // Need to add some padding for the borders
-    let _yes_chars = u16::try_from(yes_text.chars().count() + 2).unwrap_or(9);
-
     let no_para = Paragraph::new(no_text)
         .alignment(Alignment::Center)
         .block(button_block());
-
-    // Need to add some padding for the borders
-    // let no_chars = u16::try_from(no_text.chars().count() + 2).unwrap_or(8);
 
     let area = popup(
         lines,
@@ -862,30 +862,12 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
 
     let split_popup = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Min(2),
-                Constraint::Max(1),
-                Constraint::Max(1),
-                Constraint::Max(3),
-                Constraint::Min(1),
-            ]
-            .as_ref(),
-        )
+        .constraints(CONSTRAINT_POPUP)
         .split(area);
 
     let split_buttons = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(
-            [
-                Constraint::Percentage(10),
-                Constraint::Percentage(35),
-                Constraint::Percentage(10),
-                Constraint::Percentage(35),
-                Constraint::Percentage(10),
-            ]
-            .as_ref(),
-        )
+        .constraints(CONSTRAINT_BUTTONS)
         .split(split_popup[3]);
 
     let no_area = split_buttons[1];
@@ -951,6 +933,7 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
 }
 
 /// Draw info box in one of the 9 BoxLocations
+// TODO is this broken?
 pub fn info(f: &mut Frame, text: &str, instant: Instant, gui_state: &Arc<Mutex<GuiState>>) {
     let block = Block::default()
         .title("")
@@ -1085,7 +1068,7 @@ mod tests {
     // ******************** //
 
     #[test]
-    // Test that when DockerCommands are available, they are drawn correctly, dependant on container state
+    /// Test that when DockerCommands are available, they are drawn correctly, dependant on container state
     fn test_draw_blocks_commands_none() {
         let (w, h) = (12, 6);
         let mut setup = test_setup(w, h, false, false);
@@ -1236,7 +1219,7 @@ mod tests {
     }
 
     #[test]
-    // When control panel is selected, the border is blue, if not then white, selected text is highlighted
+    /// When control panel is selected, the border is blue, if not then white, selected text is highlighted
     fn test_draw_blocks_commands_panel_selected_color() {
         let (w, h) = (12, 6);
         let mut setup = test_setup(w, h, true, true);
@@ -1326,7 +1309,7 @@ mod tests {
     }
 
     #[test]
-    // No containers, panel unselected, then selected, border color changes correctly
+    /// No containers, panel unselected, then selected, border color changes correctly
     fn test_draw_blocks_containers_none() {
         let (w, h) = (25, 6);
         let mut setup = test_setup(w, h, true, true);
@@ -1387,7 +1370,7 @@ mod tests {
     }
 
     #[test]
-    // Containers panel drawn, selected line is bold, border is blue
+    /// Containers panel drawn, selected line is bold, border is blue
     fn test_draw_blocks_containers_some() {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
@@ -1746,7 +1729,7 @@ mod tests {
     // ********** //
 
     #[test]
-    // No logs, panel unselected, then selected, border color changes correctly
+    /// No logs, panel unselected, then selected, border color changes correctly
     fn test_draw_blocks_logs_none() {
         let (w, h) = (25, 6);
         let mut setup = test_setup(w, h, true, true);
@@ -1808,7 +1791,7 @@ mod tests {
     }
 
     #[test]
-    // Parsing logs, spinner visible, and then animates by one frame
+    /// Parsing logs, spinner visible, and then animates by one frame
     fn test_draw_blocks_logs_parsing() {
         let (w, h) = (25, 6);
         let mut setup = test_setup(w, h, true, true);
@@ -1874,7 +1857,7 @@ mod tests {
     }
 
     #[test]
-    // Logs correct displayed, changing log state also draws correctly
+    /// Logs correct displayed, changing log state also draws correctly
     fn test_draw_blocks_logs_some() {
         let (w, h) = (25, 6);
         let mut setup = test_setup(w, h, true, true);
@@ -1943,7 +1926,7 @@ mod tests {
     }
 
     #[test]
-    // Full (long) name displayed in logs border
+    /// Full (long) name displayed in logs border
     fn test_draw_blocks_logs_long_name() {
         let (w, h) = (80, 6);
         let mut setup = test_setup(w, h, true, true);
@@ -2032,7 +2015,7 @@ mod tests {
         }
     }
     #[test]
-    // When status is Running, but not data, charts drawn without dots etc
+    /// When status is Running, but not data, charts drawn without dots etc
     fn test_draw_blocks_charts_running_none() {
         let (w, h) = (80, 10);
         let mut setup = test_setup(w, h, true, true);
@@ -2087,7 +2070,7 @@ mod tests {
     }
 
     #[test]
-    // When status is Running, charts correctly drawn
+    /// When status is Running, charts correctly drawn
     fn test_draw_blocks_charts_running_some() {
         let (w, h) = (80, 10);
         let mut setup = test_setup(w, h, true, true);
@@ -2140,7 +2123,7 @@ mod tests {
     }
 
     #[test]
-    // Whens status paused, some text is now Yellow
+    /// Whens status paused, some text is now Yellow
     fn test_draw_blocks_charts_paused() {
         let (w, h) = (80, 10);
         let mut setup = test_setup(w, h, true, true);
@@ -2188,7 +2171,7 @@ mod tests {
     }
 
     #[test]
-    // When dead, text is read
+    /// When dead, text is read
     fn test_draw_blocks_charts_dead() {
         let (w, h) = (80, 10);
         let mut setup = test_setup(w, h, true, true);
@@ -2335,7 +2318,6 @@ mod tests {
             let result = &setup.terminal.backend().buffer().content;
             for (index, expected_char) in expected.chars().enumerate() {
                 let result_cell = &result[index];
-
                 assert_eq!(result_cell.symbol(), expected_char.to_string());
                 assert_eq!(result_cell.bg, Color::Magenta);
                 assert_eq!(
@@ -2383,8 +2365,8 @@ mod tests {
         test("           name       state               status       cpu        memory/limit         id     image    ▼ ↓ rx      ↑ tx    ( h ) show help  ", 99..=108, (Header::Rx, SortedOrder::Desc));
 
         // tx
-        test("           name       state               status       cpu        memory/limit         id     image      ↓ rx    ▲ ↑ tx    ( h ) show help  ", 109..=122, (Header::Tx, SortedOrder::Asc));
-        test("           name       state               status       cpu        memory/limit         id     image      ↓ rx    ▼ ↑ tx    ( h ) show help  ", 109..=122, (Header::Tx, SortedOrder::Desc));
+        test("           name       state               status       cpu        memory/limit         id     image      ↓ rx    ▲ ↑ tx    ( h ) show help  ", 109..=118, (Header::Tx, SortedOrder::Asc));
+        test("           name       state               status       cpu        memory/limit         id     image      ↓ rx    ▼ ↑ tx    ( h ) show help  ", 109..=118, (Header::Tx, SortedOrder::Desc));
     }
 
     #[test]
@@ -2425,7 +2407,7 @@ mod tests {
     // Help popup //
     // ********** //
     #[test]
-    // This will cause issues once the version has more than the current 5 chars (0.5.0)
+    /// This will cause issues once the version has more than the current 5 chars (0.5.0)
     // Help  popup is drawn correctly
     fn test_draw_blocks_help() {
         let (w, h) = (87, 30);
@@ -2525,7 +2507,7 @@ mod tests {
     // ************ //
 
     #[test]
-    // Delete container popup is drawn correctly
+    /// Delete container popup is drawn correctly
     fn test_draw_blocks_delete() {
         let (w, h) = (82, 10);
         let mut setup = test_setup(w, h, true, true);
@@ -2587,6 +2569,70 @@ mod tests {
         }
     }
 
+    #[test]
+    /// Delete container popup is drawn correctly
+    fn test_draw_blocks_delete_long_name() {
+        let (w, h) = (106, 10);
+        let mut setup = test_setup(w, h, true, true);
+        let name = ContainerName::from("container_1_container_1_container_1");
+        setup.app_data.lock().containers.items[0].name = name.clone();
+
+        let expected = [
+            "                                                                                                          ",
+            "        ╭──────────────────────────────────── Confirm Delete ────────────────────────────────────╮        ",
+            "        │                                                                                        │        ",
+            "        │     Are you sure you want to delete container: container_1_container_1_container_1     │        ",
+            "        │                                                                                        │        ",
+            "        │        ╭──────────────────────────────╮         ╭─────────────────────────────╮        │        ",
+            "        │        │             (N)o             │         │            (Y)es            │        │        ",
+            "        │        ╰──────────────────────────────╯         ╰─────────────────────────────╯        │        ",
+            "        ╰────────────────────────────────────────────────────────────────────────────────────────╯        ",
+            "                                                                                                          ",
+        ];
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::delete_confirm(f, &setup.gui_state, &name);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                if row_index == 0
+                    || row_index == usize::from(h - 1)
+                    || char_index < 8
+                    || char_index > usize::from(w - 9)
+                {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                    assert_eq!(result_cell.bg, Color::Reset);
+                } else {
+                    assert_eq!(result_cell.bg, Color::White);
+                }
+
+                // Borders are black
+                if BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::Black);
+                // Container name is red
+                } else if row_index == 3 && (57..=82).contains(&char_index) {
+                    assert_eq!(result_cell.fg, Color::Red);
+                // All other text is black
+                } else if !row_index == 0
+                    && !row_index == usize::from(h - 1)
+                    && !char_index < 8
+                    && !char_index > usize::from(w - 9)
+                {
+                    assert_eq!(result_cell.fg, Color::Black);
+                }
+            }
+        }
+    }
+
     // ***** //
     // popup //
     // ***** //
@@ -2617,13 +2663,13 @@ mod tests {
             .unwrap();
 
         let result = &setup.terminal.backend().buffer().content;
+
         for (row_index, row) in expected.iter().enumerate() {
             for (char_index, expected_char) in row.chars().enumerate() {
                 let index = row_index * usize::from(w) + char_index;
                 let result_cell = &result[index];
 
                 assert_eq!(expected_char.to_string(), result_cell.symbol());
-
                 let (fg, bg) = if row_index >= 6 && char_index >= 32 {
                     (Color::White, Color::Blue)
                 } else {
@@ -2641,7 +2687,7 @@ mod tests {
     // *********** //
 
     #[test]
-    // Test that the error popup is centered, red background, white border, white text, and displays the correct text
+    /// Test that the error popup is centered, red background, white border, white text, and displays the correct text
     fn test_draw_blocks_docker_connect_error() {
         let (w, h) = (46, 9);
         let mut setup = test_setup(w, h, true, true);
@@ -2692,7 +2738,7 @@ mod tests {
     }
 
     #[test]
-    // Test that the clearable error popup is centered, red background, white border, white text, and displays the correct text
+    /// Test that the clearable error popup is centered, red background, white border, white text, and displays the correct text
     fn test_draw_blocks_clearable_error() {
         let (w, h) = (39, 10);
         let mut setup = test_setup(w, h, true, true);
@@ -2744,7 +2790,7 @@ mod tests {
     }
 
     #[test]
-    // Port section when container has no ports
+    /// Port section when container has no ports
     fn test_draw_blocks_ports_no_ports() {
         let (w, h) = (30, 8);
         let mut setup = test_setup(w, h, true, true);
@@ -2824,7 +2870,7 @@ mod tests {
     }
 
     #[test]
-    // Port section when container has multiple ports
+    /// Port section when container has multiple ports
     fn test_draw_blocks_ports_multiple_ports() {
         let (w, h) = (32, 8);
         let mut setup = test_setup(w, h, true, true);
@@ -2883,11 +2929,8 @@ mod tests {
                 if row_index == 1 && result_cell_as_char {
                     assert_eq!(result_cell.fg, Color::Yellow);
                 }
-                if row_index == 2 && result_cell_as_char {
+                if (2..=3).contains(&row_index) && result_cell_as_char {
                     assert_eq!(result_cell.fg, Color::White);
-                }
-                if row_index == 3 && result_cell_as_char {
-                    assert_eq!(result_cell.fg, Color::Magenta);
                 }
                 if row_index == 4 && result_cell_as_char {
                     assert_eq!(result_cell.fg, Color::White);
@@ -2897,7 +2940,7 @@ mod tests {
     }
 
     #[test]
-    // Port section title color correct dependant on state
+    /// Port section title color correct dependant on state
     fn test_draw_blocks_ports_container_state() {
         let (w, h) = (32, 8);
         let mut setup = test_setup(w, h, true, true);
@@ -2951,6 +2994,7 @@ mod tests {
             })
             .unwrap();
 
+        // This is wrong - why?
         let expected = [
             "╭─────────── ports ────────────╮",
             "│   ip   private   public      │",
@@ -2988,7 +3032,7 @@ mod tests {
     // The whole layout //
     // **************** //
     #[test]
-    // Check that the whole layout is drawn correctly
+    /// Check that the whole layout is drawn correctly
     fn test_draw_blocks_whole_layout() {
         let (w, h) = (160, 30);
         let mut setup = test_setup(w, h, true, true);
@@ -3028,12 +3072,83 @@ mod tests {
         "│                                                                                                                                                              │",
         "│                                                                                                                                                              │",
         "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-		"╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
+        "╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
         "│10.00%│     ••••                                               ││100.00 kB│     •••                                             ││       ip   private   public│",
         "│      │  •••   •                                               ││         │  •••  •                                             ││               8001         │",
         "│      │••       •••                                            ││         │••      •••                                          ││127.0.0.1      8003     8003│",
         "│      │                                                        ││         │                                                     ││                            │",
         "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
+        ];
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(f, &setup.app_data, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string(),);
+            }
+        }
+    }
+
+    #[test]
+    /// Check that the whole layout is drawn correctly when have long container name and long image name
+    fn test_draw_blocks_whole_layout_long_name() {
+        let (w, h) = (190, 30);
+        let mut setup = test_setup(w, h, true, true);
+
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some("127.0.0.1".to_owned()),
+                private: 8003,
+                public: Some(8003),
+            });
+
+        setup.app_data.lock().containers.items[0].name =
+            ContainerName::from("a_long_container_name_for_the_purposes_of_this_test");
+        setup.app_data.lock().containers.items[0].image =
+            ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
+
+        let expected = [
+        "                              name       state               status       cpu          memory/limit         id                            image      ↓ rx      ↑ tx          ( h ) show help  ",
+        "╭ Containers 1/3 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭─────────────────╮",
+        "│⚪  a_long_container_name_for_the…   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB       ││▶ pause          │",
+        "│                      container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2                          image_2   0.00 kB   0.00 kB       ││  restart        │",
+        "│                      container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3                          image_3   0.00 kB   0.00 kB       ││  stop           │",
+        "│                                                                                                                                                                         ││  delete         │",
+        "│                                                                                                                                                                         ││                 │",
+        "│                                                                                                                                                                         ││                 │",
+        "╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰─────────────────╯",
+        "╭ Logs 3/3 - a_long_container_name_for_the_purposes_of_this_test ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+        "│  line 1                                                                                                                                                                                    │",
+        "│  line 2                                                                                                                                                                                    │",
+        "│▶ line 3                                                                                                                                                                                    │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        "╭───────────────────────────────── cpu 03.00% ─────────────────────────────────╮╭────────────────────────────── memory 30.00 kB ───────────────────────────────╮╭────────── ports ───────────╮",
+        "│10.00%│       ••••                                                            ││100.00 kB│      •••••                                                         ││       ip   private   public│",
+        "│      │   ••••   •                                                            ││         │   •••    •                                                         ││               8001         │",
+        "│      │•••        ••••                                                        ││         │•••        •••                                                      ││127.0.0.1      8003     8003│",
+        "│      │                                                                       ││         │                                                                    ││                            │",
+        "╰──────────────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
         ];
         setup
             .terminal

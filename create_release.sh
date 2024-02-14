@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# rust create_release
-# v0.4.1
+# rust create_release v0.5.5
 
 STAR_LINE='****************************************'
 CWD=$(pwd)
@@ -18,6 +17,11 @@ error_close() {
 	exit 1
 }
 
+# Check that dialog is installed
+if ! [ -x "$(command -v dialog)" ]; then
+	error_close "dialog is not installed"
+fi
+
 # $1 string - question to ask
 ask_yn() {
 	printf "%b%s? [y/N]:%b " "${GREEN}" "$1" "${RESET}"
@@ -29,21 +33,34 @@ user_input() {
 	echo "$data"
 }
 
+# ask continue, or quit
+ask_continue() {
+	ask_yn "continue"
+	if [[ ! "$(user_input)" =~ ^y$ ]]; then
+		exit
+	fi
+}
+
+# semver major update
 update_major() {
 	local bumped_major
 	bumped_major=$((MAJOR + 1))
 	echo "${bumped_major}.0.0"
 }
 
+# semver minor update
 update_minor() {
 	local bumped_minor
 	bumped_minor=$((MINOR + 1))
+	MINOR=bumped_minor
 	echo "${MAJOR}.${bumped_minor}.0"
 }
 
+# semver patch update
 update_patch() {
 	local bumped_patch
 	bumped_patch=$((PATCH + 1))
+	PATCH=bumped_patch
 	echo "${MAJOR}.${MINOR}.${bumped_patch}"
 }
 
@@ -153,14 +170,6 @@ check_tag() {
 	done
 }
 
-# ask continue, or quit
-ask_continue() {
-	ask_yn "continue"
-	if [[ ! "$(user_input)" =~ ^y$ ]]; then
-		exit
-	fi
-}
-
 # run all tests
 cargo_test() {
 	cargo test -- --test-threads=1
@@ -169,31 +178,55 @@ cargo_test() {
 
 # Simulate publishing to crates.io
 cargo_publish() {
+	echo -e "${PURPLE}cargo publish --dry-run${RESET}"
 	cargo publish --dry-run
 	ask_continue
 }
 
-# Build all releases that GitHub workflow would
-# This will download GB's of docker images
-cargo_build() {
-	cargo install cross
-	cargo_clean
+# Check to see if cross is installed - if not then install
+check_cross() {
+	if ! [ -x "$(command -v cross)" ]; then
+		echo -e "${GREEN}cargo install cross${RESET}"
+		cargo install cross
+	fi
+}
+
+cargo_build_x86_linux() {
+	check_cross
 	echo -e "${YELLOW}cross build --target x86_64-unknown-linux-musl --release${RESET}"
 	cross build --target x86_64-unknown-linux-musl --release
-	ask_continue
-	cargo_clean
+}
+
+cargo_build_aarch64_linux() {
+	check_cross
 	echo -e "${YELLOW}cross build --target aarch64-unknown-linux-musl --release${RESET}"
 	cross build --target aarch64-unknown-linux-musl --release
-	ask_continue
-	cargo_clean
+}
+
+cargo_build_armv6_linux() {
+	check_cross
 	echo -e "${YELLOW}cross build --target arm-unknown-linux-musleabihf --release${RESET}"
 	cross build --target arm-unknown-linux-musleabihf --release
-	ask_continue
-	cargo_clean
+}
+
+cargo_build_x86_windows() {
+	check_cross
 	echo -e "${YELLOW}cross build --target x86_64-pc-windows-gnu --release${RESET}"
 	cross build --target x86_64-pc-windows-gnu --release
+}
+
+# Build all releases that GitHub workflow would
+# This will download GB's of docker images
+cargo_build_all() {
+	cargo clean
+	cargo_build_armv6_linux
 	ask_continue
-	cargo_clean
+	cargo_build_aarch64_linux
+	ask_continue
+	cargo_build_x86_linux
+	ask_continue
+	cargo_build_x86_windows
+	ask_continue
 }
 
 # $1 text to colourise
@@ -202,11 +235,6 @@ release_continue() {
 	ask_continue
 }
 
-# Clean/remove builds, due to issue with cross-rs
-cargo_clean() {
-	echo -e "${YELLOW}cargo clean${RESET}"
-	cargo clean
-}
 # Check repository for typos
 check_typos() {
 	echo -e "\n${PURPLE}check typos${RESET}"
@@ -214,14 +242,16 @@ check_typos() {
 	ask_continue
 }
 
-#  Make sure the unused lint isn't used
+# Make sure the unused lint isn't used
 check_allow_unused() {
 	matches_any=$(find . -type d \( -name .git -o -name target \) -prune -o -type f -exec grep -lE '^#!\[allow\(unused\)\]$' {} +)
 	matches_cargo=$(grep "^unused = \"allow\"" ./Cargo.toml)
 	if [ -n "$matches_any" ]; then
-		error_close "\"#[allow(unused)]\" in ${matches_any}"
+		echo "\"#[allow(unused)]\" in ${matches_any}"
+		ask_continue
 	elif [ -n "$matches_cargo" ]; then
-		error_close "\"unused = \"allow\"\" in Cargo.toml"
+		echo "\"unused = \"allow\"\" in Cargo.toml"
+		ask_continue
 	fi
 }
 
@@ -234,7 +264,7 @@ release_flow() {
 	get_git_remote_url
 
 	cargo_test
-	cargo_build
+	cargo_build_all
 	cargo_publish
 
 	cd "${CWD}" || error_close "Can't find ${CWD}"
@@ -255,6 +285,7 @@ release_flow() {
 
 	echo -e "\ncargo fmt"
 	cargo fmt
+
 	echo -e "\n${PURPLE}cargo check${RESET}\n"
 	cargo check
 
@@ -267,8 +298,12 @@ release_flow() {
 	release_continue "git checkout main"
 	git checkout main
 
+	echo -e "${PURPLE}git pull origin main${RESET}"
+	git pull origin main
+
 	echo -e "${PURPLE}git merge --no-ff \"${RELEASE_BRANCH}\" -m \"chore: merge ${RELEASE_BRANCH} into main\"${RESET}"
 	git merge --no-ff "$RELEASE_BRANCH" -m "chore: merge ${RELEASE_BRANCH} into main"
+
 	echo -e "\n${PURPLE}cargo check${RESET}\n"
 	cargo check
 
@@ -289,6 +324,51 @@ release_flow() {
 
 	release_continue "git branch -d \"$RELEASE_BRANCH\""
 	git branch -d "$RELEASE_BRANCH"
+}
+
+build_choice() {
+	cmd=(dialog --backtitle "Choose option" --radiolist "choose" 14 80 16)
+	options=(
+		1 "x86 musl linux" off
+		2 "aarch64 musl linux" off
+		3 "armv6 musl linux" off
+		4 "x86 windows" off
+		5 "all" off
+	)
+	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+	exitStatus=$?
+	clear
+	if [ $exitStatus -ne 0 ]; then
+		exit
+	fi
+	for choice in $choices; do
+		case $choice in
+		0)
+			exit
+			;;
+		1)
+			cargo_build_x86_linux
+			exit
+			;;
+		2)
+			cargo_build_aarch64_linux
+			exit
+			;;
+		3)
+			cargo_build_armv6_linux
+			exit
+			;;
+		4)
+			cargo_build_x86_windows
+			exit
+			;;
+		5)
+			cargo_build_all
+			exit
+			;;
+		esac
+	done
+
 }
 
 main() {
@@ -319,7 +399,7 @@ main() {
 			break
 			;;
 		3)
-			cargo_build
+			build_choice
 			main
 			break
 			;;
