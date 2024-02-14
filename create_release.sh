@@ -282,7 +282,7 @@ release_flow() {
 
 	echo -e "\ncargo fmt"
 	cargo fmt
-	
+
 	echo -e "\n${PURPLE}cargo check${RESET}\n"
 	cargo check
 
