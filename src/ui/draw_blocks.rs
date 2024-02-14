@@ -925,7 +925,7 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = popup(lines, max_line_width, f.size(), BoxLocation::TopLeft);
+    let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
 
     // let (paragraph, area) = gen_error(f, error, seconds);
     f.render_widget(Clear, area);
@@ -2698,6 +2698,7 @@ mod tests {
                 super::error(f, AppError::DockerConnect, Some(4));
             })
             .unwrap();
+
 
         let expected = vec![
             "                                              ".to_owned(),
