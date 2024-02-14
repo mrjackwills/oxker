@@ -828,7 +828,7 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
     let confirm = Line::from(vec![
         Span::from("Are you sure you want to delete container: "),
         Span::styled(
-            name.to_string(),
+            name.get(),
             Style::default()
                 .fg(Color::Red)
                 .bg(Color::White)
@@ -2575,6 +2575,70 @@ mod tests {
         }
     }
 
+    #[test]
+    /// Delete container popup is drawn correctly
+    fn test_draw_blocks_delete_long_name() {
+        let (w, h) = (106, 10);
+        let mut setup = test_setup(w, h, true, true);
+        let name = ContainerName::from("container_1_container_1_container_1");
+        setup.app_data.lock().containers.items[0].name = name.clone();
+
+        let expected = [
+			"                                                                                                          ",
+			"        ╭──────────────────────────────────── Confirm Delete ────────────────────────────────────╮        ",
+			"        │                                                                                        │        ",
+			"        │     Are you sure you want to delete container: container_1_container_1_container_1     │        ",
+			"        │                                                                                        │        ",
+			"        │        ╭──────────────────────────────╮         ╭─────────────────────────────╮        │        ",
+			"        │        │             (N)o             │         │            (Y)es            │        │        ",
+			"        │        ╰──────────────────────────────╯         ╰─────────────────────────────╯        │        ",
+			"        ╰────────────────────────────────────────────────────────────────────────────────────────╯        ",
+			"                                                                                                          ",
+        ];
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::delete_confirm(f, &setup.gui_state, &name);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+                assert_eq!(result_cell.symbol(), expected_char.to_string());
+
+                if row_index == 0
+                    || row_index == usize::from(h - 1)
+                    || char_index < 8
+                    || char_index > usize::from(w - 9)
+                {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                    assert_eq!(result_cell.bg, Color::Reset);
+                } else {
+                    assert_eq!(result_cell.bg, Color::White);
+                }
+
+                // Borders are black
+                if BORDER_CHARS.contains(&result_cell.symbol()) {
+                    assert_eq!(result_cell.fg, Color::Black);
+                // Container name is red
+                } else if row_index == 3 && (57..=82).contains(&char_index) {
+                    assert_eq!(result_cell.fg, Color::Red);
+                // All other text is black
+                } else if !row_index == 0
+                    && !row_index == usize::from(h - 1)
+                    && !char_index < 8
+                    && !char_index > usize::from(w - 9)
+                {
+                    assert_eq!(result_cell.fg, Color::Black);
+                }
+            }
+        }
+    }
+
     // ***** //
     // popup //
     // ***** //
@@ -3023,6 +3087,77 @@ mod tests {
         "│      │••       •••                                            ││         │••      •••                                          ││127.0.0.1      8003     8003│",
         "│      │                                                        ││         │                                                     ││                            │",
         "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
+        ];
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(f, &setup.app_data, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (row_index, row) in expected.iter().enumerate() {
+            for (char_index, expected_char) in row.chars().enumerate() {
+                let index = row_index * usize::from(w) + char_index;
+                let result_cell = &result[index];
+
+                assert_eq!(result_cell.symbol(), expected_char.to_string(),);
+            }
+        }
+    }
+
+    #[test]
+    /// Check that the whole layout is drawn correctly when have long container name and long image name
+    fn test_draw_blocks_whole_layout_long_name() {
+        let (w, h) = (190, 30);
+        let mut setup = test_setup(w, h, true, true);
+
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some("127.0.0.1".to_owned()),
+                private: 8003,
+                public: Some(8003),
+            });
+
+        setup.app_data.lock().containers.items[0].name =
+            ContainerName::from("a_long_container_name_for_the_purposes_of_this_test");
+        setup.app_data.lock().containers.items[0].image =
+            ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
+
+        let expected = [
+		    "                              name       state               status       cpu          memory/limit         id                            image      ↓ rx      ↑ tx          ( h ) show help  ",
+        "╭ Containers 1/3 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭─────────────────╮",
+        "│⚪  a_long_container_name_for_the…   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB       ││▶ pause          │",
+		"│                      container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2                          image_2   0.00 kB   0.00 kB       ││  restart        │",
+        "│                      container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3                          image_3   0.00 kB   0.00 kB       ││  stop           │",
+        "│                                                                                                                                                                         ││  delete         │",
+        "│                                                                                                                                                                         ││                 │",
+        "│                                                                                                                                                                         ││                 │",
+        "╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰─────────────────╯",
+        "╭ Logs 3/3 - a_long_container_name_for_the_purposes_of_this_test ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+        "│  line 1                                                                                                                                                                                    │",
+        "│  line 2                                                                                                                                                                                    │",
+        "│▶ line 3                                                                                                                                                                                    │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "│                                                                                                                                                                                            │",
+        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        "╭───────────────────────────────── cpu 03.00% ─────────────────────────────────╮╭────────────────────────────── memory 30.00 kB ───────────────────────────────╮╭────────── ports ───────────╮",
+        "│10.00%│       ••••                                                            ││100.00 kB│      •••••                                                         ││       ip   private   public│",
+        "│      │   ••••   •                                                            ││         │   •••    •                                                         ││               8001         │",
+        "│      │•••        ••••                                                        ││         │•••        •••                                                      ││127.0.0.1      8003     8003│",
+        "│      │                                                                       ││         │                                                                    ││                            │",
+        "╰──────────────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
         ];
         setup
             .terminal
