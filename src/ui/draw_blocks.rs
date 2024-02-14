@@ -321,12 +321,8 @@ pub fn ports(
                 ))
                 .fg(Color::Yellow),
             )];
-            for (index, item) in ports.0.iter().enumerate() {
-                let fg = if index % 2 == 0 {
-                    Color::White
-                } else {
-                    Color::Magenta
-                };
+            for item in &ports.0 {
+                let fg = Color::White;
                 let strings = item.print();
 
                 let line = vec![
