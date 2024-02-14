@@ -383,7 +383,7 @@ impl AppData {
     }
 
     /// Get mutable Option of the currently selected container DockerControls items
-    /// TODO command or control, need a uniform name acorss the application
+    /// TODO command or control, need a uniform name across the application
     pub fn get_control_items(&mut self) -> Option<&mut Vec<DockerControls>> {
         self.get_mut_selected_container()
             .map(|i| &mut i.docker_controls.items)

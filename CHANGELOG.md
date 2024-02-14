@@ -14,7 +14,7 @@
 
 ### Refactors
 + use &[T] instead of &Vec<T>, [76cd08ab2f98687a866a6bbb4fa93bbdedaa7699], [1f62bb50210f2d66bb7215e42e8b21a3c1a6ec06]
-+ draw_block constaints into consts, [0436ff1b7356c80532048c7d497c66d331092b01]
++ draw_block constraints into consts, [0436ff1b7356c80532048c7d497c66d331092b01]
 
 ### Tests
 + update port test with new colour, [f74ae3f5c34d74b78822078291fed401427c4cba]
