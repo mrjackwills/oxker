@@ -1384,7 +1384,7 @@ mod tests {
                     "Up 1 hour".to_owned(),
                 )
             };
-            let mut app_data = gen_appdata(&vec![gen_item_state(state)]);
+            let mut app_data = gen_appdata(&[gen_item_state(state)]);
             app_data.containers_start();
             app_data.docker_controls_start();
 
