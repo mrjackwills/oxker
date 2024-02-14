@@ -13,7 +13,7 @@
 + memory display, closes #33, [a182d40a7463164ef5dcac379d1a1768d77209d2]
 
 ### Refactors
-+ return &[T] instead of &Vec<T>, [76cd08ab2f98687a866a6bbb4fa93bbdedaa7699]
++ use &[T] instead of &Vec<T>, [76cd08ab2f98687a866a6bbb4fa93bbdedaa7699], [1f62bb50210f2d66bb7215e42e8b21a3c1a6ec06]
 + draw_block constaints into consts, [0436ff1b7356c80532048c7d497c66d331092b01]
 
 ### Tests
