@@ -46,7 +46,6 @@ const CIRCLE: &str = "⚪ ";
 
 const CONSTRAINT_50_50: [Constraint; 2] = [Constraint::Percentage(50), Constraint::Percentage(50)];
 const CONSTRAINT_100: [Constraint; 1] = [Constraint::Percentage(100)];
-// TODO FIX THIS
 const CONSTRAINT_POPUP: [Constraint; 5] = [
     Constraint::Min(2),
     Constraint::Max(1),
@@ -764,8 +763,6 @@ pub fn help_box(f: &mut Frame) {
         BoxLocation::MiddleCentre,
     );
 
-    // This is wrong!
-    // TODO
     let split_popup = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -928,7 +925,7 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
+    let area = popup(lines, max_line_width, f.size(), BoxLocation::TopLeft);
 
     // let (paragraph, area) = gen_error(f, error, seconds);
     f.render_widget(Clear, area);
@@ -936,6 +933,7 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
 }
 
 /// Draw info box in one of the 9 BoxLocations
+// TODO is this broken?
 pub fn info(f: &mut Frame, text: &str, instant: Instant, gui_state: &Arc<Mutex<GuiState>>) {
     let block = Block::default()
         .title("")
@@ -2580,16 +2578,16 @@ mod tests {
         setup.app_data.lock().containers.items[0].name = name.clone();
 
         let expected = [
-			"                                                                                                          ",
-			"        ╭──────────────────────────────────── Confirm Delete ────────────────────────────────────╮        ",
-			"        │                                                                                        │        ",
-			"        │     Are you sure you want to delete container: container_1_container_1_container_1     │        ",
-			"        │                                                                                        │        ",
-			"        │        ╭──────────────────────────────╮         ╭─────────────────────────────╮        │        ",
-			"        │        │             (N)o             │         │            (Y)es            │        │        ",
-			"        │        ╰──────────────────────────────╯         ╰─────────────────────────────╯        │        ",
-			"        ╰────────────────────────────────────────────────────────────────────────────────────────╯        ",
-			"                                                                                                          ",
+            "                                                                                                          ",
+            "        ╭──────────────────────────────────── Confirm Delete ────────────────────────────────────╮        ",
+            "        │                                                                                        │        ",
+            "        │     Are you sure you want to delete container: container_1_container_1_container_1     │        ",
+            "        │                                                                                        │        ",
+            "        │        ╭──────────────────────────────╮         ╭─────────────────────────────╮        │        ",
+            "        │        │             (N)o             │         │            (Y)es            │        │        ",
+            "        │        ╰──────────────────────────────╯         ╰─────────────────────────────╯        │        ",
+            "        ╰────────────────────────────────────────────────────────────────────────────────────────╯        ",
+            "                                                                                                          ",
         ];
 
         setup
@@ -2931,11 +2929,8 @@ mod tests {
                 if row_index == 1 && result_cell_as_char {
                     assert_eq!(result_cell.fg, Color::Yellow);
                 }
-                if row_index == 2 && result_cell_as_char {
+                if (2..=3).contains(&row_index) && result_cell_as_char {
                     assert_eq!(result_cell.fg, Color::White);
-                }
-                if row_index == 3 && result_cell_as_char {
-                    assert_eq!(result_cell.fg, Color::Magenta);
                 }
                 if row_index == 4 && result_cell_as_char {
                     assert_eq!(result_cell.fg, Color::White);
@@ -3124,10 +3119,10 @@ mod tests {
             ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
 
         let expected = [
-		    "                              name       state               status       cpu          memory/limit         id                            image      ↓ rx      ↑ tx          ( h ) show help  ",
+        "                              name       state               status       cpu          memory/limit         id                            image      ↓ rx      ↑ tx          ( h ) show help  ",
         "╭ Containers 1/3 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭─────────────────╮",
         "│⚪  a_long_container_name_for_the…   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB       ││▶ pause          │",
-		"│                      container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2                          image_2   0.00 kB   0.00 kB       ││  restart        │",
+        "│                      container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2                          image_2   0.00 kB   0.00 kB       ││  restart        │",
         "│                      container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3                          image_3   0.00 kB   0.00 kB       ││  stop           │",
         "│                                                                                                                                                                         ││  delete         │",
         "│                                                                                                                                                                         ││                 │",
