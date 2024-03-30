@@ -277,7 +277,7 @@ impl ExecMode {
                     }
 
                     while let Ok(x) = async_tty.rx.recv() {
-                        input.write(&[x]).await.ok();
+                        input.write_all(&[x]).await.ok();
                     }
 
                     self.internal_cleanup()?;
