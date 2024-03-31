@@ -15,7 +15,7 @@
 		"--security-opt",
 		"seccomp=unconfined"
 	],
-	"postCreateCommand": "rustup target add x86_64-unknown-linux-musl && cargo install cross typos-cli cargo-expand",
+	"postCreateCommand": "cargo install cross typos-cli cargo-expand",
 	"mounts": [
 		"source=/run/shm,target=/dev/shm,type=bind"
 	],
