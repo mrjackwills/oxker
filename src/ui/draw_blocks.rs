@@ -498,13 +498,7 @@ pub fn heading_bar(
         (Header::Tx, data.columns.net_tx.1),
     ];
 
-    let header_data = header_meta
-        .iter()
-        .map(|i| {
-            let header_block = gen_header(&i.0, i.1.into());
-            (header_block.0, i.0, Constraint::Max(header_block.1))
-        })
-        .collect::<Vec<_>>();
+    // Need to add widths to this
 
     let suffix = if data.help_visible { "exit" } else { "show" };
     let info_text = format!("( h ) {suffix} help {MARGIN}",);
@@ -526,7 +520,26 @@ pub fn heading_bar(
         .direction(Direction::Horizontal)
         .constraints(splits)
         .split(area);
+
     if data.has_containers {
+        let header_section_width = split_bar[1].width;
+
+        let mut counter = 0;
+
+        // Only show a header if the header cumulative header width is less than the header section width
+        let header_data = header_meta
+            .iter()
+            .filter_map(|i| {
+                let header_block = gen_header(&i.0, i.1.into());
+                counter += header_block.1;
+                if counter <= header_section_width {
+                    Some((header_block.0, i.0, Constraint::Max(header_block.1)))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
         // Draw loading icon, or not, and a prefix with a single space
         let loading_paragraph = Paragraph::new(format!("{:>2}", data.loading_icon))
             .block(block(Color::White))
@@ -539,7 +552,6 @@ pub fn heading_bar(
             .constraints(container_splits)
             .split(split_bar[1]);
 
-        // draw the actual header blocks
         for (index, (paragraph, header, _)) in header_data.into_iter().enumerate() {
             let rect = headers_section[index];
             gui_state
