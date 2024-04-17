@@ -2312,6 +2312,38 @@ mod tests {
     }
 
     #[test]
+    /// Only show the headings that fit the reduced-in-size header section
+    fn test_draw_blocks_headers_some_containers_reduced_width() {
+        let (w, h) = (80, 1);
+        let mut setup = test_setup(w, h, true, true);
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        let expected =
+            "           name       state               status       cpu     ( h ) show help  ";
+        setup
+            .terminal
+            .draw(|f| {
+                super::heading_bar(setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (index, expected_char) in expected.chars().enumerate() {
+            let result_cell = &result[index];
+
+            assert_eq!(result_cell.symbol(), expected_char.to_string());
+            assert_eq!(result_cell.bg, Color::Magenta);
+            assert_eq!(
+                result_cell.fg,
+                match index {
+                    (2..=62) => Color::Black,
+                    _ => Color::White,
+                }
+            );
+        }
+    }
+
+    #[test]
     /// Test all combination of headers & sort by
     fn test_draw_blocks_headers_sort_containers() {
         let (w, h) = (140, 1);
