@@ -84,43 +84,44 @@ pub fn tty_readable() -> bool {
         .is_ok()
 }
 
-async fn tty_read_loop(mut f: File, tx: Sender<u8>, cancel_token: CancellationToken) {
-    loop {
-        let mut buf = [0];
-        if tokio::time::timeout(std::time::Duration::from_millis(10), f.read_exact(&mut buf))
-            .await
-            .is_ok()
-            && tx.send(buf[0]).is_err()
-        {
-            cancel_token.cancel();
-        }
-    }
-}
-/// Async tty reading, spawned into its own tokio thread
-/// This should be a cancel token
-fn tty(cancel_token: &CancellationToken) -> Option<AsyncTTY> {
-    if tty_readable() {
-        let (tx, rx) = std::sync::mpsc::channel();
-        let cancel_token = cancel_token.to_owned();
-        tokio::spawn(async move {
-            if let Ok(f) = tokio::fs::File::open(TTY).await {
-                let c_1 = cancel_token.clone();
-                let c_2 = cancel_token.clone();
-
-                tokio::select! {
-                () = c_1.cancelled() => (),
-                () = tty_read_loop(f, tx, c_2) => (),
-                }
-            }
-        });
-        Some(AsyncTTY { rx })
-    } else {
-        None
-    }
-}
 
 struct AsyncTTY {
     rx: std::sync::mpsc::Receiver<u8>,
+}
+
+impl AsyncTTY {
+	/// Use an async timeout to read data from the file, and send to the "main" thread
+    async fn read_loop(mut f: File, tx: Sender<u8>) {
+        loop {
+            let mut buf = [0];
+            if tokio::time::timeout(std::time::Duration::from_millis(10), f.read_exact(&mut buf))
+                .await
+                .is_ok()
+                && tx.send(buf[0]).is_err()
+            {
+                break;
+            }
+        }
+    }
+
+    /// Async tty reading, spawned into its own tokio thread
+    fn get(cancel_token: &CancellationToken) -> Option<Self> {
+        if tty_readable() {
+            let (tx, rx) = std::sync::mpsc::channel();
+            let cancel_token = cancel_token.to_owned();
+            tokio::spawn(async move {
+                if let Ok(f) = tokio::fs::File::open(TTY).await {
+                    tokio::select! {
+                    () = cancel_token.cancelled() => (),
+                    () = Self::read_loop(f, tx) => cancel_token.cancel(),
+                    }
+                }
+            });
+            Some(Self { rx })
+        } else {
+            None
+        }
+    }
 }
 
 /// This is used to set the terminal size when exec via the Internal method
@@ -258,7 +259,7 @@ impl ExecMode {
                 )
                 .await
             {
-                if let Some(async_tty) = tty(&cancel_token) {
+                if let Some(tty) = AsyncTTY::get(&cancel_token) {
                     tokio::spawn(async move {
                         enable_raw_mode().ok();
                         let mut stdout = std::io::stdout();
@@ -284,7 +285,7 @@ impl ExecMode {
                             .ok();
                     }
 
-                    while let Ok(x) = async_tty.rx.recv() {
+                    while let Ok(x) = tty.rx.recv() {
                         input.write_all(&[x]).await.ok();
                     }
 
