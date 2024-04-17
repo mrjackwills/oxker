@@ -855,6 +855,7 @@ dependencies = [
  "parking_lot",
  "ratatui",
  "tokio",
+ "tokio-util",
  "tracing",
  "tracing-subscriber",
  "uuid",
