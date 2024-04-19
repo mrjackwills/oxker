@@ -305,7 +305,7 @@ impl InputHandler {
         }
     }
 
-    /// Change the the "next" seletable panel
+    /// Change the the "next" selectable panel
     fn tab_key(&mut self) {
         let is_containers =
             self.gui_state.lock().get_selected_panel() == SelectablePanel::Containers;
@@ -354,7 +354,7 @@ impl InputHandler {
     }
 
     /// Handle keyboard button events
-    async fn button_press(&mut self, key_code: KeyCode, key_modififer: KeyModifiers) {
+    async fn button_press(&mut self, key_code: KeyCode, key_modifier: KeyModifiers) {
         let contains_delete = self
             .gui_state
             .lock()
@@ -370,25 +370,30 @@ impl InputHandler {
             // Always just quit on Ctrl + c/C or q/Q
             let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
             let is_q = || key_code == KeyCode::Char('q') || key_code == KeyCode::Char('Q');
-            if key_modififer == KeyModifiers::CONTROL && is_c() || is_q() {
+            if key_modifier == KeyModifiers::CONTROL && is_c() || is_q() {
                 self.quit().await;
             }
 
             if contains_error {
-                if let KeyCode::Char('c' | 'C') = key_code {
-                    self.app_data.lock().remove_error();
-                    self.gui_state.lock().status_del(Status::Error);
+                match key_code {
+                    KeyCode::Esc | KeyCode::Char('c' | 'C') => {
+                        self.app_data.lock().remove_error();
+                        self.gui_state.lock().status_del(Status::Error);
+                    }
+                    _ => (),
                 }
             } else if contains_help {
                 match key_code {
-                    KeyCode::Char('h' | 'H') => self.gui_state.lock().status_del(Status::Help),
+                    KeyCode::Esc | KeyCode::Char('h' | 'H') => {
+                        self.gui_state.lock().status_del(Status::Help);
+                    }
                     KeyCode::Char('m' | 'M') => self.m_key(),
                     _ => (),
                 }
             } else if contains_delete {
                 match key_code {
                     KeyCode::Char('y' | 'Y') => self.confirm_delete().await,
-                    KeyCode::Char('n' | 'N') => self.clear_delete(),
+                    KeyCode::Esc | KeyCode::Char('n' | 'N') => self.clear_delete(),
                     _ => (),
                 }
             } else {
