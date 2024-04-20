@@ -106,7 +106,7 @@ In application controls
 | ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
 | ```( q )``` | Quit.|
 | ```( s )``` | Save logs to `$HOME/[container_name]_[timestamp].log`, or the directory set by `--save-dir`.|
-
+| ```( esc )``` | Close dialog.|
 
 Available command line arguments
 | argument|result|
