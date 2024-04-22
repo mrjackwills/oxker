@@ -1,3 +1,19 @@
+### Chores
++ Sependencies updated, [07e293ac2ce2e7deb5735154fcdb24ef83a19b67]
+
+### Features
++ Allow closing dialogs with `Escape`, thanks[](), [0e4c3ceab933458d40b54d5fcff7e6cf7a3ab315]
+
+### Fixes
++ header display when width changes, [4628803b2b9fe63522d033b192763ed6ff5b57dd]
+
+### Refactors
++ use tokio CancellationToken, [0631a73ec27530f8fcc88988a0a02ca75e32c5ba]
++ impl AsyncTTY, [bf33776e9a61684032a80d22d995ba7e0446620e]
+
+### Test
++ reduced header section test, [aa0947405393db2c306e86986183514cbc0f5a75]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.6.2'>v0.6.2</a>
 ### 2024-03-31
 
