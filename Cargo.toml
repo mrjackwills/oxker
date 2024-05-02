@@ -15,9 +15,9 @@ categories = ["command-line-utilities"]
 unsafe_code = "forbid"
 
 [lints.clippy]
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
 expect_used = "warn"
-nursery = "warn"
-pedantic = "warn"
 todo = "warn"
 unused_async = "warn"
 unwrap_used = "warn"
