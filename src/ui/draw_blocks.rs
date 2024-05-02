@@ -707,6 +707,11 @@ impl HelpInfo {
             ]),
             Line::from(vec![
                 space(),
+                button_item("esc"),
+                button_desc("close dialog"),
+            ]),
+            Line::from(vec![
+                space(),
                 button_item("q"),
                 button_desc("quit at any time"),
             ]),

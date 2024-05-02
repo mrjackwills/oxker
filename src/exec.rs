@@ -84,13 +84,12 @@ pub fn tty_readable() -> bool {
         .is_ok()
 }
 
-
 struct AsyncTTY {
     rx: std::sync::mpsc::Receiver<u8>,
 }
 
 impl AsyncTTY {
-	/// Use an async timeout to read data from the file, and send to the "main" thread
+    /// Use an async timeout to read data from the file, and send to the "main" thread
     async fn read_loop(mut f: File, tx: Sender<u8>) {
         loop {
             let mut buf = [0];
