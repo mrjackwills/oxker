@@ -37,7 +37,7 @@ RUN cargo build --target $(cat /.platform) --release
 # Now copy in the rest of the sources
 COPY src /usr/src/oxker/src/
 
-## Touch main.rs to prevent cached release build
+# Touch main.rs to prevent cached release build
 RUN touch /usr/src/oxker/src/main.rs
 
 # This is the actual application build
