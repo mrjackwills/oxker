@@ -101,7 +101,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: publish to crates.io
-        uses: katyo/publish-crates@v1
+        uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CRATES_IO_TOKEN }}
 
