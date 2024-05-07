@@ -1,6 +1,7 @@
 #!/bin/bash
 
-case "$(arch)" in
+UNAME_CMD="$(uname -m)"
+case "$UNAME_CMD" in
 x86_64) SUFFIX="x86_64" ;;
 aarch64) SUFFIX="aarch64" ;;
 armv6l) SUFFIX="armv6" ;;

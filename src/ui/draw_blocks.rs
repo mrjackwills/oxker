@@ -498,13 +498,7 @@ pub fn heading_bar(
         (Header::Tx, data.columns.net_tx.1),
     ];
 
-    let header_data = header_meta
-        .iter()
-        .map(|i| {
-            let header_block = gen_header(&i.0, i.1.into());
-            (header_block.0, i.0, Constraint::Max(header_block.1))
-        })
-        .collect::<Vec<_>>();
+    // Need to add widths to this
 
     let suffix = if data.help_visible { "exit" } else { "show" };
     let info_text = format!("( h ) {suffix} help {MARGIN}",);
@@ -526,7 +520,26 @@ pub fn heading_bar(
         .direction(Direction::Horizontal)
         .constraints(splits)
         .split(area);
+
     if data.has_containers {
+        let header_section_width = split_bar[1].width;
+
+        let mut counter = 0;
+
+        // Only show a header if the header cumulative header width is less than the header section width
+        let header_data = header_meta
+            .iter()
+            .filter_map(|i| {
+                let header_block = gen_header(&i.0, i.1.into());
+                counter += header_block.1;
+                if counter <= header_section_width {
+                    Some((header_block.0, i.0, Constraint::Max(header_block.1)))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
         // Draw loading icon, or not, and a prefix with a single space
         let loading_paragraph = Paragraph::new(format!("{:>2}", data.loading_icon))
             .block(block(Color::White))
@@ -539,7 +552,6 @@ pub fn heading_bar(
             .constraints(container_splits)
             .split(split_bar[1]);
 
-        // draw the actual header blocks
         for (index, (paragraph, header, _)) in header_data.into_iter().enumerate() {
             let rect = headers_section[index];
             gui_state
@@ -692,6 +704,11 @@ impl HelpInfo {
                 space(),
                 button_item("1 - 9"),
                 button_desc("sort by header - or click header"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("esc"),
+                button_desc("close dialog"),
             ]),
             Line::from(vec![
                 space(),
@@ -2300,6 +2317,38 @@ mod tests {
     }
 
     #[test]
+    /// Only show the headings that fit the reduced-in-size header section
+    fn test_draw_blocks_headers_some_containers_reduced_width() {
+        let (w, h) = (80, 1);
+        let mut setup = test_setup(w, h, true, true);
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        let expected =
+            "           name       state               status       cpu     ( h ) show help  ";
+        setup
+            .terminal
+            .draw(|f| {
+                super::heading_bar(setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+        for (index, expected_char) in expected.chars().enumerate() {
+            let result_cell = &result[index];
+
+            assert_eq!(result_cell.symbol(), expected_char.to_string());
+            assert_eq!(result_cell.bg, Color::Magenta);
+            assert_eq!(
+                result_cell.fg,
+                match index {
+                    (2..=62) => Color::Black,
+                    _ => Color::White,
+                }
+            );
+        }
+    }
+
+    #[test]
     /// Test all combination of headers & sort by
     fn test_draw_blocks_headers_sort_containers() {
         let (w, h) = (140, 1);
@@ -2410,7 +2459,7 @@ mod tests {
     /// This will cause issues once the version has more than the current 5 chars (0.5.0)
     // Help  popup is drawn correctly
     fn test_draw_blocks_help() {
-        let (w, h) = (87, 30);
+        let (w, h) = (87, 32);
         let mut setup = test_setup(w, h, true, true);
 
         setup
@@ -2419,39 +2468,39 @@ mod tests {
                 super::help_box(f);
             })
             .unwrap();
-
         let expected = [
-                "                                                                                       ".to_owned(),
-                format!(" ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ "),
-                " │                                                                                   │ ".to_owned(),
-                " │                                      88                                           │ ".to_owned(),
-                " │                                      88                                           │ ".to_owned(),
-                " │                                      88                                           │ ".to_owned(),
-                " │             ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,            │ ".to_owned(),
-                r#" │            a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8            │ "#.to_owned(),
-                r#" │            8b       d8     )888(     8888[      8PP"""""""  88                    │ "#.to_owned(),
-                r#" │            "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                    │ "#.to_owned(),
-                r#" │             `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                    │ "#.to_owned(),
-                " │                                                                                   │ ".to_owned(),
-                " │                 A simple tui to view & control docker containers                  │ ".to_owned(),
-                " │                                                                                   │ ".to_owned(),
-                " │ ( tab ) or ( shift+tab ) change panels                                            │ ".to_owned(),
-                " │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) change selected line        │ ".to_owned(),
-                " │ ( enter ) send docker container command                                           │ ".to_owned(),
-                " │ ( e ) exec into a container                                                       │ ".to_owned(),
-                " │ ( h ) toggle this help information                                                │ ".to_owned(),
-                " │ ( s ) save logs to file                                                           │ ".to_owned(),
-                " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ".to_owned(),
-                " │ ( 0 ) stop sort                                                                   │ ".to_owned(),
-                " │ ( 1 - 9 ) sort by header - or click header                                        │ ".to_owned(),
-                " │ ( q ) quit at any time                                                            │ ".to_owned(),
-                " │                                                                                   │ ".to_owned(),
-                " │        currently an early work in progress, all and any input appreciated         │ ".to_owned(),
-                " │                       https://github.com/mrjackwills/oxker                        │ ".to_owned(),
-                " │                                                                                   │ ".to_owned(),
-                " ╰───────────────────────────────────────────────────────────────────────────────────╯ ".to_owned(),
-                "                                                                                       ".to_owned(),
-            ];
+            "                                                                                       ".to_owned(),
+            format!(" ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ "),
+            " │                                                                                   │ ".to_owned(),
+            " │                                      88                                           │ ".to_owned(),
+            " │                                      88                                           │ ".to_owned(),
+            " │                                      88                                           │ ".to_owned(),
+            " │             ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,            │ ".to_owned(),
+            r#" │            a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8            │ "#.to_owned(),
+            r#" │            8b       d8     )888(     8888[      8PP"""""""  88                    │ "#.to_owned(),
+            r#" │            "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                    │ "#.to_owned(),
+            r#" │             `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                    │ "#.to_owned(),
+            " │                                                                                   │ ".to_owned(),
+            " │                 A simple tui to view & control docker containers                  │ ".to_owned(),
+            " │                                                                                   │ ".to_owned(),
+            " │ ( tab ) or ( shift+tab ) change panels                                            │ ".to_owned(),
+            " │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) change selected line        │ ".to_owned(),
+            " │ ( enter ) send docker container command                                           │ ".to_owned(),
+            " │ ( e ) exec into a container                                                       │ ".to_owned(),
+            " │ ( h ) toggle this help information                                                │ ".to_owned(),
+            " │ ( s ) save logs to file                                                           │ ".to_owned(),
+            " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ".to_owned(),
+            " │ ( 0 ) stop sort                                                                   │ ".to_owned(),
+            " │ ( 1 - 9 ) sort by header - or click header                                        │ ".to_owned(),
+            " │ ( esc ) close dialog                                                              │ ".to_owned(),
+            " │ ( q ) quit at any time                                                            │ ".to_owned(),
+            " │                                                                                   │ ".to_owned(),
+            " │        currently an early work in progress, all and any input appreciated         │ ".to_owned(),
+            " │                       https://github.com/mrjackwills/oxker                        │ ".to_owned(),
+            " │                                                                                   │ ".to_owned(),
+            " │                                                                                   │ ".to_owned(),
+            " ╰───────────────────────────────────────────────────────────────────────────────────╯ ".to_owned(),
+        ];
 
         for (row_index, row) in expected.iter().enumerate() {
             let mut bracket_key = vec![];

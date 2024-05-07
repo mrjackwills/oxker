@@ -804,11 +804,11 @@ mod tests {
         assert_eq!(result, &containers);
 
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("2")) {
-            i.status = "Exited (0) 10 minutes ago".to_owned();
+            "Exited (0) 10 minutes ago".clone_into(&mut i.status);
         }
 
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("3")) {
-            i.status = "Up 2 hours (Paused)".to_owned();
+            "Up 2 hours (Paused)".clone_into(&mut i.status);
         }
 
         // Sort by status

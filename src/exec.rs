@@ -1,6 +1,6 @@
 use std::{
     io::{Read, Stdout, Write},
-    sync::{atomic::AtomicBool, Arc},
+    sync::{atomic::AtomicBool, mpsc::Sender, Arc},
 };
 
 use bollard::{
@@ -11,7 +11,11 @@ use crossterm::terminal::enable_raw_mode;
 use futures_util::StreamExt;
 use parking_lot::Mutex;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::{
+    fs::File,
+    io::{AsyncReadExt, AsyncWriteExt},
+};
+use tokio_util::sync::CancellationToken;
 
 use crate::{
     app_data::{AppData, ContainerId, State},
@@ -80,35 +84,43 @@ pub fn tty_readable() -> bool {
         .is_ok()
 }
 
-/// Async tty reading, spawned into its own tokio thread
-fn tty(run: Arc<AtomicBool>) -> Option<AsyncTTY> {
-    if tty_readable() {
-        let (tx, rx) = std::sync::mpsc::channel();
-        tokio::spawn(async move {
-            if let Ok(mut f) = tokio::fs::File::open(TTY).await {
-                while run.load(std::sync::atomic::Ordering::SeqCst) {
-                    let mut buf = [0];
-                    if tokio::time::timeout(
-                        std::time::Duration::from_millis(10),
-                        f.read_exact(&mut buf),
-                    )
-                    .await
-                    .is_ok()
-                        && tx.send(buf[0]).is_err()
-                    {
-                        run.store(false, std::sync::atomic::Ordering::SeqCst);
-                    }
-                }
-            }
-        });
-        Some(AsyncTTY { rx })
-    } else {
-        None
-    }
-}
-
 struct AsyncTTY {
     rx: std::sync::mpsc::Receiver<u8>,
+}
+
+impl AsyncTTY {
+    /// Use an async timeout to read data from the file, and send to the "main" thread
+    async fn read_loop(mut f: File, tx: Sender<u8>) {
+        loop {
+            let mut buf = [0];
+            if tokio::time::timeout(std::time::Duration::from_millis(10), f.read_exact(&mut buf))
+                .await
+                .is_ok()
+                && tx.send(buf[0]).is_err()
+            {
+                break;
+            }
+        }
+    }
+
+    /// Async tty reading, spawned into its own tokio thread
+    fn get(cancel_token: &CancellationToken) -> Option<Self> {
+        if tty_readable() {
+            let (tx, rx) = std::sync::mpsc::channel();
+            let cancel_token = cancel_token.to_owned();
+            tokio::spawn(async move {
+                if let Ok(f) = tokio::fs::File::open(TTY).await {
+                    tokio::select! {
+                    () = cancel_token.cancelled() => (),
+                    () = Self::read_loop(f, tx) => cancel_token.cancel(),
+                    }
+                }
+            });
+            Some(Self { rx })
+        } else {
+            None
+        }
+    }
 }
 
 /// This is used to set the terminal size when exec via the Internal method
@@ -217,7 +229,7 @@ impl ExecMode {
         docker: &Arc<Docker>,
         terminal_size: Option<TerminalSize>,
     ) -> Result<(), AppError> {
-        let run = Arc::new(AtomicBool::new(true));
+        let cancel_token = CancellationToken::new();
 
         if let Ok(exec_result) = docker
             .create_exec(
@@ -246,21 +258,17 @@ impl ExecMode {
                 )
                 .await
             {
-                if let Some(async_tty) = tty(Arc::clone(&run)) {
-                    let run_thread = Arc::clone(&run);
+                if let Some(tty) = AsyncTTY::get(&cancel_token) {
                     tokio::spawn(async move {
                         enable_raw_mode().ok();
                         let mut stdout = std::io::stdout();
                         stdout.write_all(CURSOR_POS.as_bytes()).ok();
                         stdout.flush().ok();
-
-                        while run_thread.load(std::sync::atomic::Ordering::SeqCst) {
-                            while let Some(Ok(x)) = output.next().await {
-                                stdout.write_all(&x.into_bytes()).ok();
-                                stdout.flush().ok();
-                            }
-                            run_thread.store(false, std::sync::atomic::Ordering::SeqCst);
+                        while let Some(Ok(x)) = output.next().await {
+                            stdout.write_all(&x.into_bytes()).ok();
+                            stdout.flush().ok();
                         }
+                        cancel_token.cancel();
                     });
 
                     if let Some(terminal_size) = terminal_size {
@@ -276,7 +284,7 @@ impl ExecMode {
                             .ok();
                     }
 
-                    while let Ok(x) = async_tty.rx.recv() {
+                    while let Ok(x) = tty.rx.recv() {
                         input.write_all(&[x]).await.ok();
                     }
 
