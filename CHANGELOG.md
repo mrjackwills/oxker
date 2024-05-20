@@ -1,3 +1,6 @@
+### Chores
++ Dependencies updated, [ratatui](https://github.com/ratatui-org/ratatui) update that fixes the unicode truncation bug, [51fdd26be5b3166bcff5c26ece6d6ec0d893381e]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.6.3'>v0.6.3</a>
 ### 2024-05-07
 
