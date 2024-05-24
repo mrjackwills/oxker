@@ -179,10 +179,12 @@ impl Ui {
             if crossterm::event::poll(self.input_poll_rate).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
-                        self.input_tx
-                            .send(InputMessages::ButtonPress((key.code, key.modifiers)))
-                            .await
-                            .ok();
+                        if key.kind == event::KeyEventKind::Press {
+                            self.input_tx
+                                .send(InputMessages::ButtonPress((key.code, key.modifiers)))
+                                .await
+                                .ok();
+                        }
                     } else if let Event::Mouse(m) = event {
                         match m.kind {
                             event::MouseEventKind::Down(_)
