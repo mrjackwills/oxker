@@ -101,7 +101,7 @@ In application controls
 | ```( enter )```| Run selected docker command.|
 | ```( 1-9 )``` | Sort containers by heading, clicking on headings also sorts the selected column. |
 | ```( 0 )``` | Stop sorting.|
-| ```( e )``` | Exec into the selected container.|
+| ```( e )``` | Exec into the selected container - not available on Windows.|
 | ```( h )``` | Toggle help menu.|
 | ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
 | ```( q )``` | Quit.|
