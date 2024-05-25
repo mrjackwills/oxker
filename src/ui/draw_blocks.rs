@@ -681,6 +681,8 @@ impl HelpInfo {
                 space(),
                 button_item("e"),
                 button_desc("exec into a container"),
+                #[cfg(target_os = "windows")]
+                button_desc(" - not available on Windows"),
             ]),
             Line::from(vec![
                 space(),
