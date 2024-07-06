@@ -267,7 +267,7 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
 
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Max(1), Constraint::Min(1)].as_ref())
+        .constraints([Constraint::Max(1), Constraint::Min(1), Constraint::Max(3)].as_ref())
         .split(f.size());
 
     // Split into 3, containers+controls, logs, then graphs
@@ -305,6 +305,8 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
     draw_blocks::logs(app_data, lower_main[0], f, &fd, gui_state);
 
     draw_blocks::heading_bar(whole_layout[0], f, &fd, gui_state);
+
+    draw_blocks::search_bar(whole_layout[2], f, &fd, gui_state);
 
     if let Some(id) = fd.delete_confirm.as_ref() {
         app_data.lock().get_container_name_by_id(id).map_or_else(

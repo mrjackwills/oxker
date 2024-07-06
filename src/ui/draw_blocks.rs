@@ -21,7 +21,7 @@ use crate::{
 
 use super::{
     gui_state::{BoxLocation, DeleteButton, Region},
-    FrameData,
+    FrameData, Status,
 };
 use super::{GuiState, SelectablePanel};
 
@@ -224,11 +224,13 @@ pub fn containers(
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Containers);
+    let search_text = gui_state.lock().get_search();
 
     let items = app_data
         .lock()
         .get_container_items()
         .iter()
+        .filter(|i| if !search_text.is_empty() { i.name.to_string().contains(&search_text[..]) } else { true })
         .map(|i| ListItem::new(format_containers(i, &fd.columns)))
         .collect::<Vec<_>>();
 
@@ -574,6 +576,22 @@ pub fn heading_bar(
     // If no containers, don't display the headers, could maybe do this first?
     let help_index = if data.has_containers { 2 } else { 0 };
     frame.render_widget(help_paragraph, split_bar[help_index]);
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn search_bar(
+    area: Rect,
+    frame: &mut Frame,
+    data: &FrameData,
+    gui_state: &Arc<Mutex<GuiState>>,
+) {
+    let input = Paragraph::new(gui_state.lock().get_search())
+        .style(Style::default())
+        .block(Block::bordered().title("Search"));
+
+    if gui_state.lock().status_contains(&[Status::Search]) {
+        frame.render_widget(input, area);
+    }
 }
 
 /// Help popup box needs these three pieces of information

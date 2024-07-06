@@ -166,6 +166,7 @@ pub enum Status {
     Help,
     Init,
     Logs,
+    Search,
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
@@ -181,6 +182,7 @@ pub struct GuiState {
     status: HashSet<Status>,
     exec_mode: Option<ExecMode>,
     pub info_box_text: Option<(String, Instant)>,
+    search: String,
 }
 impl GuiState {
     /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
@@ -374,5 +376,21 @@ impl GuiState {
     /// Remove info box content
     pub fn reset_info_box(&mut self) {
         self.info_box_text = None;
+    }
+
+    pub fn get_search(&self) -> String {
+        self.search.clone()
+    }
+
+    pub fn search_reset(&mut self) {
+        self.search = String::new();
+    }
+
+    pub fn search_delete_char(&mut self) {
+        self.search.pop();
+    }
+
+    pub fn search_add_char(&mut self, c: char) {
+        self.search.push(c);
     }
 }

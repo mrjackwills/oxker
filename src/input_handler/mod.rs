@@ -365,6 +365,7 @@ impl InputHandler {
         let contains_error = contains(Status::Error);
         let contains_help = contains(Status::Help);
         let contains_exec = contains(Status::Exec);
+        let contains_search = contains(Status::Search);
 
         if !contains_exec {
             // Always just quit on Ctrl + c/C or q/Q
@@ -382,6 +383,25 @@ impl InputHandler {
                     }
                     _ => (),
                 }
+            } else if contains_search {
+                match key_code {
+                    KeyCode::Esc => {
+                        self.gui_state.lock().search_reset();
+                        self.gui_state.lock().status_del(Status::Search);
+                    }
+                    KeyCode::Enter => {
+                        self.gui_state.lock().status_del(Status::Search);
+                    }
+                    KeyCode::Backspace => {
+                        self.gui_state.lock().search_delete_char();
+                    }
+                    KeyCode::Char(c) => {
+                        self.gui_state.lock().search_add_char(c);
+                    }
+                    _ => (),
+                    
+                }
+
             } else if contains_help {
                 match key_code {
                     KeyCode::Esc | KeyCode::Char('h' | 'H') => {
@@ -429,6 +449,9 @@ impl InputHandler {
                         }
                     }
                     KeyCode::Enter => self.enter_key().await,
+                    KeyCode::F(1) | KeyCode::Char('/') => {
+                        self.gui_state.lock().status_push(Status::Search);
+                    }
                     _ => (),
                 }
             }
