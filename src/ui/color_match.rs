@@ -41,15 +41,19 @@ pub mod log_sanitizer {
 
     /// Remove all ansi formatting from a given string and create ratatui Lines
     pub fn remove_ansi<'a>(input: &str) -> Vec<Line<'a>> {
-        raw(&categorise_text(input)
-            .into_iter()
-            .map(|i| i.text)
-            .collect::<String>())
+        vec![Line::from(
+            categorise_text(input)
+                .into_iter()
+                .map(|i| i.text)
+                .collect::<String>()
+                .trim()
+                .to_owned(),
+        )]
     }
 
     /// create ratatui Lines that exactly match the given strings
     pub fn raw<'a>(input: &str) -> Vec<Line<'a>> {
-        vec![Line::from(Span::raw(input.to_owned()))]
+        vec![Line::from(input.escape_debug().collect::<String>())]
     }
 
     /// Change from ansi to tui colors
@@ -62,7 +66,7 @@ pub mod log_sanitizer {
             CansiColor::Blue => Color::Blue,
             CansiColor::Magenta => Color::Magenta,
             CansiColor::Cyan => Color::Cyan,
-            CansiColor::White | CansiColor::BrightWhite => Color::White,
+            CansiColor::White | CansiColor::BrightWhite => Color::Gray,
             CansiColor::BrightRed => Color::LightRed,
             CansiColor::BrightGreen => Color::LightGreen,
             CansiColor::BrightYellow => Color::LightYellow,
@@ -92,7 +96,7 @@ mod tests {
         let expected = vec![Line {
             spans: [Span {
                 content: std::borrow::Cow::Borrowed(
-                    "\x1b[31;47mo\x1b[32;40mx\x1b[33;41mk\x1b[34;42me\x1b[35;43mr\x1b[0m",
+                    "\\u{1b}[31;47mo\\u{1b}[32;40mx\\u{1b}[33;41mk\\u{1b}[34;42me\\u{1b}[35;43mr\\u{1b}[0m",
                 ),
                 style: Style::default(),
             }]
@@ -111,7 +115,7 @@ mod tests {
             spans: vec![
                 Span {
                     content: std::borrow::Cow::Borrowed("o"),
-                    style: Style::default().fg(Color::Red).bg(Color::White),
+                    style: Style::default().fg(Color::Red).bg(Color::Gray),
                 },
                 Span {
                     content: std::borrow::Cow::Borrowed("x"),
