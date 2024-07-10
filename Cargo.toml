@@ -34,12 +34,12 @@ crossterm = "0.27"
 directories = "5.0"
 futures-util = "0.3"
 parking_lot = { version = "0.12" }
-ratatui = "0.26"
+ratatui = "0.27"
 tokio = { version = "1.38", features = ["full"] }
 tokio-util = "0.7"
 tracing = "0.1"
 tracing-subscriber = "0.3"
-uuid = { version = "1.8", features = ["fast-rng", "v4"] }
+uuid = { version = "1.10", features = ["fast-rng", "v4"] }
 
 [profile.release]
 lto = true
