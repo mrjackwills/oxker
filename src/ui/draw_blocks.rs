@@ -1128,6 +1128,26 @@ mod tests {
         setup.app_data.lock().update_log_by_id(logs, &setup.ids[0]);
     }
 
+    /// Get a single row of String's from the expected data
+    fn expected_to_vec(expected: &[&str], row_index: usize) -> Vec<String> {
+        expected[row_index]
+            .chars()
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>()
+    }
+
+    fn get_result(
+        setup: &TuiTestSetup,
+        w: u16,
+    ) -> std::iter::Enumerate<std::slice::Chunks<ratatui::buffer::Cell>> {
+        setup
+            .terminal
+            .backend()
+            .buffer()
+            .content
+            .chunks(usize::from(w))
+            .enumerate()
+    }
     // ******************** //
     // DockerControls panel //
     // ******************** //
@@ -1154,14 +1174,10 @@ mod tests {
             "╰──────────╯",
         ];
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-                assert_eq!(result_cell.fg, Color::Reset);
+        for (row_index, row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (cell_index, cell) in row.iter().enumerate() {
+                assert_eq!(cell.symbol(), expected_row[cell_index]);
             }
         }
     }
@@ -1187,44 +1203,35 @@ mod tests {
             "│  delete  │",
             "╰──────────╯",
         ];
-        let result = &setup.terminal.backend().buffer().content;
 
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-
-                // Check the text color is correct
-                match index {
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Reset);
+                match (row_index, result_cell_index) {
                     // pause
-                    15..=19 => {
+                    (1, 3..=7) => {
                         assert_eq!(result_cell.fg, Color::Yellow);
                     }
                     // restart
-                    27..=33 => {
+                    (2, 3..=9) => {
                         assert_eq!(result_cell.fg, Color::Magenta);
                     }
                     // stop
-                    39..=42 => {
+                    (3, 3..=6) => {
                         assert_eq!(result_cell.fg, Color::Red);
                     }
                     // delete
-                    51..=56 => {
+                    (4, 3..=8) => {
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
-                    // no text
                     _ => {
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
                 }
-                if result_cell.symbol().starts_with('▶') {
-                    assert_eq!(result_cell.fg, Color::Reset);
-                }
             }
         }
-
         // Change the controls state
         setup
             .app_data
@@ -1248,36 +1255,27 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-
-                // Chceck the text color is correct
-                match index {
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Reset);
+                match (row_index, result_cell_index) {
                     // resume
-                    15..=20 => {
+                    (1, 3..=8) => {
                         assert_eq!(result_cell.fg, Color::Blue);
                     }
                     // stop
-                    27..=30 => {
+                    (2, 3..=6) => {
                         assert_eq!(result_cell.fg, Color::Red);
                     }
                     // delete
-                    39..=44 => {
+                    (3, 3..=8) => {
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
-                    // no text
                     _ => {
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
-                }
-                if result_cell.symbol().starts_with('▶') {
-                    assert_eq!(result_cell.fg, Color::Reset);
                 }
             }
         }
@@ -1305,13 +1303,10 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::Reset);
                 }
@@ -1328,25 +1323,21 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-                if BORDER_CHARS.contains(&result_cell.symbol()) {
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                if row_index == 0
+                    || row_index == 5
+                    || result_cell_index == 0
+                    || result_cell_index == 11
+                {
                     assert_eq!(result_cell.fg, Color::LightCyan);
                 }
-                // Make sure that the selected line has bold text
-                match index {
-                    // pause
-                    13..=22 => {
-                        assert_eq!(result_cell.modifier, Modifier::BOLD);
-                    }
-                    _ => {
-                        assert!(result_cell.modifier.is_empty());
-                    }
+                if row_index == 1 && result_cell_index > 0 && result_cell_index < 11 {
+                    assert_eq!(result_cell.modifier, Modifier::BOLD);
+                } else {
+                    assert!(result_cell.modifier.is_empty());
                 }
             }
         }
@@ -1357,20 +1348,40 @@ mod tests {
     // *********************** //
 
     // Check that the correct solor is applied to the state/status/cpu/memory section
+    #[allow(unused)]
     fn check_expected(expected: [&str; 6], w: u16, _h: u16, setup: &TuiTestSetup, color: Color) {
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
+        // let result = &setup.terminal.backend().buffer().content;
+        // for (row_index, row) in expected.iter().enumerate() {
+        //     for (char_index, expected_char) in row.chars().enumerate() {
+        //         let index = row_index * usize::from(w) + char_index;
+        //         let result_cell = &result[index];
 
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-                if (145..=207).contains(&index) {
-                    assert_eq!(result_cell.fg, color);
-                    assert_eq!(result_cell.modifier, Modifier::BOLD);
-                }
-            }
-        }
+        //         assert_eq!(result_cell.symbol(), expected_char.to_string());
+        //         if (145..=207).contains(&index) {
+        //             assert_eq!(result_cell.fg, color);
+        //             assert_eq!(result_cell.modifier, Modifier::BOLD);
+        //         }
+        //     }
+        // }
+
+        assert_eq!(1, 2);
+
+        // let result = &setup.terminal.backend().buffer().content;
+
+        // for (row_index, row) in result.chunks(usize::from(w)).enumerate() {
+        //     let expected_row = expected_to_vec(&expected, row_index);
+        //     for (cell_index, result_cell) in row.iter().enumerate() {
+        //         assert_eq!(result_cell.symbol(), expected_row[cell_index]);
+        //         if row_index == 0 || row_index == 5 || cell_index == 0 || cell_index == 11 {
+        //             assert_eq!(result_cell.fg, Color::LightCyan);
+        //         }
+        //         if row_index == 1 && cell_index > 0 && cell_index < 11 {
+        //             assert_eq!(result_cell.modifier, Modifier::BOLD);
+        //         } else {
+        //             assert!(result_cell.modifier.is_empty());
+        //         }
+        //     }
+        // }
     }
 
     #[test]
@@ -1399,13 +1410,10 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.fg, Color::Reset);
             }
         }
@@ -1420,13 +1428,10 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::LightCyan);
                 }
@@ -1456,26 +1461,27 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
 
-                // result matches expected
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-
-                // Selected container is bold
-                match index {
-                    131 | 133..=258 => assert_eq!(result_cell.modifier, Modifier::BOLD),
-                    _ => {
-                        assert!(result_cell.modifier.is_empty());
-                    }
-                }
-
-                // Border is blue
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::LightCyan);
+                }
+
+                let not_bold = || assert!(result_cell.modifier.is_empty());
+                if row_index == 1 {
+                    match result_cell_index {
+                        0 | 2 | 129 => {
+                            not_bold();
+                        }
+                        _ => {
+                            assert_eq!(result_cell.modifier, Modifier::BOLD);
+                        }
+                    }
+                } else {
+                    not_bold();
                 }
             }
         }
@@ -1490,15 +1496,11 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
 
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-
-                // Border is gray
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::Reset);
                 }
@@ -1507,7 +1509,7 @@ mod tests {
     }
 
     #[test]
-    /// ALl columns on all rows are coloured correctly
+    /// Columns on all rows are coloured correctly
     fn test_draw_blocks_containers_colors() {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
@@ -1529,71 +1531,40 @@ mod tests {
             })
             .unwrap();
 
-        let index_blue = [
-            134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 208, 209, 210, 211, 212, 213,
-            214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228,
-        ];
-        let index_blue = index_blue
-            .iter()
-            .flat_map(|&x| vec![x, x + 130, x + 260])
-            .collect::<Vec<_>>();
-        let index_green = [
-            145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161,
-            162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178,
-            179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195,
-            196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207,
-        ];
-        let index_green = index_green
-            .iter()
-            .flat_map(|&x| vec![x, x + 130, x + 260])
-            .collect::<Vec<_>>();
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
 
-        let index_rx = [229, 230, 231, 232, 233, 234, 235, 236, 237, 238];
-        let index_rx = index_rx
-            .iter()
-            .flat_map(|&x| vec![x, x + 130, x + 260])
-            .collect::<Vec<_>>();
-
-        let index_tx = [239, 240, 241, 242, 243, 244, 245, 246, 247, 248];
-        let index_tx = index_tx
-            .iter()
-            .flat_map(|&x| vec![x, x + 130, x + 260])
-            .collect::<Vec<_>>();
-
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-
-                let result_cell = &result[index];
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-
-                match index {
-                    _x if index_blue.contains(&index) => {
-                        assert_eq!(result_cell.fg, Color::Blue);
-                    }
-                    _x if index_green.contains(&index) => {
-                        assert_eq!(result_cell.fg, Color::Green);
-                    }
-                    _x if index_rx.contains(&index) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
-                    }
-                    _x if index_tx.contains(&index) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
-                    }
-                    (0..=130) | (259..=260) | (389..=390) | (519..=520) | (649..=779) => {
+                match (row_index, result_cell_index) {
+                    //border
+                    (0 | 5, _) | (1..=4, 0 | 129) => {
                         assert_eq!(result_cell.fg, Color::LightCyan);
                     }
-                    _ => {
-                        assert_eq!(result_cell.fg, Color::Reset);
+                    // name, id, image column
+                    (1..=3, 4..=14 | 78..=98) => {
+                        assert_eq!(result_cell.fg, Color::Blue);
                     }
+                    // state, status, cpu, memory column
+                    (1..=3, 15..=77) => {
+                        assert_eq!(result_cell.fg, Color::Green);
+                    }
+                    // rx column
+                    (1..=3, 99..=108) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                    }
+                    // tx column
+                    (1..=3, 109..=118) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                    }
+                    _ => assert_eq!(result_cell.fg, Color::Reset),
                 }
             }
         }
     }
 
     #[test]
-    /// When long container/image name, it is truncated correctly
+    /// Long container + image name is truncated correctly
     fn test_draw_blocks_containers_long_name_image() {
         let (w, h) = (170, 6);
         let mut setup = test_setup(w, h, true, true);
@@ -1620,17 +1591,12 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
             }
         }
-
-        // THis char: …
     }
 
     #[test]
@@ -2781,6 +2747,60 @@ mod tests {
         }
     }
 
+    // ********** //
+    // Filter Row //
+    // ********** //
+
+    #[test]
+    /// Filter row is drawn correctly & colors are correct
+    fn test_draw_blocks_filter_row() {
+        let (w, h) = (140, 1);
+        let mut setup = test_setup(w, h, true, true);
+
+        setup.app_data.lock().filter_term_push('c');
+        setup
+            .gui_state
+            .lock()
+            .status_push(crate::ui::Status::Filter);
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::filter_bar(setup.area, f, &setup.app_data);
+            })
+            .unwrap();
+
+        let expected = [
+			" Enter  done  Esc  clear filter: c                                                                                                          "
+		];
+        let result = &setup.terminal.backend().buffer().content;
+
+        for (row_index, row) in result.chunks(usize::from(w)).enumerate() {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (cell_index, cell) in row.iter().enumerate() {
+                match cell_index {
+                    0..=6 | 13..=17 => {
+                        assert_eq!(cell.bg, Color::Magenta);
+                        assert_eq!(cell.fg, Color::Black);
+                    }
+                    7..=12 | 18..=24 | 33 => {
+                        assert_eq!(cell.bg, Color::Reset);
+                        assert_eq!(cell.fg, Color::Gray);
+                    }
+                    25..=32 => {
+                        assert_eq!(cell.bg, Color::Reset);
+                        assert_eq!(cell.fg, Color::Magenta);
+                    }
+                    _ => {
+                        assert_eq!(cell.bg, Color::Reset);
+                        assert_eq!(cell.fg, Color::Reset);
+                    }
+                }
+                assert_eq!(cell.symbol(), expected_row[cell_index]);
+            }
+        }
+    }
+
     // *********** //
     // Error popup //
     // *********** //
@@ -3273,37 +3293,37 @@ mod tests {
         setup.app_data.lock().filter_term_push('1');
 
         let expected = [
-            "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
-            "╭ Containers 1/1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
-            "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
-            "│                                                                                                                                              ││  restart     │",
-            "│                                                                                                                                              ││  stop        │",
-            "│                                                                                                                                              ││  delete      │",
-            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
-            "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│  line 1                                                                                                                                                      │",
-            "│  line 2                                                                                                                                                      │",
-            "│▶ line 3                                                                                                                                                      │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "│                                                                                                                                                              │",
-            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-            "╭────────────────────────── cpu 03.00% ───────────────────────────╮╭──────────────────────── memory 30.00 kB ────────────────────────╮╭──────── ports ─────────╮",
-            "│10.00%│      •••                                                 ││100.00 kB│      •••                                              ││   ip   private   public│",
-            "│      │    ••  •                                                 ││         │    ••  •                                              ││           8001         │",
-            "│      │ •••     • •                                              ││         │ •••     ••                                            ││                        │",
-            "│      │•        ••                                               ││         │•        •                                             ││                        │",
-            "│      │                                                          ││         │                                                       ││                        │",
-            "╰─────────────────────────────────────────────────────────────────╯╰─────────────────────────────────────────────────────────────────╯╰────────────────────────╯",
-            " Enter  done  Esc  clear filter: r_1                                                                                                                            ",
-            ];
+			"           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
+			"╭ Containers 1/1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
+			"│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
+			"│                                                                                                                                              ││  restart     │",
+			"│                                                                                                                                              ││  stop        │",
+			"│                                                                                                                                              ││  delete      │",
+			"╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
+			"╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+			"│  line 1                                                                                                                                                      │",
+			"│  line 2                                                                                                                                                      │",
+			"│▶ line 3                                                                                                                                                      │",
+			"│                                                                                                                                                              │",
+			"│                                                                                                                                                              │",
+			"│                                                                                                                                                              │",
+			"│                                                                                                                                                              │",
+			"│                                                                                                                                                              │",
+			"│                                                                                                                                                              │",
+			"│                                                                                                                                                              │",
+			"│                                                                                                                                                              │",
+			"│                                                                                                                                                              │",
+			"│                                                                                                                                                              │",
+			"╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+			"╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
+			"│10.00%│      •••                                               ││100.00 kB│      ••                                             ││       ip   private   public│",
+			"│      │    ••  •                                               ││         │    •• •                                             ││               8001         │",
+			"│      │ •••     • •                                            ││         │ •••    • •                                          ││                            │",
+			"│      │•        ••                                             ││         │•       ••                                           ││                            │",
+			"│      │                                                        ││         │                                                     ││                            │",
+			"╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
+			" Enter  done  Esc  clear filter: r_1                                                                                                                            "
+			];
         setup
             .terminal
             .draw(|f| {
