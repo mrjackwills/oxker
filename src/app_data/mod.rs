@@ -3,6 +3,7 @@ use core::fmt;
 use parking_lot::Mutex;
 use ratatui::widgets::{ListItem, ListState};
 use std::{
+    hash::Hash,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -60,17 +61,21 @@ impl fmt::Display for Header {
 pub struct AppData {
     containers: StatefulList<ContainerItem>,
     error: Option<AppError>,
+    filter_term: Option<String>,
     sorted_by: Option<(Header, SortedOrder)>,
+    hidden_containers: Vec<ContainerItem>,
     pub args: CliArgs,
 }
 
 #[derive(Debug, Clone)]
 #[cfg(test)]
 pub struct AppData {
+    pub hidden_containers: Vec<ContainerItem>,
+    pub args: CliArgs,
     pub containers: StatefulList<ContainerItem>,
     pub error: Option<AppError>,
+    pub filter_term: Option<String>,
     pub sorted_by: Option<(Header, SortedOrder)>,
-    pub args: CliArgs,
 }
 
 impl AppData {
@@ -79,8 +84,10 @@ impl AppData {
         Self {
             args,
             containers: StatefulList::new(vec![]),
+            hidden_containers: vec![],
             error: None,
             sorted_by: None,
+            filter_term: None,
         }
     }
 
@@ -91,6 +98,90 @@ impl AppData {
             .duration_since(UNIX_EPOCH)
             .expect("In our known reality, this error should never occur")
             .as_secs()
+    }
+
+    /// Filter related methods
+
+    /// Get the current filter term
+    pub const fn get_filter_term(&self) -> Option<&String> {
+        self.filter_term.as_ref()
+    }
+
+    /// Check the container name against the current filter
+    fn can_insert(&self, name: &str) -> bool {
+        self.filter_term.as_ref().map_or(true, |term| {
+            name.to_string()
+                .to_lowercase()
+                .contains(&term.to_lowercase())
+        })
+    }
+
+    /// Remove items from the containers list based on the filter term, and insert into a "hidden" vec
+    /// sets the state to start if any filtering has occured
+    /// Also search in the "hidden" vec for items and insert back into the main containers vec
+    fn filter_containers(&mut self) {
+        let pre_len = self.get_container_len();
+
+        if !self.hidden_containers.is_empty() {
+            let (mut new_items, tmp_items): (Vec<_>, Vec<_>) = self
+                .hidden_containers
+                .iter()
+                .cloned()
+                .partition(|item| self.can_insert(item.name.get()));
+
+            while let Some(x) = new_items.pop() {
+                self.containers.items.push(x);
+            }
+            self.hidden_containers = tmp_items;
+        }
+
+        let (new_items, tmp_items) = self
+            .containers
+            .items
+            .iter()
+            .cloned()
+            .partition(|item| self.can_insert(item.name.get()));
+
+        self.containers.items = new_items;
+        self.hidden_containers.extend(tmp_items);
+
+        self.sort_containers();
+        if self.get_container_len() != pre_len {
+            self.containers.start();
+        }
+    }
+
+    /// Set a single char into the filter term
+    pub fn filter_term_push(&mut self, c: char) {
+        if let Some(term) = self.filter_term.as_mut() {
+            term.push(c);
+        } else {
+            self.filter_term = Some(format!("{c}"));
+        };
+        self.filter_containers();
+    }
+
+    /// Delete the final char of the filter term
+    pub fn filter_term_pop(&mut self) {
+        if let Some(term) = self.filter_term.as_mut() {
+            // should now search for items in the tmp vec, and insert into containers if found
+            term.pop();
+            if term.is_empty() {
+                self.filter_term = None;
+            }
+        }
+        self.filter_containers();
+    }
+
+    /// Remove the filter term completely, empty the "hidden" container vec
+    pub fn filter_term_clear(&mut self) {
+        self.filter_term = None;
+        while let Some(i) = self.hidden_containers.pop() {
+            if self.get_container_by_id(&i.id).is_none() {
+                self.containers.items.push(i);
+            };
+        }
+        self.sort_containers();
     }
 
     /// Container sort related methods
@@ -206,7 +297,7 @@ impl AppData {
 
     /// Container state methods
 
-    /// Just get the total number of containers
+    /// Get the total number of none "hidden" containers
     pub fn get_container_len(&self) -> usize {
         self.containers.items.len()
     }
@@ -260,35 +351,35 @@ impl AppData {
         let mut longest_private = 10;
         let mut longest_public = 9;
 
-        for item in &self.containers.items {
-            // if let Some(ports) = item.ports.as_ref() {
-            longest_ip = longest_ip.max(
-                item.ports
-                    .iter()
-                    .map(ContainerPorts::len_ip)
-                    .max()
-                    .unwrap_or(3),
-            );
-            longest_private = longest_private.max(
-                item.ports
-                    .iter()
-                    .map(ContainerPorts::len_private)
-                    .max()
-                    .unwrap_or(8),
-            );
-            longest_public = longest_public.max(
-                item.ports
-                    .iter()
-                    .map(ContainerPorts::len_public)
-                    .max()
-                    .unwrap_or(6),
-            );
+        for item in [&self.containers.items, &self.hidden_containers] {
+            for item in item {
+                longest_ip = longest_ip.max(
+                    item.ports
+                        .iter()
+                        .map(ContainerPorts::len_ip)
+                        .max()
+                        .unwrap_or(3),
+                );
+                longest_private = longest_private.max(
+                    item.ports
+                        .iter()
+                        .map(ContainerPorts::len_private)
+                        .max()
+                        .unwrap_or(8),
+                );
+                longest_public = longest_public.max(
+                    item.ports
+                        .iter()
+                        .map(ContainerPorts::len_public)
+                        .max()
+                        .unwrap_or(6),
+                );
+            }
         }
-        // }
 
         (longest_ip, longest_private, longest_public)
-        // )
     }
+
     /// Get Option of the current selected container's ports, sorted by private port
     pub fn get_selected_ports(&mut self) -> Option<(Vec<ContainerPorts>, State)> {
         if let Some(item) = self.get_mut_selected_container() {
@@ -307,9 +398,14 @@ impl AppData {
             .and_then(|i| self.containers.items.get_mut(i))
     }
 
-    /// return a mutable container by given id
+    /// Get a mutable container by given id
     fn get_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
         self.containers.items.iter_mut().find(|i| &i.id == id)
+    }
+
+    /// Get a mutable container by given id in the tmp_container vec
+    fn get_hidden_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
+        self.hidden_containers.iter_mut().find(|i| &i.id == id)
     }
 
     /// Get the ContainerName of by ID
@@ -333,6 +429,7 @@ impl AppData {
         self.get_selected_container()
             .map(|i| (i.id.clone(), i.state, i.name.get().to_owned()))
     }
+
     /// Selected DockerCommand methods
 
     /// Get the current selected docker command
@@ -467,17 +564,17 @@ impl AppData {
 
     /// Error related methods
 
-    /// return single app_state error
+    /// Get single app_state error
     pub const fn get_error(&self) -> Option<AppError> {
         self.error
     }
 
-    /// remove single app_state error
+    /// Remove single app_state error
     pub fn remove_error(&mut self) {
         self.error = None;
     }
 
-    /// insert single app_state error
+    /// Insert single app_state error
     pub fn set_error(&mut self, error: AppError, gui_state: &Arc<Mutex<GuiState>>, status: Status) {
         gui_state.lock().status_push(status);
         self.error = Some(error);
@@ -498,43 +595,54 @@ impl AppData {
 
     /// Find the widths for the strings in the containers panel.
     /// So can display nicely and evenly
+    /// Searches in both containes & hidden_containers
     pub fn get_width(&self) -> Columns {
         let mut columns = Columns::new();
         let count = |x: &str| u8::try_from(x.chars().count()).unwrap_or(12);
 
         // Should probably find a refactor here somewhere
-        for container in &self.containers.items {
-            let cpu_count = count(
-                &container
-                    .cpu_stats
-                    .back()
-                    .unwrap_or(&CpuStats::default())
-                    .to_string(),
-            );
+        for container in [&self.containers.items, &self.hidden_containers] {
+            for container in container {
+                let cpu_count = count(
+                    &container
+                        .cpu_stats
+                        .back()
+                        .unwrap_or(&CpuStats::default())
+                        .to_string(),
+                );
 
-            let mem_current_count = count(
-                &container
-                    .mem_stats
-                    .back()
-                    .unwrap_or(&ByteStats::default())
-                    .to_string(),
-            );
+                let mem_current_count = count(
+                    &container
+                        .mem_stats
+                        .back()
+                        .unwrap_or(&ByteStats::default())
+                        .to_string(),
+                );
 
-            // Issue here!
-            columns.cpu.1 = columns.cpu.1.max(cpu_count);
-            columns.image.1 = columns.image.1.max(count(&container.image.to_string()));
-            columns.mem.1 = columns.mem.1.max(mem_current_count);
-            columns.mem.2 = columns.mem.2.max(count(&container.mem_limit.to_string()));
-            columns.name.1 = columns.name.1.max(count(&container.name.to_string()));
-            columns.net_rx.1 = columns.net_rx.1.max(count(&container.rx.to_string()));
-            columns.net_tx.1 = columns.net_tx.1.max(count(&container.tx.to_string()));
-            columns.state.1 = columns.state.1.max(count(&container.state.to_string()));
-            columns.status.1 = columns.status.1.max(count(&container.status));
+                columns.cpu.1 = columns.cpu.1.max(cpu_count);
+                columns.image.1 = columns.image.1.max(count(&container.image.to_string()));
+                columns.mem.1 = columns.mem.1.max(mem_current_count);
+                columns.mem.2 = columns.mem.2.max(count(&container.mem_limit.to_string()));
+                columns.name.1 = columns.name.1.max(count(&container.name.to_string()));
+                columns.net_rx.1 = columns.net_rx.1.max(count(&container.rx.to_string()));
+                columns.net_tx.1 = columns.net_tx.1.max(count(&container.tx.to_string()));
+                columns.state.1 = columns.state.1.max(count(&container.state.to_string()));
+                columns.status.1 = columns.status.1.max(count(&container.status));
+            }
         }
         columns
     }
 
     /// Update related methods
+
+    /// Get mutable reference to a container in the containers vec & the hidden_containers vec
+    fn get_any_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
+        if self.get_hidden_container_by_id(id).is_some() {
+            self.get_hidden_container_by_id(id)
+        } else {
+            self.get_container_by_id(id)
+        }
+    }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
     /// Will also, if a sort is set, sort the containers
@@ -547,7 +655,7 @@ impl AppData {
         rx: u64,
         tx: u64,
     ) {
-        if let Some(container) = self.get_container_by_id(id) {
+        if let Some(container) = self.get_any_container_by_id(id) {
             if container.cpu_stats.len() >= 60 {
                 container.cpu_stats.pop_front();
             }
@@ -642,8 +750,8 @@ impl AppData {
                 let created = i
                     .created
                     .map_or(0, |i| u64::try_from(i).unwrap_or_default());
-                // If container info already in containers Vec, then just update details
-                if let Some(item) = self.get_container_by_id(&id) {
+
+                if let Some(item) = self.get_any_container_by_id(&id) {
                     if item.name.get() != name {
                         item.name.set(name);
                     };
@@ -668,24 +776,29 @@ impl AppData {
                         item.image.set(image);
                     };
                 } else {
-                    // container not known, so make new ContainerItem and push into containers Vec
+                    // container not known, so make new ContainerItem and push into containers Ve
+                    let can_insert = self.can_insert(&name);
                     let container = ContainerItem::new(
                         created, id, image, is_oxker, name, ports, state, status,
                     );
-                    self.containers.items.push(container);
+                    if can_insert {
+                        self.containers.items.push(container);
+                    } else {
+                        self.hidden_containers.push(container);
+                    }
                 }
             }
         }
     }
 
-    /// update logs of a given container, based on id
+    /// Update logs of a given container, based on id
     pub fn update_log_by_id(&mut self, logs: Vec<String>, id: &ContainerId) {
         let color = self.args.color;
         let raw = self.args.raw;
 
         let timestamp = self.args.timestamp;
 
-        if let Some(container) = self.get_container_by_id(id) {
+        if let Some(container) = self.get_any_container_by_id(id) {
             if !container.is_oxker {
                 container.last_updated = Self::get_systemtime();
                 let current_len = container.logs.len();
@@ -1433,6 +1546,36 @@ mod tests {
         test_state(State::Unknown, &mut vec![DockerControls::Delete]);
     }
 
+    // ****** //
+    // Filter //
+    // ****** //
+
+    #[test]
+    /// Data is filtered correctly
+    fn test_app_data_filter() {
+        let (_, containers) = gen_containers();
+
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        app_data.filter_term_push('_');
+        app_data.filter_term_push('2');
+
+        assert_eq!(app_data.get_filter_term(), Some(&"_2".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        // Can insert checks against the current filter term
+        assert!(app_data.can_insert("_2"));
+        assert!(!app_data.can_insert("_"));
+        assert!(!app_data.can_insert("_3"));
+    }
+
     // **** //
     // Logs //
     // **** //
@@ -1729,6 +1872,32 @@ mod tests {
             net_rx: (Header::Rx, 7),
             net_tx: (Header::Tx, 7),
         };
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    /// Header widths return correctly when some containers hidden
+    fn test_app_data_get_width_filtered() {
+        let (_ids, mut containers) = gen_containers();
+        containers[0].name = ContainerName::from("some_longer_name_with_filter");
+        let mut app_data = gen_appdata(&containers);
+
+        let result = app_data.get_width();
+        let expected = Columns {
+            name: (Header::Name, 28),
+            state: (Header::State, 11),
+            status: (Header::Status, 16),
+            cpu: (Header::Cpu, 7),
+            mem: (Header::Memory, 7, 7),
+            id: (Header::Id, 8),
+            image: (Header::Image, 7),
+            net_rx: (Header::Rx, 7),
+            net_tx: (Header::Tx, 7),
+        };
+
+        assert_eq!(result, expected);
+        app_data.filter_term_push('c');
+        app_data.filter_containers();
         assert_eq!(result, expected);
     }
 

@@ -167,6 +167,11 @@ async fn main() {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::many_single_char_names, unused)]
 mod tests {
+    use std::{
+        collections::{HashSet, VecDeque},
+        vec,
+    };
+
     use bollard::service::{ContainerSummary, Port};
 
     use crate::{
@@ -209,8 +214,10 @@ mod tests {
     pub fn gen_appdata(containers: &[ContainerItem]) -> AppData {
         AppData {
             containers: StatefulList::new(containers.to_vec()),
+            hidden_containers: vec![],
             error: None,
             sorted_by: None,
+            filter_term: None,
             args: gen_args(),
         }
     }
