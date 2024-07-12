@@ -163,19 +163,21 @@ pub enum Status {
     DockerConnect,
     Error,
     Exec,
+    Filter,
     Help,
     Init,
     Logs,
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct GuiState {
     delete_container: Option<ContainerId>,
     delete_map: HashMap<DeleteButton, Rect>,
     heading_map: HashMap<Header, Rect>,
-    is_loading: HashSet<Uuid>,
+    loading_handle: Option<JoinHandle<()>>,
     loading_index: u8,
+    loading_set: HashSet<Uuid>,
     panel_map: HashMap<SelectablePanel, Rect>,
     selected_panel: SelectablePanel,
     status: HashSet<Status>,
@@ -325,45 +327,46 @@ impl GuiState {
         } else {
             self.loading_index += 1;
         }
-        self.is_loading.insert(uuid);
+        self.loading_set.insert(uuid);
     }
 
+    pub fn is_loading(&self) -> bool {
+        !self.loading_set.is_empty()
+    }
     /// If is_loading has any entries, return the char at FRAMES[index], else an empty char, which needs to take up the same space, hence ' '
     pub fn get_loading(&self) -> char {
-        if self.is_loading.is_empty() {
-            ' '
-        } else {
+        if self.is_loading() {
             FRAMES[usize::from(self.loading_index)]
-        }
-    }
-
-    /// Remove a loading_uuid from the is_loading HashSet, if empty, reset loading_index to 0
-    fn remove_loading(&mut self, uuid: Uuid) {
-        self.is_loading.remove(&uuid);
-        if self.is_loading.is_empty() {
-            self.loading_index = 0;
+        } else {
+            ' '
         }
     }
 
     /// Animate the loading icon in its own Tokio thread
-    pub fn start_loading_animation(
-        gui_state: &Arc<Mutex<Self>>,
-        loading_uuid: Uuid,
-    ) -> JoinHandle<()> {
+    /// This should only be able to executed once, rather than multiple spawns
+    pub fn start_loading_animation(gui_state: &Arc<Mutex<Self>>, loading_uuid: Uuid) {
+        if !gui_state.lock().is_loading() {
+            let inner_state = Arc::clone(gui_state);
+            gui_state.lock().loading_handle = Some(tokio::spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    inner_state.lock().next_loading(loading_uuid);
+                }
+            }));
+        }
         gui_state.lock().next_loading(loading_uuid);
-        let gui_state = Arc::clone(gui_state);
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                gui_state.lock().next_loading(loading_uuid);
-            }
-        })
     }
 
     /// Stop the loading_spin function, and reset gui loading status
-    pub fn stop_loading_animation(&mut self, handle: &JoinHandle<()>, loading_uuid: Uuid) {
-        handle.abort();
-        self.remove_loading(loading_uuid);
+    pub fn stop_loading_animation(&mut self, loading_uuid: Uuid) {
+        self.loading_set.remove(&loading_uuid);
+        if self.loading_set.is_empty() {
+            self.loading_index = 0;
+            if let Some(h) = &self.loading_handle {
+                h.abort();
+            }
+            self.loading_handle = None;
+        }
     }
 
     /// Set info box content

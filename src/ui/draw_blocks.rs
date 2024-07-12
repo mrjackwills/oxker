@@ -21,7 +21,7 @@ use crate::{
 
 use super::{
     gui_state::{BoxLocation, DeleteButton, Region},
-    FrameData,
+    FrameData, Status,
 };
 use super::{GuiState, SelectablePanel};
 
@@ -98,7 +98,7 @@ fn generate_block<'a>(
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .title(title);
-    if fd.selected_panel == panel {
+    if fd.selected_panel == panel && !gui_state.lock().status_contains(&[Status::Filter]) {
         block = block.border_style(Style::default().fg(Color::LightCyan));
     }
     block
@@ -233,7 +233,15 @@ pub fn containers(
         .collect::<Vec<_>>();
 
     if items.is_empty() {
-        let paragraph = Paragraph::new("no containers running")
+        let text = if app_data.lock().get_filter_term().is_some() {
+            "no containers match filter"
+        } else if gui_state.lock().is_loading() {
+            &format!("loading {}", fd.loading_icon)
+        } else {
+            "no containers running"
+        };
+
+        let paragraph = Paragraph::new(text)
             .block(block)
             .alignment(Alignment::Center);
         f.render_widget(paragraph, area);
@@ -414,6 +422,32 @@ fn make_chart<'a, T: Stats + Display>(
         )
 }
 
+/// Draw the filter bar
+pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>) {
+    let style_but = Style::default().fg(Color::Black).bg(Color::Magenta);
+    let style_desc = Style::default().fg(Color::Gray).bg(Color::Reset);
+    let line = Line::from(vec![
+        Span::styled(" Enter ", style_but),
+        Span::styled(" done ", style_desc),
+        Span::styled(" Esc ", style_but),
+        Span::styled(" clear ", style_desc),
+        Span::styled(
+            "filter: ",
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            app_data
+                .lock()
+                .get_filter_term()
+                .map_or(String::new(), std::borrow::ToOwned::to_owned),
+            Style::default().fg(Color::Gray),
+        ),
+    ]);
+    frame.render_widget(line, area);
+}
+
 /// Draw heading bar at top of program, always visible
 /// TODO Should separate into loading icon/headers/help functions
 #[allow(clippy::too_many_lines)]
@@ -521,6 +555,11 @@ pub fn heading_bar(
         .constraints(splits)
         .split(area);
 
+    // Draw loading icon, or not, and a prefix with a single space
+    let loading_paragraph = Paragraph::new(format!("{:>2}", data.loading_icon))
+        .block(block(Color::White))
+        .alignment(Alignment::Left);
+    frame.render_widget(loading_paragraph, split_bar[0]);
     if data.has_containers {
         let header_section_width = split_bar[1].width;
 
@@ -540,11 +579,11 @@ pub fn heading_bar(
             })
             .collect::<Vec<_>>();
 
-        // Draw loading icon, or not, and a prefix with a single space
-        let loading_paragraph = Paragraph::new(format!("{:>2}", data.loading_icon))
-            .block(block(Color::White))
-            .alignment(Alignment::Center);
-        frame.render_widget(loading_paragraph, split_bar[0]);
+        // // Draw loading icon, or not, and a prefix with a single space
+        // let loading_paragraph = Paragraph::new(format!("{:>2}", data.loading_icon))
+        //     .block(block(Color::White))
+        //     .alignment(Alignment::Center);
+        // frame.render_widget(loading_paragraph, split_bar[0]);
 
         let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
         let headers_section = Layout::default()
@@ -700,6 +739,13 @@ impl HelpInfo {
                 button_desc(
                     "toggle mouse capture - if disabled, text on screen can be selected & copied",
                 ),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("F1"),
+                or(),
+                button_item("/"),
+                button_desc("toggle filter mode"),
             ]),
             Line::from(vec![space(), button_item("0"), button_desc("stop sort")]),
             Line::from(vec![
@@ -2461,7 +2507,7 @@ mod tests {
     /// This will cause issues once the version has more than the current 5 chars (0.5.0)
     // Help  popup is drawn correctly
     fn test_draw_blocks_help() {
-        let (w, h) = (87, 32);
+        let (w, h) = (87, 33);
         let mut setup = test_setup(w, h, true, true);
 
         setup
@@ -2492,6 +2538,7 @@ mod tests {
             " │ ( h ) toggle this help information                                                │ ".to_owned(),
             " │ ( s ) save logs to file                                                           │ ".to_owned(),
             " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ".to_owned(),
+            " │ ( F1 ) or ( / ) toggle filter mode                                                │ ".to_owned(),
             " │ ( 0 ) stop sort                                                                   │ ".to_owned(),
             " │ ( 1 - 9 ) sort by header - or click header                                        │ ".to_owned(),
             " │ ( esc ) close dialog                                                              │ ".to_owned(),
@@ -2502,6 +2549,7 @@ mod tests {
             " │                                                                                   │ ".to_owned(),
             " │                                                                                   │ ".to_owned(),
             " ╰───────────────────────────────────────────────────────────────────────────────────╯ ".to_owned(),
+            "                                                                                       ".to_owned(),
         ];
 
         for (row_index, row) in expected.iter().enumerate() {
@@ -3099,7 +3147,7 @@ mod tests {
             });
 
         let expected = [
-            "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
+        "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
         "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
         "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
         "│   container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                      ││  restart     │",
@@ -3144,6 +3192,134 @@ mod tests {
                 let result_cell = &result[index];
 
                 assert_eq!(result_cell.symbol(), expected_char.to_string(),);
+            }
+        }
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    /// Check that the whole layout is drawn correctly
+    fn test_draw_blocks_whole_layout_with_filter() {
+        let (w, h) = (160, 30);
+        let mut setup = test_setup(w, h, true, true);
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+
+        setup.app_data.lock().containers.items[1]
+            .ports
+            .push(ContainerPorts {
+                ip: Some("127.0.0.1".to_owned()),
+                private: 8003,
+                public: Some(8003),
+            });
+
+        let expected = [
+                "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
+                "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
+                "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
+                "│   container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                      ││  restart     │",
+                "│   container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                      ││  stop        │",
+                "│                                                                                                                                              ││  delete      │",
+                "│                                                                                                                                              ││              │",
+                "│                                                                                                                                              ││              │",
+                "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
+                "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+                "│  line 1                                                                                                                                                      │",
+                "│  line 2                                                                                                                                                      │",
+                "│▶ line 3                                                                                                                                                      │",
+                "│                                                                                                                                                              │",
+                "│                                                                                                                                                              │",
+                "│                                                                                                                                                              │",
+                "│                                                                                                                                                              │",
+                "│                                                                                                                                                              │",
+                "│                                                                                                                                                              │",
+                "│                                                                                                                                                              │",
+                "│                                                                                                                                                              │",
+                "│                                                                                                                                                              │",
+                "│                                                                                                                                                              │",
+                "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+                "╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
+                "│10.00%│     ••••                                               ││100.00 kB│     •••                                             ││       ip   private   public│",
+                "│      │  •••   •                                               ││         │  •••  •                                             ││               8001         │",
+                "│      │••       •••                                            ││         │••      •••                                          ││                            │",
+                "│      │                                                        ││         │                                                     ││                            │",
+                "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
+                ];
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(f, &setup.app_data, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+
+        for (row_index, row) in result.chunks(usize::from(w)).enumerate() {
+            let expected_row = expected[row_index]
+                .chars()
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>();
+            for (cell_index, cell) in row.iter().enumerate() {
+                assert_eq!(cell.symbol(), expected_row[cell_index]);
+            }
+        }
+
+        setup
+            .gui_state
+            .lock()
+            .status_push(crate::ui::Status::Filter);
+        setup.app_data.lock().filter_term_push('r');
+        setup.app_data.lock().filter_term_push('_');
+        setup.app_data.lock().filter_term_push('1');
+
+        let expected = [
+            "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
+            "╭ Containers 1/1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
+            "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
+            "│                                                                                                                                              ││  restart     │",
+            "│                                                                                                                                              ││  stop        │",
+            "│                                                                                                                                              ││  delete      │",
+            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
+            "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│  line 1                                                                                                                                                      │",
+            "│  line 2                                                                                                                                                      │",
+            "│▶ line 3                                                                                                                                                      │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+            "╭────────────────────────── cpu 03.00% ───────────────────────────╮╭──────────────────────── memory 30.00 kB ────────────────────────╮╭──────── ports ─────────╮",
+            "│10.00%│      •••                                                 ││100.00 kB│      •••                                              ││   ip   private   public│",
+            "│      │    ••  •                                                 ││         │    ••  •                                              ││           8001         │",
+            "│      │ •••     • •                                              ││         │ •••     ••                                            ││                        │",
+            "│      │•        ••                                               ││         │•        •                                             ││                        │",
+            "│      │                                                          ││         │                                                       ││                        │",
+            "╰─────────────────────────────────────────────────────────────────╯╰─────────────────────────────────────────────────────────────────╯╰────────────────────────╯",
+            " Enter  done  Esc  clear filter: r_1                                                                                                                            ",
+            ];
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(f, &setup.app_data, &setup.gui_state);
+            })
+            .unwrap();
+
+        let result = &setup.terminal.backend().buffer().content;
+
+        for (row_index, row) in result.chunks(usize::from(w)).enumerate() {
+            let expected_row = expected[row_index]
+                .chars()
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>();
+            for (cell_index, cell) in row.iter().enumerate() {
+                assert_eq!(cell.symbol(), expected_row[cell_index]);
             }
         }
     }

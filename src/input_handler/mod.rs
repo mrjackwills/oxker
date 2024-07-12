@@ -71,6 +71,7 @@ impl InputHandler {
                         Status::Error,
                         Status::Help,
                         Status::DeleteConfirm,
+                        Status::Filter,
                     ]) {
                         self.mouse_press(mouse_event);
                     }
@@ -125,7 +126,7 @@ impl InputHandler {
         let is_oxker = self.app_data.lock().is_oxker();
         if !is_oxker && tty_readable() {
             let uuid = Uuid::new_v4();
-            let handle = GuiState::start_loading_animation(&self.gui_state, uuid);
+            GuiState::start_loading_animation(&self.gui_state, uuid);
             let (sx, rx) = tokio::sync::oneshot::channel::<Arc<Docker>>();
             self.docker_tx.send(DockerMessage::Exec(sx)).await.ok();
 
@@ -143,7 +144,7 @@ impl InputHandler {
                     },
                 );
             }
-            self.gui_state.lock().stop_loading_animation(&handle, uuid);
+            self.gui_state.lock().stop_loading_animation(uuid);
         }
     }
 
@@ -248,7 +249,7 @@ impl InputHandler {
             self.gui_state.lock().status_push(log_status);
 
             let uuid = Uuid::new_v4();
-            let handle = GuiState::start_loading_animation(&self.gui_state, uuid);
+            GuiState::start_loading_animation(&self.gui_state, uuid);
             if save_logs(&self.app_data, &self.gui_state, &self.docker_tx)
                 .await
                 .is_err()
@@ -260,7 +261,7 @@ impl InputHandler {
                 );
             }
             self.gui_state.lock().status_del(log_status);
-            self.gui_state.lock().stop_loading_animation(&handle, uuid);
+            self.gui_state.lock().stop_loading_animation(uuid);
         }
     }
 
@@ -353,6 +354,98 @@ impl InputHandler {
         }
     }
 
+    /// Actions to take when in Help status active
+    fn handle_help(&mut self, key_code: KeyCode) {
+        match key_code {
+            KeyCode::Esc | KeyCode::Char('h' | 'H') => {
+                self.gui_state.lock().status_del(Status::Help);
+            }
+            KeyCode::Char('m' | 'M') => self.m_key(),
+            _ => (),
+        }
+    }
+
+    /// Actions to take when Error status active
+    fn handle_error(&mut self, key_code: KeyCode) {
+        match key_code {
+            KeyCode::Esc | KeyCode::Char('c' | 'C') => {
+                self.app_data.lock().remove_error();
+                self.gui_state.lock().status_del(Status::Error);
+            }
+            _ => (),
+        }
+    }
+
+    /// Actions to take when Delete status active
+    async fn handle_delete(&mut self, key_code: KeyCode) {
+        match key_code {
+            KeyCode::Char('y' | 'Y') => self.confirm_delete().await,
+            KeyCode::Esc | KeyCode::Char('n' | 'N') => self.clear_delete(),
+            _ => (),
+        }
+    }
+
+    /// Actions to take when Filter status active
+    fn handle_filter(&mut self, key_code: KeyCode) {
+        match key_code {
+            KeyCode::F(1) | KeyCode::Char('/') | KeyCode::Esc => {
+                self.app_data.lock().filter_term_clear();
+                self.gui_state.lock().status_del(Status::Filter);
+            }
+            KeyCode::Enter => {
+                self.gui_state.lock().status_del(Status::Filter);
+            }
+            KeyCode::Backspace => {
+                self.app_data.lock().filter_term_pop();
+            }
+            KeyCode::Char(x) => {
+                self.app_data.lock().filter_term_push(x);
+            }
+            _ => (),
+        }
+    }
+
+    /// Handle button presses in all other scenarios
+    async fn handle_others(&mut self, key_code: KeyCode) {
+        match key_code {
+            KeyCode::Char('0') => self.app_data.lock().reset_sorted(),
+            KeyCode::Char('1') => self.sort(Header::Name),
+            KeyCode::Char('2') => self.sort(Header::State),
+            KeyCode::Char('3') => self.sort(Header::Status),
+            KeyCode::Char('4') => self.sort(Header::Cpu),
+            KeyCode::Char('5') => self.sort(Header::Memory),
+            KeyCode::Char('6') => self.sort(Header::Id),
+            KeyCode::Char('7') => self.sort(Header::Image),
+            KeyCode::Char('8') => self.sort(Header::Rx),
+            KeyCode::Char('9') => self.sort(Header::Tx),
+            KeyCode::Char('e' | 'E') => self.e_key().await,
+            KeyCode::Char('h' | 'H') => self.gui_state.lock().status_push(Status::Help),
+            KeyCode::Char('m' | 'M') => self.m_key(),
+            KeyCode::Char('s' | 'S') => self.s_key().await,
+            KeyCode::Tab => self.tab_key(),
+            KeyCode::BackTab => self.back_tab_key(),
+            KeyCode::Home => self.home_key(),
+            KeyCode::End => self.end_key(),
+            KeyCode::Up | KeyCode::Char('k' | 'K') => self.previous(),
+            KeyCode::PageUp => {
+                for _ in 0..=6 {
+                    self.previous();
+                }
+            }
+            KeyCode::F(1) | KeyCode::Char('/') => {
+                self.gui_state.lock().status_push(Status::Filter);
+                self.docker_tx.send(DockerMessage::Update).await.ok();
+            }
+            KeyCode::Down | KeyCode::Char('j' | 'J') => self.next(),
+            KeyCode::PageDown => {
+                for _ in 0..=6 {
+                    self.next();
+                }
+            }
+            KeyCode::Enter => self.enter_key().await,
+            _ => (),
+        }
+    }
     /// Handle keyboard button events
     async fn button_press(&mut self, key_code: KeyCode, key_modifier: KeyModifiers) {
         let contains_delete = self
@@ -365,72 +458,26 @@ impl InputHandler {
         let contains_error = contains(Status::Error);
         let contains_help = contains(Status::Help);
         let contains_exec = contains(Status::Exec);
+        let contains_filter: bool = contains(Status::Filter);
 
         if !contains_exec {
-            // Always just quit on Ctrl + c/C or q/Q
             let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
             let is_q = || key_code == KeyCode::Char('q') || key_code == KeyCode::Char('Q');
-            if key_modifier == KeyModifiers::CONTROL && is_c() || is_q() {
+            if key_modifier == KeyModifiers::CONTROL && is_c() || is_q() && !contains_filter {
+                // Always just quit on Ctrl + c/C or q/Q, unless in FIlter status active
                 self.quit().await;
             }
 
             if contains_error {
-                match key_code {
-                    KeyCode::Esc | KeyCode::Char('c' | 'C') => {
-                        self.app_data.lock().remove_error();
-                        self.gui_state.lock().status_del(Status::Error);
-                    }
-                    _ => (),
-                }
+                self.handle_error(key_code);
             } else if contains_help {
-                match key_code {
-                    KeyCode::Esc | KeyCode::Char('h' | 'H') => {
-                        self.gui_state.lock().status_del(Status::Help);
-                    }
-                    KeyCode::Char('m' | 'M') => self.m_key(),
-                    _ => (),
-                }
+                self.handle_help(key_code);
+            } else if contains_filter {
+                self.handle_filter(key_code);
             } else if contains_delete {
-                match key_code {
-                    KeyCode::Char('y' | 'Y') => self.confirm_delete().await,
-                    KeyCode::Esc | KeyCode::Char('n' | 'N') => self.clear_delete(),
-                    _ => (),
-                }
+                self.handle_delete(key_code).await;
             } else {
-                match key_code {
-                    KeyCode::Char('0') => self.app_data.lock().reset_sorted(),
-                    KeyCode::Char('1') => self.sort(Header::Name),
-                    KeyCode::Char('2') => self.sort(Header::State),
-                    KeyCode::Char('3') => self.sort(Header::Status),
-                    KeyCode::Char('4') => self.sort(Header::Cpu),
-                    KeyCode::Char('5') => self.sort(Header::Memory),
-                    KeyCode::Char('6') => self.sort(Header::Id),
-                    KeyCode::Char('7') => self.sort(Header::Image),
-                    KeyCode::Char('8') => self.sort(Header::Rx),
-                    KeyCode::Char('9') => self.sort(Header::Tx),
-                    KeyCode::Char('e' | 'E') => self.e_key().await,
-                    KeyCode::Char('h' | 'H') => self.gui_state.lock().status_push(Status::Help),
-                    KeyCode::Char('m' | 'M') => self.m_key(),
-                    KeyCode::Char('s' | 'S') => self.s_key().await,
-                    KeyCode::Tab => self.tab_key(),
-                    KeyCode::BackTab => self.back_tab_key(),
-                    KeyCode::Home => self.home_key(),
-                    KeyCode::End => self.end_key(),
-                    KeyCode::Up | KeyCode::Char('k' | 'K') => self.previous(),
-                    KeyCode::PageUp => {
-                        for _ in 0..=6 {
-                            self.previous();
-                        }
-                    }
-                    KeyCode::Down | KeyCode::Char('j' | 'J') => self.next(),
-                    KeyCode::PageDown => {
-                        for _ in 0..=6 {
-                            self.next();
-                        }
-                    }
-                    KeyCode::Enter => self.enter_key().await,
-                    _ => (),
-                }
+                self.handle_others(key_code).await;
             }
         }
     }
