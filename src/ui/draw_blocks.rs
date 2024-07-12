@@ -1348,40 +1348,41 @@ mod tests {
     // *********************** //
 
     // Check that the correct solor is applied to the state/status/cpu/memory section
-    #[allow(unused)]
     fn check_expected(expected: [&str; 6], w: u16, _h: u16, setup: &TuiTestSetup, color: Color) {
-        // let result = &setup.terminal.backend().buffer().content;
-        // for (row_index, row) in expected.iter().enumerate() {
-        //     for (char_index, expected_char) in row.chars().enumerate() {
-        //         let index = row_index * usize::from(w) + char_index;
-        //         let result_cell = &result[index];
+        for (row_index, result_row) in get_result(setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
 
-        //         assert_eq!(result_cell.symbol(), expected_char.to_string());
-        //         if (145..=207).contains(&index) {
-        //             assert_eq!(result_cell.fg, color);
-        //             assert_eq!(result_cell.modifier, Modifier::BOLD);
-        //         }
-        //     }
-        // }
-
-        assert_eq!(1, 2);
-
-        // let result = &setup.terminal.backend().buffer().content;
-
-        // for (row_index, row) in result.chunks(usize::from(w)).enumerate() {
-        //     let expected_row = expected_to_vec(&expected, row_index);
-        //     for (cell_index, result_cell) in row.iter().enumerate() {
-        //         assert_eq!(result_cell.symbol(), expected_row[cell_index]);
-        //         if row_index == 0 || row_index == 5 || cell_index == 0 || cell_index == 11 {
-        //             assert_eq!(result_cell.fg, Color::LightCyan);
-        //         }
-        //         if row_index == 1 && cell_index > 0 && cell_index < 11 {
-        //             assert_eq!(result_cell.modifier, Modifier::BOLD);
-        //         } else {
-        //             assert!(result_cell.modifier.is_empty());
-        //         }
-        //     }
-        // }
+                match (row_index, result_cell_index) {
+                    // border
+                    (0 | 5, _) | (1..=4, 0 | 129) => {
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    // name, id, image column
+                    (1..=3, 4..=14 | 78..=98) => {
+                        assert_eq!(result_cell.fg, Color::Blue);
+                    }
+                    // state, status, cpu, memory column of the first row
+                    (1, 15..=77) => {
+                        assert_eq!(result_cell.fg, color);
+                    }
+                    // state, status, cpu, memory column
+                    (2..=3, 15..=77) => {
+                        assert_eq!(result_cell.fg, Color::Green);
+                    }
+                    // rx column
+                    (1..=3, 99..=108) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                    }
+                    // tx column
+                    (1..=3, 109..=118) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                    }
+                    _ => assert_eq!(result_cell.fg, Color::Reset),
+                }
+            }
+        }
     }
 
     #[test]
@@ -1704,6 +1705,7 @@ mod tests {
 
         check_expected(expected, w, h, &setup, Color::LightRed);
     }
+
     #[test]
     /// When container state is restarting, correct colors displayed
     fn test_draw_blocks_containers_restarting() {
@@ -1727,9 +1729,44 @@ mod tests {
                 super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
             })
             .unwrap();
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
 
-        check_expected(expected, w, h, &setup, Color::LightGreen);
+                match (row_index, result_cell_index) {
+                    // border
+                    (0 | 5, _) | (1..=4, 0 | 129) => {
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    // name, id, image column
+                    (1..=3, 4..=14 | 79..=99) => {
+                        assert_eq!(result_cell.fg, Color::Blue);
+                    }
+                    // state, status, cpu, memory column of the first row
+                    (1, 15..=78) => {
+                        assert_eq!(result_cell.fg, Color::LightGreen);
+                    }
+                    // state, status, cpu, memory column
+                    (2..=3, 15..=78) => {
+                        assert_eq!(result_cell.fg, Color::Green);
+                    }
+                    // rx column
+                    (1..=3, 100..=109) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                    }
+                    // tx column
+                    (1..=3, 110..=119) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                    }
+                    _ => {
+                        assert_eq!(result_cell.fg, Color::Reset);
+                    }
+                }
+            }
+        }
     }
+
     #[test]
     /// When container state is unknown, correct colors displayed
     fn test_draw_blocks_containers_unknown() {
