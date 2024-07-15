@@ -388,11 +388,11 @@ impl InputHandler {
     /// Actions to take when Filter status active
     fn handle_filter(&mut self, key_code: KeyCode) {
         match key_code {
-            KeyCode::F(1) | KeyCode::Char('/') | KeyCode::Esc => {
+            KeyCode::Esc => {
                 self.app_data.lock().filter_term_clear();
                 self.gui_state.lock().status_del(Status::Filter);
             }
-            KeyCode::Enter => {
+            KeyCode::Enter | KeyCode::F(1) | KeyCode::Char('/') => {
                 self.gui_state.lock().status_del(Status::Filter);
             }
             KeyCode::Backspace => {

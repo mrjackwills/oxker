@@ -427,8 +427,8 @@ pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>)
     let style_but = Style::default().fg(Color::Black).bg(Color::Magenta);
     let style_desc = Style::default().fg(Color::Gray).bg(Color::Reset);
     let line = Line::from(vec![
-        Span::styled(" Enter ", style_but),
-        Span::styled(" done ", style_desc),
+        // Span::styled(" Enter ", style_but),
+        // Span::styled(" done ", style_desc),
         Span::styled(" Esc ", style_but),
         Span::styled(" clear ", style_desc),
         Span::styled(
@@ -745,7 +745,7 @@ impl HelpInfo {
                 button_item("F1"),
                 or(),
                 button_item("/"),
-                button_desc("toggle filter mode"),
+                button_desc("enter filter mode"),
             ]),
             Line::from(vec![space(), button_item("0"), button_desc("stop sort")]),
             Line::from(vec![
@@ -2549,7 +2549,7 @@ mod tests {
             " │ ( h ) toggle this help information                                                │ ",
             " │ ( s ) save logs to file                                                           │ ",
             " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ",
-            " │ ( F1 ) or ( / ) toggle filter mode                                                │ ",
+            " │ ( F1 ) or ( / ) enter filter mode                                                 │ ",
             " │ ( 0 ) stop sort                                                                   │ ",
             " │ ( 1 - 9 ) sort by header - or click header                                        │ ",
             " │ ( esc ) close dialog                                                              │ ",
@@ -2779,22 +2779,23 @@ mod tests {
             .unwrap();
 
         let expected = [
-            " Enter  done  Esc  clear filter:                                                                                                            "
+            " Esc  clear filter:                                                                                                                         "
         ];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 match result_cell_index {
-                    0..=6 | 13..=17 => {
+                    0..=4 => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    7..=12 | 18..=24 => {
+                    5..=11 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
-                    25..=32 => {
+                    12..=19 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Magenta);
                     }
@@ -2803,7 +2804,6 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
                 }
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
             }
         }
 
@@ -2817,23 +2817,24 @@ mod tests {
             .unwrap();
 
         let expected = [
-            " Enter  done  Esc  clear filter: c                                                                                                          "
+            " Esc  clear filter: c                                                                                                                       "
         ];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+
                 match result_cell_index {
-                    0..=6 | 13..=17 => {
+                    0..=4 => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    7..=12 | 18..=24 | 33 => {
+                    5..=11 | 20 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
-                    25..=32 => {
+                    12..=19 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Magenta);
                     }
@@ -3341,7 +3342,7 @@ mod tests {
             "│      │•        ••                                             ││         │•       ••                                           ││                            │",
             "│      │                                                        ││         │                                                     ││                            │",
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
-            " Enter  done  Esc  clear filter: r_1                                                                                                                            "
+            " Esc  clear filter: r_1                                                                                                                                         "
             ];
         setup
             .terminal
