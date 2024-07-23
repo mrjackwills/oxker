@@ -146,7 +146,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
     Line::from(vec![
         Span::styled(
             format!(
-                "{:>width$}",
+                "{:<width$}",
                 i.name.to_string(),
                 width = widths.name.1.into()
             ),
@@ -162,7 +162,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!(
-                "{MARGIN}{:>width$}",
+                "{MARGIN}{:<width$}",
                 i.status,
                 width = &widths.status.1.into()
             ),
@@ -198,7 +198,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!(
-                "{MARGIN}{:>width$}",
+                "{MARGIN}{:<width$}",
                 i.image.to_string(),
                 width = widths.image.1.into()
             ),
