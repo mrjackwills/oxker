@@ -665,14 +665,14 @@ impl Columns {
     pub const fn new() -> Self {
         Self {
             name: (Header::Name, 4),
-            state: (Header::State, 11),
-            status: (Header::Status, 16),
-            cpu: (Header::Cpu, 7),
+            state: (Header::State, 5),
+            status: (Header::Status, 6),
+            cpu: (Header::Cpu, 3),
             mem: (Header::Memory, 7, 7),
             id: (Header::Id, 8),
             image: (Header::Image, 5),
-            net_rx: (Header::Rx, 7),
-            net_tx: (Header::Tx, 7),
+            net_rx: (Header::Rx, 4),
+            net_tx: (Header::Tx, 4),
         }
     }
 }
