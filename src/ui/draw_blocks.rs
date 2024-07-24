@@ -1396,9 +1396,9 @@ mod tests {
 
         let expected = [
         "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│⚪  container_1   ✓ running            Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-        "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-        "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+        "│⚪  container_1   ✓ running     Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+        "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+        "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
         "│                                                                                                                                │",
         "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
     ];
@@ -1468,9 +1468,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✓ running            Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   ✓ running     Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1558,9 +1558,9 @@ mod tests {
 
         let expected = [
         "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│⚪  a_long_container_name_for_the…   ॥ paused             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB        │",
-        "│                      container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2                          image_2   0.00 kB   0.00 kB        │",
-        "│                      container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3                          image_3   0.00 kB   0.00 kB        │",
+        "│⚪  a_long_container_name_for_the…   ॥ paused      Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB        │",
+        "│   container_2                      ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2                          0.00 kB   0.00 kB        │",
+        "│   container_3                      ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3                          0.00 kB   0.00 kB        │",
         "│                                                                                                                                                                        │",
         "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1595,9 +1595,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│⚪  container_1   ॥ paused             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-        "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-        "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+        "│⚪  container_1   ॥ paused      Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+        "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+        "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
         "│                                                                                                                                │",
         "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1622,9 +1622,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✖ dead               Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   ✖ dead        Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1648,9 +1648,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✖ exited             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   ✖ exited      Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1674,9 +1674,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   removing             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   removing      Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1700,9 +1700,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ↻ restarting          Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB         │",
-            "│   container_2   ✓ running             Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB         │",
-            "│   container_3   ✓ running             Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB         │",
+            "│⚪  container_1   ↻ restarting   Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB         │",
+            "│   container_2   ✓ running      Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB         │",
+            "│   container_3   ✓ running      Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB         │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1726,9 +1726,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ? unknown            Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   ? unknown     Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
+            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
+            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -3101,9 +3101,9 @@ mod tests {
         let expected = [
             "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
         "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
-        "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
-        "│   container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                      ││  restart     │",
-        "│   container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                      ││  stop        │",
+        "│⚪  container_1   ✓ running     Up 1 hour           03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
+        "│   container_2   ✓ running     Up 2 hour           00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                      ││  restart     │",
+        "│   container_3   ✓ running     Up 3 hour           00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                      ││  stop        │",
         "│                                                                                                                                              ││  delete      │",
         "│                                                                                                                                              ││              │",
         "│                                                                                                                                              ││              │",
@@ -3172,9 +3172,9 @@ mod tests {
         let expected = [
         "                              name       state               status       cpu          memory/limit         id                            image      ↓ rx      ↑ tx          ( h ) show help  ",
         "╭ Containers 1/3 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭─────────────────╮",
-        "│⚪  a_long_container_name_for_the…   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB       ││▶ pause          │",
-        "│                      container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2                          image_2   0.00 kB   0.00 kB       ││  restart        │",
-        "│                      container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3                          image_3   0.00 kB   0.00 kB       ││  stop           │",
+        "│⚪  a_long_container_name_for_the…   ✓ running     Up 1 hour           03.00%   30.00 kB / 30.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB       ││▶ pause          │",
+        "│   container_2                      ✓ running     Up 2 hour           00.00%    0.00 kB /  0.00 kB          2   image_2                          0.00 kB   0.00 kB       ││  restart        │",
+        "│   container_3                      ✓ running     Up 3 hour           00.00%    0.00 kB /  0.00 kB          3   image_3                          0.00 kB   0.00 kB       ││  stop           │",
         "│                                                                                                                                                                         ││  delete         │",
         "│                                                                                                                                                                         ││                 │",
         "│                                                                                                                                                                         ││                 │",
