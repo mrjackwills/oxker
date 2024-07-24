@@ -401,6 +401,12 @@ impl InputHandler {
             KeyCode::Char(x) => {
                 self.app_data.lock().filter_term_push(x);
             }
+            KeyCode::Right => {
+                self.app_data.lock().filter_by_next();
+            }
+            KeyCode::Left => {
+                self.app_data.lock().filter_by_prev();
+            }
             _ => (),
         }
     }

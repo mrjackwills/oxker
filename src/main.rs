@@ -175,7 +175,9 @@ mod tests {
     use bollard::service::{ContainerSummary, Port};
 
     use crate::{
-        app_data::{AppData, ContainerId, ContainerItem, ContainerPorts, State, StatefulList},
+        app_data::{
+            AppData, ContainerId, ContainerItem, ContainerPorts, Filter, State, StatefulList,
+        },
         parse_args::CliArgs,
     };
 
@@ -217,7 +219,7 @@ mod tests {
             hidden_containers: vec![],
             error: None,
             sorted_by: None,
-            filter_term: None,
+            filter: Filter::new(),
             args: gen_args(),
         }
     }
