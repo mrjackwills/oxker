@@ -146,7 +146,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
     Line::from(vec![
         Span::styled(
             format!(
-                "{:<width$}",
+                "{:<width$}{MARGIN}",
                 i.name.to_string(),
                 width = widths.name.1.into()
             ),
@@ -154,7 +154,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!(
-                "{MARGIN}{:<width$}",
+                "{:<width$}{MARGIN}",
                 i.state.to_string(),
                 width = widths.state.1.into()
             ),
@@ -162,7 +162,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!(
-                "{MARGIN}{:<width$}",
+                "{:<width$}{MARGIN}",
                 i.status,
                 width = &widths.status.1.into()
             ),
@@ -170,8 +170,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!(
-                "{}{:>width$}",
-                MARGIN,
+                "{:>width$}{MARGIN}",
                 i.cpu_stats.back().unwrap_or(&CpuStats::default()),
                 width = &widths.cpu.1.into()
             ),
@@ -179,7 +178,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!(
-                "{MARGIN}{:>width_current$} / {:>width_limit$}",
+                "{:>width_current$} / {:>width_limit$}{MARGIN}",
                 i.mem_stats.back().unwrap_or(&ByteStats::default()),
                 i.mem_limit,
                 width_current = &widths.mem.1.into(),
@@ -189,8 +188,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!(
-                "{}{:>width$}",
-                MARGIN,
+                "{:>width$}{MARGIN}",
                 i.id.get_short(),
                 width = &widths.id.1.into()
             ),
@@ -198,18 +196,18 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!(
-                "{MARGIN}{:<width$}",
+                "{:<width$}{MARGIN}",
                 i.image.to_string(),
                 width = widths.image.1.into()
             ),
             blue,
         ),
         Span::styled(
-            format!("{MARGIN}{:>width$}", i.rx, width = widths.net_rx.1.into()),
+            format!("{:>width$}{MARGIN}", i.rx, width = widths.net_rx.1.into()),
             Style::default().fg(Color::Rgb(255, 233, 193)),
         ),
         Span::styled(
-            format!("{MARGIN}{:>width$}", i.tx, width = widths.net_tx.1.into()),
+            format!("{:>width$}{MARGIN}", i.tx, width = widths.net_tx.1.into()),
             Style::default().fg(Color::Rgb(205, 140, 140)),
         ),
     ])
@@ -430,54 +428,31 @@ pub fn heading_bar(
     // Generate a block for the header, if the header is currently being used to sort a column, then highlight it white
     let header_block = |x: &Header| {
         let mut color = Color::Black;
-        let mut prefix = "";
-        let mut prefix_margin = 0;
+        let mut suffix = "";
         if let Some((a, b)) = &data.sorted_by {
             if x == a {
                 match b {
-                    SortedOrder::Asc => prefix = "▲ ",
-                    SortedOrder::Desc => prefix = "▼ ",
+                    SortedOrder::Asc => suffix = " ▲",
+                    SortedOrder::Desc => suffix = " ▼",
                 }
-                prefix_margin = 2;
-                color = Color::White;
+                color = Color::Gray;
             };
         };
-        (
-            Block::default().style(Style::default().bg(Color::Magenta).fg(color)),
-            prefix,
-            prefix_margin,
-        )
+
+        (Block::default().style(Style::default().fg(color)), suffix)
     };
 
     // Generate block for the headers, state and status has a specific layout, others all equal
     // width is dependant on it that column is selected to sort - or not
     let gen_header = |header: &Header, width: usize| {
         let block = header_block(header);
+
         // Yes this is a mess, needs documenting correctly
-        let text = match header {
-            Header::State => format!(
-                " {x:>width$}",
-                x = format!("{ic}{header}", ic = block.1),
-                width = width
-            ),
-            Header::Name => format!(
-                "  {x:>width$}",
-                x = format!("{ic}{header}", ic = block.1),
-                width = width
-            ),
-            Header::Status => format!(
-                "{}  {x:>width$}",
-                MARGIN,
-                x = format!("{ic}{header}", ic = block.1),
-                width = width
-            ),
-            _ => format!(
-                "{}{x:>width$}",
-                MARGIN,
-                x = format!("{ic}{header}", ic = block.1),
-                width = width
-            ),
-        };
+
+        let text = format!(
+            "{x:<width$}{MARGIN}",
+            x = format!("{header}{ic}", ic = block.1),
+        );
         let count = u16::try_from(text.chars().count()).unwrap_or_default();
         let status = Paragraph::new(text)
             .block(block.0)
@@ -508,7 +483,7 @@ pub fn heading_bar(
     let column_width = if column_width > 0 { column_width } else { 1 };
     let splits = if data.has_containers {
         vec![
-            Constraint::Max(2),
+            Constraint::Max(4),
             Constraint::Min(column_width.try_into().unwrap_or_default()),
             Constraint::Max(info_width.try_into().unwrap_or_default()),
         ]
@@ -541,7 +516,7 @@ pub fn heading_bar(
             .collect::<Vec<_>>();
 
         // Draw loading icon, or not, and a prefix with a single space
-        let loading_paragraph = Paragraph::new(format!("{:>2}", data.loading_icon))
+        let loading_paragraph = Paragraph::new(format!(" {:<3}", data.loading_icon))
             .block(block(Color::White))
             .alignment(Alignment::Center);
         frame.render_widget(loading_paragraph, split_bar[0]);
