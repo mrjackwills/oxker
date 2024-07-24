@@ -55,26 +55,85 @@ impl fmt::Display for Header {
     }
 }
 
+#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FilterBy {
+    #[default]
+    Name,
+    Image,
+    Status,
+    All,
+}
+
+/// Convert errors into strings to display
+impl fmt::Display for FilterBy {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Name => "Name",
+                Self::Image => "Image",
+                Self::Status => "Status",
+                Self::All => "All",
+            }
+        )
+    }
+}
+
+impl FilterBy {
+    const fn next(self) -> Option<Self> {
+        match self {
+            Self::Name => Some(Self::Image),
+            Self::Image => Some(Self::Status),
+            Self::Status => Some(Self::All),
+            Self::All => None,
+        }
+    }
+
+    const fn prev(self) -> Option<Self> {
+        match self {
+            Self::Name => None,
+            Self::Image => Some(Self::Name),
+            Self::Status => Some(Self::Image),
+            Self::All => Some(Self::Status),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Filter {
+    pub term: Option<String>,
+    pub by: FilterBy,
+}
+impl Filter {
+    pub fn new() -> Self {
+        Self {
+            term: None,
+            by: FilterBy::default(),
+        }
+    }
+}
+
 /// Global app_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 #[cfg(not(test))]
 pub struct AppData {
     containers: StatefulList<ContainerItem>,
     error: Option<AppError>,
-    filter_term: Option<String>,
-    sorted_by: Option<(Header, SortedOrder)>,
+    filter: Filter,
     hidden_containers: Vec<ContainerItem>,
+    sorted_by: Option<(Header, SortedOrder)>,
     pub args: CliArgs,
 }
 
 #[derive(Debug, Clone)]
 #[cfg(test)]
 pub struct AppData {
-    pub hidden_containers: Vec<ContainerItem>,
     pub args: CliArgs,
     pub containers: StatefulList<ContainerItem>,
     pub error: Option<AppError>,
-    pub filter_term: Option<String>,
+    pub filter: Filter,
+    pub hidden_containers: Vec<ContainerItem>,
     pub sorted_by: Option<(Header, SortedOrder)>,
 }
 
@@ -87,7 +146,7 @@ impl AppData {
             hidden_containers: vec![],
             error: None,
             sorted_by: None,
-            filter_term: None,
+            filter: Filter::new(),
         }
     }
 
@@ -104,20 +163,33 @@ impl AppData {
 
     /// Get the current filter term
     pub const fn get_filter_term(&self) -> Option<&String> {
-        self.filter_term.as_ref()
+        self.filter.term.as_ref()
     }
 
-    /// Check the container name against the current filter
-    fn can_insert(&self, name: &str) -> bool {
-        self.filter_term.as_ref().map_or(true, |term| {
-            name.to_string()
-                .to_lowercase()
-                .contains(&term.to_lowercase())
+    /// Get the current filter by choice
+    pub const fn get_filter_by(&self) -> FilterBy {
+        self.filter.by
+    }
+
+    /// Check if a given container can be inserted into the "visible" list, based on current filter term and filter_by
+    fn can_insert(&self, container: &ContainerItem) -> bool {
+        self.filter.term.as_ref().map_or(true, |term| {
+            let term = term.to_lowercase();
+            match self.filter.by {
+                FilterBy::All => {
+                    container.name.contains(&term)
+                        || container.image.contains(&term)
+                        || container.status.to_lowercase().contains(&term)
+                }
+                FilterBy::Image => container.image.contains(&term),
+                FilterBy::Name => container.name.contains(&term),
+                FilterBy::Status => container.status.to_lowercase().contains(&term),
+            }
         })
     }
 
     /// Remove items from the containers list based on the filter term, and insert into a "hidden" vec
-    /// sets the state to start if any filtering has occured
+    /// sets the state to start if any filtering has occurred
     /// Also search in the "hidden" vec for items and insert back into the main containers vec
     fn filter_containers(&mut self) {
         let pre_len = self.get_container_len();
@@ -127,7 +199,7 @@ impl AppData {
                 .hidden_containers
                 .iter()
                 .cloned()
-                .partition(|item| self.can_insert(item.name.get()));
+                .partition(|item| self.can_insert(item));
 
             while let Some(x) = new_items.pop() {
                 self.containers.items.push(x);
@@ -140,7 +212,7 @@ impl AppData {
             .items
             .iter()
             .cloned()
-            .partition(|item| self.can_insert(item.name.get()));
+            .partition(|item| self.can_insert(item));
 
         self.containers.items = new_items;
         self.hidden_containers.extend(tmp_items);
@@ -151,31 +223,54 @@ impl AppData {
         }
     }
 
+    /// Re-filter the containers, used after the filter.by has been changed
+    fn re_filter(&mut self) {
+        self.containers.items.append(&mut self.hidden_containers);
+        self.hidden_containers = vec![];
+        self.filter_containers();
+    }
+
     /// Set a single char into the filter term
     pub fn filter_term_push(&mut self, c: char) {
-        if let Some(term) = self.filter_term.as_mut() {
+        if let Some(term) = self.filter.term.as_mut() {
             term.push(c);
         } else {
-            self.filter_term = Some(format!("{c}"));
+            self.filter.term = Some(format!("{c}"));
         };
         self.filter_containers();
     }
 
     /// Delete the final char of the filter term
     pub fn filter_term_pop(&mut self) {
-        if let Some(term) = self.filter_term.as_mut() {
+        if let Some(term) = self.filter.term.as_mut() {
             // should now search for items in the tmp vec, and insert into containers if found
             term.pop();
             if term.is_empty() {
-                self.filter_term = None;
+                self.filter.term = None;
             }
         }
         self.filter_containers();
     }
 
-    /// Remove the filter term completely, empty the "hidden" container vec
+    // change the filter_by option
+    pub fn filter_by_next(&mut self) {
+        if let Some(by) = self.filter.by.next() {
+            self.filter.by = by;
+            self.re_filter();
+        }
+    }
+
+    // change the filter_by option
+    pub fn filter_by_prev(&mut self) {
+        if let Some(by) = self.filter.by.prev() {
+            self.filter.by = by;
+            self.re_filter();
+        }
+    }
+
+    /// Remove the filter completely
     pub fn filter_term_clear(&mut self) {
-        self.filter_term = None;
+        self.filter.term = None;
         while let Some(i) = self.hidden_containers.pop() {
             if self.get_container_by_id(&i.id).is_none() {
                 self.containers.items.push(i);
@@ -307,9 +402,14 @@ impl AppData {
         &self.containers.items
     }
 
-    /// Get title for containers section
+    /// Get title for containers section, add a suffix indicating if the containers are currently under filter
     pub fn container_title(&self) -> String {
-        self.containers.get_state_title()
+        let suffix = if !self.hidden_containers.is_empty() && !self.containers.items.is_empty() {
+            " - filtered"
+        } else {
+            ""
+        };
+        format!("{}{}", self.containers.get_state_title(), suffix)
     }
 
     /// Select the first container
@@ -595,7 +695,7 @@ impl AppData {
 
     /// Find the widths for the strings in the containers panel.
     /// So can display nicely and evenly
-    /// Searches in both containes & hidden_containers
+    /// Searches in both contains & hidden_containers
     pub fn get_width(&self) -> Columns {
         let mut columns = Columns::new();
         let count = |x: &str| u8::try_from(x.chars().count()).unwrap_or(12);
@@ -777,10 +877,10 @@ impl AppData {
                     };
                 } else {
                     // container not known, so make new ContainerItem and push into containers Ve
-                    let can_insert = self.can_insert(&name);
                     let container = ContainerItem::new(
                         created, id, image, is_oxker, name, ports, state, status,
                     );
+                    let can_insert = self.can_insert(&container);
                     if can_insert {
                         self.containers.items.push(container);
                     } else {
@@ -1551,8 +1651,8 @@ mod tests {
     // ****** //
 
     #[test]
-    /// Data is filtered correctly
-    fn test_app_data_filter() {
+    /// Data is filtered correctly by name
+    fn test_app_data_filter_by_name() {
         let (_, containers) = gen_containers();
 
         let mut app_data = gen_appdata(&containers);
@@ -1571,9 +1671,137 @@ mod tests {
         assert_eq!(post_len, 1);
 
         // Can insert checks against the current filter term
-        assert!(app_data.can_insert("_2"));
-        assert!(!app_data.can_insert("_"));
-        assert!(!app_data.can_insert("_3"));
+        // todo!("fix me");
+        assert!(app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[2]));
+    }
+
+    #[test]
+    /// Data is filtered correctly by image
+    fn test_app_data_filter_by_image() {
+        let (_, containers) = gen_containers();
+
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        for c in ['i', 'm', 'a', 'g', 'e', '_', '2'] {
+            app_data.filter_term_push(c);
+        }
+        // app_data.filter_term_push('2');
+        app_data.filter_by_next();
+
+        assert_eq!(app_data.get_filter_by(), FilterBy::Image);
+        assert_eq!(app_data.get_filter_term(), Some(&"image_2".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        assert!(!app_data.can_insert(&containers[0]));
+        assert!(app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
+    }
+
+    #[test]
+    /// Data is filtered correctly by status
+    fn test_app_data_filter_by_status() {
+        let (_, mut containers) = gen_containers();
+        "Exited".clone_into(&mut containers[0].status);
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        app_data.filter_term_push('x');
+
+        app_data.filter_by_next();
+        app_data.filter_by_next();
+
+        assert_eq!(app_data.get_filter_by(), FilterBy::Status);
+        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        assert!(app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
+    }
+
+    #[test]
+    /// Data is filtered correctly by all
+    fn test_app_data_filter_by_all() {
+        let (_, mut containers) = gen_containers();
+        "Exited".clone_into(&mut containers[0].status);
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        app_data.filter_term_push('x');
+
+        app_data.filter_by_next();
+        app_data.filter_by_next();
+        app_data.filter_by_next();
+
+        assert_eq!(app_data.get_filter_by(), FilterBy::All);
+        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        assert!(app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
+    }
+
+    #[test]
+    /// Data is filtered correctly after various next() and previous() commands
+    fn test_app_data_filter_prev() {
+        let (_, mut containers) = gen_containers();
+        "Exited".clone_into(&mut containers[0].status);
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        app_data.filter_term_push('x');
+
+        app_data.filter_by_next();
+        app_data.filter_by_next();
+
+        assert_eq!(app_data.get_filter_by(), FilterBy::Status);
+        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        assert!(app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
+
+        app_data.filter_by_prev();
+        assert_eq!(app_data.get_filter_by(), FilterBy::Image);
+        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 0);
+
+        assert!(!app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
     }
 
     // **** //

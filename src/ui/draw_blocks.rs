@@ -13,7 +13,7 @@ use ratatui::{
 use std::{default::Default, time::Instant};
 use std::{fmt::Display, sync::Arc};
 
-use crate::app_data::{ContainerItem, ContainerName, Header, SortedOrder};
+use crate::app_data::{ContainerItem, ContainerName, FilterBy, Header, SortedOrder};
 use crate::{
     app_data::{AppData, ByteStats, Columns, CpuStats, State, Stats},
     app_error::AppError,
@@ -422,17 +422,59 @@ fn make_chart<'a, T: Stats + Display>(
         )
 }
 
+/// Create the filter_by by spans, coloured dependant on which one is selected
+fn filter_by_spans(app_data: &Arc<Mutex<AppData>>) -> [Span; 4] {
+    let filter_by = app_data.lock().get_filter_by();
+
+    let selected = Style::default().bg(Color::Gray).fg(Color::Black);
+    let not_selected = Style::default().bg(Color::Reset).fg(Color::Reset);
+
+    // This should be refactored somehow
+    let name = [" Name ", " Image ", " Status ", " All "];
+
+    match filter_by {
+        FilterBy::Name => [
+            Span::styled(name[0], selected),
+            Span::styled(name[1], not_selected),
+            Span::styled(name[2], not_selected),
+            Span::styled(name[3], not_selected),
+        ],
+        FilterBy::Image => [
+            Span::styled(name[0], not_selected),
+            Span::styled(name[1], selected),
+            Span::styled(name[2], not_selected),
+            Span::styled(name[3], not_selected),
+        ],
+        FilterBy::Status => [
+            Span::styled(name[0], not_selected),
+            Span::styled(name[1], not_selected),
+            Span::styled(name[2], selected),
+            Span::styled(name[3], not_selected),
+        ],
+        FilterBy::All => [
+            Span::styled(name[0], not_selected),
+            Span::styled(name[1], not_selected),
+            Span::styled(name[2], not_selected),
+            Span::styled(name[3], selected),
+        ],
+    }
+}
+
 /// Draw the filter bar
 pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>) {
     let style_but = Style::default().fg(Color::Black).bg(Color::Magenta);
     let style_desc = Style::default().fg(Color::Gray).bg(Color::Reset);
-    let line = Line::from(vec![
-        // Span::styled(" Enter ", style_but),
-        // Span::styled(" done ", style_desc),
+
+    let mut line = vec![
         Span::styled(" Esc ", style_but),
         Span::styled(" clear ", style_desc),
+        Span::styled(" ← by → ", style_but),
+        Span::from(" "),
+    ];
+    line.extend_from_slice(&filter_by_spans(app_data));
+    line.extend_from_slice(&[
         Span::styled(
-            "filter: ",
+            " term: ",
             Style::default()
                 .fg(Color::Magenta)
                 .add_modifier(Modifier::BOLD),
@@ -445,7 +487,7 @@ pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>)
             Style::default().fg(Color::Gray),
         ),
     ]);
-    frame.render_widget(line, area);
+    frame.render_widget(Line::from(line), area);
 }
 
 /// Draw heading bar at top of program, always visible
@@ -578,12 +620,6 @@ pub fn heading_bar(
                 }
             })
             .collect::<Vec<_>>();
-
-        // // Draw loading icon, or not, and a prefix with a single space
-        // let loading_paragraph = Paragraph::new(format!("{:>2}", data.loading_icon))
-        //     .block(block(Color::White))
-        //     .alignment(Alignment::Center);
-        // frame.render_widget(loading_paragraph, split_bar[0]);
 
         let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
         let headers_section = Layout::default()
@@ -998,7 +1034,7 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
 }
 
 /// Draw info box in one of the 9 BoxLocations
-// TODO is this broken?
+// TODO is this broken - I don't think so
 pub fn info(f: &mut Frame, text: &str, instant: Instant, gui_state: &Arc<Mutex<GuiState>>) {
     let block = Block::default()
         .title("")
@@ -1148,6 +1184,7 @@ mod tests {
             .chunks(usize::from(w))
             .enumerate()
     }
+
     // ******************** //
     // DockerControls panel //
     // ******************** //
@@ -2056,7 +2093,7 @@ mod tests {
         }
     }
 
-    /// CPU and Memroy charts used in multiple tests, based on data from above insert_chart_data()
+    /// CPU and Memory charts used in multiple tests, based on data from above insert_chart_data()
     const EXPECTED: [&str; 10] = [
         "╭───────────── cpu 03.00% ─────────────╮╭────────── memory 30.00 kB ───────────╮",
         "│10.00%│    •                          ││100.00 kB│   ••                       │",
@@ -2762,7 +2799,9 @@ mod tests {
     // ********** //
 
     #[test]
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     /// Filter row is drawn correctly & colors are correct
+    /// Colours change when filter_by option is changed
     fn test_draw_blocks_filter_row() {
         let (w, h) = (140, 1);
         let mut setup = test_setup(w, h, true, true);
@@ -2779,7 +2818,7 @@ mod tests {
             .unwrap();
 
         let expected = [
-            " Esc  clear filter:                                                                                                                         "
+            " Esc  clear  ← by →   Name  Image  Status  All  term:                                                                                        "
         ];
 
         for (row_index, result_row) in get_result(&setup, w) {
@@ -2787,7 +2826,7 @@ mod tests {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 match result_cell_index {
-                    0..=4 => {
+                    0..=4 | 12..=19 => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
@@ -2795,9 +2834,14 @@ mod tests {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
-                    12..=19 => {
+                    21..=26 => {
+                        assert_eq!(result_cell.bg, Color::Gray);
+                        assert_eq!(result_cell.fg, Color::Black);
+                    }
+                    47..=53 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Magenta);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
                     }
                     _ => {
                         assert_eq!(result_cell.bg, Color::Reset);
@@ -2807,7 +2851,9 @@ mod tests {
             }
         }
 
+        // Test when char added to search term
         setup.app_data.lock().filter_term_push('c');
+        setup.app_data.lock().filter_term_push('d');
 
         setup
             .terminal
@@ -2817,7 +2863,7 @@ mod tests {
             .unwrap();
 
         let expected = [
-            " Esc  clear filter: c                                                                                                                       "
+            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     "
         ];
 
         for (row_index, result_row) in get_result(&setup, w) {
@@ -2826,17 +2872,66 @@ mod tests {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
 
                 match result_cell_index {
-                    0..=4 => {
+                    0..=4 | 12..=19 => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    5..=11 | 20 => {
+                    5..=11 | 54..=55 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
-                    12..=19 => {
+                    21..=26 => {
+                        assert_eq!(result_cell.bg, Color::Gray);
+                        assert_eq!(result_cell.fg, Color::Black);
+                    }
+                    47..=53 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Magenta);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Reset);
+                    }
+                }
+            }
+        }
+
+        // Test when filter_by chances
+        setup.app_data.lock().filter_by_next();
+        setup
+            .terminal
+            .draw(|f| {
+                super::filter_bar(setup.area, f, &setup.app_data);
+            })
+            .unwrap();
+
+        let expected = [
+        " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     "
+    ];
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+
+                match result_cell_index {
+                    0..=4 | 12..=19 => {
+                        assert_eq!(result_cell.bg, Color::Magenta);
+                        assert_eq!(result_cell.fg, Color::Black);
+                    }
+                    5..=11 | 54..=55 => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                    27..=33 => {
+                        assert_eq!(result_cell.bg, Color::Gray);
+                        assert_eq!(result_cell.fg, Color::Black);
+                    }
+                    47..=53 => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Magenta);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
                     }
                     _ => {
                         assert_eq!(result_cell.bg, Color::Reset);
@@ -3314,7 +3409,7 @@ mod tests {
 
         let expected = [
             "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
-            "╭ Containers 1/1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
+            "╭ Containers 1/1 - filtered ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
             "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
             "│                                                                                                                                              ││  restart     │",
             "│                                                                                                                                              ││  stop        │",
@@ -3342,7 +3437,7 @@ mod tests {
             "│      │•        ••                                             ││         │•       ••                                           ││                            │",
             "│      │                                                        ││         │                                                     ││                            │",
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
-            " Esc  clear filter: r_1                                                                                                                                         "
+            " Esc  clear  ← by →   Name  Image  Status  All  term: r_1                                                                                                       "
             ];
         setup
             .terminal

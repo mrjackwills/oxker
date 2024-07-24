@@ -75,6 +75,10 @@ macro_rules! unit_struct {
             pub fn set(&mut self, value: String) {
                 self.0 = value;
             }
+
+            pub fn contains(&self, term: &str) -> bool {
+                self.0.to_lowercase().contains(term)
+            }
         }
 
         impl std::fmt::Display for $name {
