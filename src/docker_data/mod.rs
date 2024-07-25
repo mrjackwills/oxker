@@ -201,7 +201,7 @@ impl DockerData {
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
     /// If in a containerised runtime, will ignore any container that uses the `/app/oxker` as an entry point, unless the `-s` flag is set
-    pub async fn update_all_containers(&mut self) -> Vec<(State, ContainerId)> {
+    pub async fn update_all_containers(&self) -> Vec<(State, ContainerId)> {
         let containers = self
             .docker
             .list_containers(Some(ListContainersOptions::<String> {
@@ -271,7 +271,7 @@ impl DockerData {
     }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
-    fn init_all_logs(&mut self, all_ids: &[(State, ContainerId)]) {
+    fn init_all_logs(&self, all_ids: &[(State, ContainerId)]) {
         for (_, id) in all_ids {
             let docker = Arc::clone(&self.docker);
             let app_data = Arc::clone(&self.app_data);

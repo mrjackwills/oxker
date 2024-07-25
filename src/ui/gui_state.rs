@@ -209,7 +209,7 @@ impl GuiState {
     }
 
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known delete button
-    pub fn button_intersect(&mut self, rect: Rect) -> Option<DeleteButton> {
+    pub fn button_intersect(&self, rect: Rect) -> Option<DeleteButton> {
         self.delete_map
             .iter()
             .filter(|i| i.1.intersects(rect))
@@ -219,7 +219,7 @@ impl GuiState {
     }
 
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
-    pub fn header_intersect(&mut self, rect: Rect) -> Option<Header> {
+    pub fn header_intersect(&self, rect: Rect) -> Option<Header> {
         self.heading_map
             .iter()
             .filter(|i| i.1.intersects(rect))
@@ -295,7 +295,7 @@ impl GuiState {
         self.status.insert(Status::Exec);
     }
 
-    pub fn get_exec_mode(&mut self) -> Option<ExecMode> {
+    pub fn get_exec_mode(&self) -> Option<ExecMode> {
         self.exec_mode.clone()
     }
 

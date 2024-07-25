@@ -178,7 +178,7 @@ impl InputHandler {
     }
 
     /// Save the currently selected containers logs into a `[container_name]_[timestamp].log` file
-    async fn s_key(&mut self) {
+    async fn s_key(&self) {
         /// This is the inner workings, *inlined* here to return a Result
         async fn save_logs(
             app_data: &Arc<Mutex<AppData>>,
@@ -266,7 +266,7 @@ impl InputHandler {
     }
 
     /// Send docker command, if the Commands panel is selected
-    async fn enter_key(&mut self) {
+    async fn enter_key(&self) {
         // This isn't great, just means you can't send docker commands before full initialization of the program
         let panel = self.gui_state.lock().get_selected_panel();
         if panel == SelectablePanel::Commands {
@@ -307,7 +307,7 @@ impl InputHandler {
     }
 
     /// Change the the "next" selectable panel
-    fn tab_key(&mut self) {
+    fn tab_key(&self) {
         let is_containers =
             self.gui_state.lock().get_selected_panel() == SelectablePanel::Containers;
         let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
@@ -321,7 +321,7 @@ impl InputHandler {
     }
 
     /// Change to previously selected panel
-    fn back_tab_key(&mut self) {
+    fn back_tab_key(&self) {
         let is_containers = self.gui_state.lock().get_selected_panel() == SelectablePanel::Logs;
         let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
             2
@@ -333,7 +333,7 @@ impl InputHandler {
         }
     }
 
-    fn home_key(&mut self) {
+    fn home_key(&self) {
         let mut locked_data = self.app_data.lock();
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
@@ -344,7 +344,7 @@ impl InputHandler {
     }
 
     /// Go to end of the list of the currently selected panel
-    fn end_key(&mut self) {
+    fn end_key(&self) {
         let mut locked_data = self.app_data.lock();
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
@@ -366,7 +366,7 @@ impl InputHandler {
     }
 
     /// Actions to take when Error status active
-    fn handle_error(&mut self, key_code: KeyCode) {
+    fn handle_error(&self, key_code: KeyCode) {
         match key_code {
             KeyCode::Esc | KeyCode::Char('c' | 'C') => {
                 self.app_data.lock().remove_error();
@@ -377,7 +377,7 @@ impl InputHandler {
     }
 
     /// Actions to take when Delete status active
-    async fn handle_delete(&mut self, key_code: KeyCode) {
+    async fn handle_delete(&self, key_code: KeyCode) {
         match key_code {
             KeyCode::Char('y' | 'Y') => self.confirm_delete().await,
             KeyCode::Esc | KeyCode::Char('n' | 'N') => self.clear_delete(),
@@ -386,7 +386,7 @@ impl InputHandler {
     }
 
     /// Actions to take when Filter status active
-    fn handle_filter(&mut self, key_code: KeyCode) {
+    fn handle_filter(&self, key_code: KeyCode) {
         match key_code {
             KeyCode::Esc => {
                 self.app_data.lock().filter_term_clear();
@@ -489,7 +489,7 @@ impl InputHandler {
     }
 
     /// Check if a button press interacts with either the yes or no buttons in the delete container confirm window
-    async fn button_intersect(&mut self, mouse_event: MouseEvent) {
+    async fn button_intersect(&self, mouse_event: MouseEvent) {
         if mouse_event.kind == MouseEventKind::Down(MouseButton::Left) {
             let intersect = self.gui_state.lock().button_intersect(Rect::new(
                 mouse_event.column,
@@ -508,7 +508,7 @@ impl InputHandler {
     }
 
     /// Handle mouse button events
-    fn mouse_press(&mut self, mouse_event: MouseEvent) {
+    fn mouse_press(&self, mouse_event: MouseEvent) {
         match mouse_event.kind {
             MouseEventKind::ScrollUp => self.previous(),
             MouseEventKind::ScrollDown => self.next(),
@@ -534,7 +534,7 @@ impl InputHandler {
     }
 
     /// Change state to next, depending which panel is currently in focus
-    fn next(&mut self) {
+    fn next(&self) {
         let mut locked_data = self.app_data.lock();
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
@@ -545,7 +545,7 @@ impl InputHandler {
     }
 
     /// Change state to previous, depending which panel is currently in focus
-    fn previous(&mut self) {
+    fn previous(&self) {
         let mut locked_data = self.app_data.lock();
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
