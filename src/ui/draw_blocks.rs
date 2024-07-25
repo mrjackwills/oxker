@@ -1013,9 +1013,11 @@ mod tests {
 
     use std::{ops::RangeInclusive, sync::Arc};
 
+    use insta::assert_snapshot;
     use parking_lot::Mutex;
     use ratatui::{
         backend::TestBackend,
+        buffer::{Buffer, Cell},
         layout::Rect,
         style::{Color, Modifier},
         Terminal,
@@ -1044,6 +1046,62 @@ mod tests {
     }
 
     const BORDER_CHARS: [&str; 6] = ["╭", "╮", "─", "│", "╰", "╯"];
+
+    fn color_char(color: Color) -> char {
+        match color {
+            Color::Reset => '-',
+            Color::Black => 'X',
+            Color::Red => 'R',
+            Color::Green => 'G',
+            Color::Yellow => 'Y',
+            Color::Blue => 'B',
+            Color::Magenta => 'M',
+            Color::Cyan => 'C',
+            Color::Gray => ':',
+            Color::DarkGray => 'x',
+            Color::LightRed => 'r',
+            Color::LightGreen => 'g',
+            Color::LightYellow => 'y',
+            Color::LightBlue => 'b',
+            Color::LightMagenta => 'm',
+            Color::LightCyan => 'c',
+            Color::White => '.',
+            Color::Rgb(_, _, _) => '*',
+            Color::Indexed(_) => 'i',
+        }
+    }
+
+    fn buffer_to_strings(buffer: &Buffer, extract: impl Fn(&Cell) -> char) -> String {
+        let width = buffer.area.width as usize;
+
+        let mut text = String::new();
+        for (index, cell) in buffer.content.iter().enumerate() {
+            text.push(extract(cell));
+
+            if (index + 1) % width == 0 {
+                text += "\n";
+            }
+        }
+        text
+    }
+
+    fn buffer_to_text(buffer: &Buffer) -> String {
+        buffer_to_strings(buffer, |c| c.symbol().chars().next().unwrap())
+    }
+
+    fn buffer_to_fg(buffer: &Buffer) -> String {
+        buffer_to_strings(buffer, |c| color_char(c.fg))
+    }
+
+    fn buffer_to_bold(buffer: &Buffer) -> String {
+        buffer_to_strings(buffer, |c| {
+            if c.modifier == Modifier::BOLD {
+                'b'
+            } else {
+                '.'
+            }
+        })
+    }
 
     /// Generate state to be used in *most* gui tests
     fn test_setup(w: u16, h: u16, control_start: bool, container_start: bool) -> TuiTestSetup {
@@ -1099,25 +1157,28 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            "╭──────────╮",
-            "│          │",
-            "│          │",
-            "│          │",
-            "│          │",
-            "╰──────────╯",
-        ];
-
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-                assert_eq!(result_cell.fg, Color::Reset);
-            }
-        }
+        let text = buffer_to_text(setup.terminal.backend().buffer());
+        let fg = buffer_to_fg(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r#"
+            ╭──────────╮
+            │          │
+            │          │
+            │          │
+            │          │
+            ╰──────────╯
+            "#
+        );
+        assert_snapshot!(
+            fg, @r#"
+            ------------
+            ------------
+            ------------
+            ------------
+            ------------
+            ------------
+            "#
+        );
     }
 
     #[test]
@@ -1133,51 +1194,28 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            "╭──────────╮",
-            "│▶ pause   │",
-            "│  restart │",
-            "│  stop    │",
-            "│  delete  │",
-            "╰──────────╯",
-        ];
-        let result = &setup.terminal.backend().buffer().content;
-
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-
-                // Check the text color is correct
-                match index {
-                    // pause
-                    15..=19 => {
-                        assert_eq!(result_cell.fg, Color::Yellow);
-                    }
-                    // restart
-                    27..=33 => {
-                        assert_eq!(result_cell.fg, Color::Magenta);
-                    }
-                    // stop
-                    39..=42 => {
-                        assert_eq!(result_cell.fg, Color::Red);
-                    }
-                    // delete
-                    51..=56 => {
-                        assert_eq!(result_cell.fg, Color::Gray);
-                    }
-                    // no text
-                    _ => {
-                        assert_eq!(result_cell.fg, Color::Reset);
-                    }
-                }
-                if result_cell.symbol().starts_with('▶') {
-                    assert_eq!(result_cell.fg, Color::Reset);
-                }
-            }
-        }
+        let text = buffer_to_text(setup.terminal.backend().buffer());
+        let fg = buffer_to_fg(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r#"
+            ╭──────────╮
+            │▶ pause   │
+            │  restart │
+            │  stop    │
+            │  delete  │
+            ╰──────────╯
+            "#
+        );
+        assert_snapshot!(
+            fg, @r#"
+            ------------
+            ---YYYYY----
+            ---MMMMMMM--
+            ---RRRR-----
+            ---::::::---
+            ------------
+            "#
+        );
 
         // Change the controls state
         setup
@@ -1186,15 +1224,6 @@ mod tests {
             .update_containers(&mut vec![gen_container_summary(1, "paused")]);
         setup.app_data.lock().docker_controls_next();
 
-        let expected = [
-            "╭──────────╮",
-            "│  resume  │",
-            "│▶ stop    │",
-            "│  delete  │",
-            "│          │",
-            "╰──────────╯",
-        ];
-
         setup
             .terminal
             .draw(|f| {
@@ -1202,39 +1231,28 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-
-                // Chceck the text color is correct
-                match index {
-                    // resume
-                    15..=20 => {
-                        assert_eq!(result_cell.fg, Color::Blue);
-                    }
-                    // stop
-                    27..=30 => {
-                        assert_eq!(result_cell.fg, Color::Red);
-                    }
-                    // delete
-                    39..=44 => {
-                        assert_eq!(result_cell.fg, Color::Gray);
-                    }
-                    // no text
-                    _ => {
-                        assert_eq!(result_cell.fg, Color::Reset);
-                    }
-                }
-                if result_cell.symbol().starts_with('▶') {
-                    assert_eq!(result_cell.fg, Color::Reset);
-                }
-            }
-        }
+        let text = buffer_to_text(setup.terminal.backend().buffer());
+        let fg = buffer_to_fg(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r#"
+            ╭──────────╮
+            │  resume  │
+            │▶ stop    │
+            │  delete  │
+            │          │
+            ╰──────────╯
+            "#
+        );
+        assert_snapshot!(
+            fg, @r#"
+            ------------
+            ---BBBBBB---
+            ---RRRR-----
+            ---::::::---
+            ------------
+            ------------
+            "#
+        );
     }
 
     #[test]
@@ -1242,14 +1260,6 @@ mod tests {
     fn test_draw_blocks_commands_panel_selected_color() {
         let (w, h) = (12, 6);
         let mut setup = test_setup(w, h, true, true);
-        let expected = [
-            "╭──────────╮",
-            "│▶ pause   │",
-            "│  restart │",
-            "│  stop    │",
-            "│  delete  │",
-            "╰──────────╯",
-        ];
 
         // Unselected, has a grey border
         setup
@@ -1259,18 +1269,28 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-                if BORDER_CHARS.contains(&result_cell.symbol()) {
-                    assert_eq!(result_cell.fg, Color::Reset);
-                }
-            }
-        }
+        let text = buffer_to_text(setup.terminal.backend().buffer());
+        let fg = buffer_to_fg(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r#"
+            ╭──────────╮
+            │▶ pause   │
+            │  restart │
+            │  stop    │
+            │  delete  │
+            ╰──────────╯
+            "#
+        );
+        assert_snapshot!(
+            fg, @r#"
+            ------------
+            ---YYYYY----
+            ---MMMMMMM--
+            ---RRRR-----
+            ---::::::---
+            ------------
+            "#
+        );
 
         // Control panel now selected, should have a blue border
         setup.gui_state.lock().next_panel();
@@ -1282,28 +1302,28 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-                if BORDER_CHARS.contains(&result_cell.symbol()) {
-                    assert_eq!(result_cell.fg, Color::LightCyan);
-                }
-                // Make sure that the selected line has bold text
-                match index {
-                    // pause
-                    13..=22 => {
-                        assert_eq!(result_cell.modifier, Modifier::BOLD);
-                    }
-                    _ => {
-                        assert!(result_cell.modifier.is_empty());
-                    }
-                }
-            }
-        }
+        let text = buffer_to_text(setup.terminal.backend().buffer());
+        let bold = buffer_to_bold(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r#"
+            ╭──────────╮
+            │▶ pause   │
+            │  restart │
+            │  stop    │
+            │  delete  │
+            ╰──────────╯
+            "#
+        );
+        assert_snapshot!(
+            bold, @r#"
+            ............
+            .bbbbbbbbbb.
+            ............
+            ............
+            ............
+            ............
+            "#
+        );
     }
 
     // *********************** //
@@ -1334,15 +1354,6 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         setup.app_data.lock().containers = StatefulList::new(vec![]);
 
-        let expected = [
-            "╭ Containers ───────────╮",
-            "│ no containers running │",
-            "│                       │",
-            "│                       │",
-            "│                       │",
-            "╰───────────────────────╯",
-        ];
-
         setup.gui_state.lock().next_panel();
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
@@ -1353,16 +1364,17 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-                assert_eq!(result_cell.fg, Color::Reset);
-            }
-        }
+        let text = buffer_to_text(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r#"
+            ╭ Containers ───────────╮
+            │ no containers running │
+            │                       │
+            │                       │
+            │                       │
+            ╰───────────────────────╯
+            "#
+        );
 
         setup.gui_state.lock().previous_panel();
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
@@ -1374,18 +1386,17 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-                if BORDER_CHARS.contains(&result_cell.symbol()) {
-                    assert_eq!(result_cell.fg, Color::LightCyan);
-                }
-            }
-        }
+        let text = buffer_to_text(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r#"
+            ╭ Containers ───────────╮
+            │ no containers running │
+            │                       │
+            │                       │
+            │                       │
+            ╰───────────────────────╯
+            "#
+        );
     }
 
     #[test]
@@ -1394,15 +1405,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-        "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│⚪  container_1   ✓ running            Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-        "│   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-        "│   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
-        "│                                                                                                                                │",
-        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-    ];
-
         setup
             .terminal
             .draw(|f| {
@@ -1410,29 +1412,39 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                // result matches expected
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-
-                // Selected container is bold
-                match index {
-                    131 | 133..=258 => assert_eq!(result_cell.modifier, Modifier::BOLD),
-                    _ => {
-                        assert!(result_cell.modifier.is_empty());
-                    }
-                }
-
-                // Border is blue
-                if BORDER_CHARS.contains(&result_cell.symbol()) {
-                    assert_eq!(result_cell.fg, Color::LightCyan);
-                }
-            }
-        }
+        let text = buffer_to_text(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r###"
+        ╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+        │⚪  container_1   ✓ running            Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │
+        │   container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │
+        │   container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │
+        │                                                                                                                                │
+        ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+        "###
+        );
+        let fg = buffer_to_fg(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            fg, @r###"
+        cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        c---BBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGBBBBBBBBBBBBBBBBBBBBB********************----------c
+        c---BBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGBBBBBBBBBBBBBBBBBBBBB********************----------c
+        c---BBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGBBBBBBBBBBBBBBBBBBBBB********************----------c
+        c--------------------------------------------------------------------------------------------------------------------------------c
+        cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        "###
+        );
+        let bold = buffer_to_bold(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            bold, @r###"
+        ..................................................................................................................................
+        .b.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.
+        ..................................................................................................................................
+        ..................................................................................................................................
+        ..................................................................................................................................
+        ..................................................................................................................................
+        "###
+        );
 
         // Change selected panel, border is now no longer blue
         setup.gui_state.lock().next_panel();
@@ -1444,20 +1456,17 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-
-                // Border is gray
-                if BORDER_CHARS.contains(&result_cell.symbol()) {
-                    assert_eq!(result_cell.fg, Color::Reset);
-                }
-            }
-        }
+        let text = buffer_to_fg(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r###"
+        ----------------------------------------------------------------------------------------------------------------------------------
+        ----BBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGBBBBBBBBBBBBBBBBBBBBB********************-----------
+        ----BBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGBBBBBBBBBBBBBBBBBBBBB********************-----------
+        ----BBBBBBBBBBBGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGBBBBBBBBBBBBBBBBBBBBB********************-----------
+        ----------------------------------------------------------------------------------------------------------------------------------
+        ----------------------------------------------------------------------------------------------------------------------------------
+        "###
+        );
     }
 
     #[test]
@@ -1556,14 +1565,6 @@ mod tests {
         setup.app_data.lock().containers.items[0].image =
             ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
 
-        let expected = [
-        "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│⚪  a_long_container_name_for_the…   ॥ paused             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB        │",
-        "│                      container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2                          image_2   0.00 kB   0.00 kB        │",
-        "│                      container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3                          image_3   0.00 kB   0.00 kB        │",
-        "│                                                                                                                                                                        │",
-        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
         setup.app_data.lock().containers.items[0].state = State::Paused;
 
@@ -1574,15 +1575,17 @@ mod tests {
             })
             .unwrap();
 
-        let result = &setup.terminal.backend().buffer().content;
-        for (row_index, row) in expected.iter().enumerate() {
-            for (char_index, expected_char) in row.chars().enumerate() {
-                let index = row_index * usize::from(w) + char_index;
-                let result_cell = &result[index];
-
-                assert_eq!(result_cell.symbol(), expected_char.to_string());
-            }
-        }
+        let text = buffer_to_text(setup.terminal.backend().buffer());
+        assert_snapshot!(
+            text, @r###"
+        ╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+        │⚪  a_long_container_name_for_the…   ॥ paused             Up 1 hour    00.00%   0.00 kB / 0.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB        │
+        │                      container_2   ✓ running            Up 2 hour    00.00%   0.00 kB / 0.00 kB          2                          image_2   0.00 kB   0.00 kB        │
+        │                      container_3   ✓ running            Up 3 hour    00.00%   0.00 kB / 0.00 kB          3                          image_3   0.00 kB   0.00 kB        │
+        │                                                                                                                                                                        │
+        ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+        "###
+        );
 
         // THis char: …
     }
