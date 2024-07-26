@@ -2091,9 +2091,9 @@ mod tests {
         let result = app_data.get_width();
         let expected = Columns {
             name: (Header::Name, 11),
-            state: (Header::State, 11),
-            status: (Header::Status, 16),
-            cpu: (Header::Cpu, 7),
+            state: (Header::State, 9),
+            status: (Header::Status, 9),
+            cpu: (Header::Cpu, 6),
             mem: (Header::Memory, 7, 7),
             id: (Header::Id, 8),
             image: (Header::Image, 7),
@@ -2113,9 +2113,9 @@ mod tests {
         let result = app_data.get_width();
         let expected = Columns {
             name: (Header::Name, 28),
-            state: (Header::State, 11),
-            status: (Header::Status, 16),
-            cpu: (Header::Cpu, 7),
+            state: (Header::State, 9),
+            status: (Header::Status, 9),
+            cpu: (Header::Cpu, 6),
             mem: (Header::Memory, 7, 7),
             id: (Header::Id, 8),
             image: (Header::Image, 7),
