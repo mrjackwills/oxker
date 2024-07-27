@@ -552,7 +552,7 @@ pub fn heading_bar(
     // Need to add widths to this
 
     let suffix = if data.help_visible { "exit" } else { "show" };
-    let info_text = format!("( h ) {suffix} help {MARGIN}",);
+    let info_text = format!("( h ) {suffix} help{MARGIN}",);
     let info_width = info_text.chars().count();
 
     let column_width = usize::from(area.width).saturating_sub(info_width);
@@ -560,7 +560,7 @@ pub fn heading_bar(
     let splits = if data.has_containers {
         vec![
             Constraint::Max(4),
-            Constraint::Min(column_width.try_into().unwrap_or_default()),
+            Constraint::Max(column_width.try_into().unwrap_or_default()),
             Constraint::Max(info_width.try_into().unwrap_or_default()),
         ]
     } else {
@@ -2319,7 +2319,7 @@ mod tests {
 
         let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
-        let expected =  ["                                                                                                                         ( h ) show help    "];
+        let expected =  ["                                                                                                                          ( h ) show help   "];
 
         setup
             .terminal
@@ -2338,7 +2338,7 @@ mod tests {
         }
 
         fd.help_visible = true;
-        let expected =  ["                                                                                                                         ( h ) exit help    "];
+        let expected =  ["                                                                                                                          ( h ) exit help   "];
         setup
             .terminal
             .draw(|f| {
@@ -2363,7 +2363,7 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
-        let expected =  ["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"];
+        let expected =  ["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "];
         setup
             .terminal
             .draw(|f| {
@@ -2379,7 +2379,7 @@ mod tests {
                 assert_eq!(
                     result_cell.fg,
                     match result_cell_index {
-                        (4..=124) => Color::Black,
+                        (4..=121) => Color::Black,
                         _ => Color::White,
                     }
                 );
@@ -2395,7 +2395,7 @@ mod tests {
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
         let expected =
-            ["    name          state       status      cpu                    ( h ) show help"];
+            ["    name          state       status      cpu                 ( h ) show help   "];
         setup
             .terminal
             .draw(|f| {
@@ -2411,7 +2411,7 @@ mod tests {
                 assert_eq!(
                     result_cell.fg,
                     match result_cell_index {
-                        (4..=64) => Color::Black,
+                        (4..=61) => Color::Black,
                         _ => Color::White,
                     }
                 );
@@ -2426,6 +2426,7 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
+        // Actual test, used for each header and sorted type
         let mut test =
             |expected: &[&str], range: RangeInclusive<usize>, x: (Header, SortedOrder)| {
                 fd.sorted_by = Some(x);
@@ -2446,7 +2447,7 @@ mod tests {
                         assert_eq!(
                             result_cell.fg,
                             match result_cell_index {
-                                0..=3 | 125..=139 => Color::White,
+                                0..=3 | 122..=139 => Color::White,
                                 // given range | help section
                                 x if range.contains(&x) => Color::Gray,
                                 _ => Color::Black,
@@ -2457,32 +2458,32 @@ mod tests {
             };
 
         // Name
-        test(&["    name ▲        state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 1..=17, (Header::Name, SortedOrder::Asc));
-        test(&["    name ▼        state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 1..=17, (Header::Name, SortedOrder::Desc));
+        test(&["    name ▲        state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "], 1..=17, (Header::Name, SortedOrder::Asc));
+        test(&["    name ▼        state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "], 1..=17, (Header::Name, SortedOrder::Desc));
         // state
-        test(&["    name          state ▲     status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"],18..=29, (Header::State, SortedOrder::Asc));
-        test(&["    name          state ▼     status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 18..=29, (Header::State, SortedOrder::Desc));
+        test(&["    name          state ▲     status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "],18..=29, (Header::State, SortedOrder::Asc));
+        test(&["    name          state ▼     status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "], 18..=29, (Header::State, SortedOrder::Desc));
         // status
-        test(&["    name          state       status ▲    cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 30..=41, (Header::Status, SortedOrder::Asc));
-        test(&["    name          state       status ▼    cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 30..=41, (Header::Status, SortedOrder::Desc));
+        test(&["    name          state       status ▲    cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "], 30..=41, (Header::Status, SortedOrder::Asc));
+        test(&["    name          state       status ▼    cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "], 30..=41, (Header::Status, SortedOrder::Desc));
         // cpu
-        test(&["    name          state       status      cpu ▲    memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"],42..=50, (Header::Cpu, SortedOrder::Asc));
-        test(&["    name          state       status      cpu ▼    memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"],42..=50, (Header::Cpu, SortedOrder::Desc));
+        test(&["    name          state       status      cpu ▲    memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "],42..=50, (Header::Cpu, SortedOrder::Asc));
+        test(&["    name          state       status      cpu ▼    memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "],42..=50, (Header::Cpu, SortedOrder::Desc));
         // memory
-        test(&["    name          state       status      cpu      memory/limit ▲      id         image     ↓ rx      ↑ tx                   ( h ) show help"], 51..=70, (Header::Memory, SortedOrder::Asc));
-        test(&["    name          state       status      cpu      memory/limit ▼      id         image     ↓ rx      ↑ tx                   ( h ) show help"], 51..=70, (Header::Memory, SortedOrder::Desc));
+        test(&["    name          state       status      cpu      memory/limit ▲      id         image     ↓ rx      ↑ tx                ( h ) show help   "], 51..=70, (Header::Memory, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit ▼      id         image     ↓ rx      ↑ tx                ( h ) show help   "], 51..=70, (Header::Memory, SortedOrder::Desc));
         //id
-        test(&["    name          state       status      cpu      memory/limit        id ▲       image     ↓ rx      ↑ tx                   ( h ) show help"], 71..=81, (Header::Id, SortedOrder::Asc));
-        test(&["    name          state       status      cpu      memory/limit        id ▼       image     ↓ rx      ↑ tx                   ( h ) show help"], 71..=81, (Header::Id, SortedOrder::Desc));
+        test(&["    name          state       status      cpu      memory/limit        id ▲       image     ↓ rx      ↑ tx                ( h ) show help   "], 71..=81, (Header::Id, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit        id ▼       image     ↓ rx      ↑ tx                ( h ) show help   "], 71..=81, (Header::Id, SortedOrder::Desc));
         // image
-        test(&["    name          state       status      cpu      memory/limit        id         image ▲   ↓ rx      ↑ tx                   ( h ) show help"], 82..=91, (Header::Image, SortedOrder::Asc));
-        test(&["    name          state       status      cpu      memory/limit        id         image ▼   ↓ rx      ↑ tx                   ( h ) show help"], 82..=91, (Header::Image, SortedOrder::Desc));
+        test(&["    name          state       status      cpu      memory/limit        id         image ▲   ↓ rx      ↑ tx                ( h ) show help   "], 82..=91, (Header::Image, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit        id         image ▼   ↓ rx      ↑ tx                ( h ) show help   "], 82..=91, (Header::Image, SortedOrder::Desc));
         // rx
-        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx ▲    ↑ tx                   ( h ) show help"], 92..=101, (Header::Rx, SortedOrder::Asc));
-        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx ▼    ↑ tx                   ( h ) show help"], 92..=101, (Header::Rx, SortedOrder::Desc));
+        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx ▲    ↑ tx                ( h ) show help   "], 92..=101, (Header::Rx, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx ▼    ↑ tx                ( h ) show help   "], 92..=101, (Header::Rx, SortedOrder::Desc));
         // tx
-        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx ▲                 ( h ) show help"], 102..=111, (Header::Tx, SortedOrder::Asc));
-        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx ▼                 ( h ) show help"], 102..=111, (Header::Tx, SortedOrder::Desc));
+        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx ▲              ( h ) show help   "], 102..=111, (Header::Tx, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx ▼              ( h ) show help   "], 102..=111, (Header::Tx, SortedOrder::Desc));
     }
 
     #[test]
@@ -2494,7 +2495,7 @@ mod tests {
         setup.gui_state.lock().next_loading(uuid);
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
-        let expected =   [" ⠙  name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"];
+        let expected =   [" ⠙  name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "];
 
         setup
             .terminal
@@ -2511,7 +2512,7 @@ mod tests {
                 assert_eq!(
                     result_cell.fg,
                     match result_cell_index {
-                        (4..=124) => Color::Black,
+                        (4..=121) => Color::Black,
                         _ => Color::White,
                     }
                 );
@@ -3262,7 +3263,7 @@ mod tests {
             });
 
         let expected = [
-            "    name          state       status      cpu      memory/limit          id         image     ↓ rx      ↑ tx                                     ( h ) show help",
+            "    name          state       status      cpu      memory/limit          id         image     ↓ rx      ↑ tx                                  ( h ) show help   ",
             "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
             "│⚪  container_1   ✓ running   Up 1 hour   03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                                ││▶ pause       │",
             "│   container_2   ✓ running   Up 2 hour   00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                                ││  restart     │",
@@ -3326,7 +3327,7 @@ mod tests {
             });
 
         let expected = [
-            "    name          state       status      cpu      memory/limit          id         image     ↓ rx      ↑ tx                                     ( h ) show help",
+            "    name          state       status      cpu      memory/limit          id         image     ↓ rx      ↑ tx                                  ( h ) show help   ",
             "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
             "│⚪  container_1   ✓ running   Up 1 hour   03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                                ││▶ pause       │",
             "│   container_2   ✓ running   Up 2 hour   00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                                ││  restart     │",
@@ -3380,7 +3381,7 @@ mod tests {
         setup.app_data.lock().filter_term_push('1');
 
         let expected = [
-            "    name          state       status      cpu      memory/limit          id         image     ↓ rx      ↑ tx                                     ( h ) show help",
+            "    name          state       status      cpu      memory/limit          id         image     ↓ rx      ↑ tx                                  ( h ) show help   ",
             "╭ Containers 1/1 - filtered ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
             "│⚪  container_1   ✓ running   Up 1 hour   03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                                ││▶ pause       │",
             "│                                                                                                                                              ││  restart     │",
@@ -3448,7 +3449,7 @@ mod tests {
             ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
 
         let expected = [
-            "    name                             state       status      cpu      memory/limit          id         image                            ↓ rx      ↑ tx                         ( h ) show help",
+            "    name                             state       status      cpu      memory/limit          id         image                            ↓ rx      ↑ tx                      ( h ) show help   ",
             "╭ Containers 1/3 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭─────────────────╮",
             "│⚪  a_long_container_name_for_the…   ✓ running   Up 1 hour   03.00%   30.00 kB / 30.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB                 ││▶ pause          │",
             "│   container_2                      ✓ running   Up 2 hour   00.00%    0.00 kB /  0.00 kB          2   image_2                          0.00 kB   0.00 kB                 ││  restart        │",
