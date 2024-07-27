@@ -1359,44 +1359,6 @@ mod tests {
     // Container summary panel //
     // *********************** //
 
-    // Check that the correct solor is applied to the state/status/cpu/memory section
-    fn check_expected(expected: [&str; 6], w: u16, _h: u16, setup: &TuiTestSetup, color: Color) {
-        for (row_index, result_row) in get_result(setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
-                match (row_index, result_cell_index) {
-                    // border
-                    (0 | 5, _) | (1..=4, 0 | 129) => {
-                        assert_eq!(result_cell.fg, Color::LightCyan);
-                    }
-                    // name, id, image column
-                    (1..=3, 4..=14 | 78..=98) => {
-                        assert_eq!(result_cell.fg, Color::Blue);
-                    }
-                    // state, status, cpu, memory column of the first row
-                    (1, 15..=77) => {
-                        assert_eq!(result_cell.fg, color);
-                    }
-                    // state, status, cpu, memory column
-                    (2..=3, 15..=77) => {
-                        assert_eq!(result_cell.fg, Color::Green);
-                    }
-                    // rx column
-                    (1..=3, 99..=108) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
-                    }
-                    // tx column
-                    (1..=3, 109..=118) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
-                    }
-                    _ => assert_eq!(result_cell.fg, Color::Reset),
-                }
-            }
-        }
-    }
-
     #[test]
     /// No containers, panel unselected, then selected, border color changes correctly
     fn test_draw_blocks_containers_none() {
@@ -1454,18 +1416,18 @@ mod tests {
 
     #[test]
     /// Containers panel drawn, selected line is bold, border is blue
-    fn test_draw_blocks_containers_some() {
+    fn test_draw_blocks_containers_selected_bold() {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
         let expected = [
-        "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│⚪  container_1   ✓ running     Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-        "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-        "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
-        "│                                                                                                                                │",
-        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-    ];
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  container_1   ✓ running   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+        ];
 
         setup
             .terminal
@@ -1529,11 +1491,11 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✓ running     Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   ✓ running   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
         ];
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
@@ -1546,6 +1508,7 @@ mod tests {
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
+
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
 
@@ -1555,19 +1518,19 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::LightCyan);
                     }
                     // name, id, image column
-                    (1..=3, 4..=14 | 78..=98) => {
+                    (1..=3, 4..=17 | 71..=91) => {
                         assert_eq!(result_cell.fg, Color::Blue);
                     }
                     // state, status, cpu, memory column
-                    (1..=3, 15..=77) => {
+                    (1..=3, 18..=70) => {
                         assert_eq!(result_cell.fg, Color::Green);
                     }
                     // rx column
-                    (1..=3, 99..=108) => {
+                    (1..=3, 92..=101) => {
                         assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
                     }
                     // tx column
-                    (1..=3, 109..=118) => {
+                    (1..=3, 102..=111) => {
                         assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
                     }
                     _ => assert_eq!(result_cell.fg, Color::Reset),
@@ -1587,12 +1550,12 @@ mod tests {
             ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
 
         let expected = [
-        "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│⚪  a_long_container_name_for_the…   ॥ paused      Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB        │",
-        "│   container_2                      ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2                          0.00 kB   0.00 kB        │",
-        "│   container_3                      ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3                          0.00 kB   0.00 kB        │",
-        "│                                                                                                                                                                        │",
-        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  a_long_container_name_for_the…   ॥ paused    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB                  │",
+            "│   container_2                      ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2                          0.00 kB   0.00 kB                  │",
+            "│   container_3                      ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3                          0.00 kB   0.00 kB                  │",
+            "│                                                                                                                                                                        │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
         setup.app_data.lock().containers.items[0].state = State::Paused;
@@ -1612,6 +1575,44 @@ mod tests {
         }
     }
 
+    // Check that the correct colour is applied to the state/status/cpu/memory section
+    fn check_expected(expected: [&str; 6], w: u16, _h: u16, setup: &TuiTestSetup, color: Color) {
+        for (row_index, result_row) in get_result(setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+
+                match (row_index, result_cell_index) {
+                    // border
+                    (0 | 5, _) | (1..=4, 0 | 129) => {
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    // name, id, image column
+                    (1..=3, 4..=17 | 71..=91) => {
+                        assert_eq!(result_cell.fg, Color::Blue);
+                    }
+                    // state, status, cpu, memory column of the first row
+                    (1, 18..=70) => {
+                        assert_eq!(result_cell.fg, color);
+                    }
+                    // state, status, cpu, memory column
+                    (2..=3, 4..=77) => {
+                        assert_eq!(result_cell.fg, Color::Green);
+                    }
+                    // rx column
+                    (1..=3, 92..=101) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                    }
+                    // tx column
+                    (1..=3, 102..=111) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                    }
+                    _ => assert_eq!(result_cell.fg, Color::Reset),
+                }
+            }
+        }
+    }
+
     #[test]
     /// When container is paused, correct colors displayed
     fn test_draw_blocks_containers_paused() {
@@ -1620,11 +1621,11 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│⚪  container_1   ॥ paused      Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-        "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-        "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
-        "│                                                                                                                                │",
-        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+            "│⚪  container_1   ॥ paused    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
         setup.app_data.lock().containers.items[0].state = State::Paused;
@@ -1647,9 +1648,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✖ dead        Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   ✖ dead      Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1662,6 +1663,7 @@ mod tests {
                 super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
             })
             .unwrap();
+
         check_expected(expected, w, h, &setup, Color::Red);
     }
 
@@ -1673,9 +1675,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✖ exited      Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   ✖ exited    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1699,9 +1701,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   removing      Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   removing    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1726,9 +1728,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ↻ restarting   Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB         │",
-            "│   container_2   ✓ running      Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB         │",
-            "│   container_3   ✓ running      Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB         │",
+            "│⚪  container_1   ↻ restarting   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                 │",
+            "│   container_2   ✓ running      Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                 │",
+            "│   container_3   ✓ running      Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                 │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1741,6 +1743,7 @@ mod tests {
                 super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
             })
             .unwrap();
+
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
@@ -1752,23 +1755,23 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::LightCyan);
                     }
                     // name, id, image column
-                    (1..=3, 4..=14 | 79..=99) => {
+                    (1..=3, 4..=17 | 74..=94) => {
                         assert_eq!(result_cell.fg, Color::Blue);
                     }
                     // state, status, cpu, memory column of the first row
-                    (1, 15..=78) => {
+                    (1, 18..=73) => {
                         assert_eq!(result_cell.fg, Color::LightGreen);
                     }
                     // state, status, cpu, memory column
-                    (2..=3, 15..=78) => {
+                    (2..=3, 18..=73) => {
                         assert_eq!(result_cell.fg, Color::Green);
                     }
                     // rx column
-                    (1..=3, 100..=109) => {
+                    (1..=3, 95..=104) => {
                         assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
                     }
                     // tx column
-                    (1..=3, 110..=119) => {
+                    (1..=3, 105..=114) => {
                         assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
                     }
                     _ => {
@@ -1787,9 +1790,9 @@ mod tests {
 
         let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ? unknown     Up 1 hour           00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB          │",
-            "│   container_2   ✓ running     Up 2 hour           00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB          │",
-            "│   container_3   ✓ running     Up 3 hour           00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB          │",
+            "│⚪  container_1   ? unknown   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
@@ -1802,8 +1805,10 @@ mod tests {
                 super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
             })
             .unwrap();
+
         check_expected(expected, w, h, &setup, Color::Red);
     }
+
     // ********** //
     // Logs panel //
     // ********** //
@@ -2358,7 +2363,7 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
-        let expected =  ["           name       state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "];
+        let expected =  ["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"];
         setup
             .terminal
             .draw(|f| {
@@ -2374,7 +2379,7 @@ mod tests {
                 assert_eq!(
                     result_cell.fg,
                     match result_cell_index {
-                        (2..=122) => Color::Black,
+                        (4..=124) => Color::Black,
                         _ => Color::White,
                     }
                 );
@@ -2390,7 +2395,7 @@ mod tests {
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
         let expected =
-            ["           name       state               status       cpu     ( h ) show help  "];
+            ["    name          state       status      cpu                    ( h ) show help"];
         setup
             .terminal
             .draw(|f| {
@@ -2406,7 +2411,7 @@ mod tests {
                 assert_eq!(
                     result_cell.fg,
                     match result_cell_index {
-                        (2..=62) => Color::Black,
+                        (4..=64) => Color::Black,
                         _ => Color::White,
                     }
                 );
@@ -2441,9 +2446,9 @@ mod tests {
                         assert_eq!(
                             result_cell.fg,
                             match result_cell_index {
-                                0 | 1 => Color::White,
+                                0..=3 | 125..=139 => Color::White,
                                 // given range | help section
-                                x if range.contains(&x) || (123..=139).contains(&x) => Color::White,
+                                x if range.contains(&x) => Color::Gray,
                                 _ => Color::Black,
                             }
                         );
@@ -2452,40 +2457,32 @@ mod tests {
             };
 
         // Name
-        test(&["         ▲ name       state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 1..=14, (Header::Name, SortedOrder::Asc));
-        test(&["         ▼ name       state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 1..=14, (Header::Name, SortedOrder::Desc));
-
+        test(&["    name ▲        state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 1..=17, (Header::Name, SortedOrder::Asc));
+        test(&["    name ▼        state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 1..=17, (Header::Name, SortedOrder::Desc));
         // state
-        test(&["           name     ▲ state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 15..=26, (Header::State, SortedOrder::Asc));
-        test(&["           name     ▼ state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 15..=26, (Header::State, SortedOrder::Desc));
-
+        test(&["    name          state ▲     status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"],18..=29, (Header::State, SortedOrder::Asc));
+        test(&["    name          state ▼     status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 18..=29, (Header::State, SortedOrder::Desc));
         // status
-        test(&["           name       state             ▲ status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 27..=47, (Header::Status, SortedOrder::Asc));
-        test(&["           name       state             ▼ status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 27..=47, (Header::Status, SortedOrder::Desc));
-
+        test(&["    name          state       status ▲    cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 30..=41, (Header::Status, SortedOrder::Asc));
+        test(&["    name          state       status ▼    cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"], 30..=41, (Header::Status, SortedOrder::Desc));
         // cpu
-        test(&["           name       state               status     ▲ cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 48..=57, (Header::Cpu, SortedOrder::Asc));
-        test(&["           name       state               status     ▼ cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 48..=57, (Header::Cpu, SortedOrder::Desc));
-
-        // mem
-        test(&["           name       state               status       cpu      ▲ memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 58..=77, (Header::Memory, SortedOrder::Asc));
-        test(&["           name       state               status       cpu      ▼ memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "], 58..=77, (Header::Memory, SortedOrder::Desc));
-
-        // id
-        test(&["           name       state               status       cpu        memory/limit       ▲ id     image      ↓ rx      ↑ tx    ( h ) show help  "], 78..=88, (Header::Id, SortedOrder::Asc));
-        test(&["           name       state               status       cpu        memory/limit       ▼ id     image      ↓ rx      ↑ tx    ( h ) show help  "], 78..=88, (Header::Id, SortedOrder::Desc));
-
+        test(&["    name          state       status      cpu ▲    memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"],42..=50, (Header::Cpu, SortedOrder::Asc));
+        test(&["    name          state       status      cpu ▼    memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"],42..=50, (Header::Cpu, SortedOrder::Desc));
+        // memory
+        test(&["    name          state       status      cpu      memory/limit ▲      id         image     ↓ rx      ↑ tx                   ( h ) show help"], 51..=70, (Header::Memory, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit ▼      id         image     ↓ rx      ↑ tx                   ( h ) show help"], 51..=70, (Header::Memory, SortedOrder::Desc));
+        //id
+        test(&["    name          state       status      cpu      memory/limit        id ▲       image     ↓ rx      ↑ tx                   ( h ) show help"], 71..=81, (Header::Id, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit        id ▼       image     ↓ rx      ↑ tx                   ( h ) show help"], 71..=81, (Header::Id, SortedOrder::Desc));
         // image
-        test(&["           name       state               status       cpu        memory/limit         id   ▲ image      ↓ rx      ↑ tx    ( h ) show help  "], 89..=98, (Header::Image, SortedOrder::Asc));
-        test(&["           name       state               status       cpu        memory/limit         id   ▼ image      ↓ rx      ↑ tx    ( h ) show help  "], 89..=98, (Header::Image, SortedOrder::Desc));
-
+        test(&["    name          state       status      cpu      memory/limit        id         image ▲   ↓ rx      ↑ tx                   ( h ) show help"], 82..=91, (Header::Image, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit        id         image ▼   ↓ rx      ↑ tx                   ( h ) show help"], 82..=91, (Header::Image, SortedOrder::Desc));
         // rx
-        test(&["           name       state               status       cpu        memory/limit         id     image    ▲ ↓ rx      ↑ tx    ( h ) show help  "], 99..=108, (Header::Rx, SortedOrder::Asc));
-        test(&["           name       state               status       cpu        memory/limit         id     image    ▼ ↓ rx      ↑ tx    ( h ) show help  "], 99..=108, (Header::Rx, SortedOrder::Desc));
-
+        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx ▲    ↑ tx                   ( h ) show help"], 92..=101, (Header::Rx, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx ▼    ↑ tx                   ( h ) show help"], 92..=101, (Header::Rx, SortedOrder::Desc));
         // tx
-        test(&["           name       state               status       cpu        memory/limit         id     image      ↓ rx    ▲ ↑ tx    ( h ) show help  "], 109..=118, (Header::Tx, SortedOrder::Asc));
-        test(&["           name       state               status       cpu        memory/limit         id     image      ↓ rx    ▼ ↑ tx    ( h ) show help  "], 109..=118, (Header::Tx, SortedOrder::Desc));
+        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx ▲                 ( h ) show help"], 102..=111, (Header::Tx, SortedOrder::Asc));
+        test(&["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx ▼                 ( h ) show help"], 102..=111, (Header::Tx, SortedOrder::Desc));
     }
 
     #[test]
@@ -2497,14 +2494,14 @@ mod tests {
         setup.gui_state.lock().next_loading(uuid);
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
+        let expected =   [" ⠙  name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                   ( h ) show help"];
+
         setup
             .terminal
             .draw(|f| {
                 super::heading_bar(setup.area, f, &fd, &setup.gui_state);
             })
             .unwrap();
-
-        let expected =   [" ⠙         name       state               status       cpu        memory/limit         id     image      ↓ rx      ↑ tx    ( h ) show help  "];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
@@ -2514,7 +2511,7 @@ mod tests {
                 assert_eq!(
                     result_cell.fg,
                     match result_cell_index {
-                        (2..=122) => Color::Black,
+                        (4..=124) => Color::Black,
                         _ => Color::White,
                     }
                 );
@@ -3265,36 +3262,36 @@ mod tests {
             });
 
         let expected = [
-        "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
-        "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
-        "│⚪  container_1   ✓ running     Up 1 hour           03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
-        "│   container_2   ✓ running     Up 2 hour           00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                      ││  restart     │",
-        "│   container_3   ✓ running     Up 3 hour           00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                      ││  stop        │",
-        "│                                                                                                                                              ││  delete      │",
-        "│                                                                                                                                              ││              │",
-        "│                                                                                                                                              ││              │",
-        "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
-        "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│  line 1                                                                                                                                                      │",
-        "│  line 2                                                                                                                                                      │",
-        "│▶ line 3                                                                                                                                                      │",
-        "│                                                                                                                                                              │",
-        "│                                                                                                                                                              │",
-        "│                                                                                                                                                              │",
-        "│                                                                                                                                                              │",
-        "│                                                                                                                                                              │",
-        "│                                                                                                                                                              │",
-        "│                                                                                                                                                              │",
-        "│                                                                                                                                                              │",
-        "│                                                                                                                                                              │",
-        "│                                                                                                                                                              │",
-        "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        "╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
-        "│10.00%│     ••••                                               ││100.00 kB│     •••                                             ││       ip   private   public│",
-        "│      │  •••   •                                               ││         │  •••  •                                             ││               8001         │",
-        "│      │••       •••                                            ││         │••      •••                                          ││127.0.0.1      8003     8003│",
-        "│      │                                                        ││         │                                                     ││                            │",
-        "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
+            "    name          state       status      cpu      memory/limit          id         image     ↓ rx      ↑ tx                                     ( h ) show help",
+            "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
+            "│⚪  container_1   ✓ running   Up 1 hour   03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                                ││▶ pause       │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                                ││  restart     │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                                ││  stop        │",
+            "│                                                                                                                                              ││  delete      │",
+            "│                                                                                                                                              ││              │",
+            "│                                                                                                                                              ││              │",
+            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
+            "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│  line 1                                                                                                                                                      │",
+            "│  line 2                                                                                                                                                      │",
+            "│▶ line 3                                                                                                                                                      │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+            "╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
+            "│10.00%│     ••••                                               ││100.00 kB│     •••                                             ││       ip   private   public│",
+            "│      │  •••   •                                               ││         │  •••  •                                             ││               8001         │",
+            "│      │••       •••                                            ││         │••      •••                                          ││127.0.0.1      8003     8003│",
+            "│      │                                                        ││         │                                                     ││                            │",
+            "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
         ];
         setup
             .terminal
@@ -3329,36 +3326,36 @@ mod tests {
             });
 
         let expected = [
-                "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
-                "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
-                "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
-                "│   container_2   ✓ running            Up 2 hour    00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                      ││  restart     │",
-                "│   container_3   ✓ running            Up 3 hour    00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                      ││  stop        │",
-                "│                                                                                                                                              ││  delete      │",
-                "│                                                                                                                                              ││              │",
-                "│                                                                                                                                              ││              │",
-                "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
-                "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-                "│  line 1                                                                                                                                                      │",
-                "│  line 2                                                                                                                                                      │",
-                "│▶ line 3                                                                                                                                                      │",
-                "│                                                                                                                                                              │",
-                "│                                                                                                                                                              │",
-                "│                                                                                                                                                              │",
-                "│                                                                                                                                                              │",
-                "│                                                                                                                                                              │",
-                "│                                                                                                                                                              │",
-                "│                                                                                                                                                              │",
-                "│                                                                                                                                                              │",
-                "│                                                                                                                                                              │",
-                "│                                                                                                                                                              │",
-                "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-                "╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
-                "│10.00%│     ••••                                               ││100.00 kB│     •••                                             ││       ip   private   public│",
-                "│      │  •••   •                                               ││         │  •••  •                                             ││               8001         │",
-                "│      │••       •••                                            ││         │••      •••                                          ││                            │",
-                "│      │                                                        ││         │                                                     ││                            │",
-                "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
+            "    name          state       status      cpu      memory/limit          id         image     ↓ rx      ↑ tx                                     ( h ) show help",
+            "╭ Containers 1/3 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
+            "│⚪  container_1   ✓ running   Up 1 hour   03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                                ││▶ pause       │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%    0.00 kB /  0.00 kB          2   image_2   0.00 kB   0.00 kB                                ││  restart     │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%    0.00 kB /  0.00 kB          3   image_3   0.00 kB   0.00 kB                                ││  stop        │",
+            "│                                                                                                                                              ││  delete      │",
+            "│                                                                                                                                              ││              │",
+            "│                                                                                                                                              ││              │",
+            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────────╯",
+            "╭ Logs 3/3 - container_1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│  line 1                                                                                                                                                      │",
+            "│  line 2                                                                                                                                                      │",
+            "│▶ line 3                                                                                                                                                      │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "│                                                                                                                                                              │",
+            "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+            "╭───────────────────────── cpu 03.00% ──────────────────────────╮╭─────────────────────── memory 30.00 kB ───────────────────────╮╭────────── ports ───────────╮",
+            "│10.00%│     ••••                                               ││100.00 kB│     •••                                             ││       ip   private   public│",
+            "│      │  •••   •                                               ││         │  •••  •                                             ││               8001         │",
+            "│      │••       •••                                            ││         │••      •••                                          ││                            │",
+            "│      │                                                        ││         │                                                     ││                            │",
+            "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
                 ];
         setup
             .terminal
@@ -3383,9 +3380,9 @@ mod tests {
         setup.app_data.lock().filter_term_push('1');
 
         let expected = [
-            "           name       state               status       cpu          memory/limit         id     image      ↓ rx      ↑ tx                      ( h ) show help  ",
+            "    name          state       status      cpu      memory/limit          id         image     ↓ rx      ↑ tx                                     ( h ) show help",
             "╭ Containers 1/1 - filtered ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────────╮",
-            "│⚪  container_1   ✓ running            Up 1 hour    03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                      ││▶ pause       │",
+            "│⚪  container_1   ✓ running   Up 1 hour   03.00%   30.00 kB / 30.00 kB          1   image_1   0.00 kB   0.00 kB                                ││▶ pause       │",
             "│                                                                                                                                              ││  restart     │",
             "│                                                                                                                                              ││  stop        │",
             "│                                                                                                                                              ││  delete      │",
@@ -3412,7 +3409,7 @@ mod tests {
             "│      │•        ••                                             ││         │•       ••                                           ││                            │",
             "│      │                                                        ││         │                                                     ││                            │",
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
-            " Esc  clear  ← by →   Name  Image  Status  All  term: r_1                                                                                                       "
+            " Esc  clear  ← by →   Name  Image  Status  All  term: r_1                                                                                                       ",
             ];
         setup
             .terminal
@@ -3451,36 +3448,36 @@ mod tests {
             ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
 
         let expected = [
-        "                              name       state               status       cpu          memory/limit         id                            image      ↓ rx      ↑ tx          ( h ) show help  ",
-        "╭ Containers 1/3 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭─────────────────╮",
-        "│⚪  a_long_container_name_for_the…   ✓ running     Up 1 hour           03.00%   30.00 kB / 30.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB       ││▶ pause          │",
-        "│   container_2                      ✓ running     Up 2 hour           00.00%    0.00 kB /  0.00 kB          2   image_2                          0.00 kB   0.00 kB       ││  restart        │",
-        "│   container_3                      ✓ running     Up 3 hour           00.00%    0.00 kB /  0.00 kB          3   image_3                          0.00 kB   0.00 kB       ││  stop           │",
-        "│                                                                                                                                                                         ││  delete         │",
-        "│                                                                                                                                                                         ││                 │",
-        "│                                                                                                                                                                         ││                 │",
-        "╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰─────────────────╯",
-        "╭ Logs 3/3 - a_long_container_name_for_the_purposes_of_this_test ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-        "│  line 1                                                                                                                                                                                    │",
-        "│  line 2                                                                                                                                                                                    │",
-        "│▶ line 3                                                                                                                                                                                    │",
-        "│                                                                                                                                                                                            │",
-        "│                                                                                                                                                                                            │",
-        "│                                                                                                                                                                                            │",
-        "│                                                                                                                                                                                            │",
-        "│                                                                                                                                                                                            │",
-        "│                                                                                                                                                                                            │",
-        "│                                                                                                                                                                                            │",
-        "│                                                                                                                                                                                            │",
-        "│                                                                                                                                                                                            │",
-        "│                                                                                                                                                                                            │",
-        "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        "╭───────────────────────────────── cpu 03.00% ─────────────────────────────────╮╭────────────────────────────── memory 30.00 kB ───────────────────────────────╮╭────────── ports ───────────╮",
-        "│10.00%│       ••••                                                            ││100.00 kB│      •••••                                                         ││       ip   private   public│",
-        "│      │   ••••   •                                                            ││         │   •••    •                                                         ││               8001         │",
-        "│      │•••        ••••                                                        ││         │•••        •••                                                      ││127.0.0.1      8003     8003│",
-        "│      │                                                                       ││         │                                                                    ││                            │",
-        "╰──────────────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
+            "    name                             state       status      cpu      memory/limit          id         image                            ↓ rx      ↑ tx                         ( h ) show help",
+            "╭ Containers 1/3 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭─────────────────╮",
+            "│⚪  a_long_container_name_for_the…   ✓ running   Up 1 hour   03.00%   30.00 kB / 30.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB                 ││▶ pause          │",
+            "│   container_2                      ✓ running   Up 2 hour   00.00%    0.00 kB /  0.00 kB          2   image_2                          0.00 kB   0.00 kB                 ││  restart        │",
+            "│   container_3                      ✓ running   Up 3 hour   00.00%    0.00 kB /  0.00 kB          3   image_3                          0.00 kB   0.00 kB                 ││  stop           │",
+            "│                                                                                                                                                                         ││  delete         │",
+            "│                                                                                                                                                                         ││                 │",
+            "│                                                                                                                                                                         ││                 │",
+            "╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰─────────────────╯",
+            "╭ Logs 3/3 - a_long_container_name_for_the_purposes_of_this_test ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│  line 1                                                                                                                                                                                    │",
+            "│  line 2                                                                                                                                                                                    │",
+            "│▶ line 3                                                                                                                                                                                    │",
+            "│                                                                                                                                                                                            │",
+            "│                                                                                                                                                                                            │",
+            "│                                                                                                                                                                                            │",
+            "│                                                                                                                                                                                            │",
+            "│                                                                                                                                                                                            │",
+            "│                                                                                                                                                                                            │",
+            "│                                                                                                                                                                                            │",
+            "│                                                                                                                                                                                            │",
+            "│                                                                                                                                                                                            │",
+            "│                                                                                                                                                                                            │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+            "╭───────────────────────────────── cpu 03.00% ─────────────────────────────────╮╭────────────────────────────── memory 30.00 kB ───────────────────────────────╮╭────────── ports ───────────╮",
+            "│10.00%│       ••••                                                            ││100.00 kB│      •••••                                                         ││       ip   private   public│",
+            "│      │   ••••   •                                                            ││         │   •••    •                                                         ││               8001         │",
+            "│      │•••        ••••                                                        ││         │•••        •••                                                      ││127.0.0.1      8003     8003│",
+            "│      │                                                                       ││         │                                                                    ││                            │",
+            "╰──────────────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
         ];
         setup
             .terminal
