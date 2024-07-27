@@ -1647,12 +1647,12 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
 
         let expected = [
-"╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-"│⚪  container_1   ✖ dead      Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-"│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-"│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-"│                                                                                                                                │",
-"╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  container_1   ✖ dead      Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
+            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
+            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Dead;
         let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
