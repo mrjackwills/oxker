@@ -1867,7 +1867,7 @@ mod tests {
         // Change log state to no longer be at the end
         app_data.log_previous();
         let result = app_data.get_log_title();
-        assert_eq!(result, " 2/3 - container_2 - image_2" );
+        assert_eq!(result, " 2/3 - container_2 - image_2");
     }
 
     #[test]
