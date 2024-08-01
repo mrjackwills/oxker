@@ -101,6 +101,7 @@ In application controls
 | ```( enter )```| Run selected docker command.|
 | ```( 1-9 )``` | Sort containers by heading, clicking on headings also sorts the selected column. |
 | ```( 0 )``` | Stop sorting.|
+| ```( F1 )``` or ```( / )``` | Enter filter mode. |
 | ```( e )``` | Exec into the selected container - not available on Windows.|
 | ```( h )``` | Toggle help menu.|
 | ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
@@ -167,10 +168,10 @@ cargo test
 
 Run some example docker images
 
-using docker-compose.yml;
+using docker/docker-compose.yml;
 
 ```shell
-docker compose -f docker-compose.yml up -d
+docker compose -f ./docker/docker-compose.yml up -d
 ```
 
 or individually

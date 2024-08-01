@@ -167,10 +167,18 @@ async fn main() {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::many_single_char_names, unused)]
 mod tests {
+    use std::{
+        collections::{HashSet, VecDeque},
+        vec,
+    };
+
     use bollard::service::{ContainerSummary, Port};
 
     use crate::{
-        app_data::{AppData, ContainerId, ContainerItem, ContainerPorts, State, StatefulList},
+        app_data::{
+            AppData, ContainerId, ContainerItem, ContainerPorts, ContainerStatus, Filter,
+            RunningState, State, StatefulList,
+        },
         parse_args::CliArgs,
     };
 
@@ -201,16 +209,18 @@ mod tests {
                 private: u16::try_from(index).unwrap_or(1) + 8000,
                 public: None,
             }],
-            State::Running,
-            format!("Up {index} hour"),
+            State::Running(RunningState::Healthy),
+            ContainerStatus::from(format!("Up {index} hour")),
         )
     }
 
     pub fn gen_appdata(containers: &[ContainerItem]) -> AppData {
         AppData {
             containers: StatefulList::new(containers.to_vec()),
+            hidden_containers: vec![],
             error: None,
             sorted_by: None,
+            filter: Filter::new(),
             args: gen_args(),
         }
     }

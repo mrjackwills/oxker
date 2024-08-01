@@ -3,6 +3,7 @@ use core::fmt;
 use parking_lot::Mutex;
 use ratatui::widgets::{ListItem, ListState};
 use std::{
+    hash::Hash,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -54,12 +55,73 @@ impl fmt::Display for Header {
     }
 }
 
+#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FilterBy {
+    #[default]
+    Name,
+    Image,
+    Status,
+    All,
+}
+
+/// Convert errors into strings to display
+impl fmt::Display for FilterBy {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Name => "Name",
+                Self::Image => "Image",
+                Self::Status => "Status",
+                Self::All => "All",
+            }
+        )
+    }
+}
+
+impl FilterBy {
+    const fn next(self) -> Option<Self> {
+        match self {
+            Self::Name => Some(Self::Image),
+            Self::Image => Some(Self::Status),
+            Self::Status => Some(Self::All),
+            Self::All => None,
+        }
+    }
+
+    const fn prev(self) -> Option<Self> {
+        match self {
+            Self::Name => None,
+            Self::Image => Some(Self::Name),
+            Self::Status => Some(Self::Image),
+            Self::All => Some(Self::Status),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Filter {
+    pub term: Option<String>,
+    pub by: FilterBy,
+}
+impl Filter {
+    pub fn new() -> Self {
+        Self {
+            term: None,
+            by: FilterBy::default(),
+        }
+    }
+}
+
 /// Global app_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
 #[cfg(not(test))]
 pub struct AppData {
     containers: StatefulList<ContainerItem>,
     error: Option<AppError>,
+    filter: Filter,
+    hidden_containers: Vec<ContainerItem>,
     sorted_by: Option<(Header, SortedOrder)>,
     pub args: CliArgs,
 }
@@ -67,10 +129,12 @@ pub struct AppData {
 #[derive(Debug, Clone)]
 #[cfg(test)]
 pub struct AppData {
+    pub args: CliArgs,
     pub containers: StatefulList<ContainerItem>,
     pub error: Option<AppError>,
+    pub filter: Filter,
+    pub hidden_containers: Vec<ContainerItem>,
     pub sorted_by: Option<(Header, SortedOrder)>,
-    pub args: CliArgs,
 }
 
 impl AppData {
@@ -79,8 +143,10 @@ impl AppData {
         Self {
             args,
             containers: StatefulList::new(vec![]),
+            hidden_containers: vec![],
             error: None,
             sorted_by: None,
+            filter: Filter::new(),
         }
     }
 
@@ -91,6 +157,126 @@ impl AppData {
             .duration_since(UNIX_EPOCH)
             .expect("In our known reality, this error should never occur")
             .as_secs()
+    }
+
+    /// Filter related methods
+
+    /// Get the current filter term
+    pub const fn get_filter_term(&self) -> Option<&String> {
+        self.filter.term.as_ref()
+    }
+
+    /// Get the current filter by choice
+    pub const fn get_filter_by(&self) -> FilterBy {
+        self.filter.by
+    }
+
+    /// Check if a given container can be inserted into the "visible" list, based on current filter term and filter_by
+    fn can_insert(&self, container: &ContainerItem) -> bool {
+        self.filter.term.as_ref().map_or(true, |term| {
+            let term = term.to_lowercase();
+            match self.filter.by {
+                FilterBy::All => {
+                    container.name.contains(&term)
+                        || container.image.contains(&term)
+                        || container.status.contains(&term)
+                }
+                FilterBy::Image => container.image.contains(&term),
+                FilterBy::Name => container.name.contains(&term),
+                FilterBy::Status => container.status.contains(&term),
+            }
+        })
+    }
+
+    /// Remove items from the containers list based on the filter term, and insert into a "hidden" vec
+    /// sets the state to start if any filtering has occurred
+    /// Also search in the "hidden" vec for items and insert back into the main containers vec
+    fn filter_containers(&mut self) {
+        let pre_len = self.get_container_len();
+
+        if !self.hidden_containers.is_empty() {
+            let (mut new_items, tmp_items): (Vec<_>, Vec<_>) = self
+                .hidden_containers
+                .iter()
+                .cloned()
+                .partition(|item| self.can_insert(item));
+
+            while let Some(x) = new_items.pop() {
+                self.containers.items.push(x);
+            }
+            self.hidden_containers = tmp_items;
+        }
+
+        let (new_items, tmp_items) = self
+            .containers
+            .items
+            .iter()
+            .cloned()
+            .partition(|item| self.can_insert(item));
+
+        self.containers.items = new_items;
+        self.hidden_containers.extend(tmp_items);
+
+        self.sort_containers();
+        if self.get_container_len() != pre_len {
+            self.containers.start();
+        }
+    }
+
+    /// Re-filter the containers, used after the filter.by has been changed
+    fn re_filter(&mut self) {
+        self.containers.items.append(&mut self.hidden_containers);
+        self.hidden_containers = vec![];
+        self.filter_containers();
+    }
+
+    /// Set a single char into the filter term
+    pub fn filter_term_push(&mut self, c: char) {
+        if let Some(term) = self.filter.term.as_mut() {
+            term.push(c);
+        } else {
+            self.filter.term = Some(format!("{c}"));
+        };
+        self.filter_containers();
+    }
+
+    /// Delete the final char of the filter term
+    pub fn filter_term_pop(&mut self) {
+        if let Some(term) = self.filter.term.as_mut() {
+            // should now search for items in the tmp vec, and insert into containers if found
+            term.pop();
+            if term.is_empty() {
+                self.filter.term = None;
+            }
+        }
+        self.filter_containers();
+    }
+
+    // change the filter_by option
+    pub fn filter_by_next(&mut self) {
+        if let Some(by) = self.filter.by.next() {
+            self.filter.by = by;
+            self.re_filter();
+        }
+    }
+
+    // change the filter_by option
+    pub fn filter_by_prev(&mut self) {
+        if let Some(by) = self.filter.by.prev() {
+            self.filter.by = by;
+            self.re_filter();
+        }
+    }
+
+    /// Remove the filter completely
+    pub fn filter_term_clear(&mut self) {
+        self.filter.term = None;
+        while let Some(i) = self.hidden_containers.pop() {
+            if self.get_container_by_id(&i.id).is_none() {
+                self.containers.items.push(i);
+            };
+        }
+        self.sort_containers();
     }
 
     /// Container sort related methods
@@ -149,7 +335,8 @@ impl AppData {
                     Header::Status => item_ord
                         .0
                         .status
-                        .cmp(&item_ord.1.status)
+                        .get()
+                        .cmp(item_ord.1.status.get())
                         .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
                     Header::Cpu => item_ord
                         .0
@@ -206,7 +393,7 @@ impl AppData {
 
     /// Container state methods
 
-    /// Just get the total number of containers
+    /// Get the total number of none "hidden" containers
     pub fn get_container_len(&self) -> usize {
         self.containers.items.len()
     }
@@ -216,9 +403,14 @@ impl AppData {
         &self.containers.items
     }
 
-    /// Get title for containers section
+    /// Get title for containers section, add a suffix indicating if the containers are currently under filter
     pub fn container_title(&self) -> String {
-        self.containers.get_state_title()
+        let suffix = if !self.hidden_containers.is_empty() && !self.containers.items.is_empty() {
+            " - filtered"
+        } else {
+            ""
+        };
+        format!("{}{}", self.containers.get_state_title(), suffix)
     }
 
     /// Select the first container
@@ -260,35 +452,35 @@ impl AppData {
         let mut longest_private = 10;
         let mut longest_public = 9;
 
-        for item in &self.containers.items {
-            // if let Some(ports) = item.ports.as_ref() {
-            longest_ip = longest_ip.max(
-                item.ports
-                    .iter()
-                    .map(ContainerPorts::len_ip)
-                    .max()
-                    .unwrap_or(3),
-            );
-            longest_private = longest_private.max(
-                item.ports
-                    .iter()
-                    .map(ContainerPorts::len_private)
-                    .max()
-                    .unwrap_or(8),
-            );
-            longest_public = longest_public.max(
-                item.ports
-                    .iter()
-                    .map(ContainerPorts::len_public)
-                    .max()
-                    .unwrap_or(6),
-            );
+        for item in [&self.containers.items, &self.hidden_containers] {
+            for item in item {
+                longest_ip = longest_ip.max(
+                    item.ports
+                        .iter()
+                        .map(ContainerPorts::len_ip)
+                        .max()
+                        .unwrap_or(3),
+                );
+                longest_private = longest_private.max(
+                    item.ports
+                        .iter()
+                        .map(ContainerPorts::len_private)
+                        .max()
+                        .unwrap_or(8),
+                );
+                longest_public = longest_public.max(
+                    item.ports
+                        .iter()
+                        .map(ContainerPorts::len_public)
+                        .max()
+                        .unwrap_or(6),
+                );
+            }
         }
-        // }
 
         (longest_ip, longest_private, longest_public)
-        // )
     }
+
     /// Get Option of the current selected container's ports, sorted by private port
     pub fn get_selected_ports(&mut self) -> Option<(Vec<ContainerPorts>, State)> {
         if let Some(item) = self.get_mut_selected_container() {
@@ -307,9 +499,14 @@ impl AppData {
             .and_then(|i| self.containers.items.get_mut(i))
     }
 
-    /// return a mutable container by given id
+    /// Get a mutable container by given id
     fn get_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
         self.containers.items.iter_mut().find(|i| &i.id == id)
+    }
+
+    /// Get a mutable container by given id in the tmp_container vec
+    fn get_hidden_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
+        self.hidden_containers.iter_mut().find(|i| &i.id == id)
     }
 
     /// Get the ContainerName of by ID
@@ -333,6 +530,7 @@ impl AppData {
         self.get_selected_container()
             .map(|i| (i.id.clone(), i.state, i.name.get().to_owned()))
     }
+
     /// Selected DockerCommand methods
 
     /// Get the current selected docker command
@@ -392,8 +590,8 @@ impl AppData {
     /// Logs related methods
 
     /// Get the title for log panel for selected container, will be either
-    /// 1) "logs x/x - container_name" where container_name is 32 chars max
-    /// 2) "logs - container_name" when no logs found, again 32 chars max
+    /// 1) "logs x/x - container_name - container_image"
+    /// 2) "logs - container_name - container_image" when no logs found
     /// 3) "" no container currently selected - aka no containers on system
     pub fn get_log_title(&self) -> String {
         self.get_selected_container()
@@ -404,7 +602,7 @@ impl AppData {
                 } else {
                     format!("{logs_len} ")
                 };
-                format!("{}- {}", prefix, ci.name.get())
+                format!("{}- {} - {}", prefix, ci.name.get(), ci.image.get())
             })
     }
 
@@ -467,17 +665,17 @@ impl AppData {
 
     /// Error related methods
 
-    /// return single app_state error
+    /// Get single app_state error
     pub const fn get_error(&self) -> Option<AppError> {
         self.error
     }
 
-    /// remove single app_state error
+    /// Remove single app_state error
     pub fn remove_error(&mut self) {
         self.error = None;
     }
 
-    /// insert single app_state error
+    /// Insert single app_state error
     pub fn set_error(&mut self, error: AppError, gui_state: &Arc<Mutex<GuiState>>, status: Status) {
         gui_state.lock().status_push(status);
         self.error = Some(error);
@@ -498,43 +696,54 @@ impl AppData {
 
     /// Find the widths for the strings in the containers panel.
     /// So can display nicely and evenly
+    /// Searches in both contains & hidden_containers
     pub fn get_width(&self) -> Columns {
         let mut columns = Columns::new();
         let count = |x: &str| u8::try_from(x.chars().count()).unwrap_or(12);
 
         // Should probably find a refactor here somewhere
-        for container in &self.containers.items {
-            let cpu_count = count(
-                &container
-                    .cpu_stats
-                    .back()
-                    .unwrap_or(&CpuStats::default())
-                    .to_string(),
-            );
+        for container in [&self.containers.items, &self.hidden_containers] {
+            for container in container {
+                let cpu_count = count(
+                    &container
+                        .cpu_stats
+                        .back()
+                        .unwrap_or(&CpuStats::default())
+                        .to_string(),
+                );
 
-            let mem_current_count = count(
-                &container
-                    .mem_stats
-                    .back()
-                    .unwrap_or(&ByteStats::default())
-                    .to_string(),
-            );
+                let mem_current_count = count(
+                    &container
+                        .mem_stats
+                        .back()
+                        .unwrap_or(&ByteStats::default())
+                        .to_string(),
+                );
 
-            // Issue here!
-            columns.cpu.1 = columns.cpu.1.max(cpu_count);
-            columns.image.1 = columns.image.1.max(count(&container.image.to_string()));
-            columns.mem.1 = columns.mem.1.max(mem_current_count);
-            columns.mem.2 = columns.mem.2.max(count(&container.mem_limit.to_string()));
-            columns.name.1 = columns.name.1.max(count(&container.name.to_string()));
-            columns.net_rx.1 = columns.net_rx.1.max(count(&container.rx.to_string()));
-            columns.net_tx.1 = columns.net_tx.1.max(count(&container.tx.to_string()));
-            columns.state.1 = columns.state.1.max(count(&container.state.to_string()));
-            columns.status.1 = columns.status.1.max(count(&container.status));
+                columns.cpu.1 = columns.cpu.1.max(cpu_count);
+                columns.image.1 = columns.image.1.max(count(&container.image.to_string()));
+                columns.mem.1 = columns.mem.1.max(mem_current_count);
+                columns.mem.2 = columns.mem.2.max(count(&container.mem_limit.to_string()));
+                columns.name.1 = columns.name.1.max(count(&container.name.to_string()));
+                columns.net_rx.1 = columns.net_rx.1.max(count(&container.rx.to_string()));
+                columns.net_tx.1 = columns.net_tx.1.max(count(&container.tx.to_string()));
+                columns.state.1 = columns.state.1.max(count(&container.state.to_string()));
+                columns.status.1 = columns.status.1.max(count(container.status.get()));
+            }
         }
         columns
     }
 
     /// Update related methods
+
+    /// Get mutable reference to a container in the containers vec & the hidden_containers vec
+    fn get_any_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
+        if self.get_hidden_container_by_id(id).is_some() {
+            self.get_hidden_container_by_id(id)
+        } else {
+            self.get_container_by_id(id)
+        }
+    }
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
     /// Will also, if a sort is set, sort the containers
@@ -547,7 +756,7 @@ impl AppData {
         rx: u64,
         tx: u64,
     ) {
-        if let Some(container) = self.get_container_by_id(id) {
+        if let Some(container) = self.get_any_container_by_id(id) {
             if container.cpu_stats.len() >= 60 {
                 container.cpu_stats.pop_front();
             }
@@ -628,12 +837,13 @@ impl AppData {
                     .as_ref()
                     .map_or(false, |i| i.starts_with(ENTRY_POINT));
 
-                let state = State::from(i.state.as_ref().map_or("dead", |z| z));
-                let status = i
-                    .status
-                    .as_ref()
-                    .map_or(String::new(), std::clone::Clone::clone);
+                let status = ContainerStatus::from(
+                    i.status
+                        .as_ref()
+                        .map_or(String::new(), std::clone::Clone::clone),
+                );
 
+                let state = State::from((i.state.as_ref().map_or("dead", |z| z), &status));
                 let image = i
                     .image
                     .as_ref()
@@ -642,8 +852,8 @@ impl AppData {
                 let created = i
                     .created
                     .map_or(0, |i| u64::try_from(i).unwrap_or_default());
-                // If container info already in containers Vec, then just update details
-                if let Some(item) = self.get_container_by_id(&id) {
+
+                if let Some(item) = self.get_any_container_by_id(&id) {
                     if item.name.get() != name {
                         item.name.set(name);
                     };
@@ -668,24 +878,29 @@ impl AppData {
                         item.image.set(image);
                     };
                 } else {
-                    // container not known, so make new ContainerItem and push into containers Vec
+                    // container not known, so make new ContainerItem and push into containers Ve
                     let container = ContainerItem::new(
                         created, id, image, is_oxker, name, ports, state, status,
                     );
-                    self.containers.items.push(container);
+                    let can_insert = self.can_insert(&container);
+                    if can_insert {
+                        self.containers.items.push(container);
+                    } else {
+                        self.hidden_containers.push(container);
+                    }
                 }
             }
         }
     }
 
-    /// update logs of a given container, based on id
+    /// Update logs of a given container, based on id
     pub fn update_log_by_id(&mut self, logs: Vec<String>, id: &ContainerId) {
         let color = self.args.color;
         let raw = self.args.raw;
 
         let timestamp = self.args.timestamp;
 
-        if let Some(container) = self.get_container_by_id(id) {
+        if let Some(container) = self.get_any_container_by_id(id) {
             if !container.is_oxker {
                 container.last_updated = Self::get_systemtime();
                 let current_len = container.logs.len();
@@ -770,7 +985,7 @@ mod tests {
             i.state = State::Exited;
         }
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("2")) {
-            i.state = State::Running;
+            i.state = State::Running(RunningState::Healthy);
         }
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("3")) {
             i.state = State::Paused;
@@ -804,11 +1019,12 @@ mod tests {
         assert_eq!(result, &containers);
 
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("2")) {
-            "Exited (0) 10 minutes ago".clone_into(&mut i.status);
+            ContainerStatus::from("Exited (0) 10 minutes ago".to_owned()).clone_into(&mut i.status);
         }
 
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("3")) {
-            "Up 2 hours (Paused)".clone_into(&mut i.status);
+            // "Up 2 hours (Paused)".clone_into(&mut i.status);
+            ContainerStatus::from("Up 2 hours (Paused)".to_owned()).clone_into(&mut i.status);
         }
 
         // Sort by status
@@ -1129,7 +1345,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("1"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_1".to_owned()
             ))
         );
@@ -1143,7 +1359,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("1"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_1".to_owned()
             ))
         );
@@ -1171,7 +1387,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("2"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_2".to_owned()
             ))
         );
@@ -1196,7 +1412,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("3"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_3".to_owned()
             ))
         );
@@ -1210,7 +1426,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("3"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_3".to_owned()
             ))
         );
@@ -1291,7 +1507,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("3"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_3".to_owned()
             ))
         );
@@ -1381,7 +1597,7 @@ mod tests {
                     "container_1".to_owned(),
                     vec![],
                     state,
-                    "Up 1 hour".to_owned(),
+                    ContainerStatus::from("Up 1 hour".to_owned()),
                 )
             };
             let mut app_data = gen_appdata(&[gen_item_state(state)]);
@@ -1422,7 +1638,7 @@ mod tests {
             &mut vec![DockerControls::Stop, DockerControls::Delete],
         );
         test_state(
-            State::Running,
+            State::Running(RunningState::Healthy),
             &mut vec![
                 DockerControls::Pause,
                 DockerControls::Restart,
@@ -1431,6 +1647,163 @@ mod tests {
             ],
         );
         test_state(State::Unknown, &mut vec![DockerControls::Delete]);
+    }
+
+    // ****** //
+    // Filter //
+    // ****** //
+
+    #[test]
+    /// Data is filtered correctly by name
+    fn test_app_data_filter_by_name() {
+        let (_, containers) = gen_containers();
+
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        app_data.filter_term_push('_');
+        app_data.filter_term_push('2');
+
+        assert_eq!(app_data.get_filter_term(), Some(&"_2".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        // Can insert checks against the current filter term
+        assert!(app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[2]));
+    }
+
+    #[test]
+    /// Data is filtered correctly by image
+    fn test_app_data_filter_by_image() {
+        let (_, containers) = gen_containers();
+
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        for c in ['i', 'm', 'a', 'g', 'e', '_', '2'] {
+            app_data.filter_term_push(c);
+        }
+        // app_data.filter_term_push('2');
+        app_data.filter_by_next();
+
+        assert_eq!(app_data.get_filter_by(), FilterBy::Image);
+        assert_eq!(app_data.get_filter_term(), Some(&"image_2".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        assert!(!app_data.can_insert(&containers[0]));
+        assert!(app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
+    }
+
+    #[test]
+    /// Data is filtered correctly by status
+    fn test_app_data_filter_by_status() {
+        let (_, mut containers) = gen_containers();
+        ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        app_data.filter_term_push('x');
+
+        app_data.filter_by_next();
+        app_data.filter_by_next();
+
+        assert_eq!(app_data.get_filter_by(), FilterBy::Status);
+        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        assert!(app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
+    }
+
+    #[test]
+    /// Data is filtered correctly by all
+    fn test_app_data_filter_by_all() {
+        let (_, mut containers) = gen_containers();
+        ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        app_data.filter_term_push('x');
+
+        app_data.filter_by_next();
+        app_data.filter_by_next();
+        app_data.filter_by_next();
+
+        assert_eq!(app_data.get_filter_by(), FilterBy::All);
+        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        assert!(app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
+    }
+
+    #[test]
+    /// Data is filtered correctly after various next() and previous() commands
+    fn test_app_data_filter_prev() {
+        let (_, mut containers) = gen_containers();
+        ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
+        let mut app_data = gen_appdata(&containers);
+
+        assert!(app_data.get_filter_term().is_none());
+
+        let pre_len = app_data.containers.items.len();
+        app_data.filter_term_push('x');
+
+        app_data.filter_by_next();
+        app_data.filter_by_next();
+
+        assert_eq!(app_data.get_filter_by(), FilterBy::Status);
+        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 1);
+
+        assert!(app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
+
+        app_data.filter_by_prev();
+        assert_eq!(app_data.get_filter_by(), FilterBy::Image);
+        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+
+        app_data.filter_containers();
+        let post_len = app_data.containers.items.len();
+        assert!(pre_len != post_len);
+        assert_eq!(post_len, 0);
+
+        assert!(!app_data.can_insert(&containers[0]));
+        assert!(!app_data.can_insert(&containers[1]));
+        assert!(!app_data.can_insert(&containers[2]));
     }
 
     // **** //
@@ -1451,18 +1824,18 @@ mod tests {
         // No logs
         app_data.containers.start();
         let result = app_data.get_log_title();
-        assert_eq!(result, " - container_1");
+        assert_eq!(result, " - container_1 - image_1");
 
         // On last line of logs
         let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[0]);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
 
         // Change log state to no longer be at the end
         app_data.log_previous();
         let result = app_data.get_log_title();
-        assert_eq!(result, " 2/3 - container_1");
+        assert_eq!(result, " 2/3 - container_1 - image_1");
     }
 
     #[test]
@@ -1478,23 +1851,23 @@ mod tests {
         app_data.containers_start();
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " - container_1");
+        assert_eq!(result, " - container_1 - image_1");
 
         // change container
         app_data.containers_next();
         let result = app_data.get_log_title();
-        assert_eq!(result, " - container_2");
+        assert_eq!(result, " - container_2 - image_2");
 
         // On last line of logs
         let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[1]);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_2");
+        assert_eq!(result, " 3/3 - container_2 - image_2");
 
         // Change log state to no longer be at the end
         app_data.log_previous();
         let result = app_data.get_log_title();
-        assert_eq!(result, " 2/3 - container_2");
+        assert_eq!(result, " 2/3 - container_2 - image_2");
     }
 
     #[test]
@@ -1522,7 +1895,7 @@ mod tests {
         assert_eq!(result.len(), 3);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
     }
 
     #[test]
@@ -1542,7 +1915,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
     }
 
     #[test]
@@ -1562,7 +1935,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
 
         app_data.log_end();
         let result = app_data.get_log_state();
@@ -1571,7 +1944,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
     }
 
     #[test]
@@ -1592,7 +1965,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
 
         app_data.log_next();
 
@@ -1602,7 +1975,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 2/3 - container_1");
+        assert_eq!(result, " 2/3 - container_1 - image_1");
 
         app_data.log_next();
         let result = app_data.get_log_state();
@@ -1611,7 +1984,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
         app_data.log_next();
 
         let result = app_data.get_log_state();
@@ -1620,7 +1993,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
     }
 
     #[test]
@@ -1641,7 +2014,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
 
         app_data.log_previous();
 
@@ -1650,7 +2023,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(1));
         assert_eq!(result.unwrap().offset(), 0);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 2/3 - container_1");
+        assert_eq!(result, " 2/3 - container_1 - image_1");
 
         app_data.log_previous();
         let result = app_data.get_log_state();
@@ -1658,7 +2031,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
         assert_eq!(result.unwrap().offset(), 0);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
 
         app_data.log_previous();
         let result = app_data.get_log_state();
@@ -1666,7 +2039,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
         assert_eq!(result.unwrap().offset(), 0);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
     }
 
     // ********** //
@@ -1696,12 +2069,12 @@ mod tests {
                 (
                     vec![(0.0, 1.1), (1.0, 1.2)],
                     CpuStats::new(1.2),
-                    State::Running
+                    State::Running(RunningState::Healthy),
                 ),
                 (
                     vec![(0.0, 1.0), (1.0, 2.0)],
                     ByteStats::new(2),
-                    State::Running
+                    State::Running(RunningState::Healthy),
                 )
             ))
         );
@@ -1720,15 +2093,41 @@ mod tests {
         let result = app_data.get_width();
         let expected = Columns {
             name: (Header::Name, 11),
-            state: (Header::State, 11),
-            status: (Header::Status, 16),
-            cpu: (Header::Cpu, 7),
+            state: (Header::State, 9),
+            status: (Header::Status, 9),
+            cpu: (Header::Cpu, 6),
             mem: (Header::Memory, 7, 7),
             id: (Header::Id, 8),
             image: (Header::Image, 7),
             net_rx: (Header::Rx, 7),
             net_tx: (Header::Tx, 7),
         };
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    /// Header widths return correctly when some containers hidden
+    fn test_app_data_get_width_filtered() {
+        let (_ids, mut containers) = gen_containers();
+        containers[0].name = ContainerName::from("some_longer_name_with_filter");
+        let mut app_data = gen_appdata(&containers);
+
+        let result = app_data.get_width();
+        let expected = Columns {
+            name: (Header::Name, 28),
+            state: (Header::State, 9),
+            status: (Header::Status, 9),
+            cpu: (Header::Cpu, 6),
+            mem: (Header::Memory, 7, 7),
+            id: (Header::Id, 8),
+            image: (Header::Image, 7),
+            net_rx: (Header::Rx, 7),
+            net_tx: (Header::Tx, 7),
+        };
+
+        assert_eq!(result, expected);
+        app_data.filter_term_push('c');
+        app_data.filter_containers();
         assert_eq!(result, expected);
     }
 
@@ -1791,7 +2190,7 @@ mod tests {
                         public: None
                     }
                 ],
-                State::Running
+                State::Running(RunningState::Healthy),
             ))
         );
 
@@ -1800,7 +2199,10 @@ mod tests {
         app_data.containers.items[0].ports = vec![];
         let result = app_data.get_selected_ports();
 
-        assert_eq!(result, Some((vec![], State::Running)));
+        assert_eq!(
+            result,
+            Some((vec![], State::Running(RunningState::Healthy)))
+        );
     }
 
     // ************** //

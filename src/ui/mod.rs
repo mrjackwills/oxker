@@ -32,6 +32,8 @@ use crate::{
     input_handler::InputMessages,
 };
 
+pub const ORANGE: ratatui::style::Color = ratatui::style::Color::Rgb(255, 178, 36);
+
 pub struct Ui {
     app_data: Arc<Mutex<AppData>>,
     gui_state: Arc<Mutex<GuiState>>,
@@ -64,7 +66,6 @@ impl Ui {
         is_running: Arc<AtomicBool>,
     ) {
         if let Ok(mut terminal) = Self::setup_terminal() {
-            // let args = app_data.lock().args.clone();
             let cursor_position = terminal.get_cursor().unwrap_or_default();
             let mut ui = Self {
                 app_data,
@@ -264,14 +265,20 @@ impl From<(MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)> for FrameData {
 /// Draw the main ui to a frame of the terminal
 fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mutex<GuiState>>) {
     let fd = FrameData::from((app_data.lock(), gui_state.lock()));
+    let contains_filter = gui_state.lock().status_contains(&[Status::Filter]);
+
+    let whole_constraints = if contains_filter {
+        vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
+    } else {
+        vec![Constraint::Max(1), Constraint::Min(1)]
+    };
 
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Max(1), Constraint::Min(1)].as_ref())
+        .constraints(whole_constraints)
         .split(f.size());
 
     // Split into 3, containers+controls, logs, then graphs
-    // This one is the issue!
     let upper_main = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Max(fd.height), Constraint::Min(1)].as_ref())
@@ -306,6 +313,11 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
 
     draw_blocks::heading_bar(whole_layout[0], f, &fd, gui_state);
 
+    // Draw filter bar
+    if let Some(rect) = whole_layout.get(2) {
+        draw_blocks::filter_bar(*rect, f, app_data);
+    }
+
     if let Some(id) = fd.delete_confirm.as_ref() {
         app_data.lock().get_container_name_by_id(id).map_or_else(
             || {
@@ -320,8 +332,8 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
     }
 
     // only draw commands + charts if there are containers
-    if fd.has_containers {
-        draw_blocks::commands(app_data, top_panel[1], f, &fd, gui_state);
+    if let Some(rect) = top_panel.get(1) {
+        draw_blocks::commands(app_data, *rect, f, &fd, gui_state);
 
         // Can calculate the max string length here, and then use that to keep the ports section as small as possible (+4 for some padding + border)
         let max_lens = app_data.lock().get_longest_port();

@@ -2,7 +2,7 @@
 ## Builder ##
 #############
 
-FROM --platform=linux/amd64 rust:slim as BUILDER
+FROM --platform=linux/amd64 rust:slim AS builder
 
 ARG TARGETARCH
 
@@ -49,12 +49,12 @@ RUN cp /usr/src/oxker/target/$(cat /.platform)/release/oxker /
 ## Runtime ##
 #############
 
-FROM scratch as RUNTIME
+FROM scratch
 
 # Set an ENV to indicate that we're running in a container
 ENV OXKER_RUNTIME=container
 
-COPY --from=BUILDER /oxker /app/
+COPY --from=builder /oxker /app/
 
 # Run the application
 # this is used in the application itself so DO NOT EDIT

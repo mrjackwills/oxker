@@ -1,0 +1,17 @@
+# Use an official lightweight image as a base
+FROM alpine:latest
+
+# Install a simple utility (e.g., curl) to run as a health check
+RUN apk --no-cache add curl
+
+# Create a dummy file that we will use in our health check
+RUN touch /tmp/healthy
+
+# Define a simple health check
+HEALTHCHECK --interval=5s --timeout=3s --retries=3 \
+  CMD [ ! -f /tmp/healthy ] || exit 1
+
+# Start a basic loop that keeps the container running
+CMD ["sh", "-c", "while :; do echo 'Container is running but will be unhealthy'; sleep 30; done"]
+
+# docker build -t unhealthy-container . -f Dockerfile.unhealthy; docker run -d --name unhealthy unhealthy-container	

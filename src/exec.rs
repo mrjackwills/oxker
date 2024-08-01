@@ -18,7 +18,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    app_data::{AppData, ContainerId, State},
+    app_data::{AppData, ContainerId, RunningState, State},
     app_error::AppError,
 };
 
@@ -162,7 +162,12 @@ impl ExecMode {
         let container = app_data.lock().get_selected_container_id_state_name();
 
         if let Some((id, state, _)) = container {
-            if state == State::Running {
+            if [
+                State::Running(RunningState::Healthy),
+                State::Running(RunningState::Unhealthy),
+            ]
+            .contains(&state)
+            {
                 if tty_readable() && !use_cli {
                     if let Ok(exec) = docker
                         .create_exec(
