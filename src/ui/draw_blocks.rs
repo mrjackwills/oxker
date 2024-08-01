@@ -1969,7 +1969,7 @@ mod tests {
         // animation moved by one frame
         setup.gui_state.lock().next_loading(uuid);
 
-		let expected = [
+        let expected = [
             "╭ Logs - container_1 - image_1 ╮",
             "│        parsing logs ⠹        │",
             "│                              │",
