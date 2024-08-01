@@ -590,8 +590,8 @@ impl AppData {
     /// Logs related methods
 
     /// Get the title for log panel for selected container, will be either
-    /// 1) "logs x/x - container_name" where container_name is 32 chars max
-    /// 2) "logs - container_name" when no logs found, again 32 chars max
+    /// 1) "logs x/x - container_name - container_image"
+    /// 2) "logs - container_name - container_image" when no logs found
     /// 3) "" no container currently selected - aka no containers on system
     pub fn get_log_title(&self) -> String {
         self.get_selected_container()
@@ -602,7 +602,7 @@ impl AppData {
                 } else {
                     format!("{logs_len} ")
                 };
-                format!("{}- {}", prefix, ci.name.get())
+                format!("{}- {} - {}", prefix, ci.name.get(), ci.image.get())
             })
     }
 
@@ -1824,18 +1824,18 @@ mod tests {
         // No logs
         app_data.containers.start();
         let result = app_data.get_log_title();
-        assert_eq!(result, " - container_1");
+        assert_eq!(result, " - container_1 - image_1");
 
         // On last line of logs
         let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[0]);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
 
         // Change log state to no longer be at the end
         app_data.log_previous();
         let result = app_data.get_log_title();
-        assert_eq!(result, " 2/3 - container_1");
+        assert_eq!(result, " 2/3 - container_1 - image_1");
     }
 
     #[test]
@@ -1851,23 +1851,23 @@ mod tests {
         app_data.containers_start();
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " - container_1");
+        assert_eq!(result, " - container_1 - image_1");
 
         // change container
         app_data.containers_next();
         let result = app_data.get_log_title();
-        assert_eq!(result, " - container_2");
+        assert_eq!(result, " - container_2 - image_2");
 
         // On last line of logs
         let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[1]);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_2");
+        assert_eq!(result, " 3/3 - container_2 - image_2");
 
         // Change log state to no longer be at the end
         app_data.log_previous();
         let result = app_data.get_log_title();
-        assert_eq!(result, " 2/3 - container_2");
+        assert_eq!(result, " 2/3 - container_2 - image_2" );
     }
 
     #[test]
@@ -1895,7 +1895,7 @@ mod tests {
         assert_eq!(result.len(), 3);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
     }
 
     #[test]
@@ -1915,7 +1915,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
     }
 
     #[test]
@@ -1935,7 +1935,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
 
         app_data.log_end();
         let result = app_data.get_log_state();
@@ -1944,7 +1944,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
     }
 
     #[test]
@@ -1965,7 +1965,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
 
         app_data.log_next();
 
@@ -1975,7 +1975,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 2/3 - container_1");
+        assert_eq!(result, " 2/3 - container_1 - image_1");
 
         app_data.log_next();
         let result = app_data.get_log_state();
@@ -1984,7 +1984,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
         app_data.log_next();
 
         let result = app_data.get_log_state();
@@ -1993,7 +1993,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
     }
 
     #[test]
@@ -2014,7 +2014,7 @@ mod tests {
         assert_eq!(result.unwrap().offset(), 0);
 
         let result = app_data.get_log_title();
-        assert_eq!(result, " 3/3 - container_1");
+        assert_eq!(result, " 3/3 - container_1 - image_1");
 
         app_data.log_previous();
 
@@ -2023,7 +2023,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(1));
         assert_eq!(result.unwrap().offset(), 0);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 2/3 - container_1");
+        assert_eq!(result, " 2/3 - container_1 - image_1");
 
         app_data.log_previous();
         let result = app_data.get_log_state();
@@ -2031,7 +2031,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
         assert_eq!(result.unwrap().offset(), 0);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
 
         app_data.log_previous();
         let result = app_data.get_log_state();
@@ -2039,7 +2039,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
         assert_eq!(result.unwrap().offset(), 0);
         let result = app_data.get_log_title();
-        assert_eq!(result, " 1/3 - container_1");
+        assert_eq!(result, " 1/3 - container_1 - image_1");
     }
 
     // ********** //
