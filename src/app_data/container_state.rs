@@ -10,6 +10,8 @@ use ratatui::{
     widgets::{ListItem, ListState},
 };
 
+use crate::ui::ORANGE;
+
 use super::Header;
 
 const ONE_KB: f64 = 1000.0;
@@ -48,6 +50,9 @@ impl PartialOrd for ContainerId {
     }
 }
 
+pub trait Contains {
+    fn contains(&self, input: &str) -> bool;
+}
 /// ContainerName and ContainerImage are simple structs, used so can implement custom fmt functions to them
 macro_rules! unit_struct {
     ($name:ident) => {
@@ -67,7 +72,7 @@ macro_rules! unit_struct {
             }
         }
 
-        impl$name {
+        impl $name {
             pub fn get(&self) -> &str {
                 self.0.as_str()
             }
@@ -75,26 +80,20 @@ macro_rules! unit_struct {
             pub fn set(&mut self, value: String) {
                 self.0 = value;
             }
+        }
 
-            pub fn contains(&self, term: &str) -> bool {
-                self.0.to_lowercase().contains(term)
+        impl Contains for $name {
+            fn contains(&self, input: &str) -> bool {
+                self.0.to_lowercase().contains(input)
             }
         }
 
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 if self.0.chars().count() >= 30 {
-                    write!(
-                        f,
-                        "{}…",
-                        self.0.chars().take(29).collect::<String>()
-                    )
+                    write!(f, "{}…", self.0.chars().take(29).collect::<String>())
                 } else {
-                    write!(
-                        f,
-                        "{}",
-                        self.0
-                    )
+                    write!(f, "{}", self.0)
                 }
             }
         }
@@ -211,62 +210,108 @@ impl<T> StatefulList<T> {
     }
 }
 
-/// States of the container
+/// Store the containers status in a  struct, so can then check for healthy/unhealthy status
+/// It's usually something like "Up 1 hour", "Exited (0) 10 hours ago", "Up 10 minutes (unhealthy)"
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
+pub struct ContainerStatus(String);
+
+impl From<String> for ContainerStatus {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl ContainerStatus {
+    /// Check if a container is unhealthy
+    pub fn unhealthy(&self) -> bool {
+        self.contains("(unhealthy)")
+    }
+
+    /// Get a reference to the source string
+    pub const fn get(&self) -> &String {
+        &self.0
+    }
+}
+
+impl Contains for ContainerStatus {
+    /// Check if the state contains a specific string
+    fn contains(&self, item: &str) -> bool {
+        self.0.to_lowercase().contains(item)
+    }
+}
+
+/// By default a container's running status will be healthy
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd)]
+pub enum RunningState {
+    Healthy,
+    Unhealthy,
+}
+/// States of the container
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum State {
     Dead,
     Exited,
     Paused,
     Removing,
     Restarting,
-    Running,
+    Running(RunningState),
     Unknown,
 }
 
 impl State {
     pub const fn is_alive(self) -> bool {
-        matches!(self, Self::Running)
+        matches!(self, Self::Running(_))
     }
     pub const fn get_color(self) -> Color {
         match self {
             Self::Paused => Color::Yellow,
             Self::Removing => Color::LightRed,
             Self::Restarting => Color::LightGreen,
-            Self::Running => Color::Green,
+            Self::Running(RunningState::Healthy) => Color::Green,
+            Self::Running(RunningState::Unhealthy) => ORANGE,
             _ => Color::Red,
         }
     }
     /// Dirty way to create order for the state, rather than impl Ord
     pub const fn order(self) -> u8 {
         match self {
-            Self::Running => 0,
-            Self::Paused => 1,
-            Self::Restarting => 2,
-            Self::Removing => 3,
-            Self::Exited => 4,
-            Self::Dead => 5,
-            Self::Unknown => 6,
+            Self::Running(RunningState::Healthy) => 0,
+            Self::Running(RunningState::Unhealthy) => 1,
+            Self::Paused => 2,
+            Self::Restarting => 3,
+            Self::Removing => 4,
+            Self::Exited => 5,
+            Self::Dead => 6,
+            Self::Unknown => 7,
         }
     }
 }
 
-impl From<&str> for State {
-    fn from(input: &str) -> Self {
+/// Need status, to check if container is unhealthy or not
+impl From<(&str, &ContainerStatus)> for State {
+    fn from((input, status): (&str, &ContainerStatus)) -> Self {
         match input {
             "dead" => Self::Dead,
             "exited" => Self::Exited,
             "paused" => Self::Paused,
             "removing" => Self::Removing,
             "restarting" => Self::Restarting,
-            "running" => Self::Running,
+            "running" => {
+                if status.unhealthy() {
+                    Self::Running(RunningState::Unhealthy)
+                } else {
+                    Self::Running(RunningState::Healthy)
+                }
+            }
             _ => Self::Unknown,
         }
     }
 }
 
-impl From<Option<String>> for State {
-    fn from(input: Option<String>) -> Self {
-        input.map_or(Self::Unknown, |input| Self::from(input.as_str()))
+/// Again, need status, to check if container is unhealthy or not
+impl From<(Option<String>, &ContainerStatus)> for State {
+    fn from((input, status): (Option<String>, &ContainerStatus)) -> Self {
+        input.map_or(Self::Unknown, |input| Self::from((input.as_str(), status)))
     }
 }
 
@@ -278,7 +323,8 @@ impl fmt::Display for State {
             Self::Paused => "॥ paused",
             Self::Removing => "removing",
             Self::Restarting => "↻ restarting",
-            Self::Running => "✓ running",
+            Self::Running(RunningState::Healthy) => "✓ running",
+            Self::Running(RunningState::Unhealthy) => "! running",
             Self::Unknown => "? unknown",
         };
         write!(f, "{disp}")
@@ -314,7 +360,7 @@ impl DockerControls {
             State::Dead | State::Exited => vec![Self::Start, Self::Restart, Self::Delete],
             State::Paused => vec![Self::Resume, Self::Stop, Self::Delete],
             State::Restarting => vec![Self::Stop, Self::Delete],
-            State::Running => vec![Self::Pause, Self::Restart, Self::Stop, Self::Delete],
+            State::Running(_) => vec![Self::Pause, Self::Restart, Self::Stop, Self::Delete],
             _ => vec![Self::Delete],
         }
     }
@@ -543,7 +589,7 @@ pub struct ContainerItem {
     pub ports: Vec<ContainerPorts>,
     pub rx: ByteStats,
     pub state: State,
-    pub status: String,
+    pub status: ContainerStatus,
     pub tx: ByteStats,
 }
 
@@ -572,7 +618,7 @@ impl ContainerItem {
         name: String,
         ports: Vec<ContainerPorts>,
         state: State,
-        status: String,
+        status: ContainerStatus,
     ) -> Self {
         let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
         docker_controls.start();
@@ -686,11 +732,11 @@ mod tests {
     use ratatui::widgets::ListItem;
 
     use crate::{
-        app_data::{ContainerImage, Logs},
+        app_data::{ContainerImage, Logs, RunningState},
         ui::log_sanitizer,
     };
 
-    use super::{ByteStats, ContainerName, CpuStats, LogsTz};
+    use super::{ByteStats, ContainerName, ContainerStatus, CpuStats, LogsTz, State};
 
     #[test]
     /// Display CpuStats as a string
@@ -773,5 +819,56 @@ mod tests {
         logs.insert(ListItem::new(line), tz);
 
         assert_eq!(logs.logs.items.len(), 2);
+    }
+
+    #[test]
+    /// check ContainerStatus unhealthy state
+    fn test_container_state_unhealthy() {
+        let input = ContainerStatus::from("Up 1 hour".to_owned());
+
+        assert!(!input.unhealthy());
+
+        let input = ContainerStatus::from("Up 1 hour (unhealthy)".to_owned());
+
+        assert!(input.unhealthy());
+    }
+
+    #[test]
+    /// Generate container State from a &str and &ContainerStatus
+    fn test_container_status_unhealthy() {
+        let healthy = ContainerStatus::from("Up 1 hour".to_owned());
+        let unhealthy = ContainerStatus::from("Up 1 hour (unhealthy)".to_owned());
+
+        // Running and healthy
+        let input = State::from(("running", &healthy));
+        assert_eq!(input, State::Running(RunningState::Healthy));
+
+        // Running and unhealthy
+        let input = State::from(("running", &unhealthy));
+        assert_eq!(input, State::Running(RunningState::Unhealthy));
+
+        // Dead
+        let input = State::from(("dead", &healthy));
+        assert_eq!(input, State::Dead);
+
+        // Exited
+        let input = State::from(("exited", &healthy));
+        assert_eq!(input, State::Exited);
+
+        // Paused
+        let input = State::from(("paused", &healthy));
+        assert_eq!(input, State::Paused);
+
+        // Removing
+        let input = State::from(("removing", &healthy));
+        assert_eq!(input, State::Removing);
+
+        // Restarting
+        let input = State::from(("restarting", &healthy));
+        assert_eq!(input, State::Restarting);
+
+        // Unknown
+        let input = State::from(("oxker", &healthy));
+        assert_eq!(input, State::Unknown);
     }
 }

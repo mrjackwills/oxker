@@ -32,6 +32,8 @@ use crate::{
     input_handler::InputMessages,
 };
 
+pub const ORANGE: ratatui::style::Color = ratatui::style::Color::Rgb(255, 178, 36);
+
 pub struct Ui {
     app_data: Arc<Mutex<AppData>>,
     gui_state: Arc<Mutex<GuiState>>,

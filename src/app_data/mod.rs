@@ -179,11 +179,11 @@ impl AppData {
                 FilterBy::All => {
                     container.name.contains(&term)
                         || container.image.contains(&term)
-                        || container.status.to_lowercase().contains(&term)
+                        || container.status.contains(&term)
                 }
                 FilterBy::Image => container.image.contains(&term),
                 FilterBy::Name => container.name.contains(&term),
-                FilterBy::Status => container.status.to_lowercase().contains(&term),
+                FilterBy::Status => container.status.contains(&term),
             }
         })
     }
@@ -335,7 +335,8 @@ impl AppData {
                     Header::Status => item_ord
                         .0
                         .status
-                        .cmp(&item_ord.1.status)
+                        .get()
+                        .cmp(item_ord.1.status.get())
                         .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
                     Header::Cpu => item_ord
                         .0
@@ -727,7 +728,7 @@ impl AppData {
                 columns.net_rx.1 = columns.net_rx.1.max(count(&container.rx.to_string()));
                 columns.net_tx.1 = columns.net_tx.1.max(count(&container.tx.to_string()));
                 columns.state.1 = columns.state.1.max(count(&container.state.to_string()));
-                columns.status.1 = columns.status.1.max(count(&container.status));
+                columns.status.1 = columns.status.1.max(count(container.status.get()));
             }
         }
         columns
@@ -836,12 +837,13 @@ impl AppData {
                     .as_ref()
                     .map_or(false, |i| i.starts_with(ENTRY_POINT));
 
-                let state = State::from(i.state.as_ref().map_or("dead", |z| z));
-                let status = i
-                    .status
-                    .as_ref()
-                    .map_or(String::new(), std::clone::Clone::clone);
+                let status = ContainerStatus::from(
+                    i.status
+                        .as_ref()
+                        .map_or(String::new(), std::clone::Clone::clone),
+                );
 
+                let state = State::from((i.state.as_ref().map_or("dead", |z| z), &status));
                 let image = i
                     .image
                     .as_ref()
@@ -983,7 +985,7 @@ mod tests {
             i.state = State::Exited;
         }
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("2")) {
-            i.state = State::Running;
+            i.state = State::Running(RunningState::Healthy);
         }
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("3")) {
             i.state = State::Paused;
@@ -1017,11 +1019,12 @@ mod tests {
         assert_eq!(result, &containers);
 
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("2")) {
-            "Exited (0) 10 minutes ago".clone_into(&mut i.status);
+            ContainerStatus::from("Exited (0) 10 minutes ago".to_owned()).clone_into(&mut i.status);
         }
 
         if let Some(i) = app_data.get_container_by_id(&ContainerId::from("3")) {
-            "Up 2 hours (Paused)".clone_into(&mut i.status);
+            // "Up 2 hours (Paused)".clone_into(&mut i.status);
+            ContainerStatus::from("Up 2 hours (Paused)".to_owned()).clone_into(&mut i.status);
         }
 
         // Sort by status
@@ -1342,7 +1345,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("1"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_1".to_owned()
             ))
         );
@@ -1356,7 +1359,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("1"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_1".to_owned()
             ))
         );
@@ -1384,7 +1387,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("2"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_2".to_owned()
             ))
         );
@@ -1409,7 +1412,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("3"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_3".to_owned()
             ))
         );
@@ -1423,7 +1426,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("3"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_3".to_owned()
             ))
         );
@@ -1504,7 +1507,7 @@ mod tests {
             result,
             Some((
                 ContainerId::from("3"),
-                State::Running,
+                State::Running(RunningState::Healthy),
                 "container_3".to_owned()
             ))
         );
@@ -1594,7 +1597,7 @@ mod tests {
                     "container_1".to_owned(),
                     vec![],
                     state,
-                    "Up 1 hour".to_owned(),
+                    ContainerStatus::from("Up 1 hour".to_owned()),
                 )
             };
             let mut app_data = gen_appdata(&[gen_item_state(state)]);
@@ -1635,7 +1638,7 @@ mod tests {
             &mut vec![DockerControls::Stop, DockerControls::Delete],
         );
         test_state(
-            State::Running,
+            State::Running(RunningState::Healthy),
             &mut vec![
                 DockerControls::Pause,
                 DockerControls::Restart,
@@ -1671,7 +1674,6 @@ mod tests {
         assert_eq!(post_len, 1);
 
         // Can insert checks against the current filter term
-        // todo!("fix me");
         assert!(app_data.can_insert(&containers[1]));
         assert!(!app_data.can_insert(&containers[0]));
         assert!(!app_data.can_insert(&containers[2]));
@@ -1710,7 +1712,7 @@ mod tests {
     /// Data is filtered correctly by status
     fn test_app_data_filter_by_status() {
         let (_, mut containers) = gen_containers();
-        "Exited".clone_into(&mut containers[0].status);
+        ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
         let mut app_data = gen_appdata(&containers);
 
         assert!(app_data.get_filter_term().is_none());
@@ -1738,7 +1740,7 @@ mod tests {
     /// Data is filtered correctly by all
     fn test_app_data_filter_by_all() {
         let (_, mut containers) = gen_containers();
-        "Exited".clone_into(&mut containers[0].status);
+        ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
         let mut app_data = gen_appdata(&containers);
 
         assert!(app_data.get_filter_term().is_none());
@@ -1767,7 +1769,7 @@ mod tests {
     /// Data is filtered correctly after various next() and previous() commands
     fn test_app_data_filter_prev() {
         let (_, mut containers) = gen_containers();
-        "Exited".clone_into(&mut containers[0].status);
+        ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
         let mut app_data = gen_appdata(&containers);
 
         assert!(app_data.get_filter_term().is_none());
@@ -2067,12 +2069,12 @@ mod tests {
                 (
                     vec![(0.0, 1.1), (1.0, 1.2)],
                     CpuStats::new(1.2),
-                    State::Running
+                    State::Running(RunningState::Healthy),
                 ),
                 (
                     vec![(0.0, 1.0), (1.0, 2.0)],
                     ByteStats::new(2),
-                    State::Running
+                    State::Running(RunningState::Healthy),
                 )
             ))
         );
@@ -2188,7 +2190,7 @@ mod tests {
                         public: None
                     }
                 ],
-                State::Running
+                State::Running(RunningState::Healthy),
             ))
         );
 
@@ -2197,7 +2199,10 @@ mod tests {
         app_data.containers.items[0].ports = vec![];
         let result = app_data.get_selected_ports();
 
-        assert_eq!(result, Some((vec![], State::Running)));
+        assert_eq!(
+            result,
+            Some((vec![], State::Running(RunningState::Healthy)))
+        );
     }
 
     // ************** //

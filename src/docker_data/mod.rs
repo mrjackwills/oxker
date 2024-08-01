@@ -22,7 +22,7 @@ use tokio::{
 use uuid::Uuid;
 
 use crate::{
-    app_data::{AppData, ContainerId, DockerControls, State},
+    app_data::{AppData, ContainerId, ContainerStatus, DockerControls, State},
     app_error::AppError,
     parse_args::CliArgs,
     ui::{GuiState, Status},
@@ -236,7 +236,15 @@ impl DockerData {
         output
             .into_iter()
             .filter_map(|i| {
-                i.id.map(|id| (State::from(i.state), ContainerId::from(id.as_str())))
+                i.id.map(|id| {
+                    (
+                        State::from((
+                            i.state,
+                            &ContainerStatus::from(i.status.map_or_else(String::new, |i| i)),
+                        )),
+                        ContainerId::from(id.as_str()),
+                    )
+                })
             })
             .collect::<Vec<_>>()
     }

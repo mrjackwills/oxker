@@ -176,7 +176,8 @@ mod tests {
 
     use crate::{
         app_data::{
-            AppData, ContainerId, ContainerItem, ContainerPorts, Filter, State, StatefulList,
+            AppData, ContainerId, ContainerItem, ContainerPorts, ContainerStatus, Filter,
+            RunningState, State, StatefulList,
         },
         parse_args::CliArgs,
     };
@@ -208,8 +209,8 @@ mod tests {
                 private: u16::try_from(index).unwrap_or(1) + 8000,
                 public: None,
             }],
-            State::Running,
-            format!("Up {index} hour"),
+            State::Running(RunningState::Healthy),
+            ContainerStatus::from(format!("Up {index} hour")),
         )
     }
 

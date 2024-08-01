@@ -39,5 +39,20 @@ services:
       resources:
         limits:
           memory: 512M
+  some_container:
+    container_name: some_container
+    image: some_container
+    build:
+      context: .
+      dockerfile: Dockerfile.unhealthy
+    ipc: private
+    restart: always
+    networks:
+      - oxker-example-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
 
 

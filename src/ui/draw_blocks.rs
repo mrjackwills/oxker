@@ -21,7 +21,7 @@ use crate::{
 
 use super::{
     gui_state::{BoxLocation, DeleteButton, Region},
-    FrameData, Status,
+    FrameData, Status, ORANGE,
 };
 use super::{GuiState, SelectablePanel};
 
@@ -39,7 +39,6 @@ const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const REPO: &str = env!("CARGO_PKG_REPOSITORY");
 const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
-const ORANGE: Color = Color::Rgb(255, 178, 36);
 const MARGIN: &str = "   ";
 const RIGHT_ARROW: &str = "▶ ";
 const CIRCLE: &str = "⚪ ";
@@ -163,7 +162,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         Span::styled(
             format!(
                 "{:<width$}{MARGIN}",
-                i.status,
+                i.status.get(),
                 width = &widths.status.1.into()
             ),
             state_style,
@@ -311,7 +310,7 @@ pub fn ports(
 
         if ports.0.is_empty() {
             let text = match ports.1 {
-                State::Running | State::Paused | State::Restarting => "no ports",
+                State::Running(_) | State::Paused | State::Restarting => "no ports",
                 _ => "",
             };
             let paragraph = Paragraph::new(Span::from(text).add_modifier(Modifier::BOLD))
@@ -383,7 +382,7 @@ fn make_chart<'a, T: Stats + Display>(
 ) -> Chart<'a> {
     let title_color = state.get_color();
     let label_color = match state {
-        State::Running => ORANGE,
+        State::Running(_) => ORANGE,
         _ => state.get_color(),
     };
     Chart::new(dataset)
@@ -1081,8 +1080,8 @@ mod tests {
 
     use crate::{
         app_data::{
-            AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts, Header,
-            SortedOrder, State, StatefulList,
+            AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts, ContainerStatus,
+            Header, SortedOrder, State, StatefulList,
         },
         app_error::AppError,
         tests::{gen_appdata, gen_container_summary, gen_containers},
@@ -1777,6 +1776,68 @@ mod tests {
                     _ => {
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// When container state is unknown, correct colors displayed
+    fn test_draw_blocks_containers_unhealthy() {
+        let (w, h) = (130, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let status = ContainerStatus::from("Up 1 hour (unhealthy)".to_owned());
+        setup.app_data.lock().containers.items[0].state = State::from(("running", &status));
+        setup.app_data.lock().containers.items[0].status = status;
+
+        let expected= [
+            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+            "│⚪  container_1   ! running   Up 1 hour (unhealthy)   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB        │",
+            "│   container_2   ✓ running   Up 2 hour               00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB        │",
+            "│   container_3   ✓ running   Up 3 hour               00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB        │",
+            "│                                                                                                                                │",
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+        ];
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::containers(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                match (row_index, result_cell_index) {
+                    // border
+                    (0 | 5, _) | (1..=4, 0 | 129) => {
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    // name, id, image column
+                    (1..=3, 4..=17 | 83..=103) => {
+                        assert_eq!(result_cell.fg, Color::Blue);
+                    }
+                    // state, status, cpu, memory column of the first row
+                    (1, 18..=82) => {
+                        assert_eq!(result_cell.fg, ORANGE);
+                    }
+                    // state, status, cpu, memory column
+                    (2..=3, 18..=82) => {
+                        assert_eq!(result_cell.fg, Color::Green);
+                    }
+                    // rx column
+                    (1..=3, 104..=113) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                    }
+                    // tx column
+                    (1..=3, 114..=123) => {
+                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                    }
+                    _ => assert_eq!(result_cell.fg, Color::Reset),
                 }
             }
         }

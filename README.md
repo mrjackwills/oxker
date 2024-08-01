@@ -168,10 +168,10 @@ cargo test
 
 Run some example docker images
 
-using docker-compose.yml;
+using docker/docker-compose.yml;
 
 ```shell
-docker compose -f docker-compose.yml up -d
+docker compose -f ./docker/docker-compose.yml up -d
 ```
 
 or individually
