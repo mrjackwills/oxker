@@ -27,7 +27,7 @@ similar_names = "allow"
 
 [dependencies]
 anyhow = "1.0"
-bollard = "0.16"
+bollard = "0.17"
 cansi = "2.2"
 clap = { version = "4.5", features = ["color", "derive", "unicode"] }
 crossterm = "0.27"
