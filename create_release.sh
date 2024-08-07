@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# rust create_release v0.5.6
-# 2024-07-27
+# rust create_release v0.5.7
+# 2024-08-02
 
 STAR_LINE='****************************************'
 CWD=$(pwd)
@@ -178,7 +178,7 @@ cargo_test() {
 }
 
 # Simulate publishing to crates.io
-cargo_publish() {
+cargo_publish_dry_run() {
 	echo -e "${PURPLE}cargo publish --dry-run${RESET}"
 	cargo publish --dry-run
 	ask_continue
@@ -266,7 +266,7 @@ release_flow() {
 
 	cargo_test
 	cross_build_all
-	cargo_publish
+	cargo_publish_dry_run
 
 	cd "${CWD}" || error_close "Can't find ${CWD}"
 	check_tag

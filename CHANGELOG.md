@@ -15,8 +15,8 @@
 + left align all text, [e0d421c4](https://github.com/mrjackwills/oxker/commit/e0d421c4918a17c9e0e21fd214edb99d71281c9d)
 + place image name in logs panel title, [12f24357](https://github.com/mrjackwills/oxker/commit/12f24357a68abe871f44d871d95b6e2ef062181e)
 + distinguish between unhealthy & healthy running containers, closes [#43](https://github.com/mrjackwills/oxker/issues/43), [de876818](https://github.com/mrjackwills/oxker/commit/de8768181631c6d961ce0e4dacb50c2ed02abc36)
-+ filter containers, use `F1` or `/` to enter filter mode, closes [#37](https://github.com/mrjackwills/oxker/issues/37), thanks to [MohammadShabaniSBU](https://github.com/MohammadShabaniSBU) for the original PR, [d5d8a0db](https://github.com/mrjackwills/oxker/commit/d5d8a0dbc5437ff3b17f34b9dbb9589bb56b4a3e), [[7ee1f06f804683e3395953a02138d4e9da115ea9]]
-+ place image name in logs panel title, [ef19b9cf](https://github.com/mrjackwills/oxker/commit/ef19b9cf89a881d0a7ac818885317ce2bd683dfc)
++ filter containers, use `F1` or `/` to enter filter mode, closes [#37](https://github.com/mrjackwills/oxker/issues/37), thanks to [MohammadShabaniSBU](https://github.com/MohammadShabaniSBU) for the original PR, [d5d8a0db](https://github.com/mrjackwills/oxker/commit/d5d8a0dbc5437ff3b17f34b9dbb9589bb56b4a3e), [7ee1f06f](https://github.com/mrjackwills/oxker/commit/7ee1f06f804683e3395953a02138d4e9da115ea9)
++ place image name in logs panel title, [12f24357](https://github.com/mrjackwills/oxker/commit/12f24357a68abe871f44d871d95b6e2ef062181e)
 
 ### Fixes
 + log_sanitizer `raw()` & `remove_ansi()` now functioning as intended, [0dc98dfc](https://github.com/mrjackwills/oxker/commit/0dc98dfc8113869b81be9d697ca77418c919e4bf)
