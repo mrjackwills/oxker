@@ -16,6 +16,7 @@
 </p>
 
 - [Download & install](#download--install)
+- [Homebrew](#homebrew)
 - [Run](#run)
 - [Build step](#build-step)
 - [Tests](#tests)
@@ -65,6 +66,14 @@ oxker can be installed from the [AUR](https://aur.archlinux.org/packages/oxker) 
 
 ```shell
 paru -S oxker
+```
+
+### Homebrew
+
+oxker can be installed on macOS using Homebrew:
+
+```shell
+brew install oxker
 ```
 
 ### Pre-Built
