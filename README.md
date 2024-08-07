@@ -16,7 +16,6 @@
 </p>
 
 - [Download & install](#download--install)
-- [Homebrew](#homebrew)
 - [Run](#run)
 - [Build step](#build-step)
 - [Tests](#tests)
