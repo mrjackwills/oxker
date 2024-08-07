@@ -156,7 +156,7 @@ Tested, and fully working on pi zero w, running Raspberry Pi OS 32 bit, the init
 cross build --target arm-unknown-linux-musleabihf --release
 ```
 
-If no memory information available, try appending ```/boot/cmdline.txt``` with
+If no memory information available, try appending either ```/boot/cmdline.txt``` or ```/boot/firmware/cmdline.txt``` with
 
 ```cgroup_enable=cpuset cgroup_enable=memory```
 
