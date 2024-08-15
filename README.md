@@ -69,7 +69,7 @@ paru -S oxker
 
 ### Homebrew
 
-oxker can be installed on macOS using Homebrew:
+oxker can be installed on macOS using [Homebrew](https://formulae.brew.sh/formula/oxker):
 
 ```shell
 brew install oxker
