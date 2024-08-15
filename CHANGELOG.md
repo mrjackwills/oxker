@@ -1,6 +1,10 @@
+
+### Chores
++ dependencies updated, [d6238587ffc536f1ea93a47dd4d2ee69c36f35e3]
+
 ### Docs
 + Readme raspberry pi fix, [baf68783929e5d6ac111a39dc62388cd24133da6]
-+ Add installation guide to README for macOS installation via `brew install oxker`, thanks [miketheman](https://github.com/miketheman), [59817311baea628d2691765ff9387e055dce3307]
++ Add installation guide to README for macOS installation via `brew install oxker`, thanks [miketheman](https://github.com/miketheman), [59817311baea628d2691765ff9387e055dce3307], [895ec6204cc8220be64be7622df6edb6ef6d795b]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.7.0'>v0.7.0</a>
 ### 2024-08-01
