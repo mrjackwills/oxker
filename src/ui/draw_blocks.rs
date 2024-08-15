@@ -834,7 +834,7 @@ pub fn help_box(f: &mut Frame) {
     let area = popup(
         max_height,
         max_line_width,
-        f.size(),
+        f.area(),
         BoxLocation::MiddleCentre,
     );
 
@@ -931,7 +931,7 @@ pub fn delete_confirm(f: &mut Frame, gui_state: &Arc<Mutex<GuiState>>, name: &Co
     let area = popup(
         lines,
         max_line_width.into(),
-        f.size(),
+        f.area(),
         BoxLocation::MiddleCentre,
     );
 
@@ -1000,7 +1000,7 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = popup(lines, max_line_width, f.size(), BoxLocation::MiddleCentre);
+    let area = popup(lines, max_line_width, f.area(), BoxLocation::MiddleCentre);
 
     // let (paragraph, area) = gen_error(f, error, seconds);
     f.render_widget(Clear, area);
@@ -1027,7 +1027,7 @@ pub fn info(f: &mut Frame, text: &str, instant: Instant, gui_state: &Arc<Mutex<G
         .block(block)
         .alignment(Alignment::Center);
 
-    let area = popup(lines, max_line_width, f.size(), BoxLocation::BottomRight);
+    let area = popup(lines, max_line_width, f.area(), BoxLocation::BottomRight);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
     if instant.elapsed().as_millis() > 4000 {
