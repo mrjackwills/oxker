@@ -114,8 +114,7 @@ impl Ui {
         )?;
         disable_raw_mode()?;
         self.terminal.clear().ok();
-        self.terminal
-            .set_cursor_position(self.cursor_position)?;
+        self.terminal.set_cursor_position(self.cursor_position)?;
         Ok(self.terminal.show_cursor()?)
     }
 

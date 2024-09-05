@@ -294,7 +294,8 @@ pub fn ports(
     app_data: &Arc<Mutex<AppData>>,
     max_lens: (usize, usize, usize),
 ) {
-    if let Some(ports) = app_data.lock().get_selected_ports() {
+    let ports = app_data.lock().get_selected_ports();
+    if let Some(ports) = ports {
         let block = Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
@@ -344,7 +345,8 @@ pub fn ports(
 
 /// Draw the cpu + mem charts
 pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
-    if let Some((cpu, mem)) = app_data.lock().get_chart_data() {
+    let cpu_mem = app_data.lock().get_chart_data();
+    if let Some((cpu, mem)) = cpu_mem {
         let area = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(CONSTRAINT_50_50)
