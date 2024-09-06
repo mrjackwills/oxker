@@ -364,7 +364,7 @@ pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
             .data(&mem.0)];
 
         let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
         let cpu_chart = make_chart(cpu.2, "cpu", cpu_dataset, &cpu_stats, &cpu.1);
         let mem_chart = make_chart(mem.2, "memory", mem_dataset, &mem_stats, &mem.1);
@@ -491,7 +491,6 @@ pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>)
 
 /// Draw heading bar at top of program, always visible
 /// TODO Should separate into loading icon/headers/help functions
-#[allow(clippy::too_many_lines)]
 pub fn heading_bar(
     area: Rect,
     frame: &mut Frame,
@@ -1066,7 +1065,7 @@ fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocatio
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::many_single_char_names)]
+#[expect(clippy::unwrap_used)]
 mod tests {
 
     use std::{ops::RangeInclusive, sync::Arc};
@@ -2111,7 +2110,7 @@ mod tests {
     // Charts panel //
     // ************ //
 
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss)]
     // Add fixed data to the cpu & mem vecdeques
     fn insert_chart_data(setup: &TuiTestSetup) {
         for i in 1..=10 {
@@ -2835,7 +2834,7 @@ mod tests {
     // ********** //
 
     #[test]
-    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
+    #[expect(clippy::cognitive_complexity, clippy::too_many_lines)]
     /// Filter row is drawn correctly & colors are correct
     /// Colours change when filter_by option is changed
     fn test_draw_blocks_filter_row() {
@@ -3373,7 +3372,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     /// Check that the whole layout is drawn correctly
     fn test_draw_blocks_whole_layout_with_filter() {
         let (w, h) = (160, 30);

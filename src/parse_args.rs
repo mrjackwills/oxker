@@ -6,7 +6,7 @@ use tracing::error;
 use crate::{ENV_KEY, ENV_VALUE};
 
 #[derive(Parser, Debug, Clone)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 #[command(version, about)]
 pub struct Args {
     /// Docker update interval in ms, minimum effectively 1000
@@ -47,7 +47,7 @@ pub struct Args {
 }
 
 #[derive(Debug, Clone)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct CliArgs {
     pub color: bool,
     pub docker_interval: u32,

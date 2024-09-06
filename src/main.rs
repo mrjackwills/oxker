@@ -1,6 +1,3 @@
-// Only allow when debugging
-// #![allow(unused)]
-
 use app_data::AppData;
 use app_error::AppError;
 use bollard::{Docker, API_DEFAULT_VERSION};
@@ -166,12 +163,8 @@ async fn main() {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::many_single_char_names, unused)]
+#[expect(clippy::unwrap_used,)]
 mod tests {
-    use std::{
-        collections::{HashSet, VecDeque},
-        vec,
-    };
 
     use bollard::service::{ContainerSummary, Port};
 
