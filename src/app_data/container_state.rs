@@ -468,7 +468,7 @@ impl ByteStats {
     }
 }
 
-#[expect(clippy::cast_precision_loss)]
+#[allow(clippy::cast_precision_loss)]
 impl Stats for ByteStats {
     fn get_value(&self) -> f64 {
         self.0 as f64
@@ -608,7 +608,7 @@ impl fmt::Display for ContainerItem {
 }
 
 impl ContainerItem {
-    #[expect(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     /// Create a new container item
     pub fn new(
         created: u64,
@@ -660,7 +660,7 @@ impl ContainerItem {
     }
 
     /// Convert cpu stats into a vec for the charts function
-    #[expect(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_precision_loss)]
     fn get_cpu_dataset(&self) -> Vec<(f64, f64)> {
         self.cpu_stats
             .iter()
@@ -670,7 +670,7 @@ impl ContainerItem {
     }
 
     /// Convert mem stats into a Vec for the charts function
-    #[expect(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_precision_loss)]
     fn get_mem_dataset(&self) -> Vec<(f64, f64)> {
         self.mem_stats
             .iter()

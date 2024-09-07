@@ -163,7 +163,7 @@ async fn main() {
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used)]
 mod tests {
 
     use bollard::service::{ContainerSummary, Port};

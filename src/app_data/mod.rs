@@ -151,7 +151,7 @@ impl AppData {
     }
 
     /// Current time as unix timestamp
-    #[expect(clippy::expect_used)]
+    #[allow(clippy::expect_used)]
     fn get_systemtime() -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -933,7 +933,7 @@ impl AppData {
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used)]
 mod tests {
 
     use super::*;
