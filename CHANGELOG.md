@@ -1,3 +1,6 @@
+### Reverts
++ Expect lint was causing issues with crates/docker builds, revert until fix is found, [578ed9f085df0d97c451c06dab4ecbfccd894c52]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.7.1'>v0.7.1</a>
 ### 2024-09-07
 
