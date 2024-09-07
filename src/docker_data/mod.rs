@@ -70,7 +70,7 @@ pub struct DockerData {
 
 impl DockerData {
     /// Use docker stats to calculate current cpu usage
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss)]
     // TODO FIX: this can overflow
     fn calculate_usage(stats: &Stats) -> f64 {
         let mut cpu_percentage = 0.0;
@@ -349,7 +349,7 @@ impl DockerData {
 
     /// Handle incoming messages, container controls & all container information update
     /// Spawn Docker commands off into own thread
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     async fn message_handler(&mut self) {
         while let Some(message) = self.receiver.recv().await {
             let docker = Arc::clone(&self.docker);
@@ -505,7 +505,7 @@ mod tests {
 
     use super::*;
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     fn gen_stats(x: u64, y: u64) -> Stats {
         Stats {
             read: String::new(),
@@ -623,7 +623,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp)]
     /// Test the stats calculator, had to cheat here to get round input/outputs
     fn test_calculate_usage_no_previous_cpu() {
         let stats = gen_stats(1_000_000_000, 900_000_000);

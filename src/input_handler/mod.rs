@@ -513,12 +513,13 @@ impl InputHandler {
             MouseEventKind::ScrollUp => self.previous(),
             MouseEventKind::ScrollDown => self.next(),
             MouseEventKind::Down(MouseButton::Left) => {
-                if let Some(header) = self.gui_state.lock().header_intersect(Rect::new(
+                let header = self.gui_state.lock().header_intersect(Rect::new(
                     mouse_event.column,
                     mouse_event.row,
                     1,
                     1,
-                )) {
+                ));
+                if let Some(header) = header {
                     self.sort(header);
                 }
 

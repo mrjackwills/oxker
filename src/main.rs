@@ -1,6 +1,3 @@
-// Only allow when debugging
-// #![allow(unused)]
-
 use app_data::AppData;
 use app_error::AppError;
 use bollard::{Docker, API_DEFAULT_VERSION};
@@ -139,7 +136,8 @@ async fn main() {
         info!("in debug mode\n");
         // Debug mode for testing, less pointless now, will display some basic information
         while is_running.load(Ordering::SeqCst) {
-            if let Some(err) = app_data.lock().get_error() {
+            let err = app_data.lock().get_error();
+            if let Some(err) = err {
                 error!("{}", err);
                 process::exit(1);
             }
@@ -165,12 +163,8 @@ async fn main() {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::many_single_char_names, unused)]
+#[expect(clippy::unwrap_used)]
 mod tests {
-    use std::{
-        collections::{HashSet, VecDeque},
-        vec,
-    };
 
     use bollard::service::{ContainerSummary, Port};
 

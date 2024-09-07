@@ -7,7 +7,7 @@ use crossterm::{
 use parking_lot::{Mutex, MutexGuard};
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Position},
     Frame, Terminal,
 };
 use std::{
@@ -42,7 +42,7 @@ pub struct Ui {
     is_running: Arc<AtomicBool>,
     now: Instant,
     terminal: Terminal<CrosstermBackend<Stdout>>,
-    cursor_position: (u16, u16),
+    cursor_position: Position,
 }
 
 impl Ui {
@@ -66,7 +66,7 @@ impl Ui {
         is_running: Arc<AtomicBool>,
     ) {
         if let Ok(mut terminal) = Self::setup_terminal() {
-            let cursor_position = terminal.get_cursor().unwrap_or_default();
+            let cursor_position = terminal.get_cursor_position().unwrap_or_default();
             let mut ui = Self {
                 app_data,
                 cursor_position,
@@ -114,8 +114,7 @@ impl Ui {
         )?;
         disable_raw_mode()?;
         self.terminal.clear().ok();
-        self.terminal
-            .set_cursor(self.cursor_position.0, self.cursor_position.1)?;
+        self.terminal.set_cursor_position(self.cursor_position)?;
         Ok(self.terminal.show_cursor()?)
     }
 
@@ -276,7 +275,7 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(whole_constraints)
-        .split(f.size());
+        .split(f.area());
 
     // Split into 3, containers+controls, logs, then graphs
     let upper_main = Layout::default()

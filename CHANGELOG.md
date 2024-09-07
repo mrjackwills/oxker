@@ -1,3 +1,19 @@
+# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.7.1'>v0.7.1</a>
+### 2024-09-07
+
+### Chores
++ dependencies updated, [d6238587](https://github.com/mrjackwills/oxker/commit/d6238587ffc536f1ea93a47dd4d2ee69c36f35e3), [a564ef80](https://github.com/mrjackwills/oxker/commit/a564ef80318adbde9f188dd2cf38626a98793c75), [1d82ff13](https://github.com/mrjackwills/oxker/commit/1d82ff1368f7b43e6df8478d5e7b8d682320010a), [99f05f2e](https://github.com/mrjackwills/oxker/commit/99f05f2e5b511d039804159c92ade6c77ff360b7)
++ Rust 1.81.0 linting, [372f759c](https://github.com/mrjackwills/oxker/commit/372f759ca467e47c373a086c6a247c150b87d4bc)
++ .devcontainer updated, [5d77f1e0](https://github.com/mrjackwills/oxker/commit/5d77f1e02a428b4e5ee1bf5466055ad17f6e05af)
+
+### Docs
++ CHANGELOG.md duplicate removed, [16ecc5a5](https://github.com/mrjackwills/oxker/commit/16ecc5a51f7defcc9dd4f4c6e34fa5bbfc7fea78)
++ Readme raspberry pi fix, [baf68783](https://github.com/mrjackwills/oxker/commit/baf68783929e5d6ac111a39dc62388cd24133da6)
++ Add installation guide to README for macOS installation via `brew install oxker`, thanks [miketheman](https://github.com/miketheman), [59817311](https://github.com/mrjackwills/oxker/commit/59817311baea628d2691765ff9387e055dce3307), [895ec620](https://github.com/mrjackwills/oxker/commit/895ec6204cc8220be64be7622df6edb6ef6d795b)
+
+### Refactors
++ switch lints from `allow(x)` to `expect(x)`, [2a0ab6d8](https://github.com/mrjackwills/oxker/commit/2a0ab6d81ce4062de053a92b85f8b25ea23412b6)
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.7.0'>v0.7.0</a>
 ### 2024-08-01
 
@@ -16,7 +32,6 @@
 + place image name in logs panel title, [12f24357](https://github.com/mrjackwills/oxker/commit/12f24357a68abe871f44d871d95b6e2ef062181e)
 + distinguish between unhealthy & healthy running containers, closes [#43](https://github.com/mrjackwills/oxker/issues/43), [de876818](https://github.com/mrjackwills/oxker/commit/de8768181631c6d961ce0e4dacb50c2ed02abc36)
 + filter containers, use `F1` or `/` to enter filter mode, closes [#37](https://github.com/mrjackwills/oxker/issues/37), thanks to [MohammadShabaniSBU](https://github.com/MohammadShabaniSBU) for the original PR, [d5d8a0db](https://github.com/mrjackwills/oxker/commit/d5d8a0dbc5437ff3b17f34b9dbb9589bb56b4a3e), [7ee1f06f](https://github.com/mrjackwills/oxker/commit/7ee1f06f804683e3395953a02138d4e9da115ea9)
-+ place image name in logs panel title, [12f24357](https://github.com/mrjackwills/oxker/commit/12f24357a68abe871f44d871d95b6e2ef062181e)
 
 ### Fixes
 + log_sanitizer `raw()` & `remove_ansi()` now functioning as intended, [0dc98dfc](https://github.com/mrjackwills/oxker/commit/0dc98dfc8113869b81be9d697ca77418c919e4bf)
