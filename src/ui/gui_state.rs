@@ -58,7 +58,7 @@ pub enum DeleteButton {
     No,
 }
 
-#[expect(unused)]
+#[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum BoxLocation {
     TopLeft,
