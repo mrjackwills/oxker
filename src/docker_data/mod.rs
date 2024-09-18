@@ -260,6 +260,7 @@ impl DockerData {
     ) {
         let options = Some(LogsOptions::<String> {
             stdout: true,
+            stderr: true,
             timestamps: true,
             since: i64::try_from(since).unwrap_or_default(),
             ..Default::default()
