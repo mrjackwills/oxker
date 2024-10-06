@@ -24,20 +24,25 @@ if ! [ -x "$(command -v dialog)" ]; then
 fi
 
 # $1 string - question to ask
+# $1 question to ask
+# Ask a yes no question, only accepts `y` or `n` as a valid answer, returns 0 for yes, 1 for no
 ask_yn() {
-	printf "%b%s? [y/N]:%b " "${GREEN}" "$1" "${RESET}"
-}
-
-# return user input
-user_input() {
-	read -r data
-	echo "$data"
+	while true; do
+		printf "\n%b%s? [y/N]:%b " "${GREEN}" "$1" "${RESET}"
+		read -r answer
+		if [[ "$answer" == "y" ]]; then
+			return 0
+		elif [[ "$answer" == "n" ]]; then
+			return 1
+		else
+			echo -e "${RED}\nPlease enter 'y' or 'n'${RESET}"
+		fi
+	done
 }
 
 # ask continue, or quit
 ask_continue() {
-	ask_yn "continue"
-	if [[ ! "$(user_input)" =~ ^y$ ]]; then
+	if ! ask_yn "continue"; then
 		exit
 	fi
 }
@@ -93,12 +98,13 @@ ask_changelog_update() {
 	RELEASE_BODY_TEXT=$(sed '/# <a href=/Q' CHANGELOG.md)
 	printf "%s" "$RELEASE_BODY_TEXT"
 	printf "\n%s\n" "${STAR_LINE}"
-	ask_yn "accept release body"
-	if [[ "$(user_input)" =~ ^y$ ]]; then
+
+	if ask_yn "accept release body"; then
 		update_release_body_and_changelog "$RELEASE_BODY_TEXT"
 	else
 		exit
 	fi
+
 }
 
 # Edit the release-body to include new lines from changelog
