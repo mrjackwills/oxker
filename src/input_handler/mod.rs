@@ -200,6 +200,7 @@ impl InputHandler {
 
                     let docker = rx.await?;
                     let options = Some(LogsOptions::<String> {
+                        stderr: true,
                         stdout: true,
                         timestamps: args.timestamp,
                         since: 0,
