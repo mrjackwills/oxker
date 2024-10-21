@@ -241,7 +241,7 @@ impl ExecMode {
                 id.get(),
                 CreateExecOptions {
                     attach_stdout: Some(true),
-                    attach_stderr: Some(false),
+                    attach_stderr: Some(true),
                     attach_stdin: Some(true),
                     tty: Some(true),
                     cmd: Some(vec![command::SH]),
