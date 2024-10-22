@@ -704,20 +704,14 @@ impl AppData {
         // Should probably find a refactor here somewhere
         for container in [&self.containers.items, &self.hidden_containers] {
             for container in container {
-                let cpu_count = count(
-                    &container
-                        .cpu_stats
-                        .back()
-                        .unwrap_or(&CpuStats::default())
-                        .to_string(),
+                let cpu_count = container.cpu_stats.back().map_or_else(
+                    || count(&CpuStats::default().to_string()),
+                    |i| count(&i.to_string()),
                 );
 
-                let mem_current_count = count(
-                    &container
-                        .mem_stats
-                        .back()
-                        .unwrap_or(&ByteStats::default())
-                        .to_string(),
+                let mem_current_count = container.mem_stats.back().map_or_else(
+                    || count(&ByteStats::default().to_string()),
+                    |i| count(&i.to_string()),
                 );
 
                 columns.cpu.1 = columns.cpu.1.max(cpu_count);

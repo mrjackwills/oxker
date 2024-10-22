@@ -170,7 +170,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         Span::styled(
             format!(
                 "{:>width$}{MARGIN}",
-                i.cpu_stats.back().unwrap_or(&CpuStats::default()),
+                i.cpu_stats.back().map_or_else(CpuStats::default, |f| *f),
                 width = &widths.cpu.1.into()
             ),
             state_style,
@@ -178,7 +178,7 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         Span::styled(
             format!(
                 "{:>width_current$} / {:>width_limit$}{MARGIN}",
-                i.mem_stats.back().unwrap_or(&ByteStats::default()),
+                i.mem_stats.back().map_or_else(ByteStats::default, |f| *f),
                 i.mem_limit,
                 width_current = &widths.mem.1.into(),
                 width_limit = &widths.mem.2.into()

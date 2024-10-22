@@ -492,7 +492,7 @@ pub type MemTuple = (Vec<(f64, f64)>, ByteStats, State);
 pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
 
 /// Used to make sure that each log entry, for each container, is unique,
-/// will only push a log entry into the logs vec if timetstamp of said log entry isn't in the hashset
+/// will only push a log entry into the logs vec if timestamp of said log entry isn't in the hashset
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct LogsTz(String);
 
