@@ -4,7 +4,7 @@
 + create_release.sh updated, [c4943370f4a67f6c01c75a8a7f825912427666a2]
 
 ### Features
-+ Add Stderr output to logs, thanks [vincentmasse](https://github.com/vincentmasse), merges #49, [b95c9311416cd0dbcfa5de90c23f3065bc2d6b17], [9936ad45e186ee431aade920674a2dc283937355], [289ede3f2531feeec56094a76bf34f4c69431bbe]
++ Add Stderr output to logs, thanks [vincentmasse](https://github.com/vincentmasse), closes #48, merges #49, [b95c9311416cd0dbcfa5de90c23f3065bc2d6b17], [9936ad45e186ee431aade920674a2dc283937355], [289ede3f2531feeec56094a76bf34f4c69431bbe]
 
 ### Refactors
 + Rust 1.82 linting, [c058c5a301cfd4e8d7a0079c4c3f8fdeae2803e5]
