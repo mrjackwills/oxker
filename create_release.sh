@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# rust create_release v0.5.7
-# 2024-08-02
+# rust create_release v0.6.1
+# 2024-10-21
 
 STAR_LINE='****************************************'
 CWD=$(pwd)
@@ -128,6 +128,10 @@ update_release_body_and_changelog() {
 	# Update changelog to add links to closed issues
 	# "closes #1" -> "closes [#1](https:/www.../issues/1)""
 	sed -i -r -E "s=closes \#([0-9]+)=closes [#\1](${GIT_REPO_URL}/issues/\1)=g" CHANGELOG.md
+
+	# Update changelog to add links to merged PR's
+	# "merges #1" -> "merges [#1](https:/www.../pull/1)""
+	sed -i -r -E "s=merges \#([0-9]+)=merges [#\1](${GIT_REPO_URL}/pull/\1)=g" CHANGELOG.md
 }
 
 # update version in cargo.toml, to match selected current version
