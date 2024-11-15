@@ -411,7 +411,7 @@ impl DockerData {
     }
 
     /// Send an update message every x ms, where x is the args.docker_interval
-    fn scheduler(args: &CliArgs, docker_tx: Sender<DockerMessage>) {
+    fn heartbeat(args: &CliArgs, docker_tx: Sender<DockerMessage>) {
         let update_duration = std::time::Duration::from_millis(u64::from(args.docker_interval));
         let mut now = std::time::Instant::now();
         tokio::spawn(async move {
@@ -445,7 +445,7 @@ impl DockerData {
                 spawns: Arc::new(Mutex::new(HashMap::new())),
             };
             inner.initialise_container_data().await;
-            Self::scheduler(&args, docker_tx);
+            Self::heartbeat(&args, docker_tx);
             inner.message_handler().await;
         }
     }
