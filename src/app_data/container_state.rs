@@ -333,7 +333,7 @@ impl fmt::Display for State {
 
 /// Items for the container control list
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DockerControls {
+pub enum DockerCommand {
     Pause,
     Restart,
     Start,
@@ -342,7 +342,7 @@ pub enum DockerControls {
     Delete,
 }
 
-impl DockerControls {
+impl DockerCommand {
     pub const fn get_color(self) -> Color {
         match self {
             Self::Pause => Color::Yellow,
@@ -366,7 +366,7 @@ impl DockerControls {
     }
 }
 
-impl fmt::Display for DockerControls {
+impl fmt::Display for DockerCommand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = match self {
             Self::Pause => "pause",
@@ -577,7 +577,7 @@ impl Logs {
 pub struct ContainerItem {
     pub cpu_stats: VecDeque<CpuStats>,
     pub created: u64,
-    pub docker_controls: StatefulList<DockerControls>,
+    pub docker_controls: StatefulList<DockerCommand>,
     pub id: ContainerId,
     pub image: ContainerImage,
     pub is_oxker: bool,
@@ -620,7 +620,7 @@ impl ContainerItem {
         state: State,
         status: ContainerStatus,
     ) -> Self {
-        let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
+        let mut docker_controls = StatefulList::new(DockerCommand::gen_vec(state));
         docker_controls.start();
 
         Self {
