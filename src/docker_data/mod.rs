@@ -22,7 +22,7 @@ use tokio::{
 use uuid::Uuid;
 
 use crate::{
-    app_data::{AppData, ContainerId, ContainerStatus, DockerControls, State},
+    app_data::{AppData, ContainerId, ContainerStatus, DockerCommand, State},
     app_error::AppError,
     parse_args::CliArgs,
     ui::{GuiState, Status},
@@ -340,7 +340,7 @@ impl DockerData {
     /// Set the global error as the docker error, and set gui_state to error
     fn set_error(
         app_data: &Arc<Mutex<AppData>>,
-        error: DockerControls,
+        error: DockerCommand,
         gui_state: &Arc<Mutex<GuiState>>,
     ) {
         app_data
@@ -348,98 +348,59 @@ impl DockerData {
             .set_error(AppError::DockerCommand(error), gui_state, Status::Error);
     }
 
+    /// Execute docker comamnds (start, stop etc) on it's own tokio thread
+    async fn execute_command(&mut self, control: DockerCommand, id: ContainerId) {
+        let (app_data, docker, gui_state) = (
+            Arc::clone(&self.app_data),
+            Arc::clone(&self.docker),
+            Arc::clone(&self.gui_state),
+        );
+        tokio::spawn(async move {
+            let uuid = Uuid::new_v4();
+            GuiState::start_loading_animation(&gui_state, uuid);
+            if match control {
+                DockerCommand::Delete => {
+                    docker
+                        .remove_container(
+                            id.get(),
+                            Some(RemoveContainerOptions {
+                                v: false,
+                                force: true,
+                                link: false,
+                            }),
+                        )
+                        .await
+                }
+                DockerCommand::Pause => docker.pause_container(id.get()).await,
+                DockerCommand::Restart => docker.restart_container(id.get(), None).await,
+                DockerCommand::Resume => docker.unpause_container(id.get()).await,
+                DockerCommand::Start => {
+                    docker
+                        .start_container(id.get(), None::<StartContainerOptions<String>>)
+                        .await
+                }
+                DockerCommand::Stop => docker.stop_container(id.get(), None).await,
+            }
+            .is_err()
+            {
+                Self::set_error(&app_data, control, &gui_state);
+            }
+            gui_state.lock().stop_loading_animation(uuid);
+        });
+        self.update_everything().await;
+    }
+
     /// Handle incoming messages, container controls & all container information update
     /// Spawn Docker commands off into own thread
-    #[allow(clippy::too_many_lines)]
     async fn message_handler(&mut self) {
         while let Some(message) = self.receiver.recv().await {
-            let docker = Arc::clone(&self.docker);
-            let gui_state = Arc::clone(&self.gui_state);
-            let app_data = Arc::clone(&self.app_data);
-            let uuid = Uuid::new_v4();
-            // TODO need to refactor these
             match message {
-                DockerMessage::Exec(docker_tx) => {
-                    docker_tx.send(Arc::clone(&self.docker)).ok();
-                }
-                DockerMessage::Pause(id) => {
-                    tokio::spawn(async move {
-                        GuiState::start_loading_animation(&gui_state, uuid);
-                        if docker.pause_container(id.get()).await.is_err() {
-                            Self::set_error(&app_data, DockerControls::Pause, &gui_state);
-                        }
-                        gui_state.lock().stop_loading_animation(uuid);
-                    });
-                    self.update_everything().await;
-                }
-                DockerMessage::Restart(id) => {
-                    tokio::spawn(async move {
-                        GuiState::start_loading_animation(&gui_state, uuid);
-                        if docker.restart_container(id.get(), None).await.is_err() {
-                            Self::set_error(&app_data, DockerControls::Restart, &gui_state);
-                        }
-                        gui_state.lock().stop_loading_animation(uuid);
-                    });
-                    self.update_everything().await;
-                }
-                DockerMessage::Start(id) => {
-                    tokio::spawn(async move {
-                        GuiState::start_loading_animation(&gui_state, uuid);
-                        if docker
-                            .start_container(id.get(), None::<StartContainerOptions<String>>)
-                            .await
-                            .is_err()
-                        {
-                            Self::set_error(&app_data, DockerControls::Start, &gui_state);
-                        }
-                        gui_state.lock().stop_loading_animation(uuid);
-                    });
-                    self.update_everything().await;
-                }
-                DockerMessage::Stop(id) => {
-                    tokio::spawn(async move {
-                        GuiState::start_loading_animation(&gui_state, uuid);
-                        if docker.stop_container(id.get(), None).await.is_err() {
-                            Self::set_error(&app_data, DockerControls::Stop, &gui_state);
-                        }
-                        gui_state.lock().stop_loading_animation(uuid);
-                    });
-                    self.update_everything().await;
-                }
-                DockerMessage::Resume(id) => {
-                    tokio::spawn(async move {
-                        GuiState::start_loading_animation(&gui_state, uuid);
-                        if docker.unpause_container(id.get()).await.is_err() {
-                            Self::set_error(&app_data, DockerControls::Resume, &gui_state);
-                        }
-                        gui_state.lock().stop_loading_animation(uuid);
-                    });
-                    self.update_everything().await;
-                }
-                DockerMessage::Delete(id) => {
-                    tokio::spawn(async move {
-                        GuiState::start_loading_animation(&gui_state, uuid);
-                        if docker
-                            .remove_container(
-                                id.get(),
-                                Some(RemoveContainerOptions {
-                                    v: false,
-                                    force: true,
-                                    link: false,
-                                }),
-                            )
-                            .await
-                            .is_err()
-                        {
-                            Self::set_error(&app_data, DockerControls::Stop, &gui_state);
-                        }
-                        gui_state.lock().stop_loading_animation(uuid);
-                    });
-                    self.update_everything().await;
-                    self.gui_state.lock().set_delete_container(None);
-                }
                 DockerMessage::ConfirmDelete(id) => {
                     self.gui_state.lock().set_delete_container(Some(id));
+                }
+                DockerMessage::Control((command, id)) => self.execute_command(command, id).await,
+                DockerMessage::Exec(docker_tx) => {
+                    docker_tx.send(Arc::clone(&self.docker)).ok();
                 }
                 DockerMessage::Update => self.update_everything().await,
                 DockerMessage::Quit => {

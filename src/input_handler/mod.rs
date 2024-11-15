@@ -22,7 +22,7 @@ use uuid::Uuid;
 
 mod message;
 use crate::{
-    app_data::{AppData, DockerControls, Header},
+    app_data::{AppData, DockerCommand, Header},
     app_error::AppError,
     docker_data::DockerMessage,
     exec::{tty_readable, ExecMode},
@@ -112,7 +112,10 @@ impl InputHandler {
     async fn confirm_delete(&self) {
         let id = self.gui_state.lock().get_delete_container();
         if let Some(id) = id {
-            self.docker_tx.send(DockerMessage::Delete(id)).await.ok();
+            self.docker_tx
+                .send(DockerMessage::Control((DockerCommand::Delete, id)))
+                .await
+                .ok();
         }
     }
 
@@ -281,26 +284,17 @@ impl InputHandler {
                 let option_id = self.app_data.lock().get_selected_container_id();
                 if let Some(id) = option_id {
                     match command {
-                        DockerControls::Delete => self
+                        DockerCommand::Delete => self
                             .docker_tx
                             .send(DockerMessage::ConfirmDelete(id))
                             .await
                             .ok(),
-                        DockerControls::Pause => {
-                            self.docker_tx.send(DockerMessage::Pause(id)).await.ok()
-                        }
-                        DockerControls::Resume => {
-                            self.docker_tx.send(DockerMessage::Resume(id)).await.ok()
-                        }
-                        DockerControls::Start => {
-                            self.docker_tx.send(DockerMessage::Start(id)).await.ok()
-                        }
-                        DockerControls::Stop => {
-                            self.docker_tx.send(DockerMessage::Stop(id)).await.ok()
-                        }
-                        DockerControls::Restart => {
-                            self.docker_tx.send(DockerMessage::Restart(id)).await.ok()
-                        }
+
+                        _ => self
+                            .docker_tx
+                            .send(DockerMessage::Control((command, id)))
+                            .await
+                            .ok(),
                     };
                 }
             }

@@ -535,7 +535,7 @@ impl AppData {
 
     /// Get the current selected docker command
     /// So know which command to execute
-    pub fn selected_docker_controls(&self) -> Option<DockerControls> {
+    pub fn selected_docker_controls(&self) -> Option<DockerCommand> {
         self.get_selected_container().and_then(|i| {
             i.docker_controls.state.selected().and_then(|x| {
                 i.docker_controls
@@ -574,15 +574,14 @@ impl AppData {
         }
     }
 
-    /// Get mutable Option of the currently selected container DockerControls state
+    /// Get mutable Option of the currently selected container DockerCommand state
     pub fn get_control_state(&mut self) -> Option<&mut ListState> {
         self.get_mut_selected_container()
             .map(|i| &mut i.docker_controls.state)
     }
 
-    /// Get mutable Option of the currently selected container DockerControls items
-    /// TODO command or control, need a uniform name across the application
-    pub fn get_control_items(&mut self) -> Option<&mut Vec<DockerControls>> {
+    /// Get mutable Option of the currently selected container DockerConmand items
+    pub fn get_control_items(&mut self) -> Option<&mut Vec<DockerCommand>> {
         self.get_mut_selected_container()
             .map(|i| &mut i.docker_controls.items)
     }
@@ -855,7 +854,7 @@ impl AppData {
                         item.status = status;
                     };
                     if item.state != state {
-                        item.docker_controls.items = DockerControls::gen_vec(state);
+                        item.docker_controls.items = DockerCommand::gen_vec(state);
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
                         match state {
                             State::Removing | State::Restarting | State::Unknown => {
@@ -1526,7 +1525,7 @@ mod tests {
         app_data.docker_controls_start();
 
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Pause));
+        assert_eq!(result, Some(DockerCommand::Pause));
     }
 
     #[test]
@@ -1539,7 +1538,7 @@ mod tests {
         app_data.docker_controls_next();
 
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Restart));
+        assert_eq!(result, Some(DockerCommand::Restart));
     }
 
     #[test]
@@ -1551,12 +1550,12 @@ mod tests {
         app_data.docker_controls_end();
 
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Delete));
+        assert_eq!(result, Some(DockerCommand::Delete));
 
         // Next has no effect when at end
         app_data.docker_controls_next();
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Delete));
+        assert_eq!(result, Some(DockerCommand::Delete));
     }
 
     #[test]
@@ -1569,19 +1568,19 @@ mod tests {
         app_data.docker_controls_previous();
 
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Stop));
+        assert_eq!(result, Some(DockerCommand::Stop));
 
         // previous has no effect when at start
         app_data.docker_controls_start();
         app_data.docker_controls_previous();
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Pause));
+        assert_eq!(result, Some(DockerCommand::Pause));
     }
 
     #[test]
     /// DockerCommands get correct controls dependant on container state
     fn test_app_data_get_control_items() {
-        let test_state = |state: State, expected: &mut Vec<DockerControls>| {
+        let test_state = |state: State, expected: &mut Vec<DockerCommand>| {
             let gen_item_state = |state: State| {
                 ContainerItem::new(
                     1,
@@ -1605,42 +1604,42 @@ mod tests {
         test_state(
             State::Dead,
             &mut vec![
-                DockerControls::Start,
-                DockerControls::Restart,
-                DockerControls::Delete,
+                DockerCommand::Start,
+                DockerCommand::Restart,
+                DockerCommand::Delete,
             ],
         );
         test_state(
             State::Exited,
             &mut vec![
-                DockerControls::Start,
-                DockerControls::Restart,
-                DockerControls::Delete,
+                DockerCommand::Start,
+                DockerCommand::Restart,
+                DockerCommand::Delete,
             ],
         );
         test_state(
             State::Paused,
             &mut vec![
-                DockerControls::Resume,
-                DockerControls::Stop,
-                DockerControls::Delete,
+                DockerCommand::Resume,
+                DockerCommand::Stop,
+                DockerCommand::Delete,
             ],
         );
-        test_state(State::Removing, &mut vec![DockerControls::Delete]);
+        test_state(State::Removing, &mut vec![DockerCommand::Delete]);
         test_state(
             State::Restarting,
-            &mut vec![DockerControls::Stop, DockerControls::Delete],
+            &mut vec![DockerCommand::Stop, DockerCommand::Delete],
         );
         test_state(
             State::Running(RunningState::Healthy),
             &mut vec![
-                DockerControls::Pause,
-                DockerControls::Restart,
-                DockerControls::Stop,
-                DockerControls::Delete,
+                DockerCommand::Pause,
+                DockerCommand::Restart,
+                DockerCommand::Stop,
+                DockerCommand::Delete,
             ],
         );
-        test_state(State::Unknown, &mut vec![DockerControls::Delete]);
+        test_state(State::Unknown, &mut vec![DockerCommand::Delete]);
     }
 
     // ****** //
