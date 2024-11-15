@@ -308,12 +308,13 @@ impl DockerData {
                 .lock()
                 .entry(SpawnId::Log(container.id.clone()))
                 .or_insert_with(|| {
-                    // MAYBE make a struct that can create this data?
-                    let app_data = Arc::clone(&self.app_data);
-                    let docker = Arc::clone(&self.docker);
-                    let id = container.id.clone();
-                    let spawns = Arc::clone(&self.spawns);
-                    tokio::spawn(Self::update_log(app_data, docker, id, last_updated, spawns))
+                    tokio::spawn(Self::update_log(
+                        Arc::clone(&self.app_data),
+                        Arc::clone(&self.docker),
+                        container.id.clone(),
+                        last_updated,
+                        Arc::clone(&self.spawns),
+                    ))
                 });
         };
         self.update_all_container_stats(&all_ids);
