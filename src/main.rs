@@ -124,6 +124,7 @@ async fn main() {
         Ui::create(app_data, gui_state, input_tx, is_running).await;
     } else {
         info!("in debug mode\n");
+        let mut now = std::time::Instant::now();
         // Debug mode for testing, less pointless now, will display some basic information
         while is_running.load(Ordering::SeqCst) {
             let err = app_data.lock().get_error();
@@ -131,10 +132,12 @@ async fn main() {
                 error!("{}", err);
                 process::exit(1);
             }
-            tokio::time::sleep(std::time::Duration::from_millis(u64::from(
-                args.docker_interval,
-            )))
-            .await;
+            if let Some(Ok(to_sleep)) = u128::from(args.docker_interval)
+                .checked_sub(now.elapsed().as_millis())
+                .map(u64::try_from)
+            {
+                tokio::time::sleep(std::time::Duration::from_millis(to_sleep)).await;
+            }
             let containers = app_data
                 .lock()
                 .get_container_items()
@@ -148,6 +151,7 @@ async fn main() {
                 }
                 println!();
             }
+            now = std::time::Instant::now();
         }
     }
 }

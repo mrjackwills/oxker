@@ -416,9 +416,10 @@ impl DockerData {
         let mut now = std::time::Instant::now();
         tokio::spawn(async move {
             loop {
-                let to_sleep = update_duration.saturating_sub(now.elapsed());
-                tokio::time::sleep(to_sleep).await;
                 docker_tx.send(DockerMessage::Update).await.ok();
+                if let Some(to_sleep) = update_duration.checked_sub(now.elapsed()) {
+                    tokio::time::sleep(to_sleep).await;
+                }
                 now = std::time::Instant::now();
             }
         });
