@@ -133,6 +133,7 @@ impl ContainerPorts {
             .count()
     }
 
+    /// Return as tuple of Strings, ip address, private port, and public port
     pub fn print(&self) -> (String, String, String) {
         (
             self.ip

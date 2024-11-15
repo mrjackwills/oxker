@@ -52,7 +52,6 @@ async fn docker_init(
     docker_rx: Receiver<DockerMessage>,
     docker_tx: Sender<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
-    is_running: &Arc<AtomicBool>,
     host: Option<String>,
 ) {
     let connection = host.map_or_else(Docker::connect_with_socket_defaults, |host| {
@@ -63,10 +62,9 @@ async fn docker_init(
         if docker.ping().await.is_ok() {
             let app_data = Arc::clone(app_data);
             let gui_state = Arc::clone(gui_state);
-            let is_running = Arc::clone(is_running);
 
             tokio::spawn(DockerData::init(
-                app_data, docker, docker_rx, docker_tx, gui_state, is_running,
+                app_data, docker, docker_rx, docker_tx, gui_state,
             ));
         } else {
             app_data
@@ -118,15 +116,7 @@ async fn main() {
     let is_running = Arc::new(AtomicBool::new(true));
     let (docker_tx, docker_rx) = tokio::sync::mpsc::channel(32);
 
-    docker_init(
-        &app_data,
-        docker_rx,
-        docker_tx.clone(),
-        &gui_state,
-        &is_running,
-        host,
-    )
-    .await;
+    docker_init(&app_data, docker_rx, docker_tx.clone(), &gui_state, host).await;
 
     if args.gui {
         let (input_tx, input_rx) = tokio::sync::mpsc::channel(32);

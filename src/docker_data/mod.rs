@@ -10,10 +10,7 @@ use futures_util::StreamExt;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
-    sync::{
-        atomic::{AtomicBool, AtomicUsize},
-        Arc,
-    },
+    sync::{atomic::AtomicUsize, Arc},
 };
 use tokio::{
     sync::mpsc::{Receiver, Sender},
@@ -62,7 +59,6 @@ pub struct DockerData {
     binate: Binate,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
-    is_running: Arc<AtomicBool>,
     init: Option<Arc<AtomicUsize>>,
     receiver: Receiver<DockerMessage>,
     spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
@@ -410,14 +406,6 @@ impl DockerData {
                     docker_tx.send(Arc::clone(&self.docker)).ok();
                 }
                 DockerMessage::Update => self.update_everything().await,
-                DockerMessage::Quit => {
-                    self.spawns
-                        .lock()
-                        .values()
-                        .for_each(tokio::task::JoinHandle::abort);
-                    self.is_running
-                        .store(false, std::sync::atomic::Ordering::SeqCst);
-                }
             }
         }
     }
@@ -443,7 +431,6 @@ impl DockerData {
         docker_rx: Receiver<DockerMessage>,
         docker_tx: Sender<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
-        is_running: Arc<AtomicBool>,
     ) {
         let args = app_data.lock().args.clone();
         if app_data.lock().get_error().is_none() {
@@ -454,7 +441,6 @@ impl DockerData {
                 docker: Arc::new(docker),
                 gui_state,
                 init: Some(Arc::new(AtomicUsize::new(0))),
-                is_running,
                 receiver: docker_rx,
                 spawns: Arc::new(Mutex::new(HashMap::new())),
             };

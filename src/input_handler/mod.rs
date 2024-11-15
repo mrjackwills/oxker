@@ -1,10 +1,7 @@
 use std::{
     fs::OpenOptions,
     io::{BufWriter, Write},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::{atomic::AtomicBool, Arc},
     time::SystemTime,
 };
 
@@ -84,9 +81,6 @@ impl InputHandler {
                     }
                 }
             }
-            if !self.is_running.load(Ordering::SeqCst) {
-                break;
-            }
         }
     }
 
@@ -97,12 +91,12 @@ impl InputHandler {
 
     /// Send a quit message to docker, to abort all spawns, if an error is returned, set is_running to false here instead
     /// If gui_status is Error or Init, then just set the is_running to false immediately, for a quicker exit
-    async fn quit(&self) {
+    fn quit(&self) {
         let error_init = self
             .gui_state
             .lock()
             .status_contains(&[Status::Error, Status::Init]);
-        if error_init || self.docker_tx.send(DockerMessage::Quit).await.is_err() {
+        if !error_init {
             self.is_running
                 .store(false, std::sync::atomic::Ordering::SeqCst);
         }
@@ -466,7 +460,7 @@ impl InputHandler {
             let is_q = || key_code == KeyCode::Char('q') || key_code == KeyCode::Char('Q');
             if key_modifier == KeyModifiers::CONTROL && is_c() || is_q() && !contains_filter {
                 // Always just quit on Ctrl + c/C or q/Q, unless in FIlter status active
-                self.quit().await;
+                self.quit();
             }
 
             if contains_error {
