@@ -71,24 +71,30 @@ pub struct DockerData {
 impl DockerData {
     /// Use docker stats to calculate current cpu usage
     #[allow(clippy::cast_precision_loss)]
-    // TODO FIX: this can overflow
     fn calculate_usage(stats: &Stats) -> f64 {
         let mut cpu_percentage = 0.0;
-        let previous_cpu = stats.precpu_stats.cpu_usage.total_usage;
-        let cpu_delta = stats.cpu_stats.cpu_usage.total_usage as f64 - previous_cpu as f64;
+        let cpu_delta = stats
+            .cpu_stats
+            .cpu_usage
+            .total_usage
+            .saturating_sub(stats.precpu_stats.cpu_usage.total_usage)
+            as f64;
 
         if let (Some(cpu_stats_usage), Some(precpu_stats_usage)) = (
             stats.cpu_stats.system_cpu_usage,
             stats.precpu_stats.system_cpu_usage,
         ) {
-            let system_delta = (cpu_stats_usage - precpu_stats_usage) as f64;
+            let system_delta = cpu_stats_usage.saturating_sub(precpu_stats_usage) as f64;
             let online_cpus = stats.cpu_stats.online_cpus.unwrap_or_else(|| {
-                stats
-                    .cpu_stats
-                    .cpu_usage
-                    .percpu_usage
-                    .as_ref()
-                    .map_or(0, std::vec::Vec::len) as u64
+                u64::try_from(
+                    stats
+                        .cpu_stats
+                        .cpu_usage
+                        .percpu_usage
+                        .as_ref()
+                        .map_or(0, std::vec::Vec::len),
+                )
+                .unwrap_or_default()
             }) as f64;
             if system_delta > 0.0 && cpu_delta > 0.0 {
                 cpu_percentage = (cpu_delta / system_delta) * online_cpus * 100.0;
@@ -460,19 +466,19 @@ impl DockerData {
 
 // tests, use redis-test container, check logs exists, and selector of logs, and that it increases, and matches end, when you run restart on the docker containers
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use bollard::container::{
-        BlkioStats, CPUStats, CPUUsage, MemoryStats, PidsStats, StorageStats, ThrottlingData,
+        BlkioStats, CPUStats, CPUUsage, MemoryStats, PidsStats, Stats, StorageStats, ThrottlingData,
     };
 
     use super::*;
 
-    #[allow(clippy::too_many_lines)]
-    fn gen_stats(x: u64, y: u64) -> Stats {
+    fn gen_stats() -> Stats {
         Stats {
             read: String::new(),
             preread: String::new(),
-            num_procs: 0,
+            num_procs: 1,
             pids_stats: PidsStats {
                 current: None,
                 limit: None,
@@ -503,33 +509,12 @@ mod tests {
             },
             cpu_stats: CPUStats {
                 cpu_usage: CPUUsage {
-                    percpu_usage: Some(vec![
-                        291_593_800,
-                        182_192_900,
-                        195_048_700,
-                        23_032_300,
-                        132_928_700,
-                        235_555_600,
-                        120_225_700,
-                        175_752_000,
-                        213_060_300,
-                        95_321_600,
-                        226_821_000,
-                        0,
-                        109_151_300,
-                        0,
-                        86_240_200,
-                        1_884_400,
-                        59_077_300,
-                        23_224_900,
-                        95_386_300,
-                        144_987_400,
-                    ]),
-                    total_usage: 250_000_000,
-                    usage_in_usermode: 1_020_000_000,
-                    usage_in_kernelmode: 1_030_000_000,
+                    percpu_usage: Some(vec![50]),
+                    usage_in_usermode: 10,
+                    total_usage: 100,
+                    usage_in_kernelmode: 20,
                 },
-                system_cpu_usage: Some(x),
+                system_cpu_usage: Some(400),
                 online_cpus: Some(1),
                 throttling_data: ThrottlingData {
                     periods: 0,
@@ -539,33 +524,12 @@ mod tests {
             },
             precpu_stats: CPUStats {
                 cpu_usage: CPUUsage {
-                    percpu_usage: Some(vec![
-                        291_593_800,
-                        182_192_900,
-                        195_048_700,
-                        23_032_300,
-                        132_928_700,
-                        235_555_600,
-                        120_225_700,
-                        175_752_000,
-                        213_060_300,
-                        95_321_600,
-                        226_821_000,
-                        0,
-                        109_151_300,
-                        0,
-                        86_240_200,
-                        1_884_400,
-                        59_077_300,
-                        23_224_900,
-                        93_831_100,
-                        144_987_400,
-                    ]),
-                    total_usage: 200_000_000,
-                    usage_in_usermode: 1_020_000_000,
-                    usage_in_kernelmode: 1_020_000_000,
+                    percpu_usage: Some(vec![50]),
+                    usage_in_usermode: 10,
+                    total_usage: 100,
+                    usage_in_kernelmode: 20,
                 },
-                system_cpu_usage: Some(y),
+                system_cpu_usage: Some(400),
                 online_cpus: Some(1),
                 throttling_data: ThrottlingData {
                     periods: 0,
@@ -579,25 +543,198 @@ mod tests {
                 write_count_normalized: None,
                 write_size_bytes: None,
             },
-            name: "/container_1".to_owned(),
-            id: "1".to_owned(),
+            name: String::new(),
+            id: String::new(),
         }
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
-    /// Test the stats calculator, had to cheat here to get round input/outputs
-    fn test_calculate_usage_no_previous_cpu() {
-        let stats = gen_stats(1_000_000_000, 900_000_000);
-        let result = DockerData::calculate_usage(&stats);
-        assert_eq!(result, 50.0);
+    fn test_calculate_usage_50() {
+        let mut stats = gen_stats();
+        stats.precpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![50]),
+                usage_in_usermode: 10,
+                total_usage: 100,
+                usage_in_kernelmode: 20,
+            },
+            system_cpu_usage: Some(400),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
+        stats.cpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![150]),
+                usage_in_usermode: 20,
+                total_usage: 150,
+                usage_in_kernelmode: 30,
+            },
+            system_cpu_usage: Some(500),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
+        let cpu_percentage = DockerData::calculate_usage(&stats);
+        assert_eq!(50.0, cpu_percentage);
+    }
 
-        let stats = gen_stats(1_000_000_000, 800_000_000);
-        let result = DockerData::calculate_usage(&stats);
-        assert_eq!(result, 25.0);
+    #[test]
+    fn test_calculate_usage_25() {
+        let mut stats = gen_stats();
+        stats.precpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![50]),
+                usage_in_usermode: 10,
+                total_usage: 100,
+                usage_in_kernelmode: 20,
+            },
+            system_cpu_usage: Some(400),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
+        stats.cpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![75]),
+                usage_in_usermode: 20,
+                total_usage: 125,
+                usage_in_kernelmode: 30,
+            },
+            system_cpu_usage: Some(500),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
 
-        let stats = gen_stats(1_000_000_000, 750_000_000);
-        let result = DockerData::calculate_usage(&stats);
-        assert_eq!(result, 20.00);
+        let cpu_percentage = DockerData::calculate_usage(&stats);
+        assert_eq!(25.0, cpu_percentage);
+    }
+
+    #[test]
+    fn test_calculate_usage_75() {
+        let mut stats = gen_stats();
+        stats.precpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![50]),
+                usage_in_usermode: 10,
+                total_usage: 100,
+                usage_in_kernelmode: 20,
+            },
+            system_cpu_usage: Some(400),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
+
+        stats.cpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![175]),
+                usage_in_usermode: 20,
+                total_usage: 175,
+                usage_in_kernelmode: 30,
+            },
+            system_cpu_usage: Some(500),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
+
+        let cpu_percentage = DockerData::calculate_usage(&stats);
+        assert_eq!(75.0, cpu_percentage);
+    }
+
+    #[test]
+    fn test_calculate_usage_100() {
+        let mut stats = gen_stats();
+        stats.precpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![50]),
+                usage_in_usermode: 10,
+                total_usage: 100,
+                usage_in_kernelmode: 20,
+            },
+            system_cpu_usage: Some(400),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
+        stats.cpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![200]),
+                usage_in_usermode: 20,
+                total_usage: 200,
+                usage_in_kernelmode: 30,
+            },
+            system_cpu_usage: Some(500),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
+        let cpu_percentage = DockerData::calculate_usage(&stats);
+        assert_eq!(100.0, cpu_percentage);
+    }
+
+    #[test]
+    fn test_calculate_usage_175() {
+        let mut stats = gen_stats();
+        stats.precpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![50]),
+                usage_in_usermode: 10,
+                total_usage: 100,
+                usage_in_kernelmode: 20,
+            },
+            system_cpu_usage: Some(400),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
+
+        stats.cpu_stats = CPUStats {
+            cpu_usage: CPUUsage {
+                percpu_usage: Some(vec![275]),
+                usage_in_usermode: 20,
+                total_usage: 275,
+                usage_in_kernelmode: 30,
+            },
+            system_cpu_usage: Some(500),
+            online_cpus: Some(1),
+            throttling_data: ThrottlingData {
+                periods: 0,
+                throttled_periods: 0,
+                throttled_time: 0,
+            },
+        };
+
+        let cpu_percentage = DockerData::calculate_usage(&stats);
+        assert_eq!(175.0, cpu_percentage);
     }
 }
