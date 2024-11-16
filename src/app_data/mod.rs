@@ -143,10 +143,10 @@ impl AppData {
         Self {
             args,
             containers: StatefulList::new(vec![]),
-            hidden_containers: vec![],
             error: None,
-            sorted_by: None,
             filter: Filter::new(),
+            hidden_containers: vec![],
+            sorted_by: None,
         }
     }
 
@@ -350,7 +350,6 @@ impl AppData {
                         .back()
                         .cmp(&item_ord.1.mem_stats.back())
                         .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
-
                     Header::Id => item_ord
                         .0
                         .id
@@ -372,7 +371,6 @@ impl AppData {
                         .tx
                         .cmp(&item_ord.1.tx)
                         .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
-
                     Header::Name => item_ord
                         .0
                         .name

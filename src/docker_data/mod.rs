@@ -59,7 +59,6 @@ pub struct DockerData {
     binate: Binate,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
-    init: Option<Arc<AtomicUsize>>,
     receiver: Receiver<DockerMessage>,
     spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
 }
@@ -106,12 +105,11 @@ impl DockerData {
         app_data: Arc<Mutex<AppData>>,
         docker: Arc<Docker>,
         id: ContainerId,
-        init: Option<(Arc<AtomicUsize>, usize)>,
         state: State,
         spawn_id: SpawnId,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
     ) {
-        if state.is_alive() || init.is_some() {
+        if state.is_alive() {
             let mut stream = docker
                 .stats(
                     id.get(),
@@ -168,9 +166,6 @@ impl DockerData {
             }
         }
         spawns.lock().remove(&spawn_id);
-        if let Some((target, _)) = init {
-            target.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        }
     }
 
     /// Update all stats, spawn each container into own tokio::spawn thread
@@ -181,7 +176,6 @@ impl DockerData {
             let spawns = Arc::clone(&self.spawns);
             let spawn_id = SpawnId::Stats((id.clone(), self.binate));
 
-            let init = self.init.as_ref().map(|i| (Arc::clone(i), all_ids.len()));
             self.spawns
                 .lock()
                 .entry(spawn_id.clone())
@@ -190,7 +184,6 @@ impl DockerData {
                         app_data,
                         docker,
                         id.clone(),
-                        init,
                         *state,
                         spawn_id,
                         spawns,
@@ -257,6 +250,7 @@ impl DockerData {
         app_data: Arc<Mutex<AppData>>,
         docker: Arc<Docker>,
         id: ContainerId,
+        init: Option<Arc<AtomicUsize>>,
         since: u64,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
     ) {
@@ -279,18 +273,22 @@ impl DockerData {
         }
         spawns.lock().remove(&SpawnId::Log(id.clone()));
         app_data.lock().update_log_by_id(output, &id);
+        init.map(|i| i.fetch_add(1, std::sync::atomic::Ordering::SeqCst));
     }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
-    fn init_all_logs(&self, all_ids: &[(State, ContainerId)]) {
+    fn init_all_logs(&self, all_ids: &[(State, ContainerId)], init: &Option<Arc<AtomicUsize>>) {
         for (_, id) in all_ids {
-            let docker = Arc::clone(&self.docker);
-            let app_data = Arc::clone(&self.app_data);
-            let spawns = Arc::clone(&self.spawns);
-            let key = SpawnId::Log(id.clone());
             self.spawns.lock().insert(
-                key,
-                tokio::spawn(Self::update_log(app_data, docker, id.clone(), 0, spawns)),
+                SpawnId::Log(id.clone()),
+                tokio::spawn(Self::update_log(
+                    Arc::clone(&self.app_data),
+                    Arc::clone(&self.docker),
+                    id.clone(),
+                    init.clone(),
+                    0,
+                    Arc::clone(&self.spawns),
+                )),
             );
         }
     }
@@ -308,6 +306,7 @@ impl DockerData {
                         Arc::clone(&self.app_data),
                         Arc::clone(&self.docker),
                         container.id.clone(),
+                        None,
                         last_updated,
                         Arc::clone(&self.spawns),
                     ))
@@ -327,14 +326,12 @@ impl DockerData {
 
         self.update_all_container_stats(&all_ids);
 
-        self.init_all_logs(&all_ids);
+        let init = Arc::new(AtomicUsize::new(0));
+        self.init_all_logs(&all_ids, &Some(Arc::clone(&init)));
 
-        while let Some(x) = self.init.as_ref() {
+        while init.load(std::sync::atomic::Ordering::SeqCst) != all_ids.len() {
             self.app_data.lock().sort_containers();
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            if x.load(std::sync::atomic::Ordering::SeqCst) == all_ids.len() {
-                self.init = None;
-            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
         self.gui_state.lock().stop_loading_animation(loading_uuid);
         self.gui_state.lock().status_del(Status::Init);
@@ -441,7 +438,6 @@ impl DockerData {
                 binate: Binate::One,
                 docker: Arc::new(docker),
                 gui_state,
-                init: Some(Arc::new(AtomicUsize::new(0))),
                 receiver: docker_rx,
                 spawns: Arc::new(Mutex::new(HashMap::new())),
             };
