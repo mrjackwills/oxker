@@ -200,11 +200,11 @@ impl<T> StatefulList<T> {
             String::new()
         } else {
             let len = self.items.len();
-            let c = self
+            let count = self
                 .state
                 .selected()
                 .map_or(0, |value| if len > 0 { value + 1 } else { value });
-            format!(" {c}/{}", self.items.len())
+            format!(" {count}/{len}")
         }
     }
 }
