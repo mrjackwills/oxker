@@ -172,27 +172,25 @@ impl<T> StatefulList<T> {
 
     pub fn next(&mut self) {
         if !self.items.is_empty() {
-            let i = match self.state.selected() {
-                Some(i) => {
-                    if i < self.items.len() - 1 {
-                        i + 1
-                    } else {
-                        i
-                    }
+            self.state.select(Some(self.state.selected().map_or(0, |i| {
+                if i < self.items.len() - 1 {
+                    i + 1
+                } else {
+                    i
                 }
-                None => 0,
-            };
-            self.state.select(Some(i));
+            })));
         }
     }
 
     pub fn previous(&mut self) {
         if !self.items.is_empty() {
-            let i = self
-                .state
-                .selected()
-                .map_or(0, |i| if i == 0 { 0 } else { i - 1 });
-            self.state.select(Some(i));
+            self.state.select(Some(self.state.selected().map_or(0, |i| {
+                if i == 0 {
+                    0
+                } else {
+                    i - 1
+                }
+            })));
         }
     }
 
