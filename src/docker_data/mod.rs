@@ -196,7 +196,7 @@ impl DockerData {
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
     /// If in a containerised runtime, will ignore any container that uses the `/app/oxker` as an entry point, unless the `-s` flag is set
-    pub async fn update_all_containers(&self) -> Vec<(State, ContainerId)> {
+    async fn update_all_containers(&self) -> Vec<(State, ContainerId)> {
         let containers = self
             .docker
             .list_containers(Some(ListContainersOptions::<String> {
@@ -293,6 +293,26 @@ impl DockerData {
         }
     }
 
+    /// Initialize docker container data, before any messages are received
+    async fn initialise_container_data(&mut self) {
+        self.gui_state.lock().status_push(Status::Init);
+        let loading_uuid = Uuid::new_v4();
+        GuiState::start_loading_animation(&self.gui_state, loading_uuid);
+        let all_ids = self.update_all_containers().await;
+
+        self.update_all_container_stats(&all_ids);
+
+        let init = Arc::new(AtomicUsize::new(0));
+        self.init_all_logs(&all_ids, &Some(Arc::clone(&init)));
+
+        while init.load(std::sync::atomic::Ordering::SeqCst) != all_ids.len() {
+            self.app_data.lock().sort_containers();
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        self.gui_state.lock().stop_loading_animation(loading_uuid);
+        self.gui_state.lock().status_del(Status::Init);
+    }
+
     /// Update all cpu_mem, and selected container log (if a log update join_handle isn't currently being executed)
     async fn update_everything(&mut self) {
         let all_ids = self.update_all_containers().await;
@@ -314,27 +334,6 @@ impl DockerData {
         };
         self.update_all_container_stats(&all_ids);
         self.app_data.lock().sort_containers();
-        self.gui_state.lock().stop_loading_animation(Uuid::nil());
-    }
-
-    /// Initialize docker container data, before any messages are received
-    async fn initialise_container_data(&mut self) {
-        self.gui_state.lock().status_push(Status::Init);
-        let loading_uuid = Uuid::new_v4();
-        GuiState::start_loading_animation(&self.gui_state, loading_uuid);
-        let all_ids = self.update_all_containers().await;
-
-        self.update_all_container_stats(&all_ids);
-
-        let init = Arc::new(AtomicUsize::new(0));
-        self.init_all_logs(&all_ids, &Some(Arc::clone(&init)));
-
-        while init.load(std::sync::atomic::Ordering::SeqCst) != all_ids.len() {
-            self.app_data.lock().sort_containers();
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        }
-        self.gui_state.lock().stop_loading_animation(loading_uuid);
-        self.gui_state.lock().status_del(Status::Init);
     }
 
     /// Set the global error as the docker error, and set gui_state to error
@@ -387,6 +386,7 @@ impl DockerData {
             }
             gui_state.lock().stop_loading_animation(uuid);
         });
+
         self.update_everything().await;
     }
 
@@ -423,7 +423,7 @@ impl DockerData {
     }
 
     /// Initialise self, and start the message receiving loop
-    pub async fn init(
+    pub async fn start(
         app_data: Arc<Mutex<AppData>>,
         docker: Docker,
         docker_rx: Receiver<DockerMessage>,

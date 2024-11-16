@@ -54,28 +54,26 @@ async fn docker_init(
     gui_state: &Arc<Mutex<GuiState>>,
     host: Option<String>,
 ) {
+    // let err = ||
     let connection = host.map_or_else(Docker::connect_with_socket_defaults, |host| {
         Docker::connect_with_socket(&host, 120, API_DEFAULT_VERSION)
     });
 
     if let Ok(docker) = connection {
         if docker.ping().await.is_ok() {
-            let app_data = Arc::clone(app_data);
-            let gui_state = Arc::clone(gui_state);
-
-            tokio::spawn(DockerData::init(
-                app_data, docker, docker_rx, docker_tx, gui_state,
+            tokio::spawn(DockerData::start(
+                Arc::clone(app_data),
+                docker,
+                docker_rx,
+                docker_tx,
+                Arc::clone(gui_state),
             ));
-        } else {
-            app_data
-                .lock()
-                .set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
+            return;
         }
-    } else {
-        app_data
-            .lock()
-            .set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
     }
+    app_data
+        .lock()
+        .set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
 }
 
 /// Create data for, and then spawn a tokio thread, for the input handler
@@ -86,15 +84,12 @@ fn handler_init(
     input_rx: Receiver<InputMessages>,
     is_running: &Arc<AtomicBool>,
 ) {
-    let app_data = Arc::clone(app_data);
-    let gui_state = Arc::clone(gui_state);
-    let is_running = Arc::clone(is_running);
-    tokio::spawn(input_handler::InputHandler::init(
-        app_data,
+    tokio::spawn(input_handler::InputHandler::start(
+        Arc::clone(app_data),
         input_rx,
         docker_sx.clone(),
-        gui_state,
-        is_running,
+        Arc::clone(gui_state),
+        Arc::clone(is_running),
     ));
 }
 
