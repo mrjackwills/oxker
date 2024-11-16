@@ -851,22 +851,19 @@ pub fn help_box(f: &mut Frame) {
 
     let name_paragraph = Paragraph::new(name_info.lines)
         .style(Style::default().bg(Color::Magenta).fg(Color::White))
-        .block(Block::default())
         .alignment(Alignment::Center);
 
+    let style = || Style::default().bg(Color::Magenta).fg(Color::Black);
     let description_paragraph = Paragraph::new(description_info.lines)
-        .style(Style::default().bg(Color::Magenta).fg(Color::Black))
-        .block(Block::default())
+        .style(style())
         .alignment(Alignment::Center);
 
     let help_paragraph = Paragraph::new(button_info.lines)
-        .style(Style::default().bg(Color::Magenta).fg(Color::Black))
-        .block(Block::default())
+        .style(style())
         .alignment(Alignment::Left);
 
     let final_paragraph = Paragraph::new(final_info.lines)
-        .style(Style::default().bg(Color::Magenta).fg(Color::Black))
-        .block(Block::default())
+        .style(style())
         .alignment(Alignment::Center);
 
     let block = Block::default()
