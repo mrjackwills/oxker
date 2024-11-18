@@ -52,9 +52,9 @@ async fn docker_init(
     docker_rx: Receiver<DockerMessage>,
     docker_tx: Sender<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
-    host: Option<String>,
 ) {
-    // let err = ||
+    let host = read_docker_host(&app_data.lock().args);
+
     let connection = host.map_or_else(Docker::connect_with_socket_defaults, |host| {
         Docker::connect_with_socket(&host, 120, API_DEFAULT_VERSION)
     });
@@ -99,24 +99,17 @@ async fn main() {
 
     let args = CliArgs::new();
 
-    // If running via Docker image, need to sleep else program will just quit straight away, no real idea why
-    // So just sleep for small while
-    if args.in_container {
-        std::thread::sleep(std::time::Duration::from_millis(250));
-    }
-    let host = read_docker_host(&args);
-
     let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
     let (docker_tx, docker_rx) = tokio::sync::mpsc::channel(32);
 
-    docker_init(&app_data, docker_rx, docker_tx.clone(), &gui_state, host).await;
+    docker_init(&app_data, docker_rx, docker_tx.clone(), &gui_state).await;
 
     if args.gui {
         let (input_tx, input_rx) = tokio::sync::mpsc::channel(32);
         handler_init(&app_data, &docker_tx, &gui_state, input_rx, &is_running);
-        Ui::create(app_data, gui_state, input_tx, is_running).await;
+        Ui::start(app_data, gui_state, input_tx, is_running).await;
     } else {
         info!("in debug mode\n");
         let mut now = std::time::Instant::now();
