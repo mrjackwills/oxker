@@ -59,7 +59,7 @@ impl Ui {
     }
 
     /// Create a new Ui struct, and execute the drawing loop
-    pub async fn create(
+    pub async fn start(
         app_data: Arc<Mutex<AppData>>,
         gui_state: Arc<Mutex<GuiState>>,
         input_tx: Sender<InputMessages>,
