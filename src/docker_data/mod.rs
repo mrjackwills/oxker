@@ -277,15 +277,16 @@ impl DockerData {
     }
 
     /// Update all logs, spawn each container into own tokio::spawn thread
-    fn init_all_logs(&self, all_ids: &[(State, ContainerId)], init: &Option<Arc<AtomicUsize>>) {
+    fn init_all_logs(&self, all_ids: &[(State, ContainerId)], init: Option<&Arc<AtomicUsize>>) {
         for (_, id) in all_ids {
+            // let init = init.map(|i|Arc::clone(i));
             self.spawns.lock().insert(
                 SpawnId::Log(id.clone()),
                 tokio::spawn(Self::update_log(
                     Arc::clone(&self.app_data),
                     Arc::clone(&self.docker),
                     id.clone(),
-                    init.clone(),
+                    init.map(Arc::clone),
                     0,
                     Arc::clone(&self.spawns),
                 )),
@@ -303,7 +304,7 @@ impl DockerData {
         self.update_all_container_stats(&all_ids);
 
         let init = Arc::new(AtomicUsize::new(0));
-        self.init_all_logs(&all_ids, &Some(Arc::clone(&init)));
+        self.init_all_logs(&all_ids, Some(&init));
 
         while init.load(std::sync::atomic::Ordering::SeqCst) != all_ids.len() {
             self.app_data.lock().sort_containers();

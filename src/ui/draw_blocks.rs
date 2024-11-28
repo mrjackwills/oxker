@@ -1000,7 +1000,7 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
 
     let area = popup(lines, max_line_width, f.area(), BoxLocation::MiddleCentre);
 
-	f.render_widget(Clear, area);
+    f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
 

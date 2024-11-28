@@ -160,7 +160,6 @@ impl AppData {
     }
 
     /// Filter related methods
-
     /// Get the current filter term
     pub const fn get_filter_term(&self) -> Option<&String> {
         self.filter.term.as_ref()
@@ -280,7 +279,6 @@ impl AppData {
     }
 
     /// Container sort related methods
-
     /// Change the sorted order, also set the selected container state to match new order
     fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
@@ -390,7 +388,6 @@ impl AppData {
     }
 
     /// Container state methods
-
     /// Get the total number of none "hidden" containers
     pub fn get_container_len(&self) -> usize {
         self.containers.items.len()
@@ -530,7 +527,6 @@ impl AppData {
     }
 
     /// Selected DockerCommand methods
-
     /// Get the current selected docker command
     /// So know which command to execute
     pub fn selected_docker_controls(&self) -> Option<DockerCommand> {
@@ -585,7 +581,6 @@ impl AppData {
     }
 
     /// Logs related methods
-
     /// Get the title for log panel for selected container, will be either
     /// 1) "logs x/x - container_name - container_image"
     /// 2) "logs - container_name - container_image" when no logs found
@@ -650,7 +645,6 @@ impl AppData {
     }
 
     /// Chart data related methods
-
     /// Get mutable Option of the currently selected container chart data
     pub fn get_chart_data(&mut self) -> Option<(CpuTuple, MemTuple)> {
         self.containers
@@ -661,7 +655,6 @@ impl AppData {
     }
 
     /// Error related methods
-
     /// Get single app_state error
     pub const fn get_error(&self) -> Option<AppError> {
         self.error
@@ -726,7 +719,6 @@ impl AppData {
     }
 
     /// Update related methods
-
     /// Get mutable reference to a container in the containers vec & the hidden_containers vec
     fn get_any_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
         if self.get_hidden_container_by_id(id).is_some() {
