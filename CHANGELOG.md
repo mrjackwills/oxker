@@ -1,3 +1,25 @@
+### Chores
++ dependencies updated, [b78713579c4706d605e5b35fcd832610a0152294]
++ Rust 1.83 linting, [751d997a3dac823e144ae62e6c1455676e50ddb8]
+
+### Fixes
++ update containerised Dockerfile, [0c6f53228f01196e352c2069383ba1e7a10950a8]
++ calculate_usage overflow, [5106a01f3dcb87ce5a8f1fb7bf49dc6b3c25d03e]
+
+### Refactors
++ massively speed up docker init process, [8b9fe4246865441704ae12dff0938868a4fe6f81]
++ remove docker sleep, [f1562d1084336fe5be39894c93cb49107f0a4a6d]
++ dead code removed, [5ee48d5708fa6de0206c021db0bb611196e66fba], [ba6a95241389f99d504ee4bf3e87e19006f12e49], [f0b1145651625ad4e577d79baaf902d4d3bc0579]
++ input_handler, [7f4238349525c01ae9fb8b1f6c0946e5364dd55e]
++ statefulList get_state_title, [2d540b0e2210cc04d73035ec59211ffc739174f6]
++ statefulList next/previous, [7bb2bef28d90ebc58da86a0365a1904a0c32dffe]
++ help_box closure fn, [2860426d57a4458fcee49a2fd20e8e7bb9e71fb5]
++ use check_sub for sleep calculations, [fe3696e5576739d8b033d9e748b5ea696c4b4e4f]
++ rename scheduler to heartbeat, [68a6551ed038a36330b2f098112829465a1c3c7a]
++ remove uneccessary is_running load, [76ccf7c00691f815c3ab0bede838c99252ba84f0]
++ execute_command(), [2a834d6c2fa4a15124d24ddbd12f667829e148ad]
+
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.8.0'>v0.8.0</a>
 ### 2024-10-22
 
