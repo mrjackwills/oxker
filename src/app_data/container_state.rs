@@ -110,10 +110,10 @@ pub struct ContainerPorts {
     pub public: Option<u16>,
 }
 
-impl From<&Port> for ContainerPorts {
-    fn from(value: &Port) -> Self {
+impl From<Port> for ContainerPorts {
+    fn from(value: Port) -> Self {
         Self {
-            ip: value.ip.clone(),
+            ip: value.ip,
             private: value.private_port,
             public: value.public_port,
         }
@@ -258,9 +258,12 @@ pub enum State {
 }
 
 impl State {
+    /// The container is alive if the start is Running, either healthy or unhealthy
     pub const fn is_alive(self) -> bool {
         matches!(self, Self::Running(_))
     }
+    /// Color of the state for the containers section
+    /// TODO allow usable editable colours
     pub const fn get_color(self) -> Color {
         match self {
             Self::Paused => Color::Yellow,
