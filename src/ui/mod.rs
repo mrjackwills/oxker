@@ -326,7 +326,7 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
                 gui_state.lock().set_delete_container(None);
             },
             |name| {
-                draw_blocks::delete_confirm(f, gui_state, &name);
+                draw_blocks::delete_confirm(f, gui_state, name);
             },
         );
     }

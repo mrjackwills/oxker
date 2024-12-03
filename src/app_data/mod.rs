@@ -251,7 +251,7 @@ impl AppData {
         self.filter_containers();
     }
 
-    // change the filter_by option
+    /// change the filter_by option
     pub fn filter_by_next(&mut self) {
         if let Some(by) = self.filter.by.next() {
             self.filter.by = by;
@@ -259,7 +259,7 @@ impl AppData {
         }
     }
 
-    // change the filter_by option
+    /// change the filter_by option
     pub fn filter_by_prev(&mut self) {
         if let Some(by) = self.filter.by.prev() {
             self.filter.by = by;
@@ -393,6 +393,14 @@ impl AppData {
         self.containers.items.len()
     }
 
+    pub fn get_all_id_state(&self) -> Vec<(State, ContainerId)> {
+        self.containers
+            .items
+            .iter()
+            .map(|i| (i.state, i.id.clone()))
+            .collect::<Vec<_>>()
+    }
+
     /// Get all the ContainerItems
     pub fn get_container_items(&self) -> &[ContainerItem] {
         &self.containers.items
@@ -478,11 +486,10 @@ impl AppData {
     }
 
     /// Get Option of the current selected container's ports, sorted by private port
-    pub fn get_selected_ports(&mut self) -> Option<(Vec<ContainerPorts>, State)> {
+    pub fn get_selected_ports(&mut self) -> Option<(&[ContainerPorts], State)> {
         if let Some(item) = self.get_mut_selected_container() {
-            let mut ports = item.ports.clone();
-            ports.sort_by(|a, b| a.private.cmp(&b.private));
-            return Some((ports, item.state));
+            item.ports.sort_by(|a, b| a.private.cmp(&b.private));
+            return Some((&item.ports, item.state));
         }
         None
     }
@@ -506,12 +513,12 @@ impl AppData {
     }
 
     /// Get the ContainerName of by ID
-    pub fn get_container_name_by_id(&mut self, id: &ContainerId) -> Option<ContainerName> {
+    pub fn get_container_name_by_id(&mut self, id: &ContainerId) -> Option<&ContainerName> {
         self.containers
             .items
             .iter_mut()
             .find(|i| &i.id == id)
-            .map(|i| i.name.clone())
+            .map(|i| &i.name)
     }
 
     /// Find the id of the currently selected container.
@@ -692,7 +699,6 @@ impl AppData {
         let mut columns = Columns::new();
         let count = |x: &str| u8::try_from(x.chars().count()).unwrap_or(12);
 
-        // Should probably find a refactor here somewhere
         for container in [&self.containers.items, &self.hidden_containers] {
             for container in container {
                 let cpu_count = container.cpu_stats.back().map_or_else(
@@ -759,12 +765,11 @@ impl AppData {
             container.tx.update(tx);
             container.mem_limit.update(mem_limit);
         }
-        // need to benchmark this?
         self.sort_containers();
     }
 
     /// Update, or insert, containers
-    pub fn update_containers(&mut self, all_containers: &mut [ContainerSummary]) {
+    pub fn update_containers(&mut self, mut all_containers: Vec<ContainerSummary>) {
         let all_ids = self
             .containers
             .items
@@ -799,7 +804,7 @@ impl AppData {
             }
         }
 
-        for i in all_containers {
+        for mut i in all_containers {
             if let Some(id) = i.id.as_ref() {
                 let name = i.names.as_mut().map_or(String::new(), |names| {
                     names.first_mut().map_or(String::new(), |f| {
@@ -810,8 +815,8 @@ impl AppData {
                     })
                 });
 
-                let ports = i.ports.as_ref().map_or(vec![], |i| {
-                    i.iter().map(ContainerPorts::from).collect::<Vec<_>>()
+                let ports = i.ports.map_or(vec![], |i| {
+                    i.into_iter().map(ContainerPorts::from).collect::<Vec<_>>()
                 });
 
                 let id = ContainerId::from(id.as_str());
@@ -1466,7 +1471,7 @@ mod tests {
         let mut app_data = gen_appdata(&containers);
 
         let result = app_data.get_container_name_by_id(&ContainerId::from("2"));
-        assert_eq!(result, Some(ContainerName::from("container_2")));
+        assert_eq!(result, Some(&ContainerName::from("container_2")));
     }
 
     #[test]
@@ -2173,7 +2178,8 @@ mod tests {
                         private: 8001,
                         public: None
                     }
-                ],
+                ]
+                .as_slice(),
                 State::Running(RunningState::Healthy),
             ))
         );
@@ -2185,7 +2191,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Some((vec![], State::Running(RunningState::Healthy)))
+            Some((vec![].as_slice(), State::Running(RunningState::Healthy)))
         );
     }
 
@@ -2220,12 +2226,12 @@ mod tests {
         let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
         let result_pre = app_data.get_container_items().to_owned();
-        let mut input = [
+        let input = vec![
             gen_container_summary(1, "paused"),
             gen_container_summary(2, "dead"),
         ];
 
-        app_data.update_containers(&mut input);
+        app_data.update_containers(input);
         let result_post = app_data.get_container_items().to_owned();
         assert_ne!(result_pre, result_post);
         assert_eq!(result_post[0].state, State::Paused);

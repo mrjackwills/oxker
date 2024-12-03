@@ -294,7 +294,8 @@ pub fn ports(
     app_data: &Arc<Mutex<AppData>>,
     max_lens: (usize, usize, usize),
 ) {
-    let ports = app_data.lock().get_selected_ports();
+    let mut data = app_data.lock();
+    let ports = data.get_selected_ports();
     if let Some(ports) = ports {
         let block = Block::default()
             .borders(Borders::ALL)
@@ -318,6 +319,7 @@ pub fn ports(
                 .alignment(Alignment::Center)
                 .block(block);
             f.render_widget(paragraph, area);
+            drop(data);
         } else {
             let mut output = vec![Line::from(
                 Span::from(format!(
@@ -326,7 +328,7 @@ pub fn ports(
                 ))
                 .fg(Color::Yellow),
             )];
-            for item in &ports.0 {
+            for item in ports.0 {
                 let fg = Color::White;
                 let strings = item.print();
 
@@ -1244,7 +1246,7 @@ mod tests {
         setup
             .app_data
             .lock()
-            .update_containers(&mut vec![gen_container_summary(1, "paused")]);
+            .update_containers(vec![gen_container_summary(1, "paused")]);
         setup.app_data.lock().docker_controls_next();
 
         let expected = [
