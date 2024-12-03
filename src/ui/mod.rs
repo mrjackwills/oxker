@@ -220,6 +220,7 @@ impl Ui {
 }
 
 /// Frequent data required by multiple framde drawing functions, can reduce mutex reads by placing it all in here
+/// TODO add more items to this, and split up into parts
 #[derive(Debug)]
 pub struct FrameData {
     columns: Columns,

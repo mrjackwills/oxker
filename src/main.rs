@@ -164,6 +164,7 @@ mod tests {
             docker_interval: 1000,
             gui: true,
             host: None,
+            std_err: false,
             in_container: false,
             save_dir: None,
             raw: false,

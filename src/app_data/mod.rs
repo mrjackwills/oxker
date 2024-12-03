@@ -442,6 +442,7 @@ impl AppData {
     }
 
     /// Find the longest port when it's transformed into a string, defaults are header lens (ip, private, public)
+    /// TODO refactor this, and write comments as to whete the initial sizes come from
     pub fn get_longest_port(&self) -> (usize, usize, usize) {
         let mut longest_ip = 5;
         let mut longest_private = 10;

@@ -16,7 +16,7 @@
 + help_box closure fn, [2860426d57a4458fcee49a2fd20e8e7bb9e71fb5]
 + use check_sub for sleep calculations, [fe3696e5576739d8b033d9e748b5ea696c4b4e4f]
 + rename scheduler to heartbeat, [68a6551ed038a36330b2f098112829465a1c3c7a]
-+ remove uneccessary is_running load, [76ccf7c00691f815c3ab0bede838c99252ba84f0]
++ remove unnecessary is_running load, [76ccf7c00691f815c3ab0bede838c99252ba84f0]
 + execute_command(), [2a834d6c2fa4a15124d24ddbd12f667829e148ad]
 
 

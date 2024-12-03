@@ -253,10 +253,11 @@ impl DockerData {
         init: Option<Arc<AtomicUsize>>,
         since: u64,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
+        stderr: bool,
     ) {
         let options = Some(LogsOptions::<String> {
             stdout: true,
-            stderr: true,
+            stderr,
             timestamps: true,
             since: i64::try_from(since).unwrap_or_default(),
             ..Default::default()
@@ -289,6 +290,7 @@ impl DockerData {
                     init.map(Arc::clone),
                     0,
                     Arc::clone(&self.spawns),
+                    self.args.std_err,
                 )),
             );
         }
@@ -330,6 +332,7 @@ impl DockerData {
                         None,
                         last_updated,
                         Arc::clone(&self.spawns),
+                        self.args.std_err,
                     ))
                 });
         };
@@ -348,7 +351,7 @@ impl DockerData {
             .set_error(AppError::DockerCommand(error), gui_state, Status::Error);
     }
 
-    /// Execute docker comamnds (start, stop etc) on it's own tokio thread
+    /// Execute docker commands (start, stop etc) on it's own tokio thread
     async fn execute_command(&mut self, control: DockerCommand, id: ContainerId) {
         let (app_data, docker, gui_state) = (
             Arc::clone(&self.app_data),
