@@ -1,6 +1,9 @@
 ### Chores
-+ dependencies updated, [b78713579c4706d605e5b35fcd832610a0152294]
++ dependencies updated, [b78713579c4706d605e5b35fcd832610a0152294], [c6200e8f77f8bb1f0152cb9374029d15cc45df9d]
 + Rust 1.83 linting, [751d997a3dac823e144ae62e6c1455676e50ddb8]
+
+### Features
++ `--no-stderr` cli arg, closes #52, [c739637b91c8fa742a69f4d888678d7b3964678c]
 
 ### Fixes
 + update containerised Dockerfile, [0c6f53228f01196e352c2069383ba1e7a10950a8]
