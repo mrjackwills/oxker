@@ -1879,20 +1879,17 @@ mod tests {
     #[test]
     /// No logs, panel unselected, then selected, border color changes correctly
     fn test_draw_blocks_logs_none() {
-        let (w, h) = (25, 6);
+        let (w, h) = (35, 6);
         let mut setup = test_setup(w, h, true, true);
-        setup.app_data.lock().containers = StatefulList::new(vec![]);
 
         let expected = [
-            "╭ Logs ─────────────────╮",
-            "│     no logs found     │",
-            "│                       │",
-            "│                       │",
-            "│                       │",
-            "╰───────────────────────╯",
+            "╭ Logs - container_1 - image_1 ───╮",
+            "│          no logs found          │",
+            "│                                 │",
+            "│                                 │",
+            "│                                 │",
+            "╰─────────────────────────────────╯",
         ];
-
-        let _fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
         setup
             .terminal
@@ -1925,7 +1922,6 @@ mod tests {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::LightCyan);
                 }
@@ -2001,7 +1997,7 @@ mod tests {
     #[test]
     /// Logs correct displayed, changing log state also draws correctly
     fn test_draw_blocks_logs_some() {
-        let (w, h) = (25, 6);
+        let (w, h) = (36, 6);
         let mut setup = test_setup(w, h, true, true);
 
         insert_logs(&setup);
@@ -2014,12 +2010,12 @@ mod tests {
             })
             .unwrap();
         let expected = [
-            "╭ Logs 3/3 - container_1╮",
-            "│  line 1               │",
-            "│  line 2               │",
-            "│▶ line 3               │",
-            "│                       │",
-            "╰───────────────────────╯",
+            "╭ Logs 3/3 - container_1 - image_1 ╮",
+            "│  line 1                          │",
+            "│  line 2                          │",
+            "│▶ line 3                          │",
+            "│                                  │",
+            "╰──────────────────────────────────╯",
         ];
 
         for (row_index, result_row) in get_result(&setup, w) {
@@ -2028,7 +2024,7 @@ mod tests {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.fg, Color::Reset);
 
-                if row_index == 3 && (1..=23).contains(&result_cell_index) {
+                if row_index == 3 && (1..=34).contains(&result_cell_index) {
                     assert_eq!(result_cell.modifier, Modifier::BOLD);
                 } else {
                     assert!(result_cell.modifier.is_empty());
@@ -2038,22 +2034,22 @@ mod tests {
 
         // Change selected log line
         setup.app_data.lock().log_previous();
-        _ = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
         setup
             .terminal
             .draw(|f| {
-                super::logs(&setup.app_data, setup.area, f, &setup.fd, &setup.gui_state);
+                super::logs(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
             })
             .unwrap();
 
         let expected = [
-            "╭ Logs 2/3 - container_1╮",
-            "│  line 1               │",
-            "│▶ line 2               │",
-            "│  line 3               │",
-            "│                       │",
-            "╰───────────────────────╯",
+            "╭ Logs 2/3 - container_1 - image_1 ╮",
+            "│  line 1                          │",
+            "│▶ line 2                          │",
+            "│  line 3                          │",
+            "│                                  │",
+            "╰──────────────────────────────────╯",
         ];
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
@@ -2061,7 +2057,7 @@ mod tests {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.fg, Color::Reset);
 
-                if row_index == 2 && (1..=23).contains(&result_cell_index) {
+                if row_index == 2 && (1..=34).contains(&result_cell_index) {
                     assert_eq!(result_cell.modifier, Modifier::BOLD);
                 } else {
                     assert!(result_cell.modifier.is_empty());
