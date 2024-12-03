@@ -224,6 +224,8 @@ impl Ui {
 #[derive(Debug)]
 pub struct FrameData {
     columns: Columns,
+    container_title: String,
+    log_title: String,
     delete_confirm: Option<ContainerId>,
     has_containers: bool,
     has_error: Option<AppError>,
@@ -248,6 +250,8 @@ impl From<(MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)> for FrameData {
 
         Self {
             columns: data.0.get_width(),
+            container_title: data.0.get_container_title(),
+            log_title: data.0.get_log_title(),
             delete_confirm: data.1.get_delete_container(),
             has_containers: data.0.get_container_len() > 0,
             has_error: data.0.get_error(),

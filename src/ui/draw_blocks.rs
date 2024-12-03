@@ -72,7 +72,6 @@ fn max_line_width(text: &str) -> usize {
 /// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
 fn generate_block<'a>(
-    app_data: &Arc<Mutex<AppData>>,
     area: Rect,
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
@@ -83,10 +82,10 @@ fn generate_block<'a>(
         .update_region_map(Region::Panel(panel), area);
     let mut title = match panel {
         SelectablePanel::Containers => {
-            format!("{}{}", panel.title(), app_data.lock().container_title())
+            format!("{}{}", panel.title(), fd.container_title)
         }
         SelectablePanel::Logs => {
-            format!("{}{}", panel.title(), app_data.lock().get_log_title())
+            format!("{}{}", panel.title(), fd.log_title)
         }
         SelectablePanel::Commands => String::new(),
     };
@@ -111,7 +110,7 @@ pub fn commands(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Commands);
+    let block = generate_block(area, fd, gui_state, SelectablePanel::Commands);
     let items = app_data.lock().get_control_items().map_or(vec![], |i| {
         i.iter()
             .map(|c| {
@@ -220,7 +219,7 @@ pub fn containers(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Containers);
+    let block = generate_block(area, fd, gui_state, SelectablePanel::Containers);
 
     let items = app_data
         .lock()
@@ -259,7 +258,7 @@ pub fn logs(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Logs);
+    let block = generate_block(area, fd, gui_state, SelectablePanel::Logs);
     if fd.init {
         let paragraph = Paragraph::new(format!("parsing logs {}", fd.loading_icon))
             .style(Style::default())

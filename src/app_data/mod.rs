@@ -407,7 +407,7 @@ impl AppData {
     }
 
     /// Get title for containers section, add a suffix indicating if the containers are currently under filter
-    pub fn container_title(&self) -> String {
+    pub fn get_container_title(&self) -> String {
         let suffix = if !self.hidden_containers.is_empty() && !self.containers.items.is_empty() {
             " - filtered"
         } else {

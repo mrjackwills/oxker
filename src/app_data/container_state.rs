@@ -125,7 +125,7 @@ impl ContainerPorts {
     pub fn len_ip(&self) -> usize {
         self.ip
             .as_ref()
-            .map_or(0, |i|i.to_string().chars().count())
+            .map_or(0, |i| i.to_string().chars().count())
     }
     pub fn len_private(&self) -> usize {
         format!("{}", self.private).chars().count()
