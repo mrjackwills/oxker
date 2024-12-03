@@ -4,7 +4,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use parking_lot::{Mutex, MutexGuard};
+use parking_lot::Mutex;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Position},
@@ -220,7 +220,6 @@ impl Ui {
 }
 
 /// Frequent data required by multiple framde drawing functions, can reduce mutex reads by placing it all in here
-/// TODO add more items to this, and split up into parts
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct FrameData {
@@ -242,41 +241,43 @@ pub struct FrameData {
     sorted_by: Option<(Header, SortedOrder)>,
 }
 
-impl From<(MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)> for FrameData {
-    fn from(data: (MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)) -> Self {
+impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
+    fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
+        let (app_data, gui_data) = (data.0.lock(), data.1.lock());
+
         // set max height for container section, needs +5 to deal with docker commands list and borders
-        let height = data.0.get_container_len();
+        let height = app_data.get_container_len();
         let height = if height < 12 {
             u16::try_from(height + 5).unwrap_or_default()
         } else {
             12
         };
 
-        let (filter_by, filter_term) = data.0.get_filter();
+        let (filter_by, filter_term) = app_data.get_filter();
         Self {
-            columns: data.0.get_width(),
-            container_title: data.0.get_container_title(),
-            delete_confirm: data.1.get_delete_container(),
+            columns: app_data.get_width(),
+            container_title: app_data.get_container_title(),
+            delete_confirm: gui_data.get_delete_container(),
             filter_by,
             filter_term: filter_term.cloned(),
-            has_containers: data.0.get_container_len() > 0,
-            has_error: data.0.get_error(),
+            has_containers: app_data.get_container_len() > 0,
+            has_error: app_data.get_error(),
             height,
-            help_visible: data.1.status_contains(&[Status::Help]),
-            info_text: data.1.info_box_text.clone(),
-            init: data.1.status_contains(&[Status::Init]),
-            is_loading: data.1.is_loading(),
-            loading_icon: data.1.get_loading().to_string(),
-            log_title: data.0.get_log_title(),
-            selected_panel: data.1.get_selected_panel(),
-            sorted_by: data.0.get_sorted(),
+            help_visible: gui_data.status_contains(&[Status::Help]),
+            info_text: gui_data.info_box_text.clone(),
+            init: gui_data.status_contains(&[Status::Init]),
+            is_loading: gui_data.is_loading(),
+            loading_icon: gui_data.get_loading().to_string(),
+            log_title: app_data.get_log_title(),
+            selected_panel: gui_data.get_selected_panel(),
+            sorted_by: app_data.get_sorted(),
         }
     }
 }
 
 /// Draw the main ui to a frame of the terminal
 fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mutex<GuiState>>) {
-    let fd = FrameData::from((app_data.lock(), gui_state.lock()));
+    let fd = FrameData::from((app_data, gui_state));
     let contains_filter = gui_state.lock().status_contains(&[Status::Filter]);
 
     let whole_constraints = if contains_filter {

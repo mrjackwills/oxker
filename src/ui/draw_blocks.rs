@@ -1119,7 +1119,7 @@ mod tests {
         let app_data = Arc::new(Mutex::new(app_data));
         let gui_state = Arc::new(Mutex::new(gui_state));
 
-        let fd = FrameData::from((app_data.lock(), gui_state.lock()));
+        let fd = FrameData::from((&app_data, &gui_state));
         let area = Rect::new(0, 0, w, h);
         TuiTestSetup {
             app_data,
@@ -1325,7 +1325,7 @@ mod tests {
 
         // Control panel now selected, should have a blue border
         setup.gui_state.lock().next_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
@@ -1374,7 +1374,7 @@ mod tests {
         ];
 
         setup.gui_state.lock().next_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1392,7 +1392,7 @@ mod tests {
         }
 
         setup.gui_state.lock().previous_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1461,7 +1461,7 @@ mod tests {
 
         // Change selected panel, border is now no longer blue
         setup.gui_state.lock().next_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
@@ -1495,7 +1495,7 @@ mod tests {
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
         ];
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1555,7 +1555,7 @@ mod tests {
             "│                                                                                                                                                                        │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup.app_data.lock().containers.items[0].state = State::Paused;
 
         setup
@@ -1625,7 +1625,7 @@ mod tests {
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup.app_data.lock().containers.items[0].state = State::Paused;
 
         setup
@@ -1653,7 +1653,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Dead;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1680,7 +1680,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Exited;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1706,7 +1706,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Removing;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1733,7 +1733,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Restarting;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1798,7 +1798,7 @@ mod tests {
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
         ];
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1857,7 +1857,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Unknown;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1905,7 +1905,7 @@ mod tests {
 
         setup.gui_state.lock().next_panel();
         setup.gui_state.lock().next_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         // When selected, has a blue border
         setup
@@ -1943,7 +1943,7 @@ mod tests {
             "╰──────────────────────────────╯",
         ];
 
-        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
         fd.init = true;
 
         setup
@@ -1973,7 +1973,7 @@ mod tests {
             "╰──────────────────────────────╯",
         ];
 
-        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
         fd.init = true;
         setup
             .terminal
@@ -1999,7 +1999,7 @@ mod tests {
 
         insert_logs(&setup);
 
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
@@ -2031,7 +2031,7 @@ mod tests {
 
         // Change selected log line
         setup.app_data.lock().log_previous();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -2084,7 +2084,7 @@ mod tests {
             "╰──────────────────────────────────────────────────────────────────────────────╯",
         ];
 
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
@@ -2373,7 +2373,7 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         setup.app_data.lock().containers = StatefulList::new(vec![]);
 
-        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         let expected =  ["                                                                                                                          ( h ) show help   "];
 
@@ -2417,7 +2417,7 @@ mod tests {
     fn test_draw_blocks_headers_some_containers() {
         let (w, h) = (140, 1);
         let mut setup = test_setup(w, h, true, true);
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         let expected =  ["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "];
         setup
@@ -2448,7 +2448,7 @@ mod tests {
     fn test_draw_blocks_headers_some_containers_reduced_width() {
         let (w, h) = (80, 1);
         let mut setup = test_setup(w, h, true, true);
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         let expected =
             ["    name          state       status      cpu                 ( h ) show help   "];
@@ -2480,7 +2480,7 @@ mod tests {
     fn test_draw_blocks_headers_sort_containers() {
         let (w, h) = (140, 1);
         let mut setup = test_setup(w, h, true, true);
-        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         // Actual test, used for each header and sorted type
         let mut test =
@@ -2549,7 +2549,7 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         let expected =   [" ⠙  name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "];
 
@@ -2888,7 +2888,7 @@ mod tests {
         // Test when char added to search term
         setup.app_data.lock().filter_term_push('c');
         setup.app_data.lock().filter_term_push('d');
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -2934,7 +2934,7 @@ mod tests {
 
         // Test when filter_by chances
         setup.app_data.lock().filter_by_next();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
