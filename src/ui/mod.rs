@@ -221,21 +221,23 @@ impl Ui {
 
 /// Frequent data required by multiple framde drawing functions, can reduce mutex reads by placing it all in here
 /// TODO add more items to this, and split up into parts
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct FrameData {
     columns: Columns,
     container_title: String,
-    log_title: String,
     delete_confirm: Option<ContainerId>,
-    has_containers: bool,
     filter_by: FilterBy,
     filter_term: Option<String>,
+    has_containers: bool,
     has_error: Option<AppError>,
     height: u16,
     help_visible: bool,
-    init: bool,
     info_text: Option<(String, Instant)>,
+    init: bool,
+    is_loading: bool,
     loading_icon: String,
+    log_title: String,
     selected_panel: SelectablePanel,
     sorted_by: Option<(Header, SortedOrder)>,
 }
@@ -252,17 +254,18 @@ impl From<(MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)> for FrameData {
 
         let (filter_by, filter_term) = data.0.get_filter();
         Self {
-            filter_by,
-            filter_term: filter_term.cloned(),
-            height,
             columns: data.0.get_width(),
             container_title: data.0.get_container_title(),
             delete_confirm: data.1.get_delete_container(),
+            filter_by,
+            filter_term: filter_term.cloned(),
             has_containers: data.0.get_container_len() > 0,
             has_error: data.0.get_error(),
+            height,
             help_visible: data.1.status_contains(&[Status::Help]),
             info_text: data.1.info_box_text.clone(),
             init: data.1.status_contains(&[Status::Init]),
+            is_loading: data.1.is_loading(),
             loading_icon: data.1.get_loading().to_string(),
             log_title: data.0.get_log_title(),
             selected_panel: data.1.get_selected_panel(),
@@ -358,7 +361,7 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
     }
 
     if let Some((text, instant)) = fd.info_text {
-        draw_blocks::info(f, &text, instant, gui_state);
+        draw_blocks::info(f, text, instant, gui_state);
     }
 
     // Check if error, and show popup if so

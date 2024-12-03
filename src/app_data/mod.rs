@@ -627,11 +627,11 @@ impl AppData {
     }
 
     /// Get mutable Vec of current containers logs
-    pub fn get_logs(&mut self) -> Vec<ListItem<'static>> {
+    pub fn get_logs(&self) -> Vec<ListItem<'static>> {
         self.containers
             .state
             .selected()
-            .and_then(|i| self.containers.items.get_mut(i))
+            .and_then(|i| self.containers.items.get(i))
             .map_or(vec![], |i| i.logs.to_vec())
     }
 
@@ -1739,7 +1739,7 @@ mod tests {
 
         assert_eq!(
             app_data.get_filter(),
-            (FilterBy::All, Some(&"image_2".to_string()))
+            (FilterBy::All, Some(&"x".to_string()))
         );
 
         app_data.filter_containers();

@@ -231,7 +231,7 @@ pub fn containers(
     if items.is_empty() {
         let text = if fd.filter_term.is_some() {
             "no containers match filter"
-        } else if gui_state.lock().is_loading() {
+        } else if fd.is_loading {
             &format!("loading {}", fd.loading_icon)
         } else {
             "no containers running"
@@ -250,7 +250,8 @@ pub fn containers(
     }
 }
 
-/// Draw the logs panel
+// /// Draw the logs panel
+// PREV WORKING
 pub fn logs(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
@@ -267,14 +268,13 @@ pub fn logs(
         f.render_widget(paragraph, area);
     } else {
         let logs = app_data.lock().get_logs();
-
         if logs.is_empty() {
             let paragraph = Paragraph::new("no logs found")
                 .block(block)
                 .alignment(Alignment::Center);
             f.render_widget(paragraph, area);
         } else {
-            let items = List::new(logs)
+            let items = List::new(app_data.lock().get_logs())
                 .block(block)
                 .highlight_symbol(RIGHT_ARROW)
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
@@ -1004,13 +1004,13 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
 
 /// Draw info box in one of the 9 BoxLocations
 // TODO is this broken - I don't think so
-pub fn info(f: &mut Frame, text: &str, instant: Instant, gui_state: &Arc<Mutex<GuiState>>) {
+pub fn info(f: &mut Frame, text: String, instant: Instant, gui_state: &Arc<Mutex<GuiState>>) {
     let block = Block::default()
         .title("")
         .title_alignment(Alignment::Center)
         .borders(Borders::NONE);
 
-    let mut max_line_width = max_line_width(text);
+    let mut max_line_width = max_line_width(&text);
     let mut lines = text.lines().count();
 
     // Add some horizontal & vertical margins
@@ -2804,7 +2804,12 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::info(f, "test", std::time::Instant::now(), &setup.gui_state);
+                super::info(
+                    f,
+                    "test".to_owned(),
+                    std::time::Instant::now(),
+                    &setup.gui_state,
+                );
             })
             .unwrap();
 
@@ -2883,11 +2888,12 @@ mod tests {
         // Test when char added to search term
         setup.app_data.lock().filter_term_push('c');
         setup.app_data.lock().filter_term_push('d');
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
         setup
             .terminal
             .draw(|f| {
-                super::filter_bar(setup.area, f, &setup.fd);
+                super::filter_bar(setup.area, f, &fd);
             })
             .unwrap();
 
