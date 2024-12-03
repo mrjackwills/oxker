@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     collections::{HashSet, VecDeque},
     fmt,
+    net::IpAddr,
 };
 
 use bollard::service::Port;
@@ -103,9 +104,9 @@ macro_rules! unit_struct {
 unit_struct!(ContainerName);
 unit_struct!(ContainerImage);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ContainerPorts {
-    pub ip: Option<String>,
+    pub ip: Option<IpAddr>,
     pub private: u16,
     pub public: Option<u16>,
 }
@@ -113,7 +114,7 @@ pub struct ContainerPorts {
 impl From<Port> for ContainerPorts {
     fn from(value: Port) -> Self {
         Self {
-            ip: value.ip,
+            ip: value.ip.and_then(|i| i.parse::<IpAddr>().ok()),
             private: value.private_port,
             public: value.public_port,
         }
@@ -122,7 +123,9 @@ impl From<Port> for ContainerPorts {
 
 impl ContainerPorts {
     pub fn len_ip(&self) -> usize {
-        self.ip.as_ref().unwrap_or(&String::new()).chars().count()
+        self.ip
+            .as_ref()
+            .map_or(0, |i|i.to_string().chars().count())
     }
     pub fn len_private(&self) -> usize {
         format!("{}", self.private).chars().count()
@@ -134,11 +137,11 @@ impl ContainerPorts {
     }
 
     /// Return as tuple of Strings, ip address, private port, and public port
-    pub fn print(&self) -> (String, String, String) {
+    pub fn get_all(&self) -> (String, String, String) {
         (
             self.ip
                 .as_ref()
-                .map_or(String::new(), std::borrow::ToOwned::to_owned),
+                .map_or(String::new(), std::string::ToString::to_string),
             format!("{}", self.private),
             self.public.map_or(String::new(), |s| s.to_string()),
         )

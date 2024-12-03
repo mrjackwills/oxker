@@ -450,39 +450,36 @@ impl AppData {
     }
 
     /// Find the longest port when it's transformed into a string, defaults are header lens (ip, private, public)
-    /// TODO refactor this, and write comments as to whete the initial sizes come from
+    ///display like this: "│   ip,   private,   public│", so (5,10,9) are the minimum lengths required
     pub fn get_longest_port(&self) -> (usize, usize, usize) {
-        let mut longest_ip = 5;
-        let mut longest_private = 10;
-        let mut longest_public = 9;
+        let mut output = (5, 10, 9);
 
         for item in [&self.containers.items, &self.hidden_containers] {
             for item in item {
-                longest_ip = longest_ip.max(
+                output.0 = output.0.max(
                     item.ports
                         .iter()
                         .map(ContainerPorts::len_ip)
                         .max()
-                        .unwrap_or(3),
+                        .unwrap_or(output.0),
                 );
-                longest_private = longest_private.max(
+                output.1 = output.1.max(
                     item.ports
                         .iter()
                         .map(ContainerPorts::len_private)
                         .max()
-                        .unwrap_or(8),
+                        .unwrap_or(output.1),
                 );
-                longest_public = longest_public.max(
+                output.2 = output.2.max(
                     item.ports
                         .iter()
                         .map(ContainerPorts::len_public)
                         .max()
-                        .unwrap_or(6),
+                        .unwrap_or(output.2),
                 );
             }
         }
-
-        (longest_ip, longest_private, longest_public)
+        output
     }
 
     /// Get Option of the current selected container's ports, sorted by private port

@@ -330,7 +330,7 @@ pub fn ports(
             )];
             for item in ports.0 {
                 let fg = Color::White;
-                let strings = item.print();
+                let strings = item.get_all();
 
                 let line = vec![
                     Span::from(format!("{:>ip$}", strings.0)).fg(fg),
@@ -1066,7 +1066,11 @@ fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocatio
 #[allow(clippy::unwrap_used)]
 mod tests {
 
-    use std::{ops::RangeInclusive, sync::Arc};
+    use std::{
+        net::{IpAddr, Ipv4Addr},
+        ops::RangeInclusive,
+        sync::Arc,
+    };
 
     use parking_lot::Mutex;
     use ratatui::{
@@ -3171,7 +3175,7 @@ mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some("127.0.0.1".to_owned()),
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                 private: 8003,
                 public: Some(8003),
             });
@@ -3317,7 +3321,7 @@ mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some("127.0.0.1".to_owned()),
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                 private: 8003,
                 public: Some(8003),
             });
@@ -3381,7 +3385,7 @@ mod tests {
         setup.app_data.lock().containers.items[1]
             .ports
             .push(ContainerPorts {
-                ip: Some("127.0.0.1".to_owned()),
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                 private: 8003,
                 public: Some(8003),
             });
@@ -3498,7 +3502,7 @@ mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some("127.0.0.1".to_owned()),
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                 private: 8003,
                 public: Some(8003),
             });

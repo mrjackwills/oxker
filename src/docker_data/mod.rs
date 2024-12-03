@@ -292,7 +292,7 @@ impl DockerData {
         GuiState::start_loading_animation(&self.gui_state, loading_uuid);
         self.update_all_containers().await;
         let all_ids = self.app_data.lock().get_all_id_state();
-		let all_ids_len = all_ids.len();
+        let all_ids_len = all_ids.len();
         let init = self.init_all_logs(all_ids);
         self.update_all_container_stats();
 
