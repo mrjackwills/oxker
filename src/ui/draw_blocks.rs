@@ -229,7 +229,7 @@ pub fn containers(
         .collect::<Vec<_>>();
 
     if items.is_empty() {
-        let text = if app_data.lock().get_filter_term().is_some() {
+        let text = if fd.filter_term.is_some() {
             "no containers match filter"
         } else if gui_state.lock().is_loading() {
             &format!("loading {}", fd.loading_icon)
@@ -423,16 +423,14 @@ fn make_chart<'a, T: Stats + Display>(
 }
 
 /// Create the filter_by by spans, coloured dependant on which one is selected
-fn filter_by_spans(app_data: &Arc<Mutex<AppData>>) -> [Span; 4] {
-    let filter_by = app_data.lock().get_filter_by();
-
+fn filter_by_spans(fd: &FrameData) -> [Span; 4] {
     let selected = Style::default().bg(Color::Gray).fg(Color::Black);
     let not_selected = Style::default().bg(Color::Reset).fg(Color::Reset);
 
     // This should be refactored somehow
     let name = [" Name ", " Image ", " Status ", " All "];
 
-    match filter_by {
+    match fd.filter_by {
         FilterBy::Name => [
             Span::styled(name[0], selected),
             Span::styled(name[1], not_selected),
@@ -461,7 +459,7 @@ fn filter_by_spans(app_data: &Arc<Mutex<AppData>>) -> [Span; 4] {
 }
 
 /// Draw the filter bar
-pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>) {
+pub fn filter_bar(area: Rect, frame: &mut Frame, fd: &FrameData) {
     let style_but = Style::default().fg(Color::Black).bg(Color::Magenta);
     let style_desc = Style::default().fg(Color::Gray).bg(Color::Reset);
 
@@ -471,7 +469,7 @@ pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>)
         Span::styled(" ← by → ", style_but),
         Span::from(" "),
     ];
-    line.extend_from_slice(&filter_by_spans(app_data));
+    line.extend_from_slice(&filter_by_spans(fd));
     line.extend_from_slice(&[
         Span::styled(
             " term: ",
@@ -480,10 +478,9 @@ pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            app_data
-                .lock()
-                .get_filter_term()
-                .map_or(String::new(), std::borrow::ToOwned::to_owned),
+            fd.filter_term
+                .as_ref()
+                .map_or(String::new(), std::clone::Clone::clone),
             Style::default().fg(Color::Gray),
         ),
     ]);
@@ -2845,7 +2842,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::filter_bar(setup.area, f, &setup.app_data);
+                super::filter_bar(setup.area, f, &setup.fd);
             })
             .unwrap();
 
@@ -2890,7 +2887,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::filter_bar(setup.area, f, &setup.app_data);
+                super::filter_bar(setup.area, f, &setup.fd);
             })
             .unwrap();
 
@@ -2931,10 +2928,11 @@ mod tests {
 
         // Test when filter_by chances
         setup.app_data.lock().filter_by_next();
+        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
         setup
             .terminal
             .draw(|f| {
-                super::filter_bar(setup.area, f, &setup.app_data);
+                super::filter_bar(setup.area, f, &fd);
             })
             .unwrap();
 

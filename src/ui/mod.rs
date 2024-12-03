@@ -26,7 +26,7 @@ mod gui_state;
 pub use self::color_match::*;
 pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
 use crate::{
-    app_data::{AppData, Columns, ContainerId, Header, SortedOrder},
+    app_data::{AppData, Columns, ContainerId, FilterBy, Header, SortedOrder},
     app_error::AppError,
     exec::TerminalSize,
     input_handler::InputMessages,
@@ -228,6 +228,8 @@ pub struct FrameData {
     log_title: String,
     delete_confirm: Option<ContainerId>,
     has_containers: bool,
+    filter_by: FilterBy,
+    filter_term: Option<String>,
     has_error: Option<AppError>,
     height: u16,
     help_visible: bool,
@@ -248,18 +250,21 @@ impl From<(MutexGuard<'_, AppData>, MutexGuard<'_, GuiState>)> for FrameData {
             12
         };
 
+        let (filter_by, filter_term) = data.0.get_filter();
         Self {
+            filter_by,
+            filter_term: filter_term.cloned(),
+            height,
             columns: data.0.get_width(),
             container_title: data.0.get_container_title(),
-            log_title: data.0.get_log_title(),
             delete_confirm: data.1.get_delete_container(),
             has_containers: data.0.get_container_len() > 0,
             has_error: data.0.get_error(),
-            height,
             help_visible: data.1.status_contains(&[Status::Help]),
-            init: data.1.status_contains(&[Status::Init]),
             info_text: data.1.info_box_text.clone(),
+            init: data.1.status_contains(&[Status::Init]),
             loading_icon: data.1.get_loading().to_string(),
+            log_title: data.0.get_log_title(),
             selected_panel: data.1.get_selected_panel(),
             sorted_by: data.0.get_sorted(),
         }
@@ -319,7 +324,7 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
 
     // Draw filter bar
     if let Some(rect) = whole_layout.get(2) {
-        draw_blocks::filter_bar(*rect, f, app_data);
+        draw_blocks::filter_bar(*rect, f, &fd);
     }
 
     if let Some(id) = fd.delete_confirm.as_ref() {

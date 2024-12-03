@@ -160,14 +160,9 @@ impl AppData {
     }
 
     /// Filter related methods
-    /// Get the current filter term
-    pub const fn get_filter_term(&self) -> Option<&String> {
-        self.filter.term.as_ref()
-    }
-
-    /// Get the current filter by choice
-    pub const fn get_filter_by(&self) -> FilterBy {
-        self.filter.by
+    /// Get the filterby and filter_term
+    pub const fn get_filter(&self) -> (FilterBy, Option<&String>) {
+        (self.filter.by, self.filter.term.as_ref())
     }
 
     /// Check if a given container can be inserted into the "visible" list, based on current filter term and filter_by
@@ -1646,13 +1641,13 @@ mod tests {
 
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         app_data.filter_term_push('_');
         app_data.filter_term_push('2');
 
-        assert_eq!(app_data.get_filter_term(), Some(&"_2".to_string()));
+        assert_eq!(app_data.get_filter().1, Some(&"_2".to_string()));
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1672,7 +1667,7 @@ mod tests {
 
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         for c in ['i', 'm', 'a', 'g', 'e', '_', '2'] {
@@ -1681,8 +1676,10 @@ mod tests {
         // app_data.filter_term_push('2');
         app_data.filter_by_next();
 
-        assert_eq!(app_data.get_filter_by(), FilterBy::Image);
-        assert_eq!(app_data.get_filter_term(), Some(&"image_2".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::Image, Some(&"image_2".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1701,7 +1698,7 @@ mod tests {
         ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         app_data.filter_term_push('x');
@@ -1709,8 +1706,10 @@ mod tests {
         app_data.filter_by_next();
         app_data.filter_by_next();
 
-        assert_eq!(app_data.get_filter_by(), FilterBy::Status);
-        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::Status, Some(&"x".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1729,7 +1728,7 @@ mod tests {
         ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         app_data.filter_term_push('x');
@@ -1738,8 +1737,10 @@ mod tests {
         app_data.filter_by_next();
         app_data.filter_by_next();
 
-        assert_eq!(app_data.get_filter_by(), FilterBy::All);
-        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::All, Some(&"image_2".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1758,7 +1759,7 @@ mod tests {
         ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         app_data.filter_term_push('x');
@@ -1766,8 +1767,10 @@ mod tests {
         app_data.filter_by_next();
         app_data.filter_by_next();
 
-        assert_eq!(app_data.get_filter_by(), FilterBy::Status);
-        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::Status, Some(&"x".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1779,8 +1782,10 @@ mod tests {
         assert!(!app_data.can_insert(&containers[2]));
 
         app_data.filter_by_prev();
-        assert_eq!(app_data.get_filter_by(), FilterBy::Image);
-        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::Image, Some(&"x".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
