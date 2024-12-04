@@ -37,11 +37,11 @@ use crate::{
 };
 
 pub const ORANGE: ratatui::style::Color = ratatui::style::Color::Rgb(255, 178, 36);
+const POLL_RATE: Duration = std::time::Duration::from_millis(100);
 
 pub struct Ui {
     app_data: Arc<Mutex<AppData>>,
     gui_state: Arc<Mutex<GuiState>>,
-    input_poll_rate: Duration,
     input_tx: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
     now: Instant,
@@ -75,7 +75,6 @@ impl Ui {
                 app_data,
                 cursor_position,
                 gui_state,
-                input_poll_rate: std::time::Duration::from_millis(100),
                 input_tx,
                 is_running,
                 now: Instant::now(),
@@ -145,7 +144,7 @@ impl Ui {
         Ok(())
     }
 
-    /// Use exeternal docker cli to exec into a container
+    /// Use external docker cli to exec into a container
     async fn exec(&mut self) {
         let exec_mode = self.gui_state.lock().get_exec_mode();
 
@@ -181,7 +180,7 @@ impl Ui {
                 return Err(AppError::Terminal);
             }
 
-            if crossterm::event::poll(self.input_poll_rate).unwrap_or(false) {
+            if crossterm::event::poll(POLL_RATE).unwrap_or(false) {
                 if let Ok(event) = event::read() {
                     if let Event::Key(key) = event {
                         if key.kind == event::KeyEventKind::Press {
@@ -221,7 +220,7 @@ impl Ui {
     }
 }
 
-/// Frequent data required by multiple framde drawing functions, can reduce mutex reads by placing it all in here
+/// Frequent data required by multiple frame drawing functions, can reduce mutex reads by placing it all in here
 #[derive(Debug, Clone)]
 pub struct FrameData {
     chart_data: Option<(CpuTuple, MemTuple)>,
