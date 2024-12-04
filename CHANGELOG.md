@@ -26,6 +26,7 @@
 + remove app_data param from generate_lock(), [1a8dab654a1fdbf351a72dc54fe3d1943355bba6]
 + combine get_filter methods, [356ea5549bb4877e9893fe0e1053e73c5a62e806]
 + FrameData refactors, [57781701ff14c553dfbafb965ee8a33ab44dd36f], [6e2f82db81caaa98ce4781fa15928eb9e246ace6]
++ update_container_stat combine is_alive(), [55cc746736f6863aedc5ad838744a983796244d8]
 
 ### Tests
 + fix logs tests, [9b22f5da18e4bf92766a68a7f4cd61ad72724cfd]
