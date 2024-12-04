@@ -11,6 +11,7 @@ use ratatui::{
     Frame, Terminal,
 };
 use std::{
+    collections::HashSet,
     io::{self, Stdout, Write},
     sync::{atomic::Ordering, Arc},
     time::Duration,
@@ -26,7 +27,10 @@ mod gui_state;
 pub use self::color_match::*;
 pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
 use crate::{
-    app_data::{AppData, Columns, ContainerId, FilterBy, Header, SortedOrder},
+    app_data::{
+        AppData, Columns, ContainerId, ContainerPorts, CpuTuple, FilterBy, Header, MemTuple,
+        SortedOrder, State,
+    },
     app_error::AppError,
     exec::TerminalSize,
     input_handler::InputMessages,
@@ -163,14 +167,15 @@ impl Ui {
     /// The loop for drawing the main UI to the terminal
     async fn gui_loop(&mut self) -> Result<(), AppError> {
         while self.is_running.load(Ordering::SeqCst) {
-            let exec = self.gui_state.lock().status_contains(&[Status::Exec]);
+            let fd = FrameData::from(&*self);
+            let exec = fd.status.contains(&Status::Exec);
             if exec {
                 self.exec().await;
             }
 
             if self
                 .terminal
-                .draw(|frame| draw_frame(frame, &self.app_data, &self.gui_state))
+                .draw(|frame| draw_frame(frame, &self.app_data, &self.gui_state, &fd))
                 .is_err()
             {
                 return Err(AppError::Terminal);
@@ -206,11 +211,8 @@ impl Ui {
 
     /// Draw either the Error, or main oxker ui, to the terminal
     async fn draw_ui(&mut self) -> Result<(), AppError> {
-        let status_dockerconnect = self
-            .gui_state
-            .lock()
-            .status_contains(&[Status::DockerConnect]);
-        if status_dockerconnect {
+        let status = self.gui_state.lock().get_status();
+        if status.contains(&Status::DockerConnect) {
             self.err_loop()?;
         } else {
             self.gui_loop().await?;
@@ -221,8 +223,8 @@ impl Ui {
 
 /// Frequent data required by multiple framde drawing functions, can reduce mutex reads by placing it all in here
 #[derive(Debug, Clone)]
-#[allow(clippy::struct_excessive_bools)]
 pub struct FrameData {
+    chart_data: Option<(CpuTuple, MemTuple)>,
     columns: Columns,
     container_title: String,
     delete_confirm: Option<ContainerId>,
@@ -231,19 +233,20 @@ pub struct FrameData {
     has_containers: bool,
     has_error: Option<AppError>,
     height: u16,
-    help_visible: bool,
     info_text: Option<(String, Instant)>,
-    init: bool,
     is_loading: bool,
     loading_icon: String,
     log_title: String,
+    port_max_lens: (usize, usize, usize),
+    ports: Option<(Vec<ContainerPorts>, State)>,
     selected_panel: SelectablePanel,
     sorted_by: Option<(Header, SortedOrder)>,
+    status: HashSet<Status>,
 }
 
-impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
-    fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
-        let (app_data, gui_data) = (data.0.lock(), data.1.lock());
+impl From<&Ui> for FrameData {
+    fn from(ui: &Ui) -> Self {
+        let (app_data, gui_data) = (ui.app_data.lock(), ui.gui_state.lock());
 
         // set max height for container section, needs +5 to deal with docker commands list and borders
         let height = app_data.get_container_len();
@@ -255,6 +258,7 @@ impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
 
         let (filter_by, filter_term) = app_data.get_filter();
         Self {
+            chart_data: app_data.get_chart_data(),
             columns: app_data.get_width(),
             container_title: app_data.get_container_title(),
             delete_confirm: gui_data.get_delete_container(),
@@ -263,24 +267,27 @@ impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
             has_containers: app_data.get_container_len() > 0,
             has_error: app_data.get_error(),
             height,
-            help_visible: gui_data.status_contains(&[Status::Help]),
             info_text: gui_data.info_box_text.clone(),
-            init: gui_data.status_contains(&[Status::Init]),
             is_loading: gui_data.is_loading(),
             loading_icon: gui_data.get_loading().to_string(),
             log_title: app_data.get_log_title(),
+            port_max_lens: app_data.get_longest_port(),
+            ports: app_data.get_selected_ports(),
             selected_panel: gui_data.get_selected_panel(),
             sorted_by: app_data.get_sorted(),
+            status: gui_data.get_status(),
         }
     }
 }
 
 /// Draw the main ui to a frame of the terminal
-fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mutex<GuiState>>) {
-    let fd = FrameData::from((app_data, gui_state));
-    let contains_filter = gui_state.lock().status_contains(&[Status::Filter]);
-
-    let whole_constraints = if contains_filter {
+fn draw_frame(
+    f: &mut Frame,
+    app_data: &Arc<Mutex<AppData>>,
+    gui_state: &Arc<Mutex<GuiState>>,
+    fd: &FrameData,
+) {
+    let whole_constraints = if fd.status.contains(&Status::Filter) {
         vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
     } else {
         vec![Constraint::Max(1), Constraint::Min(1)]
@@ -320,15 +327,15 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
         .constraints(lower_split)
         .split(upper_main[1]);
 
-    draw_blocks::containers(app_data, top_panel[0], f, &fd, gui_state);
+    draw_blocks::containers(app_data, top_panel[0], f, fd, gui_state);
 
-    draw_blocks::logs(app_data, lower_main[0], f, &fd, gui_state);
+    draw_blocks::logs(app_data, lower_main[0], f, fd, gui_state);
 
-    draw_blocks::heading_bar(whole_layout[0], f, &fd, gui_state);
+    draw_blocks::heading_bar(whole_layout[0], f, fd, gui_state);
 
     // Draw filter bar
     if let Some(rect) = whole_layout.get(2) {
-        draw_blocks::filter_bar(*rect, f, &fd);
+        draw_blocks::filter_bar(*rect, f, fd);
     }
 
     if let Some(id) = fd.delete_confirm.as_ref() {
@@ -346,27 +353,28 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
 
     // only draw commands + charts if there are containers
     if let Some(rect) = top_panel.get(1) {
-        draw_blocks::commands(app_data, *rect, f, &fd, gui_state);
+        draw_blocks::commands(app_data, *rect, f, fd, gui_state);
 
         // Can calculate the max string length here, and then use that to keep the ports section as small as possible (+4 for some padding + border)
-        let max_lens = app_data.lock().get_longest_port();
-        let ports_len = u16::try_from(max_lens.0 + max_lens.1 + max_lens.2 + 2).unwrap_or(26);
+        let ports_len =
+            u16::try_from(fd.port_max_lens.0 + fd.port_max_lens.1 + fd.port_max_lens.2 + 2)
+                .unwrap_or(26);
 
         let lower = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Min(1), Constraint::Max(ports_len)])
             .split(lower_main[1]);
 
-        draw_blocks::chart(f, lower[0], app_data);
-        draw_blocks::ports(f, lower[1], app_data, max_lens);
+        draw_blocks::chart(f, lower[0], fd);
+        draw_blocks::ports(f, lower[1], fd);
     }
 
-    if let Some((text, instant)) = fd.info_text {
-        draw_blocks::info(f, text, instant, gui_state);
+    if let Some((text, instant)) = fd.info_text.as_ref() {
+        draw_blocks::info(f, text.to_owned(), instant, gui_state);
     }
 
     // Check if error, and show popup if so
-    if fd.help_visible {
+    if fd.status.contains(&Status::Help) {
         draw_blocks::help_box(f);
     }
 

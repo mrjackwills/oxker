@@ -478,10 +478,11 @@ impl AppData {
     }
 
     /// Get Option of the current selected container's ports, sorted by private port
-    pub fn get_selected_ports(&mut self) -> Option<(&[ContainerPorts], State)> {
-        if let Some(item) = self.get_mut_selected_container() {
-            item.ports.sort_by(|a, b| a.private.cmp(&b.private));
-            return Some((&item.ports, item.state));
+    pub fn get_selected_ports(&self) -> Option<(Vec<ContainerPorts>, State)> {
+        if let Some(item) = self.get_selected_container() {
+            let mut ports = item.ports.clone();
+            ports.sort_by(|a, b| a.private.cmp(&b.private));
+            return Some((ports, item.state));
         }
         None
     }
@@ -646,12 +647,12 @@ impl AppData {
 
     /// Chart data related methods
     /// Get mutable Option of the currently selected container chart data
-    pub fn get_chart_data(&mut self) -> Option<(CpuTuple, MemTuple)> {
+    pub fn get_chart_data(&self) -> Option<(CpuTuple, MemTuple)> {
         self.containers
             .state
             .selected()
-            .and_then(|i| self.containers.items.get_mut(i))
-            .map(|i| i.get_chart_data())
+            .and_then(|i| self.containers.items.get(i))
+            .map(container_state::ContainerItem::get_chart_data)
     }
 
     /// Error related methods
@@ -2180,8 +2181,7 @@ mod tests {
                         private: 8001,
                         public: None
                     }
-                ]
-                .as_slice(),
+                ],
                 State::Running(RunningState::Healthy),
             ))
         );
@@ -2193,7 +2193,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Some((vec![].as_slice(), State::Running(RunningState::Healthy)))
+            Some((vec![], State::Running(RunningState::Healthy)))
         );
     }
 

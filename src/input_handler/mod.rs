@@ -64,19 +64,17 @@ impl InputHandler {
             match message {
                 InputMessages::ButtonPress(key) => self.button_press(key.0, key.1).await,
                 InputMessages::MouseEvent(mouse_event) => {
-                    if !self.gui_state.lock().status_contains(&[
-                        Status::Error,
-                        Status::Help,
-                        Status::DeleteConfirm,
-                        Status::Filter,
-                    ]) {
+                    let status = self.gui_state.lock().get_status();
+                    let contains = |s: Status| status.contains(&s);
+
+                    if !contains(Status::Error)
+                        | !contains(Status::Help)
+                        | !contains(Status::DeleteConfirm)
+                        | !contains(Status::Filter)
+                    {
                         self.mouse_press(mouse_event);
                     }
-                    let delete_confirm = self
-                        .gui_state
-                        .lock()
-                        .status_contains(&[Status::DeleteConfirm]);
-                    if delete_confirm {
+                    if contains(Status::DeleteConfirm) {
                         self.button_intersect(mouse_event).await;
                     }
                 }
@@ -92,11 +90,9 @@ impl InputHandler {
     /// Send a quit message to docker, to abort all spawns, if an error is returned, set is_running to false here instead
     /// If gui_status is Error or Init, then just set the is_running to false immediately, for a quicker exit
     fn quit(&self) {
-        let error_init = self
-            .gui_state
-            .lock()
-            .status_contains(&[Status::Error, Status::Init]);
-        if !error_init {
+        let status = self.gui_state.lock().get_status();
+        let contains = |s: Status| status.contains(&s);
+        if !contains(Status::Error) | !contains(Status::Init) {
             self.is_running
                 .store(false, std::sync::atomic::Ordering::SeqCst);
         }
@@ -235,10 +231,11 @@ impl InputHandler {
 
     /// Attempt to save the currently selected container logs to a file
     async fn s_key(&self) {
-        let log_status = Status::Logs;
-        let status = self.gui_state.lock().status_contains(&[log_status]);
-        if !status {
-            self.gui_state.lock().status_push(log_status);
+        let status = self.gui_state.lock().get_status();
+        let contains = |s: Status| status.contains(&s);
+
+        if !contains(Status::Logs) {
+            self.gui_state.lock().status_push(Status::Logs);
             let uuid = Uuid::new_v4();
             GuiState::start_loading_animation(&self.gui_state, uuid);
             if self.save_logs().await.is_err() {
@@ -248,7 +245,7 @@ impl InputHandler {
                     Status::Error,
                 );
             }
-            self.gui_state.lock().status_del(log_status);
+            self.gui_state.lock().status_del(Status::Logs);
             self.gui_state.lock().stop_loading_animation(uuid);
         }
     }
@@ -426,17 +423,14 @@ impl InputHandler {
     }
     /// Handle keyboard button events
     async fn button_press(&mut self, key_code: KeyCode, key_modifier: KeyModifiers) {
-        let contains_delete = self
-            .gui_state
-            .lock()
-            .status_contains(&[Status::DeleteConfirm]);
-
-        let contains = |s: Status| self.gui_state.lock().status_contains(&[s]);
+        let status = self.gui_state.lock().get_status();
+        let contains = |s: Status| status.contains(&s);
 
         let contains_error = contains(Status::Error);
         let contains_help = contains(Status::Help);
         let contains_exec = contains(Status::Exec);
-        let contains_filter: bool = contains(Status::Filter);
+        let contains_filter = contains(Status::Filter);
+        let contains_delete = contains(Status::DeleteConfirm);
 
         if !contains_exec {
             let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
