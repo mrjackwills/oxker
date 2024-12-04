@@ -117,62 +117,58 @@ impl DockerData {
         spawn_id: SpawnId,
         spawns: Arc<Mutex<HashMap<SpawnId, JoinHandle<()>>>>,
     ) {
-        if state.is_alive() {
-            let id = spawn_id.get_id();
-            let mut stream = docker
-                .stats(
-                    id.get(),
-                    Some(StatsOptions {
-                        stream: false,
-                        one_shot: false,
-                    }),
-                )
-                .take(1);
+        let id = spawn_id.get_id();
+        let mut stream = docker
+            .stats(
+                id.get(),
+                Some(StatsOptions {
+                    stream: false,
+                    one_shot: false,
+                }),
+            )
+            .take(1);
 
-            while let Some(Ok(stats)) = stream.next().await {
-                // Memory stats are only collected if the container is alive - is this the behaviour we want?
-                let mem_stat = if state.is_alive() {
-                    let mem_cache = stats.memory_stats.stats.map_or(0, |i| match i {
-                        MemoryStatsStats::V1(x) => x.inactive_file,
-                        MemoryStatsStats::V2(x) => x.inactive_file,
-                    });
+        while let Some(Ok(stats)) = stream.next().await {
+            // Memory stats are only collected if the container is alive - is this the behaviour we want?
+            let (mem_stat, cpu_stats) = if state.is_alive() {
+                let mem_cache = stats.memory_stats.stats.map_or(0, |i| match i {
+                    MemoryStatsStats::V1(x) => x.inactive_file,
+                    MemoryStatsStats::V2(x) => x.inactive_file,
+                });
+                (
                     Some(
                         stats
                             .memory_stats
                             .usage
                             .unwrap_or_default()
                             .saturating_sub(mem_cache),
-                    )
-                } else {
-                    None
-                };
+                    ),
+                    Some(Self::calculate_usage(&stats)),
+                )
+            } else {
+                (None, None)
+            };
 
-                let mem_limit = stats.memory_stats.limit.unwrap_or_default();
+            let mem_limit = stats.memory_stats.limit.unwrap_or_default();
 
-                let op_key = stats
+            let op_key = stats
+                .networks
+                .as_ref()
+                .and_then(|networks| networks.keys().next().cloned());
+
+            let (rx, tx) = if let Some(key) = op_key {
+                stats
                     .networks
-                    .as_ref()
-                    .and_then(|networks| networks.keys().next().cloned());
+                    .unwrap_or_default()
+                    .get(&key)
+                    .map_or((0, 0), |f| (f.rx_bytes, f.tx_bytes))
+            } else {
+                (0, 0)
+            };
 
-                let cpu_stats = if state.is_alive() {
-                    Some(Self::calculate_usage(&stats))
-                } else {
-                    None
-                };
-                let (rx, tx) = if let Some(key) = op_key {
-                    stats
-                        .networks
-                        .unwrap_or_default()
-                        .get(&key)
-                        .map_or((0, 0), |f| (f.rx_bytes, f.tx_bytes))
-                } else {
-                    (0, 0)
-                };
-
-                app_data
-                    .lock()
-                    .update_stats_by_id(id, cpu_stats, mem_stat, mem_limit, rx, tx);
-            }
+            app_data
+                .lock()
+                .update_stats_by_id(id, cpu_stats, mem_stat, mem_limit, rx, tx);
         }
         spawns.lock().remove(&spawn_id);
     }
