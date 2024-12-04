@@ -4,13 +4,14 @@
 
 ### Features
 + `--no-stderr` cli arg, closes #52, [c739637b91c8fa742a69f4d888678d7b3964678c]
++ ContainerPorts use ipaddr, [1b26997d25f748e0d452f41fe41791533046ecdf]
 
 ### Fixes
 + update containerised Dockerfile, [0c6f53228f01196e352c2069383ba1e7a10950a8]
 + calculate_usage overflow, [5106a01f3dcb87ce5a8f1fb7bf49dc6b3c25d03e]
 
 ### Refactors
-+ massively speed up docker init process, [8b9fe4246865441704ae12dff0938868a4fe6f81]
++ speed up docker logs init process, [8b9fe4246865441704ae12dff0938868a4fe6f81]
 + remove docker sleep, [f1562d1084336fe5be39894c93cb49107f0a4a6d]
 + dead code removed, [5ee48d5708fa6de0206c021db0bb611196e66fba], [ba6a95241389f99d504ee4bf3e87e19006f12e49], [f0b1145651625ad4e577d79baaf902d4d3bc0579]
 + input_handler, [7f4238349525c01ae9fb8b1f6c0946e5364dd55e]
@@ -21,7 +22,13 @@
 + rename scheduler to heartbeat, [68a6551ed038a36330b2f098112829465a1c3c7a]
 + remove unnecessary is_running load, [76ccf7c00691f815c3ab0bede838c99252ba84f0]
 + execute_command(), [2a834d6c2fa4a15124d24ddbd12f667829e148ad]
++ Remove numerous clones(), [e5927f781a7e9517b9fa00a2d1a835d2774a9d26]
++ remove app_data param from generate_lock(), [1a8dab654a1fdbf351a72dc54fe3d1943355bba6]
++ combine get_filter methods, [356ea5549bb4877e9893fe0e1053e73c5a62e806]
++ FrameData refactors, [57781701ff14c553dfbafb965ee8a33ab44dd36f], [6e2f82db81caaa98ce4781fa15928eb9e246ace6]
 
+### Tests
++ fix logs tests, [9b22f5da18e4bf92766a68a7f4cd61ad72724cfd]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.8.0'>v0.8.0</a>
 ### 2024-10-22

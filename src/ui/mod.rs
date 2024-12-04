@@ -314,7 +314,7 @@ fn draw_frame(f: &mut Frame, app_data: &Arc<Mutex<AppData>>, gui_state: &Arc<Mut
         vec![Constraint::Percentage(100)]
     };
 
-    // Split into 2, logs, and optional charts
+    // Split into 2, logs and charts
     let lower_main = Layout::default()
         .direction(Direction::Vertical)
         .constraints(lower_split)
