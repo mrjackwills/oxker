@@ -178,18 +178,18 @@ impl DockerData {
         let all_ids = self.app_data.lock().get_all_id_state();
         for (state, id) in all_ids {
             let spawn_id = SpawnId::Stats((id, self.binate));
-            self.spawns
-                .lock()
-                .entry(spawn_id.clone())
-                .or_insert_with(|| {
-                    tokio::spawn(Self::update_container_stat(
-                        Arc::clone(&self.app_data),
-                        Arc::clone(&self.docker),
-                        state,
-                        spawn_id,
-                        Arc::clone(&self.spawns),
-                    ))
-                });
+
+            if let std::collections::hash_map::Entry::Vacant(spawns) =
+                self.spawns.lock().entry(spawn_id.clone())
+            {
+                spawns.insert(tokio::spawn(Self::update_container_stat(
+                    Arc::clone(&self.app_data),
+                    Arc::clone(&self.docker),
+                    state,
+                    spawn_id,
+                    Arc::clone(&self.spawns),
+                )));
+            }
         }
         self.binate = self.binate.toggle();
     }
@@ -305,19 +305,20 @@ impl DockerData {
         self.update_all_containers().await;
         if let Some(container) = self.app_data.lock().get_selected_container() {
             let last_updated = container.last_updated;
-            self.spawns
-                .lock()
-                .entry(SpawnId::Log(container.id.clone()))
-                .or_insert_with(|| {
-                    tokio::spawn(Self::update_log(
-                        Arc::clone(&self.app_data),
-                        Arc::clone(&self.docker),
-                        container.id.clone(),
-                        last_updated,
-                        Arc::clone(&self.spawns),
-                        self.args.std_err,
-                    ))
-                });
+            let spawn_id = SpawnId::Log(container.id.clone());
+            // Only spawn if not already sapwned with a given id/binate pair
+            if let std::collections::hash_map::Entry::Vacant(spawns) =
+                self.spawns.lock().entry(spawn_id)
+            {
+                spawns.insert(tokio::spawn(Self::update_log(
+                    Arc::clone(&self.app_data),
+                    Arc::clone(&self.docker),
+                    container.id.clone(),
+                    last_updated,
+                    Arc::clone(&self.spawns),
+                    self.args.std_err,
+                )));
+            }
         };
         self.update_all_container_stats();
         self.app_data.lock().sort_containers();
