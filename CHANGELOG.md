@@ -3,7 +3,7 @@
 + Rust 1.83 linting, [751d997a3dac823e144ae62e6c1455676e50ddb8]
 
 ### Features
-+ `--no-stderr` cli arg, closes #52, [c739637b91c8fa742a69f4d888678d7b3964678c]
++ `--no-stderr` cli arg, removes Standard error output from logs, closes #52, [c739637b91c8fa742a69f4d888678d7b3964678c]
 + ContainerPorts use ipaddr, [1b26997d25f748e0d452f41fe41791533046ecdf]
 
 ### Fixes
@@ -27,6 +27,8 @@
 + combine get_filter methods, [356ea5549bb4877e9893fe0e1053e73c5a62e806]
 + FrameData refactors, [57781701ff14c553dfbafb965ee8a33ab44dd36f], [6e2f82db81caaa98ce4781fa15928eb9e246ace6]
 + update_container_stat combine is_alive(), [55cc746736f6863aedc5ad838744a983796244d8]
++ remove `input_poll_rate` from `Ui`, instead use const `POLL_RATE`, [69f6c96b700b9fde5578ae204992a67986d456ab]
++ pass `&FrameDate` into `draw_frame()`, [35aec5060fdbe606267be26656b4aeee43d50c02]
 
 ### Tests
 + fix logs tests, [9b22f5da18e4bf92766a68a7f4cd61ad72724cfd]
