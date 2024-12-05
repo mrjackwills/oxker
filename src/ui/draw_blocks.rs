@@ -43,6 +43,9 @@ const MARGIN: &str = "   ";
 const RIGHT_ARROW: &str = "▶ ";
 const CIRCLE: &str = "⚪ ";
 
+const COLOR_RX: Color = Color::Rgb(255, 233, 193);
+const COLOR_TX: Color = Color::Rgb(205, 140, 140);
+
 const CONSTRAINT_50_50: [Constraint; 2] = [Constraint::Percentage(50), Constraint::Percentage(50)];
 const CONSTRAINT_100: [Constraint; 1] = [Constraint::Percentage(100)];
 const CONSTRAINT_POPUP: [Constraint; 5] = [
@@ -80,6 +83,7 @@ fn generate_block<'a>(
     gui_state
         .lock()
         .update_region_map(Region::Panel(panel), area);
+
     let mut title = match panel {
         SelectablePanel::Containers => {
             format!("{}{}", panel.title(), fd.container_title)
@@ -140,7 +144,6 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
     let state_style = Style::default().fg(i.state.get_color());
     let blue = Style::default().fg(Color::Blue);
 
-    // Truncate?
     Line::from(vec![
         Span::styled(
             format!(
@@ -202,11 +205,11 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!("{:>width$}{MARGIN}", i.rx, width = widths.net_rx.1.into()),
-            Style::default().fg(Color::Rgb(255, 233, 193)),
+            Style::default().fg(COLOR_RX),
         ),
         Span::styled(
             format!("{:>width$}{MARGIN}", i.tx, width = widths.net_tx.1.into()),
-            Style::default().fg(Color::Rgb(205, 140, 140)),
+            Style::default().fg(COLOR_TX),
         ),
     ])
 }
@@ -250,8 +253,7 @@ pub fn containers(
     }
 }
 
-// /// Draw the logs panel
-// PREV WORKING
+/// Draw the logs panel
 pub fn logs(
     app_data: &Arc<Mutex<AppData>>,
     area: Rect,
@@ -286,7 +288,7 @@ pub fn logs(
     }
 }
 
-// Display the ports in a formatted list
+/// Display the ports in a formatted list
 pub fn ports(f: &mut Frame, area: Rect, fd: &FrameData) {
     if let Some(ports) = fd.ports.as_ref() {
         let block = Block::default()
@@ -418,35 +420,22 @@ fn filter_by_spans(fd: &FrameData) -> [Span; 4] {
     let selected = Style::default().bg(Color::Gray).fg(Color::Black);
     let not_selected = Style::default().bg(Color::Reset).fg(Color::Reset);
 
-    // This should be refactored somehow
     let name = [" Name ", " Image ", " Status ", " All "];
 
+    let mut filter_spans = [
+        Span::styled(name[0], not_selected),
+        Span::styled(name[1], not_selected),
+        Span::styled(name[2], not_selected),
+        Span::styled(name[3], not_selected),
+    ];
+
     match fd.filter_by {
-        FilterBy::Name => [
-            Span::styled(name[0], selected),
-            Span::styled(name[1], not_selected),
-            Span::styled(name[2], not_selected),
-            Span::styled(name[3], not_selected),
-        ],
-        FilterBy::Image => [
-            Span::styled(name[0], not_selected),
-            Span::styled(name[1], selected),
-            Span::styled(name[2], not_selected),
-            Span::styled(name[3], not_selected),
-        ],
-        FilterBy::Status => [
-            Span::styled(name[0], not_selected),
-            Span::styled(name[1], not_selected),
-            Span::styled(name[2], selected),
-            Span::styled(name[3], not_selected),
-        ],
-        FilterBy::All => [
-            Span::styled(name[0], not_selected),
-            Span::styled(name[1], not_selected),
-            Span::styled(name[2], not_selected),
-            Span::styled(name[3], selected),
-        ],
+        FilterBy::Name => filter_spans[0] = Span::styled(name[0], selected),
+        FilterBy::Image => filter_spans[1] = Span::styled(name[1], selected),
+        FilterBy::Status => filter_spans[2] = Span::styled(name[2], selected),
+        FilterBy::All => filter_spans[3] = Span::styled(name[3], selected),
     }
+    filter_spans
 }
 
 /// Draw the filter bar
@@ -513,6 +502,7 @@ pub fn heading_bar(
     let gen_header = |header: &Header, width: usize| {
         let block = header_block(header);
 
+		// TODO
         // Yes this is a mess, needs documenting correctly
 
         let text = format!(
@@ -1080,7 +1070,10 @@ mod tests {
         },
         app_error::AppError,
         tests::{gen_appdata, gen_container_summary, gen_containers},
-        ui::{draw_frame, GuiState, Status},
+        ui::{
+            draw_blocks::{COLOR_RX, COLOR_TX},
+            draw_frame, GuiState, Status,
+        },
     };
 
     use super::{FrameData, ORANGE, VERSION};
@@ -1556,11 +1549,11 @@ mod tests {
                     }
                     // rx column
                     (1..=3, 92..=101) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                        assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // tx column
                     (1..=3, 102..=111) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                        assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     _ => assert_eq!(result_cell.fg, Color::Reset),
                 }
@@ -1630,11 +1623,11 @@ mod tests {
                     }
                     // rx column
                     (1..=3, 92..=101) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                        assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // tx column
                     (1..=3, 102..=111) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                        assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     _ => assert_eq!(result_cell.fg, Color::Reset),
                 }
@@ -1797,11 +1790,11 @@ mod tests {
                     }
                     // rx column
                     (1..=3, 95..=104) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                        assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // tx column
                     (1..=3, 105..=114) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                        assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     _ => {
                         assert_eq!(result_cell.fg, Color::Reset);
@@ -1861,11 +1854,11 @@ mod tests {
                     }
                     // rx column
                     (1..=3, 104..=113) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                        assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // tx column
                     (1..=3, 114..=123) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                        assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     _ => assert_eq!(result_cell.fg, Color::Reset),
                 }
