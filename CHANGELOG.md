@@ -9,6 +9,7 @@
 ### Fixes
 + update containerised Dockerfile, [0c6f53228f01196e352c2069383ba1e7a10950a8]
 + calculate_usage overflow, [5106a01f3dcb87ce5a8f1fb7bf49dc6b3c25d03e]
++ DockerData spawns insertion error, [d4906d33c26b75d92e7d80040c488faa90a257c6]
 
 ### Refactors
 + speed up docker logs init process, [8b9fe4246865441704ae12dff0938868a4fe6f81]
