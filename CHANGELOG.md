@@ -30,6 +30,9 @@
 + update_container_stat combine is_alive(), [55cc746736f6863aedc5ad838744a983796244d8]
 + remove `input_poll_rate` from `Ui`, instead use const `POLL_RATE`, [69f6c96b700b9fde5578ae204992a67986d456ab]
 + pass `&FrameDate` into `draw_frame()`, [35aec5060fdbe606267be26656b4aeee43d50c02]
++ dead code removed, [caf23be4a7faff99aaca80b081a02e4e0a372009]
++ input_handler, [9c4f8910381b90b563da12eaba4b79cb60c40129]
++ draw_block, [de76bc22936b124dcb9646f302f6cc14691dbb63]
 
 ### Tests
 + fix logs tests, [9b22f5da18e4bf92766a68a7f4cd61ad72724cfd]
