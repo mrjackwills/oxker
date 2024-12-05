@@ -436,7 +436,7 @@ impl InputHandler {
             let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
             let is_q = || key_code == KeyCode::Char('q') || key_code == KeyCode::Char('Q');
             if key_modifier == KeyModifiers::CONTROL && is_c() || is_q() && !contains_filter {
-                // Always just quit on Ctrl + c/C or q/Q, unless in FIlter status active
+                // Always just quit on Ctrl + c/C or q/Q, unless in Filter status active
                 self.quit();
             }
 
@@ -479,22 +479,13 @@ impl InputHandler {
             MouseEventKind::ScrollUp => self.previous(),
             MouseEventKind::ScrollDown => self.next(),
             MouseEventKind::Down(MouseButton::Left) => {
-                let header = self.gui_state.lock().header_intersect(Rect::new(
-                    mouse_event.column,
-                    mouse_event.row,
-                    1,
-                    1,
-                ));
+                let mouse_point = Rect::new(mouse_event.column, mouse_event.row, 1, 1);
+                let header = self.gui_state.lock().header_intersect(mouse_point);
                 if let Some(header) = header {
                     self.sort(header);
                 }
 
-                self.gui_state.lock().panel_intersect(Rect::new(
-                    mouse_event.column,
-                    mouse_event.row,
-                    1,
-                    1,
-                ));
+                self.gui_state.lock().panel_intersect(mouse_point);
             }
             _ => (),
         }
