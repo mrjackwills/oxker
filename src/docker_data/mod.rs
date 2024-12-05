@@ -149,8 +149,6 @@ impl DockerData {
                 (None, None)
             };
 
-            let mem_limit = stats.memory_stats.limit.unwrap_or_default();
-
             let op_key = stats
                 .networks
                 .as_ref()
@@ -166,9 +164,14 @@ impl DockerData {
                 (0, 0)
             };
 
-            app_data
-                .lock()
-                .update_stats_by_id(id, cpu_stats, mem_stat, mem_limit, rx, tx);
+            app_data.lock().update_stats_by_id(
+                id,
+                cpu_stats,
+                mem_stat,
+                stats.memory_stats.limit.unwrap_or_default(),
+                rx,
+                tx,
+            );
         }
         spawns.lock().remove(&spawn_id);
     }
@@ -306,7 +309,7 @@ impl DockerData {
         if let Some(container) = self.app_data.lock().get_selected_container() {
             let last_updated = container.last_updated;
             let spawn_id = SpawnId::Log(container.id.clone());
-            // Only spawn if not already sapwned with a given id/binate pair
+            // Only spawn if not already spawned with a given id/binate pair
             if let std::collections::hash_map::Entry::Vacant(spawns) =
                 self.spawns.lock().entry(spawn_id)
             {

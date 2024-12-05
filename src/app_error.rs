@@ -2,7 +2,6 @@ use crate::app_data::DockerCommand;
 use std::fmt;
 
 /// app errors to set in global state
-// #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum AppError {
     DockerCommand(DockerCommand),
