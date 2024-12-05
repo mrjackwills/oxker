@@ -37,13 +37,17 @@ pub struct Args {
     #[clap(long, short = None)]
     pub host: Option<String>,
 
-    /// Force use of docker cli when execing into containers
-    #[clap(long="use-cli", short = None)]
-    pub use_cli: bool,
+    /// Do not include stderr output in logs
+    #[clap(long = "no-stderr")]
+    pub no_std_err: bool,
 
     /// Directory for saving exported logs, defaults to `$HOME`
     #[clap(long="save-dir", short = None)]
     pub save_dir: Option<String>,
+
+    /// Force use of docker cli when execing into containers
+    #[clap(long="use-cli", short = None)]
+    pub use_cli: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -58,6 +62,7 @@ pub struct CliArgs {
     pub raw: bool,
     pub show_self: bool,
     pub timestamp: bool,
+    pub std_err: bool,
     pub use_cli: bool,
 }
 
@@ -65,12 +70,7 @@ impl CliArgs {
     /// An ENV is set in the ./containerised/Dockerfile, if this is ENV found, then sleep for 250ms, else the container, for as yet unknown reasons, will close immediately
     /// returns a bool, so that the `update_all_containers()` won't bother to check the entry point unless running via a container
     fn check_if_in_container() -> bool {
-        if let Ok(value) = std::env::var(ENV_KEY) {
-            if value == ENV_VALUE {
-                return true;
-            }
-        }
-        false
+        std::env::var(ENV_KEY).map_or(false, |i| i == ENV_VALUE)
     }
 
     /// Parse cli arguments
@@ -97,6 +97,7 @@ impl CliArgs {
             in_container: Self::check_if_in_container(),
             save_dir: logs_dir,
             raw: args.raw,
+            std_err: !args.no_std_err,
             show_self: !args.show_self,
             timestamp: !args.timestamp,
         }

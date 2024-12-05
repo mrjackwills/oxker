@@ -43,6 +43,9 @@ const MARGIN: &str = "   ";
 const RIGHT_ARROW: &str = "▶ ";
 const CIRCLE: &str = "⚪ ";
 
+const COLOR_RX: Color = Color::Rgb(255, 233, 193);
+const COLOR_TX: Color = Color::Rgb(205, 140, 140);
+
 const CONSTRAINT_50_50: [Constraint; 2] = [Constraint::Percentage(50), Constraint::Percentage(50)];
 const CONSTRAINT_100: [Constraint; 1] = [Constraint::Percentage(100)];
 const CONSTRAINT_POPUP: [Constraint; 5] = [
@@ -72,7 +75,6 @@ fn max_line_width(text: &str) -> usize {
 /// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
 fn generate_block<'a>(
-    app_data: &Arc<Mutex<AppData>>,
     area: Rect,
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
@@ -81,12 +83,13 @@ fn generate_block<'a>(
     gui_state
         .lock()
         .update_region_map(Region::Panel(panel), area);
+
     let mut title = match panel {
         SelectablePanel::Containers => {
-            format!("{}{}", panel.title(), app_data.lock().container_title())
+            format!("{}{}", panel.title(), fd.container_title)
         }
         SelectablePanel::Logs => {
-            format!("{}{}", panel.title(), app_data.lock().get_log_title())
+            format!("{}{}", panel.title(), fd.log_title)
         }
         SelectablePanel::Commands => String::new(),
     };
@@ -97,7 +100,7 @@ fn generate_block<'a>(
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .title(title);
-    if fd.selected_panel == panel && !gui_state.lock().status_contains(&[Status::Filter]) {
+    if fd.selected_panel == panel && !fd.status.contains(&Status::Filter) {
         block = block.border_style(Style::default().fg(Color::LightCyan));
     }
     block
@@ -111,7 +114,7 @@ pub fn commands(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Commands);
+    let block = generate_block(area, fd, gui_state, SelectablePanel::Commands);
     let items = app_data.lock().get_control_items().map_or(vec![], |i| {
         i.iter()
             .map(|c| {
@@ -141,7 +144,6 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
     let state_style = Style::default().fg(i.state.get_color());
     let blue = Style::default().fg(Color::Blue);
 
-    // Truncate?
     Line::from(vec![
         Span::styled(
             format!(
@@ -203,11 +205,11 @@ fn format_containers<'a>(i: &ContainerItem, widths: &Columns) -> Line<'a> {
         ),
         Span::styled(
             format!("{:>width$}{MARGIN}", i.rx, width = widths.net_rx.1.into()),
-            Style::default().fg(Color::Rgb(255, 233, 193)),
+            Style::default().fg(COLOR_RX),
         ),
         Span::styled(
             format!("{:>width$}{MARGIN}", i.tx, width = widths.net_tx.1.into()),
-            Style::default().fg(Color::Rgb(205, 140, 140)),
+            Style::default().fg(COLOR_TX),
         ),
     ])
 }
@@ -220,7 +222,7 @@ pub fn containers(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Containers);
+    let block = generate_block(area, fd, gui_state, SelectablePanel::Containers);
 
     let items = app_data
         .lock()
@@ -230,9 +232,9 @@ pub fn containers(
         .collect::<Vec<_>>();
 
     if items.is_empty() {
-        let text = if app_data.lock().get_filter_term().is_some() {
+        let text = if fd.filter_term.is_some() {
             "no containers match filter"
-        } else if gui_state.lock().is_loading() {
+        } else if fd.is_loading {
             &format!("loading {}", fd.loading_icon)
         } else {
             "no containers running"
@@ -259,8 +261,8 @@ pub fn logs(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = generate_block(app_data, area, fd, gui_state, SelectablePanel::Logs);
-    if fd.init {
+    let block = generate_block(area, fd, gui_state, SelectablePanel::Logs);
+    if fd.status.contains(&Status::Init) {
         let paragraph = Paragraph::new(format!("parsing logs {}", fd.loading_icon))
             .style(Style::default())
             .block(block)
@@ -268,7 +270,6 @@ pub fn logs(
         f.render_widget(paragraph, area);
     } else {
         let logs = app_data.lock().get_logs();
-
         if logs.is_empty() {
             let paragraph = Paragraph::new("no logs found")
                 .block(block)
@@ -287,15 +288,9 @@ pub fn logs(
     }
 }
 
-// Display the ports in a formatted list
-pub fn ports(
-    f: &mut Frame,
-    area: Rect,
-    app_data: &Arc<Mutex<AppData>>,
-    max_lens: (usize, usize, usize),
-) {
-    let ports = app_data.lock().get_selected_ports();
-    if let Some(ports) = ports {
+/// Display the ports in a formatted list
+pub fn ports(f: &mut Frame, area: Rect, fd: &FrameData) {
+    if let Some(ports) = fd.ports.as_ref() {
         let block = Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
@@ -307,7 +302,7 @@ pub fn ports(
                     .add_modifier(Modifier::BOLD),
             ));
 
-        let (ip, private, public) = max_lens;
+        let (ip, private, public) = fd.port_max_lens;
 
         if ports.0.is_empty() {
             let text = match ports.1 {
@@ -328,7 +323,7 @@ pub fn ports(
             )];
             for item in &ports.0 {
                 let fg = Color::White;
-                let strings = item.print();
+                let strings = item.get_all();
 
                 let line = vec![
                     Span::from(format!("{:>ip$}", strings.0)).fg(fg),
@@ -344,9 +339,8 @@ pub fn ports(
 }
 
 /// Draw the cpu + mem charts
-pub fn chart(f: &mut Frame, area: Rect, app_data: &Arc<Mutex<AppData>>) {
-    let cpu_mem = app_data.lock().get_chart_data();
-    if let Some((cpu, mem)) = cpu_mem {
+pub fn chart(f: &mut Frame, area: Rect, fd: &FrameData) {
+    if let Some((cpu, mem)) = fd.chart_data.as_ref() {
         let area = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(CONSTRAINT_50_50)
@@ -422,45 +416,30 @@ fn make_chart<'a, T: Stats + Display>(
 }
 
 /// Create the filter_by by spans, coloured dependant on which one is selected
-fn filter_by_spans(app_data: &Arc<Mutex<AppData>>) -> [Span; 4] {
-    let filter_by = app_data.lock().get_filter_by();
-
+fn filter_by_spans(fd: &FrameData) -> [Span; 4] {
     let selected = Style::default().bg(Color::Gray).fg(Color::Black);
     let not_selected = Style::default().bg(Color::Reset).fg(Color::Reset);
 
-    // This should be refactored somehow
     let name = [" Name ", " Image ", " Status ", " All "];
 
-    match filter_by {
-        FilterBy::Name => [
-            Span::styled(name[0], selected),
-            Span::styled(name[1], not_selected),
-            Span::styled(name[2], not_selected),
-            Span::styled(name[3], not_selected),
-        ],
-        FilterBy::Image => [
-            Span::styled(name[0], not_selected),
-            Span::styled(name[1], selected),
-            Span::styled(name[2], not_selected),
-            Span::styled(name[3], not_selected),
-        ],
-        FilterBy::Status => [
-            Span::styled(name[0], not_selected),
-            Span::styled(name[1], not_selected),
-            Span::styled(name[2], selected),
-            Span::styled(name[3], not_selected),
-        ],
-        FilterBy::All => [
-            Span::styled(name[0], not_selected),
-            Span::styled(name[1], not_selected),
-            Span::styled(name[2], not_selected),
-            Span::styled(name[3], selected),
-        ],
+    let mut filter_spans = [
+        Span::styled(name[0], not_selected),
+        Span::styled(name[1], not_selected),
+        Span::styled(name[2], not_selected),
+        Span::styled(name[3], not_selected),
+    ];
+
+    match fd.filter_by {
+        FilterBy::Name => filter_spans[0] = Span::styled(name[0], selected),
+        FilterBy::Image => filter_spans[1] = Span::styled(name[1], selected),
+        FilterBy::Status => filter_spans[2] = Span::styled(name[2], selected),
+        FilterBy::All => filter_spans[3] = Span::styled(name[3], selected),
     }
+    filter_spans
 }
 
 /// Draw the filter bar
-pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>) {
+pub fn filter_bar(area: Rect, frame: &mut Frame, fd: &FrameData) {
     let style_but = Style::default().fg(Color::Black).bg(Color::Magenta);
     let style_desc = Style::default().fg(Color::Gray).bg(Color::Reset);
 
@@ -470,7 +449,7 @@ pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>)
         Span::styled(" ← by → ", style_but),
         Span::from(" "),
     ];
-    line.extend_from_slice(&filter_by_spans(app_data));
+    line.extend_from_slice(&filter_by_spans(fd));
     line.extend_from_slice(&[
         Span::styled(
             " term: ",
@@ -479,10 +458,9 @@ pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            app_data
-                .lock()
-                .get_filter_term()
-                .map_or(String::new(), std::borrow::ToOwned::to_owned),
+            fd.filter_term
+                .as_ref()
+                .map_or(String::new(), std::clone::Clone::clone),
             Style::default().fg(Color::Gray),
         ),
     ]);
@@ -491,10 +469,11 @@ pub fn filter_bar(area: Rect, frame: &mut Frame, app_data: &Arc<Mutex<AppData>>)
 
 /// Draw heading bar at top of program, always visible
 /// TODO Should separate into loading icon/headers/help functions
+#[allow(clippy::too_many_lines)]
 pub fn heading_bar(
     area: Rect,
     frame: &mut Frame,
-    data: &FrameData,
+    fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
     let block = |fg: Color| Block::default().style(Style::default().bg(Color::Magenta).fg(fg));
@@ -505,7 +484,7 @@ pub fn heading_bar(
     let header_block = |x: &Header| {
         let mut color = Color::Black;
         let mut suffix = "";
-        if let Some((a, b)) = &data.sorted_by {
+        if let Some((a, b)) = &fd.sorted_by {
             if x == a {
                 match b {
                     SortedOrder::Asc => suffix = " ▲",
@@ -523,6 +502,7 @@ pub fn heading_bar(
     let gen_header = |header: &Header, width: usize| {
         let block = header_block(header);
 
+        // TODO
         // Yes this is a mess, needs documenting correctly
 
         let text = format!(
@@ -538,26 +518,30 @@ pub fn heading_bar(
 
     // Meta data to iterate over to create blocks with correct widths
     let header_meta = [
-        (Header::Name, data.columns.name.1),
-        (Header::State, data.columns.state.1),
-        (Header::Status, data.columns.status.1),
-        (Header::Cpu, data.columns.cpu.1),
-        (Header::Memory, data.columns.mem.1 + data.columns.mem.2 + 3),
-        (Header::Id, data.columns.id.1),
-        (Header::Image, data.columns.image.1),
-        (Header::Rx, data.columns.net_rx.1),
-        (Header::Tx, data.columns.net_tx.1),
+        (Header::Name, fd.columns.name.1),
+        (Header::State, fd.columns.state.1),
+        (Header::Status, fd.columns.status.1),
+        (Header::Cpu, fd.columns.cpu.1),
+        (Header::Memory, fd.columns.mem.1 + fd.columns.mem.2 + 3),
+        (Header::Id, fd.columns.id.1),
+        (Header::Image, fd.columns.image.1),
+        (Header::Rx, fd.columns.net_rx.1),
+        (Header::Tx, fd.columns.net_tx.1),
     ];
 
     // Need to add widths to this
 
-    let suffix = if data.help_visible { "exit" } else { "show" };
+    let suffix = if fd.status.contains(&Status::Help) {
+        "exit"
+    } else {
+        "show"
+    };
     let info_text = format!("( h ) {suffix} help{MARGIN}",);
     let info_width = info_text.chars().count();
 
     let column_width = usize::from(area.width).saturating_sub(info_width);
     let column_width = if column_width > 0 { column_width } else { 1 };
-    let splits = if data.has_containers {
+    let splits = if fd.has_containers {
         vec![
             Constraint::Max(4),
             Constraint::Max(column_width.try_into().unwrap_or_default()),
@@ -573,11 +557,11 @@ pub fn heading_bar(
         .split(area);
 
     // Draw loading icon, or not, and a prefix with a single space
-    let loading_paragraph = Paragraph::new(format!("{:>2}", data.loading_icon))
+    let loading_paragraph = Paragraph::new(format!("{:>2}", fd.loading_icon))
         .block(block(Color::White))
         .alignment(Alignment::Left);
     frame.render_widget(loading_paragraph, split_bar[0]);
-    if data.has_containers {
+    if fd.has_containers {
         let header_section_width = split_bar[1].width;
 
         let mut counter = 0;
@@ -612,7 +596,7 @@ pub fn heading_bar(
     }
 
     // show/hide help
-    let color = if data.help_visible {
+    let color = if fd.status.contains(&Status::Help) {
         Color::Black
     } else {
         Color::White
@@ -622,7 +606,7 @@ pub fn heading_bar(
         .alignment(Alignment::Right);
 
     // If no containers, don't display the headers, could maybe do this first?
-    let help_index = if data.has_containers { 2 } else { 0 };
+    let help_index = if fd.has_containers { 2 } else { 0 };
     frame.render_widget(help_paragraph, split_bar[help_index]);
 }
 
@@ -851,22 +835,19 @@ pub fn help_box(f: &mut Frame) {
 
     let name_paragraph = Paragraph::new(name_info.lines)
         .style(Style::default().bg(Color::Magenta).fg(Color::White))
-        .block(Block::default())
         .alignment(Alignment::Center);
 
+    let style = || Style::default().bg(Color::Magenta).fg(Color::Black);
     let description_paragraph = Paragraph::new(description_info.lines)
-        .style(Style::default().bg(Color::Magenta).fg(Color::Black))
-        .block(Block::default())
+        .style(style())
         .alignment(Alignment::Center);
 
     let help_paragraph = Paragraph::new(button_info.lines)
-        .style(Style::default().bg(Color::Magenta).fg(Color::Black))
-        .block(Block::default())
+        .style(style())
         .alignment(Alignment::Left);
 
     let final_paragraph = Paragraph::new(final_info.lines)
-        .style(Style::default().bg(Color::Magenta).fg(Color::Black))
-        .block(Block::default())
+        .style(style())
         .alignment(Alignment::Center);
 
     let block = Block::default()
@@ -1003,20 +984,19 @@ pub fn error(f: &mut Frame, error: AppError, seconds: Option<u8>) {
 
     let area = popup(lines, max_line_width, f.area(), BoxLocation::MiddleCentre);
 
-    // let (paragraph, area) = gen_error(f, error, seconds);
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
 
 /// Draw info box in one of the 9 BoxLocations
 // TODO is this broken - I don't think so
-pub fn info(f: &mut Frame, text: &str, instant: Instant, gui_state: &Arc<Mutex<GuiState>>) {
+pub fn info(f: &mut Frame, text: String, instant: &Instant, gui_state: &Arc<Mutex<GuiState>>) {
     let block = Block::default()
         .title("")
         .title_alignment(Alignment::Center)
         .borders(Borders::NONE);
 
-    let mut max_line_width = max_line_width(text);
+    let mut max_line_width = max_line_width(&text);
     let mut lines = text.lines().count();
 
     // Add some horizontal & vertical margins
@@ -1068,7 +1048,11 @@ fn popup(text_lines: usize, text_width: usize, r: Rect, box_location: BoxLocatio
 #[allow(clippy::unwrap_used)]
 mod tests {
 
-    use std::{ops::RangeInclusive, sync::Arc};
+    use std::{
+        net::{IpAddr, Ipv4Addr},
+        ops::RangeInclusive,
+        sync::Arc,
+    };
 
     use parking_lot::Mutex;
     use ratatui::{
@@ -1086,7 +1070,10 @@ mod tests {
         },
         app_error::AppError,
         tests::{gen_appdata, gen_container_summary, gen_containers},
-        ui::{draw_frame, GuiState},
+        ui::{
+            draw_blocks::{COLOR_RX, COLOR_TX},
+            draw_frame, GuiState, Status,
+        },
     };
 
     use super::{FrameData, ORANGE, VERSION};
@@ -1101,6 +1088,42 @@ mod tests {
     }
 
     const BORDER_CHARS: [&str; 6] = ["╭", "╮", "─", "│", "╰", "╯"];
+
+    impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
+        fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
+            let (app_data, gui_data) = (data.0.lock(), data.1.lock());
+
+            // set max height for container section, needs +5 to deal with docker commands list and borders
+            let height = app_data.get_container_len();
+            let height = if height < 12 {
+                u16::try_from(height + 5).unwrap_or_default()
+            } else {
+                12
+            };
+
+            let (filter_by, filter_term) = app_data.get_filter();
+            Self {
+                chart_data: app_data.get_chart_data(),
+                columns: app_data.get_width(),
+                container_title: app_data.get_container_title(),
+                delete_confirm: gui_data.get_delete_container(),
+                filter_by,
+                filter_term: filter_term.cloned(),
+                has_containers: app_data.get_container_len() > 0,
+                has_error: app_data.get_error(),
+                height,
+                ports: app_data.get_selected_ports(),
+                port_max_lens: app_data.get_longest_port(),
+                info_text: gui_data.info_box_text.clone(),
+                is_loading: gui_data.is_loading(),
+                loading_icon: gui_data.get_loading().to_string(),
+                log_title: app_data.get_log_title(),
+                selected_panel: gui_data.get_selected_panel(),
+                sorted_by: app_data.get_sorted(),
+                status: gui_data.get_status(),
+            }
+        }
+    }
 
     /// Generate state to be used in *most* gui tests
     fn test_setup(w: u16, h: u16, control_start: bool, container_start: bool) -> TuiTestSetup {
@@ -1120,8 +1143,7 @@ mod tests {
 
         let app_data = Arc::new(Mutex::new(app_data));
         let gui_state = Arc::new(Mutex::new(gui_state));
-
-        let fd = FrameData::from((app_data.lock(), gui_state.lock()));
+        let fd = FrameData::from((&app_data, &gui_state));
         let area = Rect::new(0, 0, w, h);
         TuiTestSetup {
             app_data,
@@ -1248,7 +1270,7 @@ mod tests {
         setup
             .app_data
             .lock()
-            .update_containers(&mut vec![gen_container_summary(1, "paused")]);
+            .update_containers(vec![gen_container_summary(1, "paused")]);
         setup.app_data.lock().docker_controls_next();
 
         let expected = [
@@ -1327,7 +1349,7 @@ mod tests {
 
         // Control panel now selected, should have a blue border
         setup.gui_state.lock().next_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
@@ -1376,7 +1398,7 @@ mod tests {
         ];
 
         setup.gui_state.lock().next_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1394,7 +1416,7 @@ mod tests {
         }
 
         setup.gui_state.lock().previous_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1463,7 +1485,7 @@ mod tests {
 
         // Change selected panel, border is now no longer blue
         setup.gui_state.lock().next_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
@@ -1497,7 +1519,7 @@ mod tests {
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
         ];
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1527,11 +1549,11 @@ mod tests {
                     }
                     // rx column
                     (1..=3, 92..=101) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                        assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // tx column
                     (1..=3, 102..=111) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                        assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     _ => assert_eq!(result_cell.fg, Color::Reset),
                 }
@@ -1557,7 +1579,7 @@ mod tests {
             "│                                                                                                                                                                        │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup.app_data.lock().containers.items[0].state = State::Paused;
 
         setup
@@ -1601,11 +1623,11 @@ mod tests {
                     }
                     // rx column
                     (1..=3, 92..=101) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                        assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // tx column
                     (1..=3, 102..=111) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                        assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     _ => assert_eq!(result_cell.fg, Color::Reset),
                 }
@@ -1627,7 +1649,7 @@ mod tests {
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup.app_data.lock().containers.items[0].state = State::Paused;
 
         setup
@@ -1655,7 +1677,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Dead;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1682,7 +1704,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Exited;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1708,7 +1730,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Removing;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1735,7 +1757,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Restarting;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1768,11 +1790,11 @@ mod tests {
                     }
                     // rx column
                     (1..=3, 95..=104) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                        assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // tx column
                     (1..=3, 105..=114) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                        assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     _ => {
                         assert_eq!(result_cell.fg, Color::Reset);
@@ -1800,7 +1822,7 @@ mod tests {
             "│                                                                                                                                │",
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
         ];
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1832,11 +1854,11 @@ mod tests {
                     }
                     // rx column
                     (1..=3, 104..=113) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(255, 233, 193));
+                        assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // tx column
                     (1..=3, 114..=123) => {
-                        assert_eq!(result_cell.fg, Color::Rgb(205, 140, 140));
+                        assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     _ => assert_eq!(result_cell.fg, Color::Reset),
                 }
@@ -1859,7 +1881,7 @@ mod tests {
             "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         setup.app_data.lock().containers.items[0].state = State::Unknown;
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -1878,20 +1900,17 @@ mod tests {
     #[test]
     /// No logs, panel unselected, then selected, border color changes correctly
     fn test_draw_blocks_logs_none() {
-        let (w, h) = (25, 6);
+        let (w, h) = (35, 6);
         let mut setup = test_setup(w, h, true, true);
-        setup.app_data.lock().containers = StatefulList::new(vec![]);
 
         let expected = [
-            "╭ Logs ─────────────────╮",
-            "│     no logs found     │",
-            "│                       │",
-            "│                       │",
-            "│                       │",
-            "╰───────────────────────╯",
+            "╭ Logs - container_1 - image_1 ───╮",
+            "│          no logs found          │",
+            "│                                 │",
+            "│                                 │",
+            "│                                 │",
+            "╰─────────────────────────────────╯",
         ];
-
-        let _fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
 
         setup
             .terminal
@@ -1910,7 +1929,7 @@ mod tests {
 
         setup.gui_state.lock().next_panel();
         setup.gui_state.lock().next_panel();
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         // When selected, has a blue border
         setup
@@ -1924,7 +1943,6 @@ mod tests {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::LightCyan);
                 }
@@ -1949,8 +1967,8 @@ mod tests {
             "╰──────────────────────────────╯",
         ];
 
-        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
-        fd.init = true;
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        fd.status.insert(Status::Init);
 
         setup
             .terminal
@@ -1979,8 +1997,8 @@ mod tests {
             "╰──────────────────────────────╯",
         ];
 
-        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
-        fd.init = true;
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        fd.status.insert(Status::Init);
         setup
             .terminal
             .draw(|f| {
@@ -2000,12 +2018,12 @@ mod tests {
     #[test]
     /// Logs correct displayed, changing log state also draws correctly
     fn test_draw_blocks_logs_some() {
-        let (w, h) = (25, 6);
+        let (w, h) = (36, 6);
         let mut setup = test_setup(w, h, true, true);
 
         insert_logs(&setup);
 
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
@@ -2013,12 +2031,12 @@ mod tests {
             })
             .unwrap();
         let expected = [
-            "╭ Logs 3/3 - container_1╮",
-            "│  line 1               │",
-            "│  line 2               │",
-            "│▶ line 3               │",
-            "│                       │",
-            "╰───────────────────────╯",
+            "╭ Logs 3/3 - container_1 - image_1 ╮",
+            "│  line 1                          │",
+            "│  line 2                          │",
+            "│▶ line 3                          │",
+            "│                                  │",
+            "╰──────────────────────────────────╯",
         ];
 
         for (row_index, result_row) in get_result(&setup, w) {
@@ -2027,7 +2045,7 @@ mod tests {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.fg, Color::Reset);
 
-                if row_index == 3 && (1..=23).contains(&result_cell_index) {
+                if row_index == 3 && (1..=34).contains(&result_cell_index) {
                     assert_eq!(result_cell.modifier, Modifier::BOLD);
                 } else {
                     assert!(result_cell.modifier.is_empty());
@@ -2037,22 +2055,22 @@ mod tests {
 
         // Change selected log line
         setup.app_data.lock().log_previous();
-        _ = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
             .draw(|f| {
-                super::logs(&setup.app_data, setup.area, f, &setup.fd, &setup.gui_state);
+                super::logs(&setup.app_data, setup.area, f, &fd, &setup.gui_state);
             })
             .unwrap();
 
         let expected = [
-            "╭ Logs 2/3 - container_1╮",
-            "│  line 1               │",
-            "│▶ line 2               │",
-            "│  line 3               │",
-            "│                       │",
-            "╰───────────────────────╯",
+            "╭ Logs 2/3 - container_1 - image_1 ╮",
+            "│  line 1                          │",
+            "│▶ line 2                          │",
+            "│  line 3                          │",
+            "│                                  │",
+            "╰──────────────────────────────────╯",
         ];
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
@@ -2060,7 +2078,7 @@ mod tests {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.fg, Color::Reset);
 
-                if row_index == 2 && (1..=23).contains(&result_cell_index) {
+                if row_index == 2 && (1..=34).contains(&result_cell_index) {
                     assert_eq!(result_cell.modifier, Modifier::BOLD);
                 } else {
                     assert!(result_cell.modifier.is_empty());
@@ -2090,7 +2108,7 @@ mod tests {
             "╰──────────────────────────────────────────────────────────────────────────────╯",
         ];
 
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
@@ -2194,10 +2212,11 @@ mod tests {
         let (w, h) = (80, 10);
         let mut setup = test_setup(w, h, true, true);
 
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::chart(f, setup.area, &setup.app_data);
+                super::chart(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -2244,11 +2263,12 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
 
         insert_chart_data(&setup);
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
             .draw(|f| {
-                super::chart(f, setup.area, &setup.app_data);
+                super::chart(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -2291,11 +2311,12 @@ mod tests {
 
         insert_chart_data(&setup);
         setup.app_data.lock().containers.items[0].state = State::Paused;
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
             .draw(|f| {
-                super::chart(f, setup.area, &setup.app_data);
+                super::chart(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -2333,11 +2354,12 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         insert_chart_data(&setup);
         setup.app_data.lock().containers.items[0].state = State::Dead;
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
             .draw(|f| {
-                super::chart(f, setup.area, &setup.app_data);
+                super::chart(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -2379,7 +2401,7 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         setup.app_data.lock().containers = StatefulList::new(vec![]);
 
-        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         let expected =  ["                                                                                                                          ( h ) show help   "];
 
@@ -2399,7 +2421,7 @@ mod tests {
             }
         }
 
-        fd.help_visible = true;
+        fd.status.insert(Status::Help);
         let expected =  ["                                                                                                                          ( h ) exit help   "];
         setup
             .terminal
@@ -2423,7 +2445,7 @@ mod tests {
     fn test_draw_blocks_headers_some_containers() {
         let (w, h) = (140, 1);
         let mut setup = test_setup(w, h, true, true);
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         let expected =  ["    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "];
         setup
@@ -2454,7 +2476,7 @@ mod tests {
     fn test_draw_blocks_headers_some_containers_reduced_width() {
         let (w, h) = (80, 1);
         let mut setup = test_setup(w, h, true, true);
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         let expected =
             ["    name          state       status      cpu                 ( h ) show help   "];
@@ -2486,7 +2508,7 @@ mod tests {
     fn test_draw_blocks_headers_sort_containers() {
         let (w, h) = (140, 1);
         let mut setup = test_setup(w, h, true, true);
-        let mut fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         // Actual test, used for each header and sorted type
         let mut test =
@@ -2555,7 +2577,7 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
-        let fd = FrameData::from((setup.app_data.lock(), setup.gui_state.lock()));
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         let expected =   [" ⠙  name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   "];
 
@@ -2810,7 +2832,12 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::info(f, "test", std::time::Instant::now(), &setup.gui_state);
+                super::info(
+                    f,
+                    "test".to_owned(),
+                    &std::time::Instant::now(),
+                    &setup.gui_state,
+                );
             })
             .unwrap();
 
@@ -2848,7 +2875,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::filter_bar(setup.area, f, &setup.app_data);
+                super::filter_bar(setup.area, f, &setup.fd);
             })
             .unwrap();
 
@@ -2889,11 +2916,12 @@ mod tests {
         // Test when char added to search term
         setup.app_data.lock().filter_term_push('c');
         setup.app_data.lock().filter_term_push('d');
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
             .draw(|f| {
-                super::filter_bar(setup.area, f, &setup.app_data);
+                super::filter_bar(setup.area, f, &fd);
             })
             .unwrap();
 
@@ -2934,10 +2962,11 @@ mod tests {
 
         // Test when filter_by chances
         setup.app_data.lock().filter_by_next();
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::filter_bar(setup.area, f, &setup.app_data);
+                super::filter_bar(setup.area, f, &fd);
             })
             .unwrap();
 
@@ -3078,11 +3107,11 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
         setup.app_data.lock().containers.items[0].ports = vec![];
 
-        let max_lens = setup.app_data.lock().get_longest_port();
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::ports(f, setup.area, &setup.app_data, max_lens);
+                super::ports(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -3123,11 +3152,12 @@ mod tests {
 
         // When state is "State::Running | State::Paused | State::Restarting, won't show "no ports"
         setup.app_data.lock().containers.items[0].state = State::Dead;
-        let max_lens = setup.app_data.lock().get_longest_port();
+
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::ports(f, setup.area, &setup.app_data, max_lens);
+                super::ports(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -3173,17 +3203,16 @@ mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some("127.0.0.1".to_owned()),
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                 private: 8003,
                 public: Some(8003),
             });
 
-        let max_lens = setup.app_data.lock().get_longest_port();
-
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::ports(f, setup.area, &setup.app_data, max_lens);
+                super::ports(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -3232,12 +3261,12 @@ mod tests {
     fn test_draw_blocks_ports_container_state() {
         let (w, h) = (32, 8);
         let mut setup = test_setup(w, h, true, true);
-        let max_lens = setup.app_data.lock().get_longest_port();
 
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::ports(f, setup.area, &setup.app_data, max_lens);
+                super::ports(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -3265,10 +3294,11 @@ mod tests {
         }
 
         setup.app_data.lock().containers.items[0].state = State::Paused;
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::ports(f, setup.area, &setup.app_data, max_lens);
+                super::ports(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -3285,10 +3315,11 @@ mod tests {
         }
 
         setup.app_data.lock().containers.items[0].state = State::Exited;
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::ports(f, setup.area, &setup.app_data, max_lens);
+                super::ports(f, setup.area, &fd);
             })
             .unwrap();
 
@@ -3319,7 +3350,7 @@ mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some("127.0.0.1".to_owned()),
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                 private: 8003,
                 public: Some(8003),
             });
@@ -3356,10 +3387,12 @@ mod tests {
             "│      │                                                        ││         │                                                     ││                            │",
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
         ];
+
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                draw_frame(f, &setup.app_data, &setup.gui_state);
+                draw_frame(f, &setup.app_data, &setup.gui_state, &fd);
             })
             .unwrap();
 
@@ -3383,7 +3416,7 @@ mod tests {
         setup.app_data.lock().containers.items[1]
             .ports
             .push(ContainerPorts {
-                ip: Some("127.0.0.1".to_owned()),
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                 private: 8003,
                 public: Some(8003),
             });
@@ -3420,10 +3453,11 @@ mod tests {
             "│      │                                                        ││         │                                                     ││                            │",
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
                 ];
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                draw_frame(f, &setup.app_data, &setup.gui_state);
+                draw_frame(f, &setup.app_data, &setup.gui_state, &fd);
             })
             .unwrap();
 
@@ -3474,10 +3508,11 @@ mod tests {
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
             " Esc  clear  ← by →   Name  Image  Status  All  term: r_1                                                                                                       ",
             ];
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                draw_frame(f, &setup.app_data, &setup.gui_state);
+                draw_frame(f, &setup.app_data, &setup.gui_state, &fd);
             })
             .unwrap();
 
@@ -3500,7 +3535,7 @@ mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some("127.0.0.1".to_owned()),
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                 private: 8003,
                 public: Some(8003),
             });
@@ -3542,10 +3577,11 @@ mod tests {
             "│      │                                                                       ││         │                                                                    ││                            │",
             "╰──────────────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
         ];
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                draw_frame(f, &setup.app_data, &setup.gui_state);
+                draw_frame(f, &setup.app_data, &setup.gui_state, &fd);
             })
             .unwrap();
 

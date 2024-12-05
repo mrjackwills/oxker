@@ -1,14 +1,11 @@
 use std::{
     fs::OpenOptions,
     io::{BufWriter, Write},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::{atomic::AtomicBool, Arc},
     time::SystemTime,
 };
 
-use bollard::{container::LogsOptions, Docker};
+use bollard::container::LogsOptions;
 use cansi::v3::categorise_text;
 use crossterm::{
     event::{DisableMouseCapture, KeyCode, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
@@ -22,7 +19,7 @@ use uuid::Uuid;
 
 mod message;
 use crate::{
-    app_data::{AppData, DockerControls, Header},
+    app_data::{AppData, DockerCommand, Header},
     app_error::AppError,
     docker_data::DockerMessage,
     exec::{tty_readable, ExecMode},
@@ -43,7 +40,7 @@ pub struct InputHandler {
 
 impl InputHandler {
     /// Initialize self, and running the message handling loop
-    pub async fn init(
+    pub async fn start(
         app_data: Arc<Mutex<AppData>>,
         rec: Receiver<InputMessages>,
         docker_tx: Sender<DockerMessage>,
@@ -58,34 +55,29 @@ impl InputHandler {
             rec,
             mouse_capture: true,
         };
-        inner.start().await;
+        inner.message_handler().await;
     }
 
     /// check for incoming messages
-    async fn start(&mut self) {
+    async fn message_handler(&mut self) {
         while let Some(message) = self.rec.recv().await {
             match message {
                 InputMessages::ButtonPress(key) => self.button_press(key.0, key.1).await,
                 InputMessages::MouseEvent(mouse_event) => {
-                    if !self.gui_state.lock().status_contains(&[
-                        Status::Error,
-                        Status::Help,
-                        Status::DeleteConfirm,
-                        Status::Filter,
-                    ]) {
+                    let status = self.gui_state.lock().get_status();
+                    let contains = |s: Status| status.contains(&s);
+
+                    if !contains(Status::Error)
+                        | !contains(Status::Help)
+                        | !contains(Status::DeleteConfirm)
+                        | !contains(Status::Filter)
+                    {
                         self.mouse_press(mouse_event);
                     }
-                    let delete_confirm = self
-                        .gui_state
-                        .lock()
-                        .status_contains(&[Status::DeleteConfirm]);
-                    if delete_confirm {
+                    if contains(Status::DeleteConfirm) {
                         self.button_intersect(mouse_event).await;
                     }
                 }
-            }
-            if !self.is_running.load(Ordering::SeqCst) {
-                break;
             }
         }
     }
@@ -97,12 +89,10 @@ impl InputHandler {
 
     /// Send a quit message to docker, to abort all spawns, if an error is returned, set is_running to false here instead
     /// If gui_status is Error or Init, then just set the is_running to false immediately, for a quicker exit
-    async fn quit(&self) {
-        let error_init = self
-            .gui_state
-            .lock()
-            .status_contains(&[Status::Error, Status::Init]);
-        if error_init || self.docker_tx.send(DockerMessage::Quit).await.is_err() {
+    fn quit(&self) {
+        let status = self.gui_state.lock().get_status();
+        let contains = |s: Status| status.contains(&s);
+        if !contains(Status::Error) | !contains(Status::Init) {
             self.is_running
                 .store(false, std::sync::atomic::Ordering::SeqCst);
         }
@@ -112,7 +102,10 @@ impl InputHandler {
     async fn confirm_delete(&self) {
         let id = self.gui_state.lock().get_delete_container();
         if let Some(id) = id {
-            self.docker_tx.send(DockerMessage::Delete(id)).await.ok();
+            self.docker_tx
+                .send(DockerMessage::Control((DockerCommand::Delete, id)))
+                .await
+                .ok();
         }
     }
 
@@ -127,7 +120,7 @@ impl InputHandler {
         if !is_oxker && tty_readable() {
             let uuid = Uuid::new_v4();
             GuiState::start_loading_animation(&self.gui_state, uuid);
-            let (sx, rx) = tokio::sync::oneshot::channel::<Arc<Docker>>();
+            let (sx, rx) = tokio::sync::oneshot::channel();
             self.docker_tx.send(DockerMessage::Exec(sx)).await.ok();
 
             if let Ok(docker) = rx.await {
@@ -150,118 +143,109 @@ impl InputHandler {
 
     /// Toggle the mouse capture (via input of the 'm' key)
     fn m_key(&mut self) {
+        let err = || {
+            self.app_data.lock().set_error(
+                AppError::MouseCapture(!self.mouse_capture),
+                &self.gui_state,
+                Status::Error,
+            );
+        };
         if self.mouse_capture {
             if execute!(std::io::stdout(), DisableMouseCapture).is_ok() {
                 self.gui_state
                     .lock()
                     .set_info_box("✖ mouse capture disabled");
             } else {
-                self.app_data.lock().set_error(
-                    AppError::MouseCapture(false),
-                    &self.gui_state,
-                    Status::Error,
-                );
+                err();
             }
         } else if Ui::enable_mouse_capture().is_ok() {
             self.gui_state
                 .lock()
                 .set_info_box("✓ mouse capture enabled");
         } else {
-            self.app_data.lock().set_error(
-                AppError::MouseCapture(true),
-                &self.gui_state,
-                Status::Error,
-            );
+            err();
         };
 
         self.mouse_capture = !self.mouse_capture;
     }
 
     /// Save the currently selected containers logs into a `[container_name]_[timestamp].log` file
-    async fn s_key(&self) {
-        /// This is the inner workings, *inlined* here to return a Result
-        async fn save_logs(
-            app_data: &Arc<Mutex<AppData>>,
-            gui_state: &Arc<Mutex<GuiState>>,
-            docker_tx: &Sender<DockerMessage>,
-        ) -> Result<(), Box<dyn std::error::Error>> {
-            let args = app_data.lock().args.clone();
-            let container = app_data.lock().get_selected_container_id_state_name();
-            if let Some((id, _, name)) = container {
-                if let Some(log_path) = args.save_dir {
-                    let (sx, rx) = tokio::sync::oneshot::channel::<Arc<Docker>>();
-                    docker_tx.send(DockerMessage::Exec(sx)).await?;
+    async fn save_logs(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let args = self.app_data.lock().args.clone();
+        let container = self.app_data.lock().get_selected_container_id_state_name();
+        if let Some((id, _, name)) = container {
+            if let Some(log_path) = args.save_dir {
+                let (sx, rx) = tokio::sync::oneshot::channel();
+                self.docker_tx.send(DockerMessage::Exec(sx)).await?;
 
-                    let now = SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .map_or(0, |i| i.as_secs());
+                let now = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .map_or(0, |i| i.as_secs());
 
-                    let path = log_path.join(format!("{name}_{now}.log"));
+                let path = log_path.join(format!("{name}_{now}.log"));
 
-                    let docker = rx.await?;
-                    let options = Some(LogsOptions::<String> {
-                        stderr: true,
-                        stdout: true,
-                        timestamps: args.timestamp,
-                        since: 0,
-                        ..Default::default()
-                    });
-                    let mut logs = docker.logs(id.get(), options);
-                    let mut output = vec![];
+                let options = Some(LogsOptions::<String> {
+                    stderr: true,
+                    stdout: true,
+                    timestamps: args.timestamp,
+                    since: 0,
+                    ..Default::default()
+                });
+                let mut logs = rx.await?.logs(id.get(), options);
+                let mut output = vec![];
 
-                    while let Some(Ok(value)) = logs.next().await {
-                        let data = value.to_string();
-                        if !data.trim().is_empty() {
-                            output.push(
-                                categorise_text(&data)
-                                    .into_iter()
-                                    .map(|i| i.text)
-                                    .collect::<String>(),
-                            );
-                        }
-                    }
-                    if !output.is_empty() {
-                        let mut stream = BufWriter::new(
-                            OpenOptions::new()
-                                .read(true)
-                                .write(true)
-                                .create(true)
-                                .truncate(true)
-                                .open(&path)?,
+                while let Some(Ok(value)) = logs.next().await {
+                    let data = value.to_string();
+                    if !data.trim().is_empty() {
+                        output.push(
+                            categorise_text(&data)
+                                .into_iter()
+                                .map(|i| i.text)
+                                .collect::<String>(),
                         );
-
-                        for line in &output {
-                            stream.write_all(line.as_bytes())?;
-                        }
-                        stream.flush()?;
-
-                        gui_state
-                            .lock()
-                            .set_info_box(&format!("saved to {}", path.display()));
                     }
                 }
+                if !output.is_empty() {
+                    let mut stream = BufWriter::new(
+                        OpenOptions::new()
+                            .read(true)
+                            .write(true)
+                            .create(true)
+                            .truncate(true)
+                            .open(&path)?,
+                    );
+
+                    for line in &output {
+                        stream.write_all(line.as_bytes())?;
+                    }
+                    stream.flush()?;
+
+                    self.gui_state
+                        .lock()
+                        .set_info_box(&format!("saved to {}", path.display()));
+                }
             }
-            Ok(())
         }
+        Ok(())
+    }
 
-        let log_status = Status::Logs;
-        let status = self.gui_state.lock().status_contains(&[log_status]);
-        if !status {
-            self.gui_state.lock().status_push(log_status);
+    /// Attempt to save the currently selected container logs to a file
+    async fn s_key(&self) {
+        let status = self.gui_state.lock().get_status();
+        let contains = |s: Status| status.contains(&s);
 
+        if !contains(Status::Logs) {
+            self.gui_state.lock().status_push(Status::Logs);
             let uuid = Uuid::new_v4();
             GuiState::start_loading_animation(&self.gui_state, uuid);
-            if save_logs(&self.app_data, &self.gui_state, &self.docker_tx)
-                .await
-                .is_err()
-            {
+            if self.save_logs().await.is_err() {
                 self.app_data.lock().set_error(
                     AppError::DockerLogs,
                     &self.gui_state,
                     Status::Error,
                 );
             }
-            self.gui_state.lock().status_del(log_status);
+            self.gui_state.lock().status_del(Status::Logs);
             self.gui_state.lock().stop_loading_animation(uuid);
         }
     }
@@ -281,26 +265,17 @@ impl InputHandler {
                 let option_id = self.app_data.lock().get_selected_container_id();
                 if let Some(id) = option_id {
                     match command {
-                        DockerControls::Delete => self
+                        DockerCommand::Delete => self
                             .docker_tx
                             .send(DockerMessage::ConfirmDelete(id))
                             .await
                             .ok(),
-                        DockerControls::Pause => {
-                            self.docker_tx.send(DockerMessage::Pause(id)).await.ok()
-                        }
-                        DockerControls::Resume => {
-                            self.docker_tx.send(DockerMessage::Resume(id)).await.ok()
-                        }
-                        DockerControls::Start => {
-                            self.docker_tx.send(DockerMessage::Start(id)).await.ok()
-                        }
-                        DockerControls::Stop => {
-                            self.docker_tx.send(DockerMessage::Stop(id)).await.ok()
-                        }
-                        DockerControls::Restart => {
-                            self.docker_tx.send(DockerMessage::Restart(id)).await.ok()
-                        }
+
+                        _ => self
+                            .docker_tx
+                            .send(DockerMessage::Control((command, id)))
+                            .await
+                            .ok(),
                     };
                 }
             }
@@ -308,50 +283,43 @@ impl InputHandler {
     }
 
     /// Change the the "next" selectable panel
+    /// If no containers, and on Commands panel, skip to next panel, as Commands panel isn't visible in this state
     fn tab_key(&self) {
-        let is_containers =
-            self.gui_state.lock().get_selected_panel() == SelectablePanel::Containers;
-        let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
-            2
-        } else {
-            1
-        };
-        for _ in 0..count {
+        self.gui_state.lock().next_panel();
+        if self.app_data.lock().get_container_len() == 0
+            && self.gui_state.lock().get_selected_panel() == SelectablePanel::Commands
+        {
             self.gui_state.lock().next_panel();
         }
     }
 
     /// Change to previously selected panel
+    /// Need to skip the commands planel if there no are current containers running
     fn back_tab_key(&self) {
-        let is_containers = self.gui_state.lock().get_selected_panel() == SelectablePanel::Logs;
-        let count = if self.app_data.lock().get_container_len() == 0 && is_containers {
-            2
-        } else {
-            1
-        };
-        for _ in 0..count {
+        self.gui_state.lock().previous_panel();
+        if self.app_data.lock().get_container_len() == 0
+            && self.gui_state.lock().get_selected_panel() == SelectablePanel::Commands
+        {
             self.gui_state.lock().previous_panel();
         }
     }
 
     fn home_key(&self) {
-        let mut locked_data = self.app_data.lock();
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
-            SelectablePanel::Containers => locked_data.containers_start(),
-            SelectablePanel::Logs => locked_data.log_start(),
-            SelectablePanel::Commands => locked_data.docker_controls_start(),
+            SelectablePanel::Containers => self.app_data.lock().containers_start(),
+            SelectablePanel::Logs => self.app_data.lock().log_start(),
+            SelectablePanel::Commands => self.app_data.lock().docker_controls_start(),
         }
     }
 
     /// Go to end of the list of the currently selected panel
     fn end_key(&self) {
-        let mut locked_data = self.app_data.lock();
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
-            SelectablePanel::Containers => locked_data.containers_end(),
-            SelectablePanel::Logs => locked_data.log_end(),
-            SelectablePanel::Commands => locked_data.docker_controls_end(),
+            SelectablePanel::Containers => self.app_data.lock().containers_end(),
+            SelectablePanel::Logs => self.app_data.lock().log_end(),
+            SelectablePanel::Commands => self.app_data.lock().docker_controls_end(),
         }
     }
 
@@ -455,24 +423,21 @@ impl InputHandler {
     }
     /// Handle keyboard button events
     async fn button_press(&mut self, key_code: KeyCode, key_modifier: KeyModifiers) {
-        let contains_delete = self
-            .gui_state
-            .lock()
-            .status_contains(&[Status::DeleteConfirm]);
-
-        let contains = |s: Status| self.gui_state.lock().status_contains(&[s]);
+        let status = self.gui_state.lock().get_status();
+        let contains = |s: Status| status.contains(&s);
 
         let contains_error = contains(Status::Error);
         let contains_help = contains(Status::Help);
         let contains_exec = contains(Status::Exec);
-        let contains_filter: bool = contains(Status::Filter);
+        let contains_filter = contains(Status::Filter);
+        let contains_delete = contains(Status::DeleteConfirm);
 
         if !contains_exec {
             let is_c = || key_code == KeyCode::Char('c') || key_code == KeyCode::Char('C');
             let is_q = || key_code == KeyCode::Char('q') || key_code == KeyCode::Char('Q');
             if key_modifier == KeyModifiers::CONTROL && is_c() || is_q() && !contains_filter {
-                // Always just quit on Ctrl + c/C or q/Q, unless in FIlter status active
-                self.quit().await;
+                // Always just quit on Ctrl + c/C or q/Q, unless in Filter status active
+                self.quit();
             }
 
             if contains_error {
@@ -514,22 +479,13 @@ impl InputHandler {
             MouseEventKind::ScrollUp => self.previous(),
             MouseEventKind::ScrollDown => self.next(),
             MouseEventKind::Down(MouseButton::Left) => {
-                let header = self.gui_state.lock().header_intersect(Rect::new(
-                    mouse_event.column,
-                    mouse_event.row,
-                    1,
-                    1,
-                ));
+                let mouse_point = Rect::new(mouse_event.column, mouse_event.row, 1, 1);
+                let header = self.gui_state.lock().header_intersect(mouse_point);
                 if let Some(header) = header {
                     self.sort(header);
                 }
 
-                self.gui_state.lock().panel_intersect(Rect::new(
-                    mouse_event.column,
-                    mouse_event.row,
-                    1,
-                    1,
-                ));
+                self.gui_state.lock().panel_intersect(mouse_point);
             }
             _ => (),
         }
@@ -537,23 +493,21 @@ impl InputHandler {
 
     /// Change state to next, depending which panel is currently in focus
     fn next(&self) {
-        let mut locked_data = self.app_data.lock();
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
-            SelectablePanel::Containers => locked_data.containers_next(),
-            SelectablePanel::Logs => locked_data.log_next(),
-            SelectablePanel::Commands => locked_data.docker_controls_next(),
+            SelectablePanel::Containers => self.app_data.lock().containers_next(),
+            SelectablePanel::Logs => self.app_data.lock().log_next(),
+            SelectablePanel::Commands => self.app_data.lock().docker_controls_next(),
         };
     }
 
     /// Change state to previous, depending which panel is currently in focus
     fn previous(&self) {
-        let mut locked_data = self.app_data.lock();
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
-            SelectablePanel::Containers => locked_data.containers_previous(),
-            SelectablePanel::Logs => locked_data.log_previous(),
-            SelectablePanel::Commands => locked_data.docker_controls_previous(),
+            SelectablePanel::Containers => self.app_data.lock().containers_previous(),
+            SelectablePanel::Logs => self.app_data.lock().log_previous(),
+            SelectablePanel::Commands => self.app_data.lock().docker_controls_previous(),
         }
     }
 }

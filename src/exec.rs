@@ -144,9 +144,9 @@ impl TerminalSize {
 #[derive(Debug, Clone)]
 pub enum ExecMode {
     // use Bollard Rust library
-    Internal((ContainerId, Arc<Docker>)),
+    Internal((Arc<ContainerId>, Arc<Docker>)),
     // use the external `docker-cli`
-    External(ContainerId),
+    External(Arc<ContainerId>),
 }
 
 impl ExecMode {
@@ -186,7 +186,10 @@ impl ExecMode {
                         {
                             if let Some(Ok(msg)) = output.next().await {
                                 if !msg.to_string().starts_with(OCI_ERROR) {
-                                    return Some(Self::Internal((id.clone(), Arc::clone(docker))));
+                                    return Some(Self::Internal((
+                                        Arc::new(id),
+                                        Arc::clone(docker),
+                                    )));
                                 }
                             }
                         }
@@ -199,7 +202,7 @@ impl ExecMode {
                 {
                     if let Ok(output) = String::from_utf8(output.stdout) {
                         if !output.starts_with(OCI_ERROR) {
-                            return Some(Self::External(id.clone()));
+                            return Some(Self::External(Arc::new(id)));
                         }
                     }
                 }
@@ -302,9 +305,9 @@ impl ExecMode {
         Ok(())
     }
 
-    // This is the fix for key pressed not being handled correctly on quit
-    // It writes a special message to the stdout, and then listens out for a valid response
-    // afterwhich it's assumes that we're completely done with TTY
+    /// This is the fix for key pressed not being handled correctly on quit
+    /// It writes a special message to the stdout, and then listens out for a valid response
+    /// afterwhich it's assumes that we're completely done with TTY
     fn internal_cleanup(&self) -> Result<(), AppError> {
         match self {
             Self::External(_) => Ok(()),

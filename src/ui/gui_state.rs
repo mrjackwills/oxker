@@ -266,10 +266,9 @@ impl GuiState {
         self.delete_container = id;
     }
 
-    /// Check if the current gui_status contains any of the given status'
-    /// Don't really like this methodology for gui state, needs a re-think
-    pub fn status_contains(&self, status: &[Status]) -> bool {
-        status.iter().any(|i| self.status.contains(i))
+    /// Return a copy of the Status HashSet
+    pub fn get_status(&self) -> HashSet<Status> {
+        self.status.clone()
     }
 
     /// Remove a gui_status into the current gui_status HashSet

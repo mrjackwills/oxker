@@ -52,32 +52,28 @@ async fn docker_init(
     docker_rx: Receiver<DockerMessage>,
     docker_tx: Sender<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
-    is_running: &Arc<AtomicBool>,
-    host: Option<String>,
 ) {
+    let host = read_docker_host(&app_data.lock().args);
+
     let connection = host.map_or_else(Docker::connect_with_socket_defaults, |host| {
         Docker::connect_with_socket(&host, 120, API_DEFAULT_VERSION)
     });
 
     if let Ok(docker) = connection {
         if docker.ping().await.is_ok() {
-            let app_data = Arc::clone(app_data);
-            let gui_state = Arc::clone(gui_state);
-            let is_running = Arc::clone(is_running);
-
-            tokio::spawn(DockerData::init(
-                app_data, docker, docker_rx, docker_tx, gui_state, is_running,
+            tokio::spawn(DockerData::start(
+                Arc::clone(app_data),
+                docker,
+                docker_rx,
+                docker_tx,
+                Arc::clone(gui_state),
             ));
-        } else {
-            app_data
-                .lock()
-                .set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
+            return;
         }
-    } else {
-        app_data
-            .lock()
-            .set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
     }
+    app_data
+        .lock()
+        .set_error(AppError::DockerConnect, gui_state, Status::DockerConnect);
 }
 
 /// Create data for, and then spawn a tokio thread, for the input handler
@@ -88,15 +84,12 @@ fn handler_init(
     input_rx: Receiver<InputMessages>,
     is_running: &Arc<AtomicBool>,
 ) {
-    let app_data = Arc::clone(app_data);
-    let gui_state = Arc::clone(gui_state);
-    let is_running = Arc::clone(is_running);
-    tokio::spawn(input_handler::InputHandler::init(
-        app_data,
+    tokio::spawn(input_handler::InputHandler::start(
+        Arc::clone(app_data),
         input_rx,
         docker_sx.clone(),
-        gui_state,
-        is_running,
+        Arc::clone(gui_state),
+        Arc::clone(is_running),
     ));
 }
 
@@ -106,34 +99,20 @@ async fn main() {
 
     let args = CliArgs::new();
 
-    // If running via Docker image, need to sleep else program will just quit straight away, no real idea why
-    // So just sleep for small while
-    if args.in_container {
-        std::thread::sleep(std::time::Duration::from_millis(250));
-    }
-    let host = read_docker_host(&args);
-
     let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
     let (docker_tx, docker_rx) = tokio::sync::mpsc::channel(32);
 
-    docker_init(
-        &app_data,
-        docker_rx,
-        docker_tx.clone(),
-        &gui_state,
-        &is_running,
-        host,
-    )
-    .await;
+    docker_init(&app_data, docker_rx, docker_tx.clone(), &gui_state).await;
 
     if args.gui {
         let (input_tx, input_rx) = tokio::sync::mpsc::channel(32);
         handler_init(&app_data, &docker_tx, &gui_state, input_rx, &is_running);
-        Ui::create(app_data, gui_state, input_tx, is_running).await;
+        Ui::start(app_data, gui_state, input_tx, is_running).await;
     } else {
         info!("in debug mode\n");
+        let mut now = std::time::Instant::now();
         // Debug mode for testing, less pointless now, will display some basic information
         while is_running.load(Ordering::SeqCst) {
             let err = app_data.lock().get_error();
@@ -141,10 +120,12 @@ async fn main() {
                 error!("{}", err);
                 process::exit(1);
             }
-            tokio::time::sleep(std::time::Duration::from_millis(u64::from(
-                args.docker_interval,
-            )))
-            .await;
+            if let Some(Ok(to_sleep)) = u128::from(args.docker_interval)
+                .checked_sub(now.elapsed().as_millis())
+                .map(u64::try_from)
+            {
+                tokio::time::sleep(std::time::Duration::from_millis(to_sleep)).await;
+            }
             let containers = app_data
                 .lock()
                 .get_container_items()
@@ -158,6 +139,7 @@ async fn main() {
                 }
                 println!();
             }
+            now = std::time::Instant::now();
         }
     }
 }
@@ -182,6 +164,7 @@ mod tests {
             docker_interval: 1000,
             gui: true,
             host: None,
+            std_err: false,
             in_container: false,
             save_dir: None,
             raw: false,

@@ -2,7 +2,7 @@
 ## Builder ##
 #############
 
-FROM --platform=linux/amd64 rust:slim AS builder
+FROM --platform=$BUILDPLATFORM rust:slim AS builder
 
 ARG TARGETARCH
 
@@ -11,9 +11,9 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER="aarch64-linux-gnu-gcc"
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-lgcc"
 ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER="arm-linux-gnueabihf-ld"
 
-COPY ./containerised/platform.sh .
+COPY ./containerised/target.sh .
 
-RUN chmod +x ./platform.sh && ./platform.sh
+RUN chmod +x ./target.sh && ./target.sh
 
 RUN apt-get update && apt-get install $(cat /.compiler) -y
 
@@ -29,10 +29,10 @@ COPY Cargo.* /usr/src/oxker/
 WORKDIR /usr/src/oxker
 
 # Install target platform (Cross-Compilation)
-RUN rustup target add $(cat /.platform)
+RUN rustup target add $(cat /.target)
 
 # This is a dummy build to get the dependencies cached - probably not needed - as run via a github action
-RUN cargo build --target $(cat /.platform) --release
+RUN cargo build --target $(cat /.target) --release
 
 # Now copy in the rest of the sources
 COPY src /usr/src/oxker/src/
@@ -41,9 +41,9 @@ COPY src /usr/src/oxker/src/
 RUN touch /usr/src/oxker/src/main.rs
 
 # This is the actual application build
-RUN cargo build --release --target $(cat /.platform)
+RUN cargo build --release --target $(cat /.target)
 
-RUN cp /usr/src/oxker/target/$(cat /.platform)/release/oxker /
+RUN cp /usr/src/oxker/target/$(cat /.target)/release/oxker /
 
 #############
 ## Runtime ##

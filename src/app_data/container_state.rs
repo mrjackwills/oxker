@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     collections::{HashSet, VecDeque},
     fmt,
+    net::IpAddr,
 };
 
 use bollard::service::Port;
@@ -103,17 +104,17 @@ macro_rules! unit_struct {
 unit_struct!(ContainerName);
 unit_struct!(ContainerImage);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ContainerPorts {
-    pub ip: Option<String>,
+    pub ip: Option<IpAddr>,
     pub private: u16,
     pub public: Option<u16>,
 }
 
-impl From<&Port> for ContainerPorts {
-    fn from(value: &Port) -> Self {
+impl From<Port> for ContainerPorts {
+    fn from(value: Port) -> Self {
         Self {
-            ip: value.ip.clone(),
+            ip: value.ip.and_then(|i| i.parse::<IpAddr>().ok()),
             private: value.private_port,
             public: value.public_port,
         }
@@ -122,7 +123,9 @@ impl From<&Port> for ContainerPorts {
 
 impl ContainerPorts {
     pub fn len_ip(&self) -> usize {
-        self.ip.as_ref().unwrap_or(&String::new()).chars().count()
+        self.ip
+            .as_ref()
+            .map_or(0, |i| i.to_string().chars().count())
     }
     pub fn len_private(&self) -> usize {
         format!("{}", self.private).chars().count()
@@ -133,11 +136,12 @@ impl ContainerPorts {
             .count()
     }
 
-    pub fn print(&self) -> (String, String, String) {
+    /// Return as tuple of Strings, ip address, private port, and public port
+    pub fn get_all(&self) -> (String, String, String) {
         (
             self.ip
                 .as_ref()
-                .map_or(String::new(), std::borrow::ToOwned::to_owned),
+                .map_or(String::new(), std::string::ToString::to_string),
             format!("{}", self.private),
             self.public.map_or(String::new(), |s| s.to_string()),
         )
@@ -171,27 +175,25 @@ impl<T> StatefulList<T> {
 
     pub fn next(&mut self) {
         if !self.items.is_empty() {
-            let i = match self.state.selected() {
-                Some(i) => {
-                    if i < self.items.len() - 1 {
-                        i + 1
-                    } else {
-                        i
-                    }
+            self.state.select(Some(self.state.selected().map_or(0, |i| {
+                if i < self.items.len() - 1 {
+                    i + 1
+                } else {
+                    i
                 }
-                None => 0,
-            };
-            self.state.select(Some(i));
+            })));
         }
     }
 
     pub fn previous(&mut self) {
         if !self.items.is_empty() {
-            let i = self
-                .state
-                .selected()
-                .map_or(0, |i| if i == 0 { 0 } else { i - 1 });
-            self.state.select(Some(i));
+            self.state.select(Some(self.state.selected().map_or(0, |i| {
+                if i == 0 {
+                    0
+                } else {
+                    i - 1
+                }
+            })));
         }
     }
 
@@ -201,11 +203,11 @@ impl<T> StatefulList<T> {
             String::new()
         } else {
             let len = self.items.len();
-            let c = self
+            let count = self
                 .state
                 .selected()
                 .map_or(0, |value| if len > 0 { value + 1 } else { value });
-            format!(" {c}/{}", self.items.len())
+            format!(" {count}/{len}")
         }
     }
 }
@@ -259,9 +261,12 @@ pub enum State {
 }
 
 impl State {
+    /// The container is alive if the start is Running, either healthy or unhealthy
     pub const fn is_alive(self) -> bool {
         matches!(self, Self::Running(_))
     }
+    /// Color of the state for the containers section
+    /// TODO allow usable editable colours
     pub const fn get_color(self) -> Color {
         match self {
             Self::Paused => Color::Yellow,
@@ -333,7 +338,7 @@ impl fmt::Display for State {
 
 /// Items for the container control list
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DockerControls {
+pub enum DockerCommand {
     Pause,
     Restart,
     Start,
@@ -342,7 +347,7 @@ pub enum DockerControls {
     Delete,
 }
 
-impl DockerControls {
+impl DockerCommand {
     pub const fn get_color(self) -> Color {
         match self {
             Self::Pause => Color::Yellow,
@@ -366,7 +371,7 @@ impl DockerControls {
     }
 }
 
-impl fmt::Display for DockerControls {
+impl fmt::Display for DockerCommand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp = match self {
             Self::Pause => "pause",
@@ -577,7 +582,7 @@ impl Logs {
 pub struct ContainerItem {
     pub cpu_stats: VecDeque<CpuStats>,
     pub created: u64,
-    pub docker_controls: StatefulList<DockerControls>,
+    pub docker_controls: StatefulList<DockerCommand>,
     pub id: ContainerId,
     pub image: ContainerImage,
     pub is_oxker: bool,
@@ -620,7 +625,7 @@ impl ContainerItem {
         state: State,
         status: ContainerStatus,
     ) -> Self {
-        let mut docker_controls = StatefulList::new(DockerControls::gen_vec(state));
+        let mut docker_controls = StatefulList::new(DockerCommand::gen_vec(state));
         docker_controls.start();
 
         Self {

@@ -143,10 +143,10 @@ impl AppData {
         Self {
             args,
             containers: StatefulList::new(vec![]),
-            hidden_containers: vec![],
             error: None,
-            sorted_by: None,
             filter: Filter::new(),
+            hidden_containers: vec![],
+            sorted_by: None,
         }
     }
 
@@ -160,15 +160,9 @@ impl AppData {
     }
 
     /// Filter related methods
-
-    /// Get the current filter term
-    pub const fn get_filter_term(&self) -> Option<&String> {
-        self.filter.term.as_ref()
-    }
-
-    /// Get the current filter by choice
-    pub const fn get_filter_by(&self) -> FilterBy {
-        self.filter.by
+    /// Get the filterby and filter_term
+    pub const fn get_filter(&self) -> (FilterBy, Option<&String>) {
+        (self.filter.by, self.filter.term.as_ref())
     }
 
     /// Check if a given container can be inserted into the "visible" list, based on current filter term and filter_by
@@ -252,7 +246,7 @@ impl AppData {
         self.filter_containers();
     }
 
-    // change the filter_by option
+    /// change the filter_by option
     pub fn filter_by_next(&mut self) {
         if let Some(by) = self.filter.by.next() {
             self.filter.by = by;
@@ -260,7 +254,7 @@ impl AppData {
         }
     }
 
-    // change the filter_by option
+    /// change the filter_by option
     pub fn filter_by_prev(&mut self) {
         if let Some(by) = self.filter.by.prev() {
             self.filter.by = by;
@@ -280,7 +274,6 @@ impl AppData {
     }
 
     /// Container sort related methods
-
     /// Change the sorted order, also set the selected container state to match new order
     fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
@@ -350,7 +343,6 @@ impl AppData {
                         .back()
                         .cmp(&item_ord.1.mem_stats.back())
                         .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
-
                     Header::Id => item_ord
                         .0
                         .id
@@ -372,7 +364,6 @@ impl AppData {
                         .tx
                         .cmp(&item_ord.1.tx)
                         .then_with(|| item_ord.0.name.get().cmp(item_ord.1.name.get())),
-
                     Header::Name => item_ord
                         .0
                         .name
@@ -392,10 +383,17 @@ impl AppData {
     }
 
     /// Container state methods
-
     /// Get the total number of none "hidden" containers
     pub fn get_container_len(&self) -> usize {
         self.containers.items.len()
+    }
+
+    pub fn get_all_id_state(&self) -> Vec<(State, ContainerId)> {
+        self.containers
+            .items
+            .iter()
+            .map(|i| (i.state, i.id.clone()))
+            .collect::<Vec<_>>()
     }
 
     /// Get all the ContainerItems
@@ -404,7 +402,7 @@ impl AppData {
     }
 
     /// Get title for containers section, add a suffix indicating if the containers are currently under filter
-    pub fn container_title(&self) -> String {
+    pub fn get_container_title(&self) -> String {
         let suffix = if !self.hidden_containers.is_empty() && !self.containers.items.is_empty() {
             " - filtered"
         } else {
@@ -447,43 +445,41 @@ impl AppData {
     }
 
     /// Find the longest port when it's transformed into a string, defaults are header lens (ip, private, public)
+    ///display like this: "│   ip,   private,   public│", so (5,10,9) are the minimum lengths required
     pub fn get_longest_port(&self) -> (usize, usize, usize) {
-        let mut longest_ip = 5;
-        let mut longest_private = 10;
-        let mut longest_public = 9;
+        let mut output = (5, 10, 9);
 
         for item in [&self.containers.items, &self.hidden_containers] {
             for item in item {
-                longest_ip = longest_ip.max(
+                output.0 = output.0.max(
                     item.ports
                         .iter()
                         .map(ContainerPorts::len_ip)
                         .max()
-                        .unwrap_or(3),
+                        .unwrap_or(output.0),
                 );
-                longest_private = longest_private.max(
+                output.1 = output.1.max(
                     item.ports
                         .iter()
                         .map(ContainerPorts::len_private)
                         .max()
-                        .unwrap_or(8),
+                        .unwrap_or(output.1),
                 );
-                longest_public = longest_public.max(
+                output.2 = output.2.max(
                     item.ports
                         .iter()
                         .map(ContainerPorts::len_public)
                         .max()
-                        .unwrap_or(6),
+                        .unwrap_or(output.2),
                 );
             }
         }
-
-        (longest_ip, longest_private, longest_public)
+        output
     }
 
     /// Get Option of the current selected container's ports, sorted by private port
-    pub fn get_selected_ports(&mut self) -> Option<(Vec<ContainerPorts>, State)> {
-        if let Some(item) = self.get_mut_selected_container() {
+    pub fn get_selected_ports(&self) -> Option<(Vec<ContainerPorts>, State)> {
+        if let Some(item) = self.get_selected_container() {
             let mut ports = item.ports.clone();
             ports.sort_by(|a, b| a.private.cmp(&b.private));
             return Some((ports, item.state));
@@ -510,12 +506,12 @@ impl AppData {
     }
 
     /// Get the ContainerName of by ID
-    pub fn get_container_name_by_id(&mut self, id: &ContainerId) -> Option<ContainerName> {
+    pub fn get_container_name_by_id(&mut self, id: &ContainerId) -> Option<&ContainerName> {
         self.containers
             .items
             .iter_mut()
             .find(|i| &i.id == id)
-            .map(|i| i.name.clone())
+            .map(|i| &i.name)
     }
 
     /// Find the id of the currently selected container.
@@ -532,10 +528,9 @@ impl AppData {
     }
 
     /// Selected DockerCommand methods
-
     /// Get the current selected docker command
     /// So know which command to execute
-    pub fn selected_docker_controls(&self) -> Option<DockerControls> {
+    pub fn selected_docker_controls(&self) -> Option<DockerCommand> {
         self.get_selected_container().and_then(|i| {
             i.docker_controls.state.selected().and_then(|x| {
                 i.docker_controls
@@ -574,21 +569,19 @@ impl AppData {
         }
     }
 
-    /// Get mutable Option of the currently selected container DockerControls state
+    /// Get mutable Option of the currently selected container DockerCommand state
     pub fn get_control_state(&mut self) -> Option<&mut ListState> {
         self.get_mut_selected_container()
             .map(|i| &mut i.docker_controls.state)
     }
 
-    /// Get mutable Option of the currently selected container DockerControls items
-    /// TODO command or control, need a uniform name across the application
-    pub fn get_control_items(&mut self) -> Option<&mut Vec<DockerControls>> {
+    /// Get mutable Option of the currently selected container DockerConmand items
+    pub fn get_control_items(&mut self) -> Option<&mut Vec<DockerCommand>> {
         self.get_mut_selected_container()
             .map(|i| &mut i.docker_controls.items)
     }
 
     /// Logs related methods
-
     /// Get the title for log panel for selected container, will be either
     /// 1) "logs x/x - container_name - container_image"
     /// 2) "logs - container_name - container_image" when no logs found
@@ -635,11 +628,11 @@ impl AppData {
     }
 
     /// Get mutable Vec of current containers logs
-    pub fn get_logs(&mut self) -> Vec<ListItem<'static>> {
+    pub fn get_logs(&self) -> Vec<ListItem<'static>> {
         self.containers
             .state
             .selected()
-            .and_then(|i| self.containers.items.get_mut(i))
+            .and_then(|i| self.containers.items.get(i))
             .map_or(vec![], |i| i.logs.to_vec())
     }
 
@@ -653,18 +646,16 @@ impl AppData {
     }
 
     /// Chart data related methods
-
     /// Get mutable Option of the currently selected container chart data
-    pub fn get_chart_data(&mut self) -> Option<(CpuTuple, MemTuple)> {
+    pub fn get_chart_data(&self) -> Option<(CpuTuple, MemTuple)> {
         self.containers
             .state
             .selected()
-            .and_then(|i| self.containers.items.get_mut(i))
-            .map(|i| i.get_chart_data())
+            .and_then(|i| self.containers.items.get(i))
+            .map(container_state::ContainerItem::get_chart_data)
     }
 
     /// Error related methods
-
     /// Get single app_state error
     pub const fn get_error(&self) -> Option<AppError> {
         self.error
@@ -701,7 +692,6 @@ impl AppData {
         let mut columns = Columns::new();
         let count = |x: &str| u8::try_from(x.chars().count()).unwrap_or(12);
 
-        // Should probably find a refactor here somewhere
         for container in [&self.containers.items, &self.hidden_containers] {
             for container in container {
                 let cpu_count = container.cpu_stats.back().map_or_else(
@@ -729,7 +719,6 @@ impl AppData {
     }
 
     /// Update related methods
-
     /// Get mutable reference to a container in the containers vec & the hidden_containers vec
     fn get_any_container_by_id(&mut self, id: &ContainerId) -> Option<&mut ContainerItem> {
         if self.get_hidden_container_by_id(id).is_some() {
@@ -769,12 +758,11 @@ impl AppData {
             container.tx.update(tx);
             container.mem_limit.update(mem_limit);
         }
-        // need to benchmark this?
         self.sort_containers();
     }
 
     /// Update, or insert, containers
-    pub fn update_containers(&mut self, all_containers: &mut [ContainerSummary]) {
+    pub fn update_containers(&mut self, mut all_containers: Vec<ContainerSummary>) {
         let all_ids = self
             .containers
             .items
@@ -809,7 +797,7 @@ impl AppData {
             }
         }
 
-        for i in all_containers {
+        for mut i in all_containers {
             if let Some(id) = i.id.as_ref() {
                 let name = i.names.as_mut().map_or(String::new(), |names| {
                     names.first_mut().map_or(String::new(), |f| {
@@ -820,8 +808,8 @@ impl AppData {
                     })
                 });
 
-                let ports = i.ports.as_ref().map_or(vec![], |i| {
-                    i.iter().map(ContainerPorts::from).collect::<Vec<_>>()
+                let ports = i.ports.map_or(vec![], |i| {
+                    i.into_iter().map(ContainerPorts::from).collect::<Vec<_>>()
                 });
 
                 let id = ContainerId::from(id.as_str());
@@ -855,7 +843,7 @@ impl AppData {
                         item.status = status;
                     };
                     if item.state != state {
-                        item.docker_controls.items = DockerControls::gen_vec(state);
+                        item.docker_controls.items = DockerCommand::gen_vec(state);
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
                         match state {
                             State::Removing | State::Restarting | State::Unknown => {
@@ -1476,7 +1464,7 @@ mod tests {
         let mut app_data = gen_appdata(&containers);
 
         let result = app_data.get_container_name_by_id(&ContainerId::from("2"));
-        assert_eq!(result, Some(ContainerName::from("container_2")));
+        assert_eq!(result, Some(&ContainerName::from("container_2")));
     }
 
     #[test]
@@ -1526,7 +1514,7 @@ mod tests {
         app_data.docker_controls_start();
 
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Pause));
+        assert_eq!(result, Some(DockerCommand::Pause));
     }
 
     #[test]
@@ -1539,7 +1527,7 @@ mod tests {
         app_data.docker_controls_next();
 
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Restart));
+        assert_eq!(result, Some(DockerCommand::Restart));
     }
 
     #[test]
@@ -1551,12 +1539,12 @@ mod tests {
         app_data.docker_controls_end();
 
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Delete));
+        assert_eq!(result, Some(DockerCommand::Delete));
 
         // Next has no effect when at end
         app_data.docker_controls_next();
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Delete));
+        assert_eq!(result, Some(DockerCommand::Delete));
     }
 
     #[test]
@@ -1569,19 +1557,19 @@ mod tests {
         app_data.docker_controls_previous();
 
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Stop));
+        assert_eq!(result, Some(DockerCommand::Stop));
 
         // previous has no effect when at start
         app_data.docker_controls_start();
         app_data.docker_controls_previous();
         let result = app_data.selected_docker_controls();
-        assert_eq!(result, Some(DockerControls::Pause));
+        assert_eq!(result, Some(DockerCommand::Pause));
     }
 
     #[test]
     /// DockerCommands get correct controls dependant on container state
     fn test_app_data_get_control_items() {
-        let test_state = |state: State, expected: &mut Vec<DockerControls>| {
+        let test_state = |state: State, expected: &mut Vec<DockerCommand>| {
             let gen_item_state = |state: State| {
                 ContainerItem::new(
                     1,
@@ -1605,42 +1593,42 @@ mod tests {
         test_state(
             State::Dead,
             &mut vec![
-                DockerControls::Start,
-                DockerControls::Restart,
-                DockerControls::Delete,
+                DockerCommand::Start,
+                DockerCommand::Restart,
+                DockerCommand::Delete,
             ],
         );
         test_state(
             State::Exited,
             &mut vec![
-                DockerControls::Start,
-                DockerControls::Restart,
-                DockerControls::Delete,
+                DockerCommand::Start,
+                DockerCommand::Restart,
+                DockerCommand::Delete,
             ],
         );
         test_state(
             State::Paused,
             &mut vec![
-                DockerControls::Resume,
-                DockerControls::Stop,
-                DockerControls::Delete,
+                DockerCommand::Resume,
+                DockerCommand::Stop,
+                DockerCommand::Delete,
             ],
         );
-        test_state(State::Removing, &mut vec![DockerControls::Delete]);
+        test_state(State::Removing, &mut vec![DockerCommand::Delete]);
         test_state(
             State::Restarting,
-            &mut vec![DockerControls::Stop, DockerControls::Delete],
+            &mut vec![DockerCommand::Stop, DockerCommand::Delete],
         );
         test_state(
             State::Running(RunningState::Healthy),
             &mut vec![
-                DockerControls::Pause,
-                DockerControls::Restart,
-                DockerControls::Stop,
-                DockerControls::Delete,
+                DockerCommand::Pause,
+                DockerCommand::Restart,
+                DockerCommand::Stop,
+                DockerCommand::Delete,
             ],
         );
-        test_state(State::Unknown, &mut vec![DockerControls::Delete]);
+        test_state(State::Unknown, &mut vec![DockerCommand::Delete]);
     }
 
     // ****** //
@@ -1654,13 +1642,13 @@ mod tests {
 
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         app_data.filter_term_push('_');
         app_data.filter_term_push('2');
 
-        assert_eq!(app_data.get_filter_term(), Some(&"_2".to_string()));
+        assert_eq!(app_data.get_filter().1, Some(&"_2".to_string()));
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1680,7 +1668,7 @@ mod tests {
 
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         for c in ['i', 'm', 'a', 'g', 'e', '_', '2'] {
@@ -1689,8 +1677,10 @@ mod tests {
         // app_data.filter_term_push('2');
         app_data.filter_by_next();
 
-        assert_eq!(app_data.get_filter_by(), FilterBy::Image);
-        assert_eq!(app_data.get_filter_term(), Some(&"image_2".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::Image, Some(&"image_2".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1709,7 +1699,7 @@ mod tests {
         ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         app_data.filter_term_push('x');
@@ -1717,8 +1707,10 @@ mod tests {
         app_data.filter_by_next();
         app_data.filter_by_next();
 
-        assert_eq!(app_data.get_filter_by(), FilterBy::Status);
-        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::Status, Some(&"x".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1737,7 +1729,7 @@ mod tests {
         ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         app_data.filter_term_push('x');
@@ -1746,8 +1738,10 @@ mod tests {
         app_data.filter_by_next();
         app_data.filter_by_next();
 
-        assert_eq!(app_data.get_filter_by(), FilterBy::All);
-        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::All, Some(&"x".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1766,7 +1760,7 @@ mod tests {
         ContainerStatus::from("Exited".to_owned()).clone_into(&mut containers[0].status);
         let mut app_data = gen_appdata(&containers);
 
-        assert!(app_data.get_filter_term().is_none());
+        assert!(app_data.get_filter().1.is_none());
 
         let pre_len = app_data.containers.items.len();
         app_data.filter_term_push('x');
@@ -1774,8 +1768,10 @@ mod tests {
         app_data.filter_by_next();
         app_data.filter_by_next();
 
-        assert_eq!(app_data.get_filter_by(), FilterBy::Status);
-        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::Status, Some(&"x".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -1787,8 +1783,10 @@ mod tests {
         assert!(!app_data.can_insert(&containers[2]));
 
         app_data.filter_by_prev();
-        assert_eq!(app_data.get_filter_by(), FilterBy::Image);
-        assert_eq!(app_data.get_filter_term(), Some(&"x".to_string()));
+        assert_eq!(
+            app_data.get_filter(),
+            (FilterBy::Image, Some(&"x".to_string()))
+        );
 
         app_data.filter_containers();
         let post_len = app_data.containers.items.len();
@@ -2230,12 +2228,12 @@ mod tests {
         let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
         let result_pre = app_data.get_container_items().to_owned();
-        let mut input = [
+        let input = vec![
             gen_container_summary(1, "paused"),
             gen_container_summary(2, "dead"),
         ];
 
-        app_data.update_containers(&mut input);
+        app_data.update_containers(input);
         let result_post = app_data.get_container_items().to_owned();
         assert_ne!(result_pre, result_post);
         assert_eq!(result_post[0].state, State::Paused);
