@@ -502,7 +502,7 @@ pub fn heading_bar(
     let gen_header = |header: &Header, width: usize| {
         let block = header_block(header);
 
-		// TODO
+        // TODO
         // Yes this is a mess, needs documenting correctly
 
         let text = format!(
