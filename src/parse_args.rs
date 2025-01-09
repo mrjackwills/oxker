@@ -70,7 +70,7 @@ impl CliArgs {
     /// An ENV is set in the ./containerised/Dockerfile, if this is ENV found, then sleep for 250ms, else the container, for as yet unknown reasons, will close immediately
     /// returns a bool, so that the `update_all_containers()` won't bother to check the entry point unless running via a container
     fn check_if_in_container() -> bool {
-        std::env::var(ENV_KEY).map_or(false, |i| i == ENV_VALUE)
+        std::env::var(ENV_KEY).is_ok_and(|i| i == ENV_VALUE)
     }
 
     /// Parse cli arguments

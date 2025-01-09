@@ -217,7 +217,7 @@ impl DockerData {
                     if self.args.in_container
                         && f.command
                             .as_ref()
-                            .map_or(false, |c| c.starts_with(ENTRY_POINT))
+                            .is_some_and(|c| c.starts_with(ENTRY_POINT))
                         && self.args.show_self
                     {
                         None

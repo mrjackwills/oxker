@@ -278,12 +278,12 @@ impl AppData {
     fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
         self.sort_containers();
-        self.containers
-            .state
-            .select(self.containers.items.iter().position(|i| {
-                self.get_selected_container_id()
-                    .map_or(false, |id| i.id == id)
-            }));
+        self.containers.state.select(
+            self.containers
+                .items
+                .iter()
+                .position(|i| self.get_selected_container_id().as_ref() == Some(&i.id)),
+        );
     }
 
     /// Remove the sorted header & order, and sort by default - created datetime
@@ -676,13 +676,13 @@ impl AppData {
     /// So that can disallow commands to be send
     /// Is a shabby way of implementing this
     pub fn is_oxker(&self) -> bool {
-        self.get_selected_container().map_or(false, |i| i.is_oxker)
+        self.get_selected_container().is_some_and(|i| i.is_oxker)
     }
 
     /// Check if selected container is oxker and also that oxker is being run in a container
     pub fn is_oxker_in_container(&self) -> bool {
         self.get_selected_container()
-            .map_or(false, |i| i.is_oxker && self.args.in_container)
+            .is_some_and(|i| i.is_oxker && self.args.in_container)
     }
 
     /// Find the widths for the strings in the containers panel.
@@ -817,7 +817,7 @@ impl AppData {
                 let is_oxker = i
                     .command
                     .as_ref()
-                    .map_or(false, |i| i.starts_with(ENTRY_POINT));
+                    .is_some_and(|i| i.starts_with(ENTRY_POINT));
 
                 let status = ContainerStatus::from(
                     i.status
