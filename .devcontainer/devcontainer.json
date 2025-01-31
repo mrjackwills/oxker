@@ -22,7 +22,7 @@
 			"extensions": [
 				"bmuskalla.vscode-tldr",
 				"christian-kohler.path-intellisense",
-				"fill-labs.dependi",
+				"citreae535.sparse-crates",
 				"foxundermoon.shell-format",
 				"gruntfuggly.todo-tree",
 				"mutantdino.resourcemonitor",
