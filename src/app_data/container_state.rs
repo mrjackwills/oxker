@@ -11,7 +11,7 @@ use ratatui::{
     widgets::{ListItem, ListState},
 };
 
-use crate::ui::ORANGE;
+use crate::config::AppColors;
 
 use super::Header;
 
@@ -265,16 +265,28 @@ impl State {
     pub const fn is_alive(self) -> bool {
         matches!(self, Self::Running(_))
     }
-    /// Color of the state for the containers section
-    /// TODO allow usable editable colours
-    pub const fn get_color(self) -> Color {
+
+    /// Check if state is running & healthy
+    pub const fn is_healthy(self) -> bool {
         match self {
-            Self::Paused => Color::Yellow,
-            Self::Removing => Color::LightRed,
-            Self::Restarting => Color::LightGreen,
-            Self::Running(RunningState::Healthy) => Color::Green,
-            Self::Running(RunningState::Unhealthy) => ORANGE,
-            _ => Color::Red,
+            Self::Running(x) => match x {
+                RunningState::Healthy => true,
+                RunningState::Unhealthy => false,
+            },
+            _ => false,
+        }
+    }
+    /// Color of the state for the containers section
+    pub const fn get_color(self, colors: AppColors) -> Color {
+        match self {
+            Self::Dead => colors.container_state.dead,
+            Self::Exited => colors.container_state.exited,
+            Self::Paused => colors.container_state.paused,
+            Self::Removing => colors.container_state.removing,
+            Self::Restarting => colors.container_state.restarting,
+            Self::Running(RunningState::Healthy) => colors.container_state.running_healthy,
+            Self::Running(RunningState::Unhealthy) => colors.container_state.running_unhealthy,
+            Self::Unknown => colors.container_state.unknown,
         }
     }
     /// Dirty way to create order for the state, rather than impl Ord
@@ -348,14 +360,14 @@ pub enum DockerCommand {
 }
 
 impl DockerCommand {
-    pub const fn get_color(self) -> Color {
+    pub const fn get_color(self, colors: AppColors) -> Color {
         match self {
-            Self::Pause => Color::Yellow,
-            Self::Restart => Color::Magenta,
-            Self::Start => Color::Green,
-            Self::Stop => Color::Red,
-            Self::Delete => Color::Gray,
-            Self::Resume => Color::Blue,
+            Self::Pause => colors.commands.pause,
+            Self::Restart => colors.commands.restart,
+            Self::Start => colors.commands.start,
+            Self::Stop => colors.commands.stop,
+            Self::Delete => colors.commands.delete,
+            Self::Resume => colors.commands.resume,
         }
     }
 

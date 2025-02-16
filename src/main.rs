@@ -1,10 +1,10 @@
 use app_data::AppData;
 use app_error::AppError;
 use bollard::{Docker, API_DEFAULT_VERSION};
+use config::Config;
 use docker_data::DockerData;
 use input_handler::InputMessages;
 use parking_lot::Mutex;
-use parse_args::CliArgs;
 use std::{
     process,
     sync::{
@@ -17,10 +17,10 @@ use tracing::{error, info, Level};
 
 mod app_data;
 mod app_error;
+mod config;
 mod docker_data;
 mod exec;
 mod input_handler;
-mod parse_args;
 mod ui;
 
 use ui::{GuiState, Status, Ui};
@@ -40,8 +40,9 @@ fn setup_tracing() {
 }
 
 /// Read the optional docker_host path, the cli args take priority over the DOCKER_HOST env
-fn read_docker_host(args: &CliArgs) -> Option<String> {
-    args.host
+fn read_docker_host(config: &Config) -> Option<String> {
+    config
+        .host
         .as_ref()
         .map_or_else(|| std::env::var(DOCKER_HOST).ok(), |x| Some(x.to_string()))
 }
@@ -53,7 +54,7 @@ async fn docker_init(
     docker_tx: Sender<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let host = read_docker_host(&app_data.lock().args);
+    let host = read_docker_host(&app_data.lock().config);
 
     let connection = host.map_or_else(Docker::connect_with_socket_defaults, |host| {
         Docker::connect_with_socket(&host, 120, API_DEFAULT_VERSION)
@@ -96,17 +97,16 @@ fn handler_init(
 #[tokio::main]
 async fn main() {
     setup_tracing();
+    let config = config::Config::new();
 
-    let args = CliArgs::new();
-
-    let app_data = Arc::new(Mutex::new(AppData::default(args.clone())));
+    let app_data = Arc::new(Mutex::new(AppData::default(config.clone())));
     let gui_state = Arc::new(Mutex::new(GuiState::default()));
     let is_running = Arc::new(AtomicBool::new(true));
     let (docker_tx, docker_rx) = tokio::sync::mpsc::channel(32);
 
     docker_init(&app_data, docker_rx, docker_tx.clone(), &gui_state).await;
 
-    if args.gui {
+    if config.gui {
         let (input_tx, input_rx) = tokio::sync::mpsc::channel(32);
         handler_init(&app_data, &docker_tx, &gui_state, input_rx, &is_running);
         Ui::start(app_data, gui_state, input_tx, is_running).await;
@@ -120,7 +120,7 @@ async fn main() {
                 error!("{}", err);
                 process::exit(1);
             }
-            if let Some(Ok(to_sleep)) = u128::from(args.docker_interval)
+            if let Some(Ok(to_sleep)) = u128::from(config.docker_interval)
                 .checked_sub(now.elapsed().as_millis())
                 .map(u64::try_from)
             {
@@ -155,21 +155,24 @@ mod tests {
             AppData, ContainerId, ContainerItem, ContainerPorts, ContainerStatus, Filter,
             RunningState, State, StatefulList,
         },
-        parse_args::CliArgs,
+        config::{AppColors, Config, Keymap},
     };
 
-    pub const fn gen_args() -> CliArgs {
-        CliArgs {
-            color: false,
+    /// Default test config, has timestamps turned off
+    pub const fn gen_config() -> Config {
+        Config {
+            color_logs: false,
             docker_interval: 1000,
             gui: true,
             host: None,
-            std_err: false,
+            show_std_err: false,
             in_container: false,
             save_dir: None,
-            raw: false,
+            raw_logs: false,
             show_self: false,
-            timestamp: false,
+            app_colors: AppColors::new(),
+            keymap: Keymap::new(),
+            show_timestamp: false,
             use_cli: false,
         }
     }
@@ -198,7 +201,7 @@ mod tests {
             error: None,
             sorted_by: None,
             filter: Filter::new(),
-            args: gen_args(),
+            config: gen_config(),
         }
     }
 

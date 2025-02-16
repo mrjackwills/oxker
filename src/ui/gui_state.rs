@@ -49,13 +49,14 @@ impl SelectablePanel {
 pub enum Region {
     Panel(SelectablePanel),
     Header(Header),
+    HelpPanel,
     Delete(DeleteButton),
 }
 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum DeleteButton {
-    Yes,
-    No,
+    Confirm,
+    Cancel,
 }
 
 #[allow(unused)]
@@ -173,21 +174,22 @@ pub enum Status {
 #[derive(Debug, Default)]
 pub struct GuiState {
     delete_container: Option<ContainerId>,
-    delete_map: HashMap<DeleteButton, Rect>,
-    heading_map: HashMap<Header, Rect>,
+    exec_mode: Option<ExecMode>,
     loading_handle: Option<JoinHandle<()>>,
     loading_index: u8,
     loading_set: HashSet<Uuid>,
-    panel_map: HashMap<SelectablePanel, Rect>,
+    intersect_delete: HashMap<DeleteButton, Rect>,
+    intersect_heading: HashMap<Header, Rect>,
+    intersect_help: Option<Rect>,
+    intersect_panel: HashMap<SelectablePanel, Rect>,
     selected_panel: SelectablePanel,
     status: HashSet<Status>,
-    exec_mode: Option<ExecMode>,
     pub info_box_text: Option<(String, Instant)>,
 }
 impl GuiState {
     /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
     pub fn clear_area_map(&mut self) {
-        self.panel_map.clear();
+        self.intersect_panel.clear();
     }
 
     /// Get the currently selected panel
@@ -196,9 +198,9 @@ impl GuiState {
     }
 
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
-    pub fn panel_intersect(&mut self, rect: Rect) {
+    pub fn get_intersect_panel(&mut self, rect: Rect) {
         if let Some(data) = self
-            .panel_map
+            .intersect_panel
             .iter()
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
@@ -209,8 +211,8 @@ impl GuiState {
     }
 
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known delete button
-    pub fn button_intersect(&self, rect: Rect) -> Option<DeleteButton> {
-        self.delete_map
+    pub fn get_intersect_button(&self, rect: Rect) -> Option<DeleteButton> {
+        self.intersect_delete
             .iter()
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
@@ -219,8 +221,8 @@ impl GuiState {
     }
 
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
-    pub fn header_intersect(&self, rect: Rect) -> Option<Header> {
-        self.heading_map
+    pub fn get_intersect_header(&self, rect: Rect) -> Option<Header> {
+        self.intersect_heading
             .iter()
             .filter(|i| i.1.intersects(rect))
             .collect::<Vec<_>>()
@@ -228,24 +230,37 @@ impl GuiState {
             .map(|data| *data.0)
     }
 
+    /// Check if a the "show/hide help" section has been clicked
+    pub fn get_intersect_help(&self, rect: Rect) -> bool {
+        self.intersect_help
+            .as_ref()
+            .is_some_and(|i| i.intersects(rect))
+    }
+
     /// Insert, or updates header area panel into heading_map
     pub fn update_region_map(&mut self, region: Region, area: Rect) {
         match region {
-            Region::Header(header) => self
-                .heading_map
-                .entry(header)
-                .and_modify(|w| *w = area)
-                .or_insert(area),
-            Region::Panel(panel) => self
-                .panel_map
-                .entry(panel)
-                .and_modify(|w| *w = area)
-                .or_insert(area),
-            Region::Delete(button) => self
-                .delete_map
-                .entry(button)
-                .and_modify(|w| *w = area)
-                .or_insert(area),
+            Region::Header(header) => {
+                self.intersect_heading
+                    .entry(header)
+                    .and_modify(|w| *w = area)
+                    .or_insert(area);
+            }
+            Region::Panel(panel) => {
+                self.intersect_panel
+                    .entry(panel)
+                    .and_modify(|w| *w = area)
+                    .or_insert(area);
+            }
+            Region::Delete(button) => {
+                self.intersect_delete
+                    .entry(button)
+                    .and_modify(|w| *w = area)
+                    .or_insert(area);
+            }
+            Region::HelpPanel => {
+                self.intersect_help = Some(area);
+            }
         };
     }
 
@@ -260,7 +275,7 @@ impl GuiState {
         if id.is_some() {
             self.status.insert(Status::DeleteConfirm);
         } else {
-            self.delete_map.clear();
+            self.intersect_delete.clear();
             self.status.remove(&Status::DeleteConfirm);
         }
         self.delete_container = id;

@@ -32,11 +32,11 @@ use crate::{
         SortedOrder, State,
     },
     app_error::AppError,
+    config::{AppColors, Keymap},
     exec::TerminalSize,
     input_handler::InputMessages,
 };
 
-pub const ORANGE: ratatui::style::Color = ratatui::style::Color::Rgb(255, 178, 36);
 const POLL_RATE: Duration = std::time::Duration::from_millis(100);
 
 pub struct Ui {
@@ -124,6 +124,8 @@ impl Ui {
     /// Draw the the error message ui, for 5 seconds, with a countdown
     fn err_loop(&mut self) -> Result<(), AppError> {
         let mut seconds = 5;
+        let colors = self.app_data.lock().config.app_colors;
+        let keymap = self.app_data.lock().config.keymap.clone();
         loop {
             if self.now.elapsed() >= std::time::Duration::from_secs(1) {
                 seconds -= 1;
@@ -135,7 +137,15 @@ impl Ui {
 
             if self
                 .terminal
-                .draw(|f| draw_blocks::error(f, AppError::DockerConnect, Some(seconds)))
+                .draw(|f| {
+                    draw_blocks::error::draw(
+                        f,
+                        &AppError::DockerConnect,
+                        &keymap,
+                        Some(seconds),
+                        colors,
+                    );
+                })
                 .is_err()
             {
                 return Err(AppError::Terminal);
@@ -165,6 +175,8 @@ impl Ui {
 
     /// The loop for drawing the main UI to the terminal
     async fn gui_loop(&mut self) -> Result<(), AppError> {
+        let colors = self.app_data.lock().config.app_colors;
+        let keymap = self.app_data.lock().config.keymap.clone();
         while self.is_running.load(Ordering::SeqCst) {
             let fd = FrameData::from(&*self);
             let exec = fd.status.contains(&Status::Exec);
@@ -174,7 +186,9 @@ impl Ui {
 
             if self
                 .terminal
-                .draw(|frame| draw_frame(frame, &self.app_data, &self.gui_state, &fd))
+                .draw(|frame| {
+                    draw_frame(&self.app_data, colors, &keymap, frame, &fd, &self.gui_state);
+                })
                 .is_err()
             {
                 return Err(AppError::Terminal);
@@ -223,6 +237,7 @@ impl Ui {
 /// Frequent data required by multiple frame drawing functions, can reduce mutex reads by placing it all in here
 #[derive(Debug, Clone)]
 pub struct FrameData {
+    // app_colors: AppColors,
     chart_data: Option<(CpuTuple, MemTuple)>,
     columns: Columns,
     container_title: String,
@@ -257,6 +272,7 @@ impl From<&Ui> for FrameData {
 
         let (filter_by, filter_term) = app_data.get_filter();
         Self {
+            // app_colors: app_data.config.app_colors,
             chart_data: app_data.get_chart_data(),
             columns: app_data.get_width(),
             container_title: app_data.get_container_title(),
@@ -281,10 +297,13 @@ impl From<&Ui> for FrameData {
 
 /// Draw the main ui to a frame of the terminal
 fn draw_frame(
-    f: &mut Frame,
     app_data: &Arc<Mutex<AppData>>,
-    gui_state: &Arc<Mutex<GuiState>>,
+    colors: AppColors,
+    keymap: &Keymap,
+    f: &mut Frame,
     fd: &FrameData,
+    gui_state: &Arc<Mutex<GuiState>>,
+    // should pass in the colors here, then I only need to get it once from app+data
 ) {
     let whole_constraints = if fd.status.contains(&Status::Filter) {
         vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
@@ -326,15 +345,15 @@ fn draw_frame(
         .constraints(lower_split)
         .split(upper_main[1]);
 
-    draw_blocks::containers(app_data, top_panel[0], f, fd, gui_state);
+    draw_blocks::containers::draw(app_data, top_panel[0], colors, f, fd, gui_state);
 
-    draw_blocks::logs(app_data, lower_main[0], f, fd, gui_state);
+    draw_blocks::logs::draw(app_data, lower_main[0], colors, f, fd, gui_state);
 
-    draw_blocks::heading_bar(whole_layout[0], f, fd, gui_state);
+    draw_blocks::headers::draw(whole_layout[0], colors, f, fd, gui_state, keymap);
 
     // Draw filter bar
     if let Some(rect) = whole_layout.get(2) {
-        draw_blocks::filter_bar(*rect, f, fd);
+        draw_blocks::filter::draw(*rect, f, fd);
     }
 
     if let Some(id) = fd.delete_confirm.as_ref() {
@@ -345,14 +364,14 @@ fn draw_frame(
                 gui_state.lock().set_delete_container(None);
             },
             |name| {
-                draw_blocks::delete_confirm(f, gui_state, name);
+                draw_blocks::delete_confirm::draw(colors, f, gui_state, keymap, name);
             },
         );
     }
 
     // only draw commands + charts if there are containers
     if let Some(rect) = top_panel.get(1) {
-        draw_blocks::commands(app_data, *rect, f, fd, gui_state);
+        draw_blocks::commands::draw(app_data, *rect, colors, f, fd, gui_state);
 
         // Can calculate the max string length here, and then use that to keep the ports section as small as possible (+4 for some padding + border)
         let ports_len =
@@ -364,20 +383,20 @@ fn draw_frame(
             .constraints([Constraint::Min(1), Constraint::Max(ports_len)])
             .split(lower_main[1]);
 
-        draw_blocks::chart(f, lower[0], fd);
-        draw_blocks::ports(f, lower[1], fd);
+        draw_blocks::charts::draw(lower[0], colors, f, fd);
+        draw_blocks::ports::draw(lower[1], colors, f, fd);
     }
 
     if let Some((text, instant)) = fd.info_text.as_ref() {
-        draw_blocks::info(f, text.to_owned(), instant, gui_state);
+        draw_blocks::info::draw(colors, f, gui_state, instant, text.to_owned());
     }
 
     // Check if error, and show popup if so
     if fd.status.contains(&Status::Help) {
-        draw_blocks::help_box(f);
+        draw_blocks::help::draw(f, colors, keymap);
     }
 
-    if let Some(error) = fd.has_error {
-        draw_blocks::error(f, error, None);
+    if let Some(error) = fd.has_error.as_ref() {
+        draw_blocks::error::draw(f, error, keymap, None, colors);
     }
 }
