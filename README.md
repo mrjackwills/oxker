@@ -100,7 +100,7 @@ curl https://raw.githubusercontent.com/mrjackwills/oxker/main/install.sh | bash
 ```shell
 oxker
 ```
-
+<!-- TODO mention custom keymap -->
 In application controls
 | button| result|
 |--|--|
@@ -118,6 +118,7 @@ In application controls
 | ```( esc )``` | Close dialog.|
 
 Available command line arguments
+<!-- TODO mention timezone -->
 | argument|result|
 |--|--|
 |```-d [number > 0]```| Set the minimum update interval for docker information in milliseconds. Defaults to 1000 (1 second).|
@@ -129,7 +130,10 @@ Available command line arguments
 |```--host [string]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
 |```--no-stderr```| Do not include stderr output in logs.|
 |```--save-dir [string]```| Save exported logs into a custom directory. Defaults to `$HOME`.|
+|```--timezone [string]```| Display the Docker logs timestamps in a given, valid, timezone. Defaults to `Etc/UTC`.|
 |```--use-cli```| Use the Docker application when exec-ing into a container, instead of the Docker API.|
+
+<!-- TODO docker config file -v example -->
 
 ## Build step
 

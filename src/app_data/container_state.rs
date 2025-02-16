@@ -6,6 +6,7 @@ use std::{
 };
 
 use bollard::service::Port;
+use jiff::{tz::TimeZone, Timestamp};
 use ratatui::{
     style::Color,
     widgets::{ListItem, ListState},
@@ -513,18 +514,26 @@ pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct LogsTz(String);
 
-/// The docker log, which should always contain a timestamp, is in the format `2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet`
-/// So just split at the inclusive index of the first space, needs to be inclusive, hence the use of format to at the space, so that we can remove the whole thing when the `-t` flag is set
-/// Need to make sure that this isn't an empty string?!
-impl From<&str> for LogsTz {
-    fn from(value: &str) -> Self {
-        Self(value.split_inclusive(' ').take(1).collect::<String>())
-    }
-}
-
 impl fmt::Display for LogsTz {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl LogsTz {
+    /// With a given &str, split into a logtz and content, so that we only need to `use split_once()` once
+    /// The docker log, which should always contain a timestamp, is in the format `2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet`
+    pub fn splitter(input: &str) -> (Self, String) {
+        let (tz, content) = input.split_once(' ').unwrap_or_default();
+        (Self(tz.to_owned()), content.to_owned())
+    }
+
+    /// Convert a LogsTZ to a datetime stamp in a given timezone
+    pub fn to_zoned(&self, zone: &TimeZone) -> Option<String> {
+        self.0.parse::<Timestamp>().map_or_else(
+            |_| None,
+            |ts| Some(format!("{:.300}", ts.to_zoned(zone.to_owned()).datetime())),
+        )
     }
 }
 
@@ -746,14 +755,15 @@ impl Columns {
 
 #[cfg(test)]
 mod tests {
+
     use ratatui::widgets::ListItem;
 
     use crate::{
-        app_data::{ContainerImage, Logs, RunningState},
+        app_data::{ContainerImage, Logs, LogsTz, RunningState},
         ui::log_sanitizer,
     };
 
-    use super::{ByteStats, ContainerName, ContainerStatus, CpuStats, LogsTz, State};
+    use super::{ByteStats, ContainerName, ContainerStatus, CpuStats, State};
 
     #[test]
     /// Display CpuStats as a string
@@ -817,7 +827,7 @@ mod tests {
     /// Logs can only contain 1 entry per LogzTz
     fn test_container_state_logz() {
         let input = "2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet";
-        let tz = LogsTz::from(input);
+        let (tz, _) = LogsTz::splitter(input);
         let mut logs = Logs::default();
         let line = log_sanitizer::remove_ansi(input);
 
@@ -828,7 +838,7 @@ mod tests {
         assert_eq!(logs.logs.items.len(), 1);
 
         let input = "2023-01-15T19:13:30.783138328Z Lorem ipsum dolor sit amet";
-        let tz = LogsTz::from(input);
+        let (tz, _) = LogsTz::splitter(input);
         let line = log_sanitizer::remove_ansi(input);
 
         logs.insert(ListItem::new(line.clone()), tz.clone());

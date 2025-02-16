@@ -54,6 +54,9 @@ FROM scratch
 # Set an ENV to indicate that we're running in a container
 ENV OXKER_RUNTIME=container
 
+# Copy timezone information into the scratch container
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+
 COPY --from=builder /oxker /app/
 
 # Run the application

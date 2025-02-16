@@ -393,7 +393,14 @@ fn draw_frame(
 
     // Check if error, and show popup if so
     if fd.status.contains(&Status::Help) {
-        draw_blocks::help::draw(f, colors, keymap);
+        let tz = app_data.lock().config.timezone.clone();
+        draw_blocks::help::draw(
+            f,
+            colors,
+            keymap,
+            app_data.lock().config.show_timestamp,
+            tz.as_ref(),
+        );
     }
 
     if let Some(error) = fd.has_error.as_ref() {

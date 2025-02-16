@@ -64,6 +64,7 @@ impl ConfigFileType {
 pub struct ConfigFile {
     pub color_logs: Option<bool>,
     pub docker_interval: Option<u32>,
+    pub timezone: Option<String>,
     pub gui: Option<bool>,
     pub host: Option<String>,
     pub raw_logs: Option<bool>,
@@ -77,7 +78,7 @@ pub struct ConfigFile {
 }
 
 impl ConfigFile {
-    /// Attempt to create an example.config.toml file, will attempt to recursively create the directories as well
+    /// Attempt to create a config.toml file, will attempt to recursively create the directories as well
     fn create_example_file(in_container: bool) -> Result<(), AppError> {
         if in_container {
             return Ok(());
@@ -85,7 +86,7 @@ impl ConfigFile {
 
         let config_dir = ConfigFileType::get_config_dir(in_container)
             .ok_or_else(|| AppError::IO("config_dir".to_owned()))?;
-        let file_name = config_dir.join("example.config.toml");
+        let file_name = config_dir.join("config.toml");
 
         if !std::fs::exists(&file_name).map_err(|i| AppError::IO(i.to_string()))? {
             if !std::fs::exists(&config_dir).map_err(|i| AppError::IO(i.to_string()))? {

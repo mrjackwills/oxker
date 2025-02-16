@@ -20,6 +20,8 @@
 	"gui": true,
 	// Docker host location
 	"host": "/var/run/docker.sock",
+	// Display the container logs timestamp with a given timezone, if timezone is unknown, defaults to UTC
+	"timezone": "Etc/UTC",
 	// Directory for saving exported logs, defaults to `$HOME`, this is automatically *correctly* calculated for Linux, Mac, and Windows
 	// "save_dir": "$HOME",
 	// Force use of docker cli when execing into containers, honestly mostly pointless

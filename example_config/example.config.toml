@@ -1,8 +1,6 @@
 # Example toml config file
-
 # This needs to be renamed to "config.toml" in order for oxker to automatically load
 # oxker will also read .jsonc and .json files which use the same key/value structure & format as this file
-
 # Every key is optional, with defaults that oxker will choose if missing or invalid
 # The `--config-file` cli argument can be used to load configuration files from any readable location
 
@@ -29,6 +27,9 @@ gui = true
 
 # Docker host location
 host = "/var/run/docker.sock"
+
+# Display the container logs timestamp with a given timezone, if timezone is unknown, defaults to UTC
+timezone = "Etc/UTC"
 
 # Directory for saving exported logs, defaults to `$HOME`, this is automatically *correctly* calculated for Linux, Mac, and Windows
 # save_dir = "$HOME"

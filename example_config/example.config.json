@@ -7,6 +7,7 @@
 	"show_self": false,
 	"show_std_err": false,
 	"show_timestamp": true,
+	"timezone": "Etc/UTC",
 	"use_cli": false,
 	"colors": {
 		"borders": {

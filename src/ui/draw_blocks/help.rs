@@ -1,4 +1,5 @@
 use crossterm::event::KeyCode;
+use jiff::tz::TimeZone;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -84,13 +85,15 @@ impl HelpInfo {
     }
 
     /// Generate the button information span + metadata
-    fn gen_keymap_info(colors: AppColors) -> Self {
+    fn gen_keymap_info(colors: AppColors, zone: Option<&TimeZone>, show_timestamp: bool) -> Self {
         let button_item = |x: &str| Self::highlighted_text_span(&format!(" ( {x} ) "), colors);
         let button_desc = |x: &str| Self::text_span(x, colors);
         let or = || button_desc("or");
         let space = || button_desc(" ");
+        // todo custom color if in use
+        // timezone if in use
 
-        let lines = [
+        let descriptions = [
             Line::from(vec![
                 space(),
                 button_item("tab"),
@@ -163,11 +166,30 @@ impl HelpInfo {
             ]),
         ];
 
+        let mut lines = if show_timestamp {
+            Vec::from([
+                Self::custom_text(colors, &Keymap::new(), zone),
+                Self::empty_span(),
+            ])
+        } else {
+            vec![]
+        };
+
+        lines.extend_from_slice(&descriptions);
+        let width = Self::calc_width(&lines);
+        let height = lines.len();
+
         Self {
-            lines: lines.to_vec(),
-            width: Self::calc_width(&lines),
-            height: lines.len(),
+            lines,
+            width,
+            height,
         }
+
+        // Self {
+        //     lines: descriptions.to_vec(),
+        //     width: Self::calc_width(&descriptions),
+        //     height: descriptions.len(),
+        // }
     }
 
     /// Generate the final lines, GitHub link etc, + metadata
@@ -193,8 +215,32 @@ impl HelpInfo {
         }
     }
 
+    /// Display timezone in timestamps are visible
+    /// Has ability to display if keymap or colors are customized, but currently not in use
+    fn custom_text<'a>(colors: AppColors, _keymap: &Keymap, zone: Option<&TimeZone>) -> Line<'a> {
+        let highlighted = |x: &str| Self::highlighted_text_span(x, colors);
+        let text = |x: &str| Self::text_span(x, colors);
+
+        // if keymap != &Keymap::new() {
+        //     op.push(highlighted("customised keymap, "));
+        // }
+
+        // if colors != AppColors::new() {
+        //     op.push(highlighted("customised app colors, "));
+        // };
+
+        let zone = zone.and_then(|i| i.iana_name()).unwrap_or("Etc/UTC");
+
+        Line::from(Vec::from([text("logs timezone: "), highlighted(zone)])).centered()
+    }
+
     /// Generate the display information when a custom keymap is being used
-    fn gen_custom_keymap_info(colors: AppColors, km: &Keymap) -> Self {
+    fn gen_custom_keymap_info(
+        colors: AppColors,
+        km: &Keymap,
+        zone: Option<&TimeZone>,
+        show_timestamp: bool,
+    ) -> Self {
         let button_item = |x: &str| Self::highlighted_text_span(&format!(" ( {x} ) "), colors);
         let button_desc = |x: &str| Self::text_span(x, colors);
         let or = || button_desc("or");
@@ -220,11 +266,7 @@ impl HelpInfo {
                 },
             )
         };
-
-        let lines = [
-            Line::from(vec![Span::from("Custom keymap config in use\n")])
-                .alignment(Alignment::Center)
-                .style(Style::default().fg(colors.popup_help.text_highlight)),
+        let descriptions = [
             or_secondary(km.select_next_panel, "select next panel"),
             or_secondary(km.select_previous_panel, "select previous panel"),
             or_secondary(km.scroll_down_one, "scroll list down by one"),
@@ -266,16 +308,32 @@ impl HelpInfo {
             or_secondary(km.quit, "quit at any time"),
         ];
 
+        let mut lines = if show_timestamp {
+            Vec::from([Self::custom_text(colors, km, zone), Self::empty_span()])
+        } else {
+            vec![]
+        };
+
+        lines.extend_from_slice(&descriptions);
+        let width = Self::calc_width(&lines);
+        let height = lines.len();
+
         Self {
-            lines: lines.to_vec(),
-            width: Self::calc_width(&lines),
-            height: lines.len(),
+            lines,
+            width,
+            height,
         }
     }
 }
 
 /// Draw the help box in the centre of the screen
-pub fn draw(f: &mut Frame, colors: AppColors, keymap: &Keymap) {
+pub fn draw(
+    f: &mut Frame,
+    colors: AppColors,
+    keymap: &Keymap,
+    show_timestamp: bool,
+    zone: Option<&TimeZone>,
+) {
     let title = format!(" {VERSION} ");
 
     let name_info = HelpInfo::gen_name(colors);
@@ -283,9 +341,9 @@ pub fn draw(f: &mut Frame, colors: AppColors, keymap: &Keymap) {
     let final_info = HelpInfo::gen_final(colors);
 
     let button_info = if keymap == &Keymap::new() {
-        HelpInfo::gen_keymap_info(colors)
+        HelpInfo::gen_keymap_info(colors, zone, show_timestamp)
     } else {
-        HelpInfo::gen_custom_keymap_info(colors, keymap)
+        HelpInfo::gen_custom_keymap_info(colors, keymap, zone, show_timestamp)
     };
 
     let max_line_width = [
@@ -364,13 +422,14 @@ pub fn draw(f: &mut Frame, colors: AppColors, keymap: &Keymap) {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::too_many_lines)]
 mod tests {
     use crate::{
         config::{AppColors, Keymap},
         ui::draw_blocks::VERSION,
     };
     use crossterm::event::KeyCode;
+    use jiff::tz::TimeZone;
     use ratatui::style::{Color, Modifier};
 
     use crate::ui::draw_blocks::tests::{expected_to_vec, get_result, test_setup};
@@ -381,11 +440,19 @@ mod tests {
         let (w, h) = (87, 33);
         let mut setup = test_setup(w, h, true, true);
         let colors = setup.app_data.lock().config.app_colors;
+        let tz = setup.app_data.lock().config.timezone.clone();
+        let show_timestamp = setup.app_data.lock().config.show_timestamp;
 
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, colors, &setup.app_data.lock().config.keymap);
+                super::draw(
+                    f,
+                    colors,
+                    &setup.app_data.lock().config.keymap,
+                    show_timestamp,
+                    tz.as_ref(),
+                );
             })
             .unwrap();
 
@@ -476,15 +543,24 @@ mod tests {
         let (w, h) = (87, 33);
         let mut setup = test_setup(w, h, true, true);
         let mut colors = AppColors::new();
+        let tz = setup.app_data.lock().config.timezone.clone();
 
         colors.popup_help.background = Color::Black;
         colors.popup_help.text = Color::Red;
         colors.popup_help.text_highlight = Color::Yellow;
 
+        let show_timestamp = setup.app_data.lock().config.show_timestamp;
+
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, colors, &setup.app_data.lock().config.keymap);
+                super::draw(
+                    f,
+                    colors,
+                    &setup.app_data.lock().config.keymap,
+                    show_timestamp,
+                    tz.as_ref(),
+                );
             })
             .unwrap();
 
@@ -572,7 +648,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with one definition for each entry
     fn test_draw_blocks_custom_keymap_one_definition() {
-        let (w, h) = (98, 48);
+        let (w, h) = (98, 47);
         let mut setup = test_setup(w, h, true, true);
         let colors = setup.app_data.lock().config.app_colors;
 
@@ -609,7 +685,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, colors, &input);
+                super::draw(f, colors, &input, false, None);
             })
             .unwrap();
 
@@ -629,7 +705,6 @@ mod tests {
             "  │                                                                                            │  ",
             "  │                      A simple tui to view & control docker containers                      │  ",
             "  │                                                                                            │  ",
-            "  │                                 Custom keymap config in use                                │  ",
             "  │ ( 0 ) select next panel                                                                    │  ",
             "  │ ( 2 ) select previous panel                                                                │  ",
             "  │ ( q ) scroll list down by one                                                              │  ",
@@ -669,9 +744,6 @@ mod tests {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-                if row_index == 14 && (36..=62).contains(&result_cell_index) {
-                    assert_eq!(result_cell.fg, Color::White);
-                }
             }
         }
     }
@@ -679,7 +751,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with two definition for each entry
     fn test_draw_blocks_custom_keymap_two_definitions() {
-        let (w, h) = (110, 48);
+        let (w, h) = (110, 47);
         let mut setup = test_setup(w, h, true, true);
         let colors = setup.app_data.lock().config.app_colors;
 
@@ -716,7 +788,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, colors, &input);
+                super::draw(f, colors, &input, false, None);
             })
             .unwrap();
 
@@ -736,7 +808,6 @@ mod tests {
           " │                                                                                                          │ ",
           " │                             A simple tui to view & control docker containers                             │ ",
           " │                                                                                                          │ ",
-          " │                                        Custom keymap config in use                                       │ ",
           " │ ( 0 ) or ( 1 ) select next panel                                                                         │ ",
           " │ ( 2 ) or ( 3 ) select previous panel                                                                     │ ",
           " │ ( q ) or ( r ) scroll list down by one                                                                   │ ",
@@ -783,7 +854,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with either one or two definition for each entry
     fn test_draw_blocks_custom_keymap_one_and_two_definitions() {
-        let (w, h) = (110, 48);
+        let (w, h) = (110, 47);
         let mut setup = test_setup(w, h, true, true);
         let colors = setup.app_data.lock().config.app_colors;
 
@@ -817,10 +888,12 @@ mod tests {
             toggle_mouse_capture: (KeyCode::PageDown, Some(KeyCode::PageUp)),
         };
 
+        let tz = setup.app_data.lock().config.timezone.clone();
+
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, colors, &input);
+                super::draw(f, colors, &input, false, tz.as_ref());
             })
             .unwrap();
 
@@ -840,7 +913,6 @@ mod tests {
             " │                                                                                                          │ ",
             " │                             A simple tui to view & control docker containers                             │ ",
             " │                                                                                                          │ ",
-            " │                                        Custom keymap config in use                                       │ ",
             " │ ( 0 ) select next panel                                                                                  │ ",
             " │ ( 2 ) or ( 3 ) select previous panel                                                                     │ ",
             " │ ( q ) or ( r ) scroll list down by one                                                                   │ ",
@@ -879,6 +951,81 @@ mod tests {
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_draw_blocks_help_show_timestamp() {
+        let (w, h) = (87, 35);
+        let mut setup = test_setup(w, h, true, true);
+        let colors = AppColors::new();
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    colors,
+                    &setup.app_data.lock().config.keymap,
+                    true,
+                    Some(&TimeZone::get("asia/tokyo").unwrap()),
+                );
+            })
+            .unwrap();
+
+        let version_row =   format!(" ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ ");
+        let expected = [
+             "                                                                                       ",
+            version_row.as_str(),
+            " │                                                                                   │ ",
+            " │                                      88                                           │ ",
+            " │                                      88                                           │ ",
+            " │                                      88                                           │ ",
+            " │             ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,            │ ",
+            r#" │            a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8            │ "#,
+            r#" │            8b       d8     )888(     8888[      8PP"""""""  88                    │ "#,
+            r#" │            "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                    │ "#,
+            r#" │             `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                    │ "#,
+            " │                                                                                   │ ",
+            " │                 A simple tui to view & control docker containers                  │ ",
+            " │                                                                                   │ ",
+            " │                             logs timezone: Asia/Tokyo                             │ ",
+            " │                                                                                   │ ",
+            " │ ( tab ) or ( shift+tab ) change panels                                            │ ",
+            " │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) change selected line        │ ",
+            " │ ( enter ) send docker container command                                           │ ",
+            " │ ( e ) exec into a container                                                       │ ",
+            " │ ( h ) toggle this help information - or click heading                             │ ",
+            " │ ( s ) save logs to file                                                           │ ",
+            " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ",
+            " │ ( F1 ) or ( / ) enter filter mode                                                 │ ",
+            " │ ( 0 ) stop sort                                                                   │ ",
+            " │ ( 1 - 9 ) sort by header - or click header                                        │ ",
+            " │ ( esc ) close dialog                                                              │ ",
+            " │ ( q ) quit at any time                                                            │ ",
+            " │                                                                                   │ ",
+            " │        currently an early work in progress, all and any input appreciated         │ ",
+            " │                       https://github.com/mrjackwills/oxker                        │ ",
+            " │                                                                                   │ ",
+            " │                                                                                   │ ",
+            " ╰───────────────────────────────────────────────────────────────────────────────────╯ ",
+            "                                                                                       "
+            ];
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (14, 31..=45) => {
+                        assert_eq!(result_cell.fg, colors.popup_help.text);
+                    }
+                    (14, 46..=55) => {
+                        assert_eq!(result_cell.fg, colors.popup_help.text_highlight);
+                    }
+                    _ => (),
+                }
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
             }
         }

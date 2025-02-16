@@ -174,6 +174,7 @@ mod tests {
             keymap: Keymap::new(),
             show_timestamp: false,
             use_cli: false,
+            timezone: None,
         }
     }
 
