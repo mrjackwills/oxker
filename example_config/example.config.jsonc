@@ -1,0 +1,282 @@
+{
+	// Example JSONC config file
+	// This needs to be renamed to "config.jsonc" ("config.json" will also work, even if the file is actually a jsonc) in order for oxker to automatically load
+	// oxker will also read .jsonc and .json files which use the same key/value structure & format as this file
+	// Every key is optional, with defaults that oxker will choose if missing or invalid
+	// The `--config-file` cli argument can be used to load configuration files from any readable location
+	// Docker update interval in ms, minimum effectively 1000
+	"docker_interval": 1000,
+	// Attempt to colorize the logs, conflicts with "raw"
+	"color_logs": false,
+	// Show raw logs, default is to remove ansi formatting, conflicts with "color"
+	"raw_logs": false,
+	// Show self (the oxker container) when running as a docker container
+	"show_self": false,
+	// Show std_err in logs
+	"show_std_err": false,
+	// Show a timestamp for every log entry
+	"show_timestamp": true,
+	// Don't draw gui - for debugging - mostly pointless
+	"gui": true,
+	// Docker host location
+	"host": "/var/run/docker.sock",
+	// Directory for saving exported logs, defaults to `$HOME`, this is automatically *correctly* calculated for Linux, Mac, and Windows
+	// "save_dir": "$HOME",
+	// Force use of docker cli when execing into containers, honestly mostly pointless
+	"use_cli": false,
+	//////////////////
+	// Custom Keymap //
+	//////////////////
+	// Available keys are;
+	// 1) a-z and A-Z
+	// 2) 0-9
+	// 3) / \ , . # ' [ ] ; = -
+	// 3) F1-F12
+	// 4) backspace, tab, backtab, delete, end, esc, home, insert, pagedown, pageup, left, right, up, down
+	// Each definition can have two keys associated with it
+	// If any key clashes are found, oxker will revert to it's default keymap
+	"keymap": {
+		// Clear any popup boxes, filter panel, or help panel
+		"clear": [
+			"c",
+			"esc"
+		],
+		// Cancel delete - clear also works here
+		"delete_deny": [
+			"n"
+		],
+		// Confirm Delete
+		"delete_confirm": [
+			"y"
+		],
+		// Exec into the selected container
+		"exec": [
+			"e"
+		],
+		// Enter filter mode
+		"filter_mode": [
+			"/",
+			"F1"
+		],
+		// Quit at anytime
+		"quit": [
+			"q"
+		],
+		// Save logs of selected container to file on disk
+		"save_logs": [
+			"s"
+		],
+		// Scroll down a list by many
+		"scroll_down_many": [
+			"pagedown"
+		],
+		// Scroll down a list by one item
+		"scroll_down_one": [
+			"down",
+			"j"
+		],
+		// Scroll down to the end of a list
+		"scroll_end": [
+			"end"
+		],
+		// Scroll up to the start of a list
+		"scroll_start": [
+			"home"
+		],
+		// Scroll up a list by many
+		"scroll_up_many": [
+			"pageup"
+		],
+		// Scroll up a list by one item
+		"scroll_up_one": [
+			"up",
+			"k"
+		],
+		// Select next panel
+		"select_next_panel": [
+			"tab"
+		],
+		// Select previous panel
+		"select_previous_panel": [
+			"backtab"
+		],
+		// Sort the containers based on specific column
+		"sort_by_name": [
+			"1"
+		],
+		"sort_by_state": [
+			"2"
+		],
+		"sort_by_status": [
+			"3"
+		],
+		"sort_by_cpu": [
+			"4"
+		],
+		"sort_by_memory": [
+			"5"
+		],
+		"sort_by_id": [
+			"6"
+		],
+		"sort_by_image": [
+			"7"
+		],
+		"sort_by_rx": [
+			"8"
+		],
+		"sort_by_tx": [
+			"9"
+		],
+		// Reset the sorted containers
+		"sort_reset": [
+			"0"
+		],
+		// Toggle the help panel
+		"toggle_help": [
+			"h"
+		],
+		// Toggle mouse capture
+		"toggle_mouse_capture": [
+			"m"
+		]
+	},
+	////////////////////
+	// Custom Colors //
+	////////////////////
+	// Colors be listed as either;
+	// 1) named ANSI: 'red', case insensitive, see https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+	// 2) Hex values: '#FF0000', case insensitive
+	// 3) 'reset' for transparency
+	// Some background/foreground combinations don't work, I *think* this is an issue/feature of ratatui - but I may have just made a mistake somewhere
+	"colors": {
+		// The single line bar at the uppermost of the display. Contains name/state/status headings etc
+		"headers_bar": {
+			// Background color of the entire line
+			"background": "magenta",
+			// Animated loading icon at the start of the bar
+			"loading_spinner": "white",
+			// Text color
+			"text": "black",
+			// Text color of a selected header
+			"text_selected": "gray"
+		},
+		// The borders around the selectable panels - Containers, Commands, Logs
+		"borders": {
+			// Border when selected
+			"selected": "lightcyan",
+			// Border when not selected
+			"unselected": "grey"
+		},
+		// The containers sections, in the future more color customization options should be made available in this section
+		"containers": {
+			// The icon use to illustrate which container is currently selected
+			"icon": "white",
+			// Background color of panel
+			"background": "reset",
+			// At the moment, this will only change the color of the name, id, and image columns
+			"text": "blue",
+			// Text color of the RX column
+			"text_rx": "#FFE9C1",
+			// Text color of the TX column
+			"text_tx": "#CD8C8C"
+		},
+		// Each state of a container has a color, which is used in multiple places, i.e. chart titles, state/status/cpu/memory columns in the container section
+		"container_state": {
+			"dead": "red",
+			"exited": "red",
+			"paused": "yellow",
+			"removing": "lightred",
+			"restarting": "lightgreen",
+			"running_healthy": "green",
+			"running_unhealthy": "#FFB224",
+			"unknown": "red"
+		},
+		// The color the of Docker commands available for each container
+		"commands": {
+			// Background color of panel
+			"background": "reset",
+			"pause": "yellow",
+			"restart": "magenta",
+			"stop": "red",
+			"delete": "gray",
+			"resume": "blue",
+			"start": "green"
+		},
+		// The cpu chart
+		"chart_cpu": {
+			// Background color of panel
+			"background": "reset",
+			// Border color
+			"border": "white",
+			// Chart title
+			"title": "green",
+			// Maximum CPU percentage
+			"max": "#FFB224",
+			// Points on the chart
+			"points": "magenta",
+			// The charts y-axis
+			"y_axis": "white"
+		},
+		// The memory chart
+		"chart_memory": {
+			// Background color of panel
+			"background": "reset",
+			// Border color
+			"border": "white",
+			// Chart title
+			"title": "green",
+			// Maximum memory use
+			"max": "#FFB224",
+			// Points on the chart
+			"points": "cyan",
+			// The charts y-axis
+			"y_axis": "white"
+		},
+		// The ports chart
+		"chart_ports": {
+			// Background color of panel
+			"background": "reset",
+			// Border color
+			"border": "white",
+			// Chart title
+			"title": "green",
+			// Private/Public/IP headings
+			"headings": "yellow",
+			// Ports & IP listing text
+			"text": "white"
+		},
+		// The help popup
+		"popup_help": {
+			// Background color
+			"background": "magenta",
+			// Text color
+			"text": "black",
+			// Highlighted text color
+			"text_highlight": "white"
+		},
+		// The info popup - used to display small messages - such as saving logs to disk, or change of mouse capture settings
+		"popup_info": {
+			// Background color
+			"background": "blue",
+			// Text color
+			"text": "white"
+		},
+		// The delete popup - used to display a confirmation warning when about to delete a container
+		"popup_delete": {
+			// Background color
+			"background": "white",
+			// Text color
+			"text": "black",
+			// Highlighted text color
+			"text_highlight": "red"
+		},
+		// The error popup - hopefully you'll never have to see this
+		"popup_error": {
+			// Background color
+			"background": "red",
+			// Text color
+			"text": "white"
+		}
+	}
+}

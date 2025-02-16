@@ -7,6 +7,7 @@ pub mod log_sanitizer {
     };
 
     /// Attempt to colorize the given string to ratatui standards
+    /// TODO this is somewhat slow/cpu intensive
     pub fn colorize_logs<'a>(input: &str) -> Vec<Line<'a>> {
         vec![Line::from(
             categorise_text(input)

@@ -12,7 +12,7 @@ mod container_state;
 
 use crate::{
     app_error::AppError,
-    parse_args::CliArgs,
+    config::Config,
     ui::{log_sanitizer, GuiState, Status},
     ENTRY_POINT,
 };
@@ -123,13 +123,13 @@ pub struct AppData {
     filter: Filter,
     hidden_containers: Vec<ContainerItem>,
     sorted_by: Option<(Header, SortedOrder)>,
-    pub args: CliArgs,
+    pub config: Config,
 }
 
 #[derive(Debug, Clone)]
 #[cfg(test)]
 pub struct AppData {
-    pub args: CliArgs,
+    pub config: Config,
     pub containers: StatefulList<ContainerItem>,
     pub error: Option<AppError>,
     pub filter: Filter,
@@ -139,9 +139,9 @@ pub struct AppData {
 
 impl AppData {
     /// Generate a default app_state
-    pub fn default(args: CliArgs) -> Self {
+    pub fn default(config: Config) -> Self {
         Self {
-            args,
+            config,
             containers: StatefulList::new(vec![]),
             error: None,
             filter: Filter::new(),
@@ -657,8 +657,8 @@ impl AppData {
 
     /// Error related methods
     /// Get single app_state error
-    pub const fn get_error(&self) -> Option<AppError> {
-        self.error
+    pub fn get_error(&self) -> Option<AppError> {
+        self.error.clone()
     }
 
     /// Remove single app_state error
@@ -682,7 +682,7 @@ impl AppData {
     /// Check if selected container is oxker and also that oxker is being run in a container
     pub fn is_oxker_in_container(&self) -> bool {
         self.get_selected_container()
-            .is_some_and(|i| i.is_oxker && self.args.in_container)
+            .is_some_and(|i| i.is_oxker && self.config.in_container)
     }
 
     /// Find the widths for the strings in the containers panel.
@@ -877,10 +877,10 @@ impl AppData {
 
     /// Update logs of a given container, based on id
     pub fn update_log_by_id(&mut self, logs: Vec<String>, id: &ContainerId) {
-        let color = self.args.color;
-        let raw = self.args.raw;
+        let color = self.config.color_logs;
+        let raw = self.config.raw_logs;
 
-        let timestamp = self.args.timestamp;
+        let timestamp = self.config.show_timestamp;
 
         if let Some(container) = self.get_any_container_by_id(id) {
             if !container.is_oxker {

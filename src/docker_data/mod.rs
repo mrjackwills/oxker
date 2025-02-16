@@ -21,7 +21,7 @@ use uuid::Uuid;
 use crate::{
     app_data::{AppData, ContainerId, DockerCommand, State},
     app_error::AppError,
-    parse_args::CliArgs,
+    config::Config,
     ui::{GuiState, Status},
     ENTRY_POINT,
 };
@@ -64,7 +64,7 @@ impl Binate {
 
 pub struct DockerData {
     app_data: Arc<Mutex<AppData>>,
-    args: CliArgs,
+    config: Config,
     binate: Binate,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
@@ -214,11 +214,11 @@ impl DockerData {
             .into_iter()
             .filter_map(|f| match f.id {
                 Some(_) => {
-                    if self.args.in_container
+                    if self.config.in_container
                         && f.command
                             .as_ref()
                             .is_some_and(|c| c.starts_with(ENTRY_POINT))
-                        && self.args.show_self
+                        && self.config.show_self
                     {
                         None
                     } else {
@@ -271,7 +271,7 @@ impl DockerData {
                 Arc::clone(&self.app_data);
             let docker = Arc::clone(&self.docker);
             let spawns = Arc::clone(&self.spawns);
-            let std_err = self.args.std_err;
+            let std_err = self.config.show_std_err;
             let init = Arc::clone(&init);
             self.spawns.lock().insert(
                 SpawnId::Log(id.clone()),
@@ -319,7 +319,7 @@ impl DockerData {
                     container.id.clone(),
                     last_updated,
                     Arc::clone(&self.spawns),
-                    self.args.std_err,
+                    self.config.show_std_err,
                 )));
             }
         };
@@ -399,8 +399,8 @@ impl DockerData {
     }
 
     /// Send an update message every x ms, where x is the args.docker_interval
-    fn heartbeat(args: &CliArgs, docker_tx: Sender<DockerMessage>) {
-        let update_duration = std::time::Duration::from_millis(u64::from(args.docker_interval));
+    fn heartbeat(config: &Config, docker_tx: Sender<DockerMessage>) {
+        let update_duration = std::time::Duration::from_millis(u64::from(config.docker_interval));
         let mut now = std::time::Instant::now();
         tokio::spawn(async move {
             loop {
@@ -421,11 +421,11 @@ impl DockerData {
         docker_tx: Sender<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
     ) {
-        let args = app_data.lock().args.clone();
+        let args = app_data.lock().config.clone();
         if app_data.lock().get_error().is_none() {
             let mut inner = Self {
                 app_data,
-                args,
+                config: args,
                 binate: Binate::One,
                 docker: Arc::new(docker),
                 gui_state,
@@ -433,7 +433,7 @@ impl DockerData {
                 spawns: Arc::new(Mutex::new(HashMap::new())),
             };
             inner.initialise_container_data().await;
-            Self::heartbeat(&inner.args, docker_tx);
+            Self::heartbeat(&inner.config, docker_tx);
             inner.message_handler().await;
         }
     }
