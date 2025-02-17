@@ -1,22 +1,10 @@
 #############
-## Builder ##
-#############
-
-FROM rust:slim AS builder
-
-# Not sure if this is needed, we just want to be able to copy the zoneinfo into the next container
-ENV OXKER_RUNTIME=container
-
-#############
 ## Runtime ##
 #############
 FROM scratch
 
 # Set env that we're running in a container, so that the application can sleep for 250ms at start
 ENV OXKER_RUNTIME=container
-
-# Copy timezone info from build step
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 # Copy application binary from builder image
 COPY ./target/x86_64-unknown-linux-musl/release/oxker /app/
@@ -25,9 +13,15 @@ COPY ./target/x86_64-unknown-linux-musl/release/oxker /app/
 # this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
 ENTRYPOINT [ "/app/oxker"]
 
+
+# cargo build --release --target x86_64-unknown-linux-musl --features tzdb
+
 # Dev build for testing
 # docker build -t oxker_dev -f containerised/Dockerfile_dev . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
 
+# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro --volume ./example_config/example.config.toml:/config.toml:ro oxker_dev --config-file /config.toml 
+
+# docker run --rm -it --volume /etc/timezone:/etc/timezone:ro --volume /etc/localtime:/etc/localtime:ro  --volume /var/run/docker.sock:/var/run/docker.sock:ro --volume ./example_config/example.config.toml:/config.toml:ro oxker_dev --config-file /config.toml 
 # Dev build one liner, x86 host
 # docker image prune -a; cargo build --release --target x86_64-unknown-linux-musl && docker build -t oxker_dev -f containerised/Dockerfile_dev . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
 

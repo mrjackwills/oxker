@@ -888,6 +888,7 @@ impl AppData {
             if !container.is_oxker {
                 container.last_updated = Self::get_systemtime();
                 let current_len = container.logs.len();
+                // TODO refactor this, store the styled logs into the container.logs
                 for mut i in logs {
                     let (log_tz, log_content) = LogsTz::splitter(i.as_str());
                     if !show_timestamp {

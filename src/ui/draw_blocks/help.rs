@@ -90,8 +90,6 @@ impl HelpInfo {
         let button_desc = |x: &str| Self::text_span(x, colors);
         let or = || button_desc("or");
         let space = || button_desc(" ");
-        // todo custom color if in use
-        // timezone if in use
 
         let descriptions = [
             Line::from(vec![
@@ -184,12 +182,6 @@ impl HelpInfo {
             width,
             height,
         }
-
-        // Self {
-        //     lines: descriptions.to_vec(),
-        //     width: Self::calc_width(&descriptions),
-        //     height: descriptions.len(),
-        // }
     }
 
     /// Generate the final lines, GitHub link etc, + metadata
@@ -230,7 +222,6 @@ impl HelpInfo {
         // };
 
         let zone = zone.and_then(|i| i.iana_name()).unwrap_or("Etc/UTC");
-
         Line::from(Vec::from([text("logs timezone: "), highlighted(zone)])).centered()
     }
 
@@ -328,8 +319,8 @@ impl HelpInfo {
 
 /// Draw the help box in the centre of the screen
 pub fn draw(
-    f: &mut Frame,
     colors: AppColors,
+    f: &mut Frame,
     keymap: &Keymap,
     show_timestamp: bool,
     zone: Option<&TimeZone>,
@@ -439,18 +430,16 @@ mod tests {
     fn test_draw_blocks_help() {
         let (w, h) = (87, 33);
         let mut setup = test_setup(w, h, true, true);
-        let colors = setup.app_data.lock().config.app_colors;
         let tz = setup.app_data.lock().config.timezone.clone();
-        let show_timestamp = setup.app_data.lock().config.show_timestamp;
 
         setup
             .terminal
             .draw(|f| {
                 super::draw(
+                    AppColors::new(),
                     f,
-                    colors,
                     &setup.app_data.lock().config.keymap,
-                    show_timestamp,
+                    false,
                     tz.as_ref(),
                 );
             })
@@ -549,16 +538,14 @@ mod tests {
         colors.popup_help.text = Color::Red;
         colors.popup_help.text_highlight = Color::Yellow;
 
-        let show_timestamp = setup.app_data.lock().config.show_timestamp;
-
         setup
             .terminal
             .draw(|f| {
                 super::draw(
-                    f,
                     colors,
+                    f,
                     &setup.app_data.lock().config.keymap,
-                    show_timestamp,
+                    false,
                     tz.as_ref(),
                 );
             })
@@ -647,10 +634,9 @@ mod tests {
 
     #[test]
     /// Help panel will show custom keymap if in use, with one definition for each entry
-    fn test_draw_blocks_custom_keymap_one_definition() {
+    fn test_draw_blocks_help_custom_keymap_one_definition() {
         let (w, h) = (98, 47);
         let mut setup = test_setup(w, h, true, true);
-        let colors = setup.app_data.lock().config.app_colors;
 
         let input = Keymap {
             clear: (KeyCode::Char('a'), None),
@@ -685,7 +671,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, colors, &input, false, None);
+                super::draw(AppColors::new(), f, &input, false, None);
             })
             .unwrap();
 
@@ -750,12 +736,11 @@ mod tests {
 
     #[test]
     /// Help panel will show custom keymap if in use, with two definition for each entry
-    fn test_draw_blocks_custom_keymap_two_definitions() {
+    fn test_draw_blocks_help_custom_keymap_two_definitions() {
         let (w, h) = (110, 47);
         let mut setup = test_setup(w, h, true, true);
-        let colors = setup.app_data.lock().config.app_colors;
 
-        let input = Keymap {
+        let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('b'))),
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('d'))),
             delete_confirm: (KeyCode::Char('e'), Some(KeyCode::Char('f'))),
@@ -788,7 +773,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, colors, &input, false, None);
+                super::draw(AppColors::new(), f, &keymap, false, None);
             })
             .unwrap();
 
@@ -853,12 +838,11 @@ mod tests {
 
     #[test]
     /// Help panel will show custom keymap if in use, with either one or two definition for each entry
-    fn test_draw_blocks_custom_keymap_one_and_two_definitions() {
+    fn test_draw_blocks_help_one_and_two_definitions() {
         let (w, h) = (110, 47);
         let mut setup = test_setup(w, h, true, true);
-        let colors = setup.app_data.lock().config.app_colors;
 
-        let input = Keymap {
+        let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('b'))),
             delete_deny: (KeyCode::Char('c'), None),
             delete_confirm: (KeyCode::Char('e'), Some(KeyCode::Char('f'))),
@@ -893,7 +877,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, colors, &input, false, tz.as_ref());
+                super::draw(AppColors::new(), f, &keymap, false, tz.as_ref());
             })
             .unwrap();
 
@@ -957,18 +941,17 @@ mod tests {
     }
 
     #[test]
-    fn test_draw_blocks_help_show_timestamp() {
+    fn test_draw_blocks_help_show_timezone() {
         let (w, h) = (87, 35);
         let mut setup = test_setup(w, h, true, true);
-        let colors = AppColors::new();
 
         setup
             .terminal
             .draw(|f| {
                 super::draw(
+                    AppColors::new(),
                     f,
-                    colors,
-                    &setup.app_data.lock().config.keymap,
+                    &Keymap::new(),
                     true,
                     Some(&TimeZone::get("asia/tokyo").unwrap()),
                 );
@@ -1019,10 +1002,10 @@ mod tests {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     (14, 31..=45) => {
-                        assert_eq!(result_cell.fg, colors.popup_help.text);
+                        assert_eq!(result_cell.fg, AppColors::new().popup_help.text);
                     }
                     (14, 46..=55) => {
-                        assert_eq!(result_cell.fg, colors.popup_help.text_highlight);
+                        assert_eq!(result_cell.fg, AppColors::new().popup_help.text_highlight);
                     }
                     _ => (),
                 }

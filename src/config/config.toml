@@ -141,6 +141,13 @@ text_rx="#FFE9C1"
 # Text color of the TX column
 text_tx="#CD8C8C"
 
+# The logs panel, will only be applied if color_logs is false
+[colors.logs]
+# Background color of panel
+background = "reset"
+# text color
+text="reset"
+
 # Each state of a container has a color, which is used in multiple places, i.e. chart titles, state/status/cpu/memory columns in the container section
 [colors.container_state]
 dead="red"

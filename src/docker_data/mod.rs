@@ -64,8 +64,8 @@ impl Binate {
 
 pub struct DockerData {
     app_data: Arc<Mutex<AppData>>,
-    config: Config,
     binate: Binate,
+    config: Config,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
     receiver: Receiver<DockerMessage>,

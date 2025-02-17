@@ -77,6 +77,7 @@ impl From<ConfigFile> for Config {
 impl Config {
     /// Attempt to parse a timezone into a jiff::tz::TimeZone
     /// If offset is the same as UTC, return None
+    /// TODO actually return Option<(TimeZone, Offset)>
     fn parse_timezone(input: Option<String>) -> Option<TimeZone> {
         let timezone_str = input?;
         let Ok(tz) = jiff::tz::TimeZone::get(&timezone_str) else {
@@ -109,23 +110,32 @@ impl Config {
 
     /// Combine config from CLI into config file, the cli take priority
     /// make sure color_logs and raw_logs can't clash
-    fn merge_args(mut self, config_file: Self) -> Self {
-        self.docker_interval = config_file.docker_interval;
-        self.show_timestamp = config_file.show_timestamp;
-        self.color_logs = config_file.color_logs;
-        self.raw_logs = config_file.raw_logs;
-        self.show_self = config_file.show_self;
-        self.gui = config_file.gui;
-        self.host = config_file.host;
-        self.show_std_err = config_file.show_std_err;
-        self.timezone = config_file.timezone;
-        self.save_dir = config_file.save_dir;
-        self.use_cli = config_file.use_cli;
+    fn merge_args(mut self, config_from_cli: Self) -> Self {
+        self.color_logs = config_from_cli.color_logs;
+        self.docker_interval = config_from_cli.docker_interval;
+        self.gui = config_from_cli.gui;
+        self.raw_logs = config_from_cli.raw_logs;
+        self.show_self = config_from_cli.show_self;
+        self.show_std_err = config_from_cli.show_std_err;
+        self.show_timestamp = config_from_cli.show_timestamp;
+        self.use_cli = config_from_cli.use_cli;
 
-        if config_file.raw_logs {
+        if let Some(host) = config_from_cli.host {
+            self.host = Some(host);
+        }
+
+        if let Some(x) = config_from_cli.save_dir {
+            self.save_dir = Some(x);
+        }
+
+        if let Some(tz) = config_from_cli.timezone {
+            self.timezone = Some(tz);
+        }
+
+        if config_from_cli.raw_logs {
             self.color_logs = false;
         }
-        if config_file.color_logs {
+        if config_from_cli.color_logs {
             self.raw_logs = false;
         }
         self
@@ -141,19 +151,19 @@ impl Config {
         let in_container = Self::check_if_in_container();
 
         let args = Args::parse();
-        let config = Self::from(&args);
+        let config_from_cli = Self::from(&args);
 
         if let Some(config_file) = &args.config_file {
             if let Some(config_file) =
                 parse_config_file::ConfigFile::try_parse_from_file(config_file)
             {
-                return Self::from(config_file).merge_args(config);
+                return Self::from(config_file).merge_args(config_from_cli);
             }
         }
 
         if let Some(config_file) = parse_config_file::ConfigFile::try_parse(in_container) {
-            return Self::from(config_file).merge_args(config);
+            return Self::from(config_file).merge_args(config_from_cli);
         }
-        config
+        config_from_cli
     }
 }

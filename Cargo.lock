@@ -912,6 +912,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba926fdd8e5b5e7f9700355b0831d8c416afe94b014b1023424037a187c9c582"
 dependencies = [
+ "jiff-tzdb",
  "jiff-tzdb-platform",
  "log",
  "portable-atomic",

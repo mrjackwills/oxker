@@ -69,6 +69,10 @@
 			"text": "black",
 			"text_selected": "gray"
 		},
+		"logs": {
+			"background": "reset",
+			"text": "reset"
+		},
 		"popup_delete": {
 			"background": "white",
 			"text": "black",

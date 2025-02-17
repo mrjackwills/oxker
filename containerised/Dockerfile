@@ -32,7 +32,7 @@ WORKDIR /usr/src/oxker
 RUN rustup target add $(cat /.target)
 
 # This is a dummy build to get the dependencies cached - probably not needed - as run via a github action
-RUN cargo build --target $(cat /.target) --release
+RUN cargo build --target $(cat /.target) --release --features tzdb
 
 # Now copy in the rest of the sources
 COPY src /usr/src/oxker/src/
@@ -40,8 +40,8 @@ COPY src /usr/src/oxker/src/
 # Touch main.rs to prevent cached release build
 RUN touch /usr/src/oxker/src/main.rs
 
-# This is the actual application build
-RUN cargo build --release --target $(cat /.target)
+# This is the actual application build, tzdb feature is vital for timezone parsing
+RUN cargo build --release --target $(cat /.target) --features tzdb
 
 RUN cp /usr/src/oxker/target/$(cat /.target)/release/oxker /
 
@@ -53,9 +53,6 @@ FROM scratch
 
 # Set an ENV to indicate that we're running in a container
 ENV OXKER_RUNTIME=container
-
-# Copy timezone information into the scratch container
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 COPY --from=builder /oxker /app/
 

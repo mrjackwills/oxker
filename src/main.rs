@@ -87,10 +87,10 @@ fn handler_init(
 ) {
     tokio::spawn(input_handler::InputHandler::start(
         Arc::clone(app_data),
-        input_rx,
         docker_sx.clone(),
         Arc::clone(gui_state),
         Arc::clone(is_running),
+        input_rx,
     ));
 }
 

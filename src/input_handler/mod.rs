@@ -37,17 +37,17 @@ pub struct InputHandler {
     gui_state: Arc<Mutex<GuiState>>,
     is_running: Arc<AtomicBool>,
     mouse_capture: bool,
-    rec: Receiver<InputMessages>,
+    rx: Receiver<InputMessages>,
 }
 
 impl InputHandler {
     /// Initialize self, and running the message handling loop
     pub async fn start(
         app_data: Arc<Mutex<AppData>>,
-        rec: Receiver<InputMessages>,
         docker_tx: Sender<DockerMessage>,
         gui_state: Arc<Mutex<GuiState>>,
         is_running: Arc<AtomicBool>,
+        rx: Receiver<InputMessages>,
     ) {
         let keymap = app_data.lock().config.keymap.clone();
         let mut inner = Self {
@@ -56,7 +56,7 @@ impl InputHandler {
             gui_state,
             is_running,
             keymap,
-            rec,
+            rx,
             mouse_capture: true,
         };
         inner.message_handler().await;
@@ -64,7 +64,7 @@ impl InputHandler {
 
     /// check for incoming messages
     async fn message_handler(&mut self) {
-        while let Some(message) = self.rec.recv().await {
+        while let Some(message) = self.rx.recv().await {
             match message {
                 InputMessages::ButtonPress(key) => self.button_press(key.0, key.1).await,
                 InputMessages::MouseEvent(mouse_event) => {
@@ -603,8 +603,6 @@ impl InputHandler {
 
     /// Handle mouse button events
     fn mouse_press(&self, mouse_event: MouseEvent) {
-        // If in help panel, ignore?
-
         let status = self.gui_state.lock().get_status();
         if status.contains(&Status::Help) {
             let mouse_point = Rect::new(mouse_event.column, mouse_event.row, 1, 1);

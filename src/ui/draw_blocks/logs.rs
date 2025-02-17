@@ -3,7 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use ratatui::{
     layout::{Alignment, Rect},
-    style::{Modifier, Style},
+    style::{Modifier, Style, Stylize},
     widgets::{List, Paragraph},
     Frame,
 };
@@ -25,22 +25,41 @@ pub fn draw(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let block = generate_block(area, colors, fd, gui_state, SelectablePanel::Logs);
+    let mut block = generate_block(area, colors, fd, gui_state, SelectablePanel::Logs);
+    if !fd.color_logs {
+        block = block.bg(colors.logs.background);
+    }
+
     if fd.status.contains(&Status::Init) {
-        let paragraph = Paragraph::new(format!("parsing logs {}", fd.loading_icon))
-            .style(Style::default())
+        let mut paragraph = Paragraph::new(format!("parsing logs {}", fd.loading_icon))
             .block(block)
             .alignment(Alignment::Center);
+        if !fd.color_logs {
+            paragraph = paragraph.fg(colors.logs.text);
+        }
         f.render_widget(paragraph, area);
     } else {
         let logs = app_data.lock().get_logs();
         if logs.is_empty() {
-            let paragraph = Paragraph::new("no logs found")
+            let mut paragraph = Paragraph::new("no logs found")
                 .block(block)
                 .alignment(Alignment::Center);
+            if !fd.color_logs {
+                paragraph = paragraph.fg(colors.logs.text);
+            }
             f.render_widget(paragraph, area);
+        } else if fd.color_logs {
+            let items = List::new(logs)
+                .block(block)
+                .highlight_symbol(RIGHT_ARROW)
+                .highlight_style(Style::default().add_modifier(Modifier::BOLD));
+            // This should always return Some, as logs is not empty
+            if let Some(log_state) = app_data.lock().get_log_state() {
+                f.render_stateful_widget(items, area, log_state);
+            }
         } else {
             let items = List::new(logs)
+                .fg(colors.logs.text)
                 .block(block)
                 .highlight_symbol(RIGHT_ARROW)
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
@@ -60,6 +79,7 @@ mod tests {
 
     use crate::{
         app_data::{ContainerImage, ContainerName},
+        config::AppColors,
         ui::{
             draw_blocks::tests::{
                 expected_to_vec, get_result, insert_logs, test_setup, BORDER_CHARS,
@@ -164,7 +184,6 @@ mod tests {
 
         let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
         fd.status.insert(Status::Init);
-        let colors = setup.app_data.lock().config.app_colors;
 
         setup
             .terminal
@@ -172,7 +191,7 @@ mod tests {
                 super::draw(
                     &setup.app_data,
                     setup.area,
-                    colors,
+                    AppColors::new(),
                     f,
                     &fd,
                     &setup.gui_state,
@@ -218,7 +237,7 @@ mod tests {
                 super::draw(
                     &setup.app_data,
                     setup.area,
-                    colors,
+                    AppColors::new(),
                     f,
                     &fd,
                     &setup.gui_state,
@@ -251,7 +270,6 @@ mod tests {
         let mut setup = test_setup(w, h, true, true);
 
         insert_logs(&setup);
-        let colors = setup.app_data.lock().config.app_colors;
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
@@ -260,7 +278,7 @@ mod tests {
                 super::draw(
                     &setup.app_data,
                     setup.area,
-                    colors,
+                    AppColors::new(),
                     f,
                     &fd,
                     &setup.gui_state,
@@ -303,7 +321,7 @@ mod tests {
                 super::draw(
                     &setup.app_data,
                     setup.area,
-                    colors,
+                    AppColors::new(),
                     f,
                     &fd,
                     &setup.gui_state,
@@ -360,7 +378,230 @@ mod tests {
         ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
-        let colors = setup.app_data.lock().config.app_colors;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    &setup.app_data,
+                    setup.area,
+                    AppColors::new(),
+                    f,
+                    &fd,
+                    &setup.gui_state,
+                );
+            })
+            .unwrap();
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_draw_blocks_logs_custom_colors_parsing() {
+        let (w, h) = (32, 6);
+        let mut setup = test_setup(w, h, true, true);
+        let uuid = Uuid::new_v4();
+        setup.gui_state.lock().next_loading(uuid);
+
+        let expected = [
+            "╭ Logs - container_1 - image_1 ╮",
+            "│        parsing logs ⠙        │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "╰──────────────────────────────╯",
+        ];
+
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        fd.status.insert(Status::Init);
+
+        let mut colors = AppColors::new();
+        colors.logs.background = Color::Green;
+        colors.logs.text = Color::Black;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    &setup.app_data,
+                    setup.area,
+                    colors,
+                    f,
+                    &fd,
+                    &setup.gui_state,
+                );
+            })
+            .unwrap();
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Green);
+                if let (1..=4, 1..=29) = (row_index, result_cell_index) {
+                    assert_eq!(result_cell.fg, Color::Black);
+                }
+            }
+        }
+
+        fd.color_logs = true;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    &setup.app_data,
+                    setup.area,
+                    colors,
+                    f,
+                    &fd,
+                    &setup.gui_state,
+                );
+            })
+            .unwrap();
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Reset);
+                if let (1..=4, 1..=29) = (row_index, result_cell_index) {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+    }
+
+    #[test]
+
+    fn test_draw_blocks_logs_custom_colors_no_logs() {
+        let (w, h) = (35, 6);
+        let mut setup = test_setup(w, h, true, true);
+
+        let expected = [
+            "╭ Logs - container_1 - image_1 ───╮",
+            "│          no logs found          │",
+            "│                                 │",
+            "│                                 │",
+            "│                                 │",
+            "╰─────────────────────────────────╯",
+        ];
+        let mut colors = AppColors::new();
+        colors.logs.background = Color::Green;
+        colors.logs.text = Color::Black;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    &setup.app_data,
+                    setup.area,
+                    colors,
+                    f,
+                    &setup.fd,
+                    &setup.gui_state,
+                );
+            })
+            .unwrap();
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Green);
+                if let (1..=4, 1..=29) = (row_index, result_cell_index) {
+                    assert_eq!(result_cell.fg, Color::Black);
+                }
+            }
+        }
+
+        setup.fd.color_logs = true;
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    &setup.app_data,
+                    setup.area,
+                    colors,
+                    f,
+                    &setup.fd,
+                    &setup.gui_state,
+                );
+            })
+            .unwrap();
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Reset);
+                if let (1..=4, 1..=29) = (row_index, result_cell_index) {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Logs correct displayed with custom colors
+    fn test_draw_blocks_logs_custom_colors_logs() {
+        let (w, h) = (36, 6);
+        let mut setup = test_setup(w, h, true, true);
+        insert_logs(&setup);
+
+        let mut colors = setup.app_data.lock().config.app_colors;
+        colors.logs.background = Color::Green;
+        colors.logs.text = Color::Black;
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        fd.color_logs = true;
+
+        // Standard colors when color_logs is true
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    &setup.app_data,
+                    setup.area,
+                    colors,
+                    f,
+                    &fd,
+                    &setup.gui_state,
+                );
+            })
+            .unwrap();
+        let expected = [
+            "╭ Logs 3/3 - container_1 - image_1 ╮",
+            "│  line 1                          │",
+            "│  line 2                          │",
+            "│▶ line 3                          │",
+            "│                                  │",
+            "╰──────────────────────────────────╯",
+        ];
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Reset);
+                if let (1..=4, 1..=34) = (row_index, result_cell_index) {
+                    assert_eq!(result_cell.fg, Color::Reset);
+                    if row_index == 3 && (1..=34).contains(&result_cell_index) {
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    } else {
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                }
+            }
+        }
+
+        fd.color_logs = false;
 
         setup
             .terminal
@@ -380,6 +621,15 @@ mod tests {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Green);
+                if let (1..=4, 1..=34) = (row_index, result_cell_index) {
+                    assert_eq!(result_cell.fg, Color::Black);
+                    if row_index == 3 && (1..=34).contains(&result_cell_index) {
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    } else {
+                        assert!(result_cell.modifier.is_empty());
+                    }
+                }
             }
         }
     }

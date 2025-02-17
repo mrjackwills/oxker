@@ -19,6 +19,7 @@ use crate::{
 use super::{generate_block, CIRCLE};
 
 /// Format the container data to display nicely on the screen
+/// TODO move this so that a style line is stored in the app_data, so it only needs to be calculated once
 fn format_containers<'a>(colors: AppColors, i: &ContainerItem, widths: &Columns) -> Line<'a> {
     let state_style = Style::default().fg(i.state.get_color(colors));
 
