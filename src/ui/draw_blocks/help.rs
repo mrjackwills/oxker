@@ -1,5 +1,5 @@
 use crossterm::event::KeyCode;
-use jiff::tz::TimeZone;
+use jiff::tz::{Offset, TimeZone};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -85,7 +85,11 @@ impl HelpInfo {
     }
 
     /// Generate the button information span + metadata
-    fn gen_keymap_info(colors: AppColors, zone: Option<&TimeZone>, show_timestamp: bool) -> Self {
+    fn gen_keymap_info(
+        colors: AppColors,
+        zone: Option<&(TimeZone, Offset)>,
+        show_timestamp: bool,
+    ) -> Self {
         let button_item = |x: &str| Self::highlighted_text_span(&format!(" ( {x} ) "), colors);
         let button_desc = |x: &str| Self::text_span(x, colors);
         let or = || button_desc("or");
@@ -209,7 +213,11 @@ impl HelpInfo {
 
     /// Display timezone in timestamps are visible
     /// Has ability to display if keymap or colors are customized, but currently not in use
-    fn custom_text<'a>(colors: AppColors, _keymap: &Keymap, zone: Option<&TimeZone>) -> Line<'a> {
+    fn custom_text<'a>(
+        colors: AppColors,
+        _keymap: &Keymap,
+        zone: Option<&(TimeZone, Offset)>,
+    ) -> Line<'a> {
         let highlighted = |x: &str| Self::highlighted_text_span(x, colors);
         let text = |x: &str| Self::text_span(x, colors);
 
@@ -221,7 +229,7 @@ impl HelpInfo {
         //     op.push(highlighted("customised app colors, "));
         // };
 
-        let zone = zone.and_then(|i| i.iana_name()).unwrap_or("Etc/UTC");
+        let zone = zone.and_then(|i| i.0.iana_name()).unwrap_or("Etc/UTC");
         Line::from(Vec::from([text("logs timezone: "), highlighted(zone)])).centered()
     }
 
@@ -229,7 +237,7 @@ impl HelpInfo {
     fn gen_custom_keymap_info(
         colors: AppColors,
         km: &Keymap,
-        zone: Option<&TimeZone>,
+        zone: Option<&(TimeZone, Offset)>,
         show_timestamp: bool,
     ) -> Self {
         let button_item = |x: &str| Self::highlighted_text_span(&format!(" ( {x} ) "), colors);
@@ -323,7 +331,7 @@ pub fn draw(
     f: &mut Frame,
     keymap: &Keymap,
     show_timestamp: bool,
-    zone: Option<&TimeZone>,
+    zone: Option<&(TimeZone, Offset)>,
 ) {
     let title = format!(" {VERSION} ");
 
@@ -420,7 +428,7 @@ mod tests {
         ui::draw_blocks::VERSION,
     };
     use crossterm::event::KeyCode;
-    use jiff::tz::TimeZone;
+    use jiff::tz::{Offset, TimeZone};
     use ratatui::style::{Color, Modifier};
 
     use crate::ui::draw_blocks::tests::{expected_to_vec, get_result, test_setup};
@@ -953,7 +961,7 @@ mod tests {
                     f,
                     &Keymap::new(),
                     true,
-                    Some(&TimeZone::get("asia/tokyo").unwrap()),
+                    Some(&(TimeZone::get("asia/tokyo").unwrap(), Offset::constant(9))),
                 );
             })
             .unwrap();

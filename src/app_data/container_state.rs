@@ -6,7 +6,10 @@ use std::{
 };
 
 use bollard::service::Port;
-use jiff::{tz::TimeZone, Timestamp};
+use jiff::{
+    tz::{Offset, TimeZone},
+    Timestamp,
+};
 use ratatui::{
     style::Color,
     widgets::{ListItem, ListState},
@@ -528,12 +531,24 @@ impl LogsTz {
         (Self(tz.to_owned()), content.to_owned())
     }
 
+    // /// Convert a LogsTZ to a datetime stamp in a given timezone
+    // pub fn to_zoned(&self, zone: &TimeZone) -> Option<String> {
+    //     self.0.parse::<Timestamp>().map_or_else(
+    //         |_| None,
+    //         |ts| Some(format!("{:.300}", ts.to_zoned(zone.to_owned()).datetime())),
+    //     )
+    // }
+
     /// Convert a LogsTZ to a datetime stamp in a given timezone
-    pub fn to_zoned(&self, zone: &TimeZone) -> Option<String> {
+    pub fn offset(&self, offset: &Offset) -> Option<String> {
         self.0.parse::<Timestamp>().map_or_else(
             |_| None,
-            |ts| Some(format!("{:.300}", ts.to_zoned(zone.to_owned()).datetime())),
+            |i| Some(format!("{:.300}", i.display_with_offset(*offset))),
         )
+        // self.0.parse::<Timestamp>().map_or_else(
+        // |_| None,
+        // |ts| Some(format!("{:.300}", ts.to_zoned(zone.to_owned()).datetime())),
+        // )
     }
 }
 

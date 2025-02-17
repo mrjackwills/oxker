@@ -893,11 +893,12 @@ impl AppData {
                     let (log_tz, log_content) = LogsTz::splitter(i.as_str());
                     if !show_timestamp {
                         i = log_content;
-                    } else if let Some(timezone) = config_tz.as_ref() {
+                    } else if let Some((_timezone, offset)) = config_tz.as_ref() {
+                        log_tz.offset(offset);
                         i = format!(
                             "{} {}",
                             log_tz
-                                .to_zoned(timezone)
+                                .offset(offset)
                                 .unwrap_or_else(|| log_tz.to_string()),
                             log_content
                         );

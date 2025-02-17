@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use jiff::tz::TimeZone;
+use jiff::tz::{Offset, TimeZone};
 use parse_args::Args;
 use parse_config_file::ConfigFile;
 mod color_parser;
@@ -28,7 +28,7 @@ pub struct Config {
     pub show_self: bool,
     pub show_std_err: bool,
     pub show_timestamp: bool,
-    pub timezone: Option<TimeZone>,
+    pub timezone: Option<(TimeZone, Offset)>,
     pub use_cli: bool,
 }
 
@@ -78,16 +78,17 @@ impl Config {
     /// Attempt to parse a timezone into a jiff::tz::TimeZone
     /// If offset is the same as UTC, return None
     /// TODO actually return Option<(TimeZone, Offset)>
-    fn parse_timezone(input: Option<String>) -> Option<TimeZone> {
+    fn parse_timezone(input: Option<String>) -> Option<(TimeZone, Offset)> {
         let timezone_str = input?;
         let Ok(tz) = jiff::tz::TimeZone::get(&timezone_str) else {
             return None;
         };
         let current_ts = jiff::Timestamp::now();
-        if jiff::tz::TimeZone::UTC.to_offset(current_ts) == tz.to_offset(current_ts) {
+        let offset = tz.to_offset(current_ts);
+        if jiff::tz::TimeZone::UTC.to_offset(current_ts) == offset {
             None
         } else {
-            Some(tz)
+            Some((tz, offset))
         }
     }
     /// Check if oxker is running inside of a container
