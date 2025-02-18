@@ -585,7 +585,7 @@ impl AppData {
     /// Get the title for log panel for selected container, will be either
     /// 1) "logs x/x - container_name - container_image"
     /// 2) "logs - container_name - container_image" when no logs found
-    /// 3) "" no container currently selected - aka no containers on system
+    /// 3) " " no container currently selected - aka no containers on system
     pub fn get_log_title(&self) -> String {
         self.get_selected_container()
             .map_or_else(String::new, |ci| {
@@ -888,7 +888,6 @@ impl AppData {
             if !container.is_oxker {
                 container.last_updated = Self::get_systemtime();
                 let current_len = container.logs.len();
-                // TODO refactor this, store the styled logs into the container.logs
                 for mut i in logs {
                     let (log_tz, log_content) = LogsTz::splitter(i.as_str());
                     if !show_timestamp {

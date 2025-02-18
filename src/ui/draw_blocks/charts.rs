@@ -73,8 +73,6 @@ impl ChartType {
     }
 }
 
-// mem_stats, mem_dataset, mem.1, "", cpu.2
-// current, dataset, max, name, state
 /// Create charts
 fn make_chart<'a, T: Stats + Display>(
     chart_type: ChartType,

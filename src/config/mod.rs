@@ -77,7 +77,7 @@ impl From<ConfigFile> for Config {
 impl Config {
     /// Attempt to parse a timezone into a jiff::tz::TimeZone
     /// If offset is the same as UTC, return None
-    /// TODO actually return Option<(TimeZone, Offset)>
+    /// TODO test me
     fn parse_timezone(input: Option<String>) -> Option<(TimeZone, Offset)> {
         let timezone_str = input?;
         let Ok(tz) = jiff::tz::TimeZone::get(&timezone_str) else {
@@ -166,5 +166,33 @@ impl Config {
             return Self::from(config_file).merge_args(config_from_cli);
         }
         config_from_cli
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use jiff::tz::{Offset, TimeZone};
+
+    #[test]
+    /// Test various timezones get parsed correctly
+    fn test_config_timezone_parser() {
+        assert!(super::Config::parse_timezone(None).is_none());
+
+        // Timezone with no offset just return None
+        for i in ["Europe/London", "Africa/Accra"] {
+            assert!(super::Config::parse_timezone(Some(i.to_owned())).is_none());
+        }
+
+        let expected = Some((
+            TimeZone::get("Asia/Tokyo").unwrap(),
+            Offset::from_hours(9).unwrap(),
+        ));
+        // string case ignored
+        for i in ["ASIA/TOKYO", "asia/tokyo", "aSiA/tOkYo"] {
+            let result = super::Config::parse_timezone(Some(i.to_owned()));
+            assert!(result.is_some());
+            assert_eq!(result, expected);
+        }
     }
 }

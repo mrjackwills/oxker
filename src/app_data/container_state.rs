@@ -35,6 +35,7 @@ impl ContainerId {
     }
 
     /// Only return first 8 chars of id, is usually more than enough for uniqueness
+    /// TODO container id is a hex string, so can assume that 0..=8 will always return a 8 char ascii &str - need to update tests to use real ids, or atleast strings of the correct-ish length
     pub fn get_short(&self) -> String {
         self.0.chars().take(8).collect::<String>()
     }
@@ -528,24 +529,12 @@ impl LogsTz {
         (Self(tz.to_owned()), content.to_owned())
     }
 
-    // /// Convert a LogsTZ to a datetime stamp in a given timezone
-    // pub fn to_zoned(&self, zone: &TimeZone) -> Option<String> {
-    //     self.0.parse::<Timestamp>().map_or_else(
-    //         |_| None,
-    //         |ts| Some(format!("{:.300}", ts.to_zoned(zone.to_owned()).datetime())),
-    //     )
-    // }
-
-    /// Convert a LogsTZ to a datetime stamp in a given timezone
+    /// Try to create a string of a timestamp into the given timexone, via its offset
     pub fn offset(&self, offset: &Offset) -> Option<String> {
         self.0.parse::<Timestamp>().map_or_else(
             |_| None,
             |i| Some(format!("{:.300}", i.display_with_offset(*offset))),
         )
-        // self.0.parse::<Timestamp>().map_or_else(
-        // |_| None,
-        // |ts| Some(format!("{:.300}", ts.to_zoned(zone.to_owned()).datetime())),
-        // )
     }
 }
 
