@@ -897,9 +897,7 @@ impl AppData {
                         log_tz.offset(offset);
                         i = format!(
                             "{} {}",
-                            log_tz
-                                .offset(offset)
-                                .unwrap_or_else(|| log_tz.to_string()),
+                            log_tz.offset(offset).unwrap_or_else(|| log_tz.to_string()),
                             log_content
                         );
                     }

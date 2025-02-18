@@ -6,10 +6,7 @@ use std::{
 };
 
 use bollard::service::Port;
-use jiff::{
-    tz::{Offset, TimeZone},
-    Timestamp,
-};
+use jiff::{tz::Offset, Timestamp};
 use ratatui::{
     style::Color,
     widgets::{ListItem, ListState},

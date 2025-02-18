@@ -130,10 +130,11 @@ Available command line arguments
 |```--host [string]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
 |```--no-stderr```| Do not include stderr output in logs.|
 |```--save-dir [string]```| Save exported logs into a custom directory. Defaults to `$HOME`.|
-|```--timezone [string]```| Display the Docker logs timestamps in a given, valid, timezone. Defaults to `Etc/UTC`.|
+|```--timezone [string]```| Display the Docker logs timestamps in a given [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). Defaults to `Etc/UTC`.|
 |```--use-cli```| Use the Docker application when exec-ing into a container, instead of the Docker API.|
 
 ### Config File
+
 
 A config file enables the user to persist settings, it also enables the user to create a custom keymap, and set the color scheme used by the application.
 <br>
