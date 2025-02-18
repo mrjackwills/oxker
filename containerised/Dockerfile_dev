@@ -14,8 +14,6 @@ COPY ./target/x86_64-unknown-linux-musl/release/oxker /app/
 ENTRYPOINT [ "/app/oxker"]
 
 
-# cargo build --release --target x86_64-unknown-linux-musl --features tzdb
-
 # Dev build for testing
 # docker build -t oxker_dev -f containerised/Dockerfile_dev . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
 
