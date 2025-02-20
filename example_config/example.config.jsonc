@@ -20,6 +20,8 @@
 	"gui": true,
 	// Docker host location
 	"host": "/var/run/docker.sock",
+	// Display the timestamp in a custom format, if given option is invalid, it will default to %Y-%m-%dT%H:%M:%S.%8f -> 2025-02-18T12:34:56.01234567
+	"timestamp_format":"%Y-%m-%dT%H:%M:%S.%8f",
 	// Display the container logs timestamp with a given timezone, if timezone is unknown, defaults to UTC
 	"timezone": "Etc/UTC",
 	// Directory for saving exported logs, defaults to `$HOME`, this is automatically *correctly* calculated for Linux, Mac, and Windows

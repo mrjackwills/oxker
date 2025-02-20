@@ -879,10 +879,10 @@ impl AppData {
     pub fn update_log_by_id(&mut self, logs: Vec<String>, id: &ContainerId) {
         let color = self.config.color_logs;
         let raw = self.config.raw_logs;
+        let format = self.config.timestamp_format.clone();
+        let config_tz = self.config.timezone.clone();
 
         let show_timestamp = self.config.show_timestamp;
-
-        let config_tz = self.config.timezone.clone();
 
         if let Some(container) = self.get_any_container_by_id(id) {
             if !container.is_oxker {
@@ -890,15 +890,16 @@ impl AppData {
                 let current_len = container.logs.len();
                 for mut i in logs {
                     let (log_tz, log_content) = LogsTz::splitter(i.as_str());
-                    if !show_timestamp {
-                        i = log_content;
-                    } else if let Some((_timezone, offset)) = config_tz.as_ref() {
-                        log_tz.offset(offset);
+                    if show_timestamp {
                         i = format!(
                             "{} {}",
-                            log_tz.offset(offset).unwrap_or_else(|| log_tz.to_string()),
+                            log_tz
+                                .display(config_tz.as_ref(), &format)
+                                .unwrap_or_else(|| log_tz.to_string()),
                             log_content
                         );
+                    } else {
+                        i = log_content;
                     }
                     let lines = if color {
                         log_sanitizer::colorize_logs(&i)

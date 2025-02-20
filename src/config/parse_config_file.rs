@@ -62,18 +62,19 @@ impl ConfigFileType {
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct ConfigFile {
     pub color_logs: Option<bool>,
+    pub colors: Option<ConfigColors>,
     pub docker_interval: Option<u32>,
-    pub timezone: Option<String>,
     pub gui: Option<bool>,
     pub host: Option<String>,
+    pub keymap: Option<ConfigKeymap>,
     pub raw_logs: Option<bool>,
-    pub show_timestamp: Option<bool>,
     pub save_dir: Option<String>,
     pub show_self: Option<bool>,
     pub show_std_err: Option<bool>,
+    pub show_timestamp: Option<bool>,
+    pub timestamp_format: Option<String>,
+    pub timezone: Option<String>,
     pub use_cli: Option<bool>,
-    pub colors: Option<ConfigColors>,
-    pub keymap: Option<ConfigKeymap>,
 }
 
 impl ConfigFile {

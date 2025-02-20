@@ -6,7 +6,7 @@ use std::{
 };
 
 use bollard::service::Port;
-use jiff::{tz::Offset, Timestamp};
+use jiff::{tz::TimeZone, Timestamp};
 use ratatui::{
     style::Color,
     widgets::{ListItem, ListState},
@@ -529,12 +529,17 @@ impl LogsTz {
         (Self(tz.to_owned()), content.to_owned())
     }
 
-    /// Try to create a string of a timestamp into the given timexone, via its offset
-    pub fn offset(&self, offset: &Offset) -> Option<String> {
-        self.0.parse::<Timestamp>().map_or_else(
-            |_| None,
-            |i| Some(format!("{:.300}", i.display_with_offset(*offset))),
-        )
+    /// Display the timestamp in a given format, and if provided, with a timezone offset
+    pub fn display(&self, tz: Option<&TimeZone>, format: &str) -> Option<String> {
+        self.0.parse::<Timestamp>().map_or(None, |t| {
+            if let Some(tz) = tz.as_ref() {
+                let tz = tz.iana_name()?;
+                let z = t.in_tz(tz).ok()?;
+                Some(z.strftime(format).to_string())
+            } else {
+                Some(t.strftime(format).to_string())
+            }
+        })
     }
 }
 
@@ -560,6 +565,8 @@ impl Default for Logs {
 
 impl Logs {
     /// Only allow a new log line to be inserted if the log timestamp isn't in the tz HashSet
+    /// This needs to be line, as logtz can be usig a custom formatter which will resutl in just "2025" returned
+    /// todo
     pub fn insert(&mut self, line: ListItem<'static>, tz: LogsTz) {
         if self.tz.insert(tz) {
             self.logs.items.push(line);
