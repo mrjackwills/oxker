@@ -100,7 +100,7 @@ curl https://raw.githubusercontent.com/mrjackwills/oxker/main/install.sh | bash
 ```shell
 oxker
 ```
-In application controls, these can be customized with the [config file](#Config-File)
+In application controls, these, amongst many other settings, can be customized with the [config file](#Config-File)
 | button| result|
 |--|--|
 | ```( tab )``` or ```( shift+tab )``` | Change panel, clicking on a panel also changes the selected panel.|
@@ -126,7 +126,7 @@ Available command line arguments
 |```-t```| Remove timestamps from each log entry.|
 |```-s```| If running via Docker, will display the oxker container.|
 |```-g```| No TUI, essentially a debugging mode with limited functionality, for now.|
-|```--config-file [string]```| Location of a `config.toml`/`config.json`/`config.jsonc`.|
+|```--config-file [string]```| Location of a `config.toml`/`config.json`/`config.jsonc`. By default will check the users local config figuration directory.|
 |```--host [string]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
 |```--no-stderr```| Do not include stderr output in logs.|
 |```--save-dir [string]```| Save exported logs into a custom directory. Defaults to `$HOME`.|
