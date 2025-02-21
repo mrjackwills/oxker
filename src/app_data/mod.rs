@@ -167,7 +167,7 @@ impl AppData {
 
     /// Check if a given container can be inserted into the "visible" list, based on current filter term and filter_by
     fn can_insert(&self, container: &ContainerItem) -> bool {
-        self.filter.term.as_ref().map_or(true, |term| {
+        self.filter.term.as_ref().is_none_or(|term| {
             let term = term.to_lowercase();
             match self.filter.by {
                 FilterBy::All => {
