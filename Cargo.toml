@@ -44,7 +44,7 @@ tokio-util = "0.7"
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
-uuid = { version = "1.12", features = ["fast-rng", "v4"] }
+uuid = { version = "1.14", features = ["fast-rng", "v4"] }
 
 
 [profile.release]
