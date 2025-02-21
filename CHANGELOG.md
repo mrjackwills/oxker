@@ -1,4 +1,18 @@
-# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.9.0'>v0.9.0</a>
+### Chores
++ dependencies updated, [e5f355a1928f78abdb64e4c5617d6fac06340016], [4539d8ad0705b46d7c89c51c7be482b696d26e5f], [6aee6181136235a1a4f79af9b9748c1801be8bf8], [64d1bdf2bf88407e02f0eded1e03fcfc5ee2d8e3]
++ .devcontainer dependencies updated, [5c8e76e7bb4d7aab8543c9be09fdbc4ffa446b10]
++ example docker-compose.yml updated, [2354b0b9be1ab3795a421512594b2650b9cbdd74]
++ Rust 1.84 linting, [3065265e26c30d78ba738cfe731d3901ec1948d0]
+
+### Features
++ Enable log timezones to be set to any given timezone, closes #56  [7a5e7a25873d2c270e5808730721ebb5427a051]
++ Config file implement, including customizing color scheme of application, closes #47 [f4d54e1ba8ea1516394aef19511a63e6271f27bf]
++ update Rust edition to 2024, [7e4a960b888f1dab524d6045504162cea1171d20]
+
+### Fixes
++ Only draw screen if data or layout has changed, drastically reduces CPU usage, [bfc295c50e982886ccaa5e60b57f10d3690b3f09]
+ 
+ # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.9.0'>v0.9.0</a>
 ### 2024-12-05
 
 ### Chores
@@ -351,7 +365,7 @@
 + dead code removed, [b8f5792d](https://github.com/mrjackwills/oxker/commit/b8f5792d1865d3a398cd7f23aa9473a55dc6ea44)
 + improve the get_width function, [04c26fe8](https://github.com/mrjackwills/oxker/commit/04c26fe8fc7c79506921b9cff42825b1ee132737)
 + place ui methods into a Ui struct, [3437df59](https://github.com/mrjackwills/oxker/commit/3437df59884f084624031fceb34ea3012a8e2251)
-+ get_horizotal/vertical constraints into single method, [e8f5cf9c](https://github.com/mrjackwills/oxker/commit/e8f5cf9c6f8cd5f807a05fb61e31d7cd1426486f)
++ get_horizontal/vertical constraints into single method, [e8f5cf9c](https://github.com/mrjackwills/oxker/commit/e8f5cf9c6f8cd5f807a05fb61e31d7cd1426486f)
 + docker update_everything variables, [074cb957](https://github.com/mrjackwills/oxker/commit/074cb957f274675a468f08fecb1c43ff7453217d)
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.2.3'>v0.2.3</a>

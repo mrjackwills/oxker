@@ -345,6 +345,7 @@ mod tests {
 
     #[test]
     /// Test all combination of headers & sort by
+    #[allow(clippy::too_many_lines)]
     fn test_draw_blocks_headers_sort_containers() {
         let (w, h) = (140, 1);
         let mut setup = test_setup(w, h, true, true);
