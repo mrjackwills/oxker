@@ -30,7 +30,7 @@ host = "/var/run/docker.sock"
 # Display the container logs timestamp with a given timezone, if timezone is unknown, defaults to UTC
 timezone = "Etc/UTC"
 
-# Display the timestamp in a custom format, if given option is invalid, it will default to %Y-%m-%dT%H:%M:%S.%8f -> 2025-02-18T12:34:56.01234567
+# Display the timestamp in a custom format, if given option is invalid, it will default to %Y-%m-%dT%H:%M:%S.%8f -> 2025-02-18T12:34:56.012345678Z
 # *Should* accept any valid strftime string up to 32 chars
 timestamp_format="%Y-%m-%dT%H:%M:%S.%8f"
 
@@ -162,6 +162,20 @@ restarting ="lightgreen"
 running_healthy ="green"
 running_unhealthy="#FFB224"
 unknown="red"
+
+# The filter panel
+[colors.filter]
+# Background color of panel
+background = "reset"
+# color of text
+text="gray"
+# background color of the selected filter by item (Name/Image/Status/All)
+selected_filter_background="gray"
+# text color of the selected filter by item (Name/Image/Status/All)
+selected_filter_text="black"
+# Highlighted text color
+highlight="magenta"
+
 
 # The color the of Docker commands available for each container
 [colors.commands]

@@ -8,7 +8,7 @@
 	"show_std_err": false,
 	"show_timestamp": true,
 	"timezone": "Etc/UTC",
-	"timestamp_format":"%Y-%m-%dT%H:%M:%S.%8f",
+	"timestamp_format": "%Y-%m-%dT%H:%M:%S.%8f",
 	"use_cli": false,
 	"colors": {
 		"borders": {
@@ -63,6 +63,13 @@
 			"text": "blue",
 			"text_rx": "#FFE9C1",
 			"text_tx": "#CD8C8C"
+		},
+		"filter": {
+			"background": "reset",
+			"text": "gray",
+			"selected_filter_background": "gray",
+			"selected_filter_text": "black",
+			"highlight": "magenta"
 		},
 		"headers_bar": {
 			"background": "magenta",

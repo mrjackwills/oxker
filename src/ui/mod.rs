@@ -380,7 +380,7 @@ fn draw_frame(
 
     // Draw filter bar
     if let Some(rect) = whole_layout.get(2) {
-        draw_blocks::filter::draw(*rect, f, fd);
+        draw_blocks::filter::draw(*rect, colors, f, fd);
     }
 
     if let Some(id) = fd.delete_confirm.as_ref() {

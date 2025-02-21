@@ -73,6 +73,22 @@ impl From<Option<ConfigColors>> for AppColors {
                 Self::map_color(ep.text.as_deref(), &mut app_colors.popup_error.text);
             }
 
+            // Filter panel
+            if let Some(fc) = config_colors.filter {
+                Self::map_color(fc.background.as_deref(), &mut app_colors.filter.background);
+                Self::map_color(fc.highlight.as_deref(), &mut app_colors.filter.highlight);
+
+                Self::map_color(
+                    fc.selected_filter_background.as_deref(),
+                    &mut app_colors.filter.selected_filter_background,
+                );
+                Self::map_color(
+                    fc.selected_filter_text.as_deref(),
+                    &mut app_colors.filter.selected_filter_text,
+                );
+                Self::map_color(fc.text.as_deref(), &mut app_colors.filter.text);
+            }
+
             // Help Popup
             if let Some(hp) = config_colors.popup_help {
                 Self::map_color(
@@ -221,6 +237,7 @@ optional_config_struct!(
     ConfigCommands, background, pause, restart, stop, delete, resume, start;
     ConfigContainers, background, icon, text, text_rx, text_tx;
     ConfigContainerState, background, dead, exited, paused, removing, restarting, running_healthy, running_unhealthy, unknown;
+    ConfigFilter, background, text, selected_filter_background, selected_filter_text, highlight;
     ConfigHeadersBar, background, loading_spinner, text, text_selected;
     ConfigLogs, background, text
 );
@@ -233,6 +250,7 @@ config_struct!(
     Commands, background, pause, restart, stop, delete, resume, start;
     Containers, background, icon, text, text_rx, text_tx;
     ContainerState, dead, exited, paused, removing, restarting, running_healthy, running_unhealthy, unknown;
+    Filter, background, text, selected_filter_background, selected_filter_text, highlight;
     HeadersBar, background, text_selected, loading_spinner, text;
     Logs, background, text;
     PopupDelete, background, text, text_highlight;
@@ -250,6 +268,7 @@ pub struct ConfigColors {
     commands: Option<ConfigCommands>,
     container_state: Option<ConfigContainerState>,
     containers: Option<ConfigContainers>,
+    filter: Option<ConfigFilter>,
     headers_bar: Option<ConfigHeadersBar>,
     logs: Option<ConfigLogs>,
     popup_delete: Option<ConfigBackgroundTextHighlight>,
@@ -365,6 +384,19 @@ impl ContainerState {
     }
 }
 
+/// Default colours for the filter panel
+impl Filter {
+    const fn new() -> Self {
+        Self {
+            background: Color::Reset,
+            highlight: Color::Magenta,
+            selected_filter_background: Color::Gray,
+            selected_filter_text: Color::Black,
+            text: Color::Gray,
+        }
+    }
+}
+
 /// Default colours for the logs panel, only applied if color_logs is false
 impl Logs {
     const fn new() -> Self {
@@ -426,6 +458,7 @@ pub struct AppColors {
     pub commands: Commands,
     pub container_state: ContainerState,
     pub containers: Containers,
+    pub filter: Filter,
     pub headers_bar: HeadersBar,
     pub logs: Logs,
     pub popup_delete: PopupDelete,
@@ -444,6 +477,7 @@ impl AppColors {
             commands: Commands::new(),
             container_state: ContainerState::new(),
             containers: Containers::new(),
+            filter: Filter::new(),
             headers_bar: HeadersBar::new(),
             logs: Logs::new(),
             popup_delete: PopupDelete::new(),

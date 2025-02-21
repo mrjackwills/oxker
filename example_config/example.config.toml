@@ -163,6 +163,20 @@ running_healthy ="green"
 running_unhealthy="#FFB224"
 unknown="red"
 
+# The filter panel
+[colors.filter]
+# Background color of panel
+background = "reset"
+# color of text
+text="gray"
+# background color of the selected filter by item (Name/Image/Status/All)
+selected_filter_background="gray"
+# text color of the selected filter by item (Name/Image/Status/All)
+selected_filter_text="black"
+# Highlighted text color
+highlight="magenta"
+
+
 # The color the of Docker commands available for each container
 [colors.commands]
 # Background color of panel

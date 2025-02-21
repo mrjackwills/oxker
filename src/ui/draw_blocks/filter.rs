@@ -1,16 +1,20 @@
 use ratatui::{
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style, Stylize},
     text::{Line, Span},
     Frame,
 };
 
-use crate::{app_data::FilterBy, ui::FrameData};
+use crate::{app_data::FilterBy, config::AppColors, ui::FrameData};
 
 /// Create the filter_by by spans, coloured dependant on which one is selected
-fn filter_by_spans(fd: &FrameData) -> [Span; 4] {
-    let selected = Style::default().bg(Color::Gray).fg(Color::Black);
-    let not_selected = Style::default().bg(Color::Reset).fg(Color::Reset);
+fn filter_by_spans(colors: AppColors, fd: &FrameData) -> [Span; 4] {
+    let selected = Style::default()
+        .bg(colors.filter.selected_filter_background)
+        .fg(colors.filter.selected_filter_text);
+    let not_selected = Style::default()
+        .bg(colors.filter.background)
+        .fg(colors.filter.text);
 
     let name = [" Name ", " Image ", " Status ", " All "];
 
@@ -31,9 +35,13 @@ fn filter_by_spans(fd: &FrameData) -> [Span; 4] {
 }
 
 /// Draw the filter bar
-pub fn draw(area: Rect, frame: &mut Frame, fd: &FrameData) {
-    let style_but = Style::default().fg(Color::Black).bg(Color::Magenta);
-    let style_desc = Style::default().fg(Color::Gray).bg(Color::Reset);
+pub fn draw(area: Rect, colors: AppColors, frame: &mut Frame, fd: &FrameData) {
+    let style_but = Style::default()
+        .fg(colors.filter.selected_filter_text)
+        .bg(colors.filter.highlight);
+    let style_desc = Style::default()
+        .fg(colors.filter.text)
+        .bg(colors.filter.background);
 
     let mut line = vec![
         Span::styled(" Esc ", style_but),
@@ -41,22 +49,22 @@ pub fn draw(area: Rect, frame: &mut Frame, fd: &FrameData) {
         Span::styled(" ← by → ", style_but),
         Span::from(" "),
     ];
-    line.extend_from_slice(&filter_by_spans(fd));
+    line.extend_from_slice(&filter_by_spans(colors, fd));
     line.extend_from_slice(&[
         Span::styled(
             " term: ",
             Style::default()
-                .fg(Color::Magenta)
+                .fg(colors.filter.highlight)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
             fd.filter_term
                 .as_ref()
                 .map_or(String::new(), std::clone::Clone::clone),
-            Style::default().fg(Color::Gray),
+            Style::default().fg(colors.filter.text),
         ),
     ]);
-    frame.render_widget(Line::from(line), area);
+    frame.render_widget(Line::from(line).bg(colors.filter.background), area);
 }
 
 #[cfg(test)]
@@ -65,9 +73,12 @@ mod tests {
 
     use ratatui::style::{Color, Modifier};
 
-    use crate::ui::{
-        draw_blocks::tests::{expected_to_vec, get_result, test_setup},
-        FrameData,
+    use crate::{
+        config::AppColors,
+        ui::{
+            draw_blocks::tests::{expected_to_vec, get_result, test_setup},
+            FrameData,
+        },
     };
 
     #[test]
@@ -85,7 +96,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(setup.area, f, &setup.fd);
+                super::draw(setup.area, AppColors::new(), f, &setup.fd);
             })
             .unwrap();
 
@@ -97,12 +108,13 @@ mod tests {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+
                 match result_cell_index {
                     0..=4 | 12..=19 => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    5..=11 => {
+                    5..=11 | 27..=46 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
@@ -131,7 +143,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(setup.area, f, &fd);
+                super::draw(setup.area, AppColors::new(), f, &fd);
             })
             .unwrap();
 
@@ -149,7 +161,7 @@ mod tests {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    5..=11 | 54..=55 => {
+                    5..=11 | 27..=46 | 54..=55 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
@@ -170,13 +182,13 @@ mod tests {
             }
         }
 
-        // Test when filter_by chances
+        // Test when filter_by changes
         setup.app_data.lock().filter_by_next();
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::draw(setup.area, f, &fd);
+                super::draw(setup.area, AppColors::new(), f, &fd);
             })
             .unwrap();
 
@@ -188,13 +200,12 @@ mod tests {
             let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match result_cell_index {
                     0..=4 | 12..=19 => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    5..=11 | 54..=55 => {
+                    5..=11 | 21..=26 | 34..=46 | 54..=55 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
@@ -209,6 +220,70 @@ mod tests {
                     }
                     _ => {
                         assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Reset);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Make sure custom colors are applied
+    fn test_draw_blocks_filter_row_custom_colors() {
+        let (w, h) = (140, 1);
+        let mut setup = test_setup(w, h, true, true);
+
+        setup
+            .gui_state
+            .lock()
+            .status_push(crate::ui::Status::Filter);
+
+        setup.app_data.lock().filter_term_push('c');
+        setup.app_data.lock().filter_term_push('d');
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+
+        let mut colors = AppColors::new();
+        colors.filter.background = Color::White;
+        colors.filter.highlight = Color::Blue;
+        colors.filter.selected_filter_background = Color::Red;
+        colors.filter.selected_filter_text = Color::Yellow;
+        colors.filter.text = Color::Magenta;
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(setup.area, colors, f, &fd);
+            })
+            .unwrap();
+
+        let expected = [
+            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     "
+        ];
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                match result_cell_index {
+                    0..=4 | 12..=19 => {
+                        assert_eq!(result_cell.bg, Color::Blue);
+                        assert_eq!(result_cell.fg, Color::Yellow);
+                    }
+                    5..=11 | 27..=46 | 54..=55 => {
+                        assert_eq!(result_cell.bg, Color::White);
+                        assert_eq!(result_cell.fg, Color::Magenta);
+                    }
+                    21..=26 => {
+                        assert_eq!(result_cell.bg, Color::Red);
+                        assert_eq!(result_cell.fg, Color::Yellow);
+                    }
+                    47..=53 => {
+                        assert_eq!(result_cell.bg, Color::White);
+                        assert_eq!(result_cell.fg, Color::Blue);
+                        assert_eq!(result_cell.modifier, Modifier::BOLD);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::White);
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
                 }
