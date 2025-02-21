@@ -126,30 +126,35 @@ impl Ui {
         let mut seconds = 5;
         let colors = self.app_data.lock().config.app_colors;
         let keymap = self.app_data.lock().config.keymap.clone();
+        let mut render = true;
         loop {
             if self.now.elapsed() >= std::time::Duration::from_secs(1) {
                 seconds -= 1;
                 self.now = Instant::now();
+                render = true;
                 if seconds < 1 {
                     break;
                 }
             }
 
-            if self
-                .terminal
-                .draw(|f| {
-                    draw_blocks::error::draw(
-                        colors,
-                        &AppError::DockerConnect,
-                        f,
-                        &keymap,
-                        Some(seconds),
-                    );
-                })
-                .is_err()
+            if render
+                && self
+                    .terminal
+                    .draw(|f| {
+                        draw_blocks::error::draw(
+                            colors,
+                            &AppError::DockerConnect,
+                            f,
+                            &keymap,
+                            Some(seconds),
+                        );
+                    })
+                    .is_err()
             {
                 return Err(AppError::Terminal);
             }
+            render = false;
+            std::thread::sleep(POLL_RATE);
         }
         Ok(())
     }
