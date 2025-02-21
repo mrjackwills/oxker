@@ -400,7 +400,8 @@ impl DockerData {
 
     /// Send an update message every x ms, where x is the args.docker_interval
     fn heartbeat(config: &Config, docker_tx: Sender<DockerMessage>) {
-        let update_duration = std::time::Duration::from_millis(u64::from(config.docker_interval));
+        let update_duration =
+            std::time::Duration::from_millis(u64::from(config.docker_interval_ms));
         let mut now = std::time::Instant::now();
         tokio::spawn(async move {
             loop {
