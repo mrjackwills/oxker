@@ -1,8 +1,8 @@
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Modifier, Style, Stylize},
     text::{Line, Span},
-    Frame,
 };
 
 use crate::{app_data::FilterBy, config::AppColors, ui::FrameData};
@@ -76,8 +76,8 @@ mod tests {
     use crate::{
         config::AppColors,
         ui::{
-            draw_blocks::tests::{expected_to_vec, get_result, test_setup},
             FrameData,
+            draw_blocks::tests::{expected_to_vec, get_result, test_setup},
         },
     };
 
@@ -101,7 +101,7 @@ mod tests {
             .unwrap();
 
         let expected = [
-            " Esc  clear  ← by →   Name  Image  Status  All  term:                                                                                        "
+            " Esc  clear  ← by →   Name  Image  Status  All  term:                                                                                        ",
         ];
 
         for (row_index, result_row) in get_result(&setup, w) {
@@ -148,7 +148,7 @@ mod tests {
             .unwrap();
 
         let expected = [
-            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     "
+            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     ",
         ];
 
         for (row_index, result_row) in get_result(&setup, w) {
@@ -193,8 +193,8 @@ mod tests {
             .unwrap();
 
         let expected = [
-        " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     "
-    ];
+            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     ",
+        ];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
@@ -257,7 +257,7 @@ mod tests {
             .unwrap();
 
         let expected = [
-            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     "
+            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     ",
         ];
 
         for (row_index, result_row) in get_result(&setup, w) {

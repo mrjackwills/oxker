@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::config::AppColors;
 
-use super::{gui_state::Region, FrameData, GuiState, SelectablePanel, Status};
+use super::{FrameData, GuiState, SelectablePanel, Status, gui_state::Region};
 
 pub mod charts;
 pub mod commands;
@@ -118,12 +118,12 @@ pub mod tests {
     };
 
     use parking_lot::Mutex;
-    use ratatui::{backend::TestBackend, layout::Rect, style::Color, Terminal};
+    use ratatui::{Terminal, backend::TestBackend, layout::Rect, style::Color};
 
     use crate::{
         app_data::{AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts},
         tests::{gen_appdata, gen_containers},
-        ui::{draw_frame, GuiState, Redraw},
+        ui::{GuiState, Redraw, draw_frame},
     };
 
     use super::FrameData;
@@ -382,7 +382,7 @@ pub mod tests {
             "│      │••       •••                                            ││         │••      •••                                          ││                            │",
             "│      │                                                        ││         │                                                     ││                            │",
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
-                ];
+        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
         let keymap = setup.app_data.lock().config.keymap.clone();
@@ -439,7 +439,7 @@ pub mod tests {
             "│      │                                                        ││         │                                                     ││                            │",
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
             " Esc  clear  ← by →   Name  Image  Status  All  term: r_1                                                                                                       ",
-            ];
+        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal

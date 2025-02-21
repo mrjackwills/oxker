@@ -2,18 +2,18 @@ use anyhow::Result;
 use crossterm::{
     event::{self, DisableMouseCapture, Event},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use parking_lot::Mutex;
 use ratatui::{
+    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Position},
-    Frame, Terminal,
 };
 use std::{
     collections::HashSet,
     io::{self, Stdout, Write},
-    sync::{atomic::Ordering, Arc},
+    sync::{Arc, atomic::Ordering},
     time::Duration,
 };
 use std::{sync::atomic::AtomicBool, time::Instant};
@@ -75,26 +75,29 @@ impl Ui {
         is_running: Arc<AtomicBool>,
         redraw: Arc<Redraw>,
     ) {
-        if let Ok(mut terminal) = Self::setup_terminal() {
-            let cursor_position = terminal.get_cursor_position().unwrap_or_default();
-            let mut ui = Self {
-                app_data,
-                cursor_position,
-                gui_state,
-                input_tx,
-                is_running,
-                now: Instant::now(),
-                redraw,
-                terminal,
-            };
-            if let Err(e) = ui.draw_ui().await {
-                error!("{e}");
+        match Self::setup_terminal() {
+            Ok(mut terminal) => {
+                let cursor_position = terminal.get_cursor_position().unwrap_or_default();
+                let mut ui = Self {
+                    app_data,
+                    cursor_position,
+                    gui_state,
+                    input_tx,
+                    is_running,
+                    now: Instant::now(),
+                    redraw,
+                    terminal,
+                };
+                if let Err(e) = ui.draw_ui().await {
+                    error!("{e}");
+                }
+                if let Err(e) = ui.reset_terminal() {
+                    error!("{e}");
+                };
             }
-            if let Err(e) = ui.reset_terminal() {
-                error!("{e}");
-            };
-        } else {
-            error!("Terminal Error");
+            _ => {
+                error!("Terminal Error");
+            }
         }
     }
 

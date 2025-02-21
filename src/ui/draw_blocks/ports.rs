@@ -1,9 +1,9 @@
 use ratatui::{
+    Frame,
     layout::{Alignment, Rect},
     style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph},
-    Frame,
 };
 
 use crate::{app_data::State, config::AppColors, ui::FrameData};
@@ -82,10 +82,10 @@ mod tests {
         app_data::{ContainerPorts, RunningState, State},
         config::AppColors,
         ui::{
-            draw_blocks::tests::{
-                expected_to_vec, get_result, test_setup, COLOR_ORANGE, COLOR_RX, COLOR_TX,
-            },
             FrameData,
+            draw_blocks::tests::{
+                COLOR_ORANGE, COLOR_RX, COLOR_TX, expected_to_vec, get_result, test_setup,
+            },
         },
     };
 

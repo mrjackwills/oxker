@@ -1,11 +1,11 @@
 use crossterm::event::KeyCode;
 use jiff::tz::TimeZone;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, Paragraph},
-    Frame,
 };
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     ui::gui_state::BoxLocation,
 };
 
-use super::{popup, DESCRIPTION, NAME_TEXT, REPO, VERSION};
+use super::{DESCRIPTION, NAME_TEXT, REPO, VERSION, popup};
 
 /// Help popup box needs these three pieces of information
 struct HelpInfo {
@@ -445,9 +445,11 @@ mod tests {
             })
             .unwrap();
 
-        let version_row =   format!(" ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ ");
+        let version_row = format!(
+            " ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ "
+        );
         let expected = [
-             "                                                                                       ",
+            "                                                                                       ",
             version_row.as_str(),
             " │                                                                                   │ ",
             " │                                      88                                           │ ",
@@ -479,8 +481,8 @@ mod tests {
             " │                                                                                   │ ",
             " │                                                                                   │ ",
             " ╰───────────────────────────────────────────────────────────────────────────────────╯ ",
-            "                                                                                       "
-            ];
+            "                                                                                       ",
+        ];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
@@ -551,9 +553,11 @@ mod tests {
             })
             .unwrap();
 
-        let version_row =   format!(" ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ ");
+        let version_row = format!(
+            " ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ "
+        );
         let expected = [
-             "                                                                                       ",
+            "                                                                                       ",
             version_row.as_str(),
             " │                                                                                   │ ",
             " │                                      88                                           │ ",
@@ -585,8 +589,8 @@ mod tests {
             " │                                                                                   │ ",
             " │                                                                                   │ ",
             " ╰───────────────────────────────────────────────────────────────────────────────────╯ ",
-            "                                                                                       "
-            ];
+            "                                                                                       ",
+        ];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
@@ -675,7 +679,9 @@ mod tests {
             })
             .unwrap();
 
-        let version_row =   format!("  ╭ {VERSION} ─────────────────────────────────────────────────────────────────────────────────────╮  ");
+        let version_row = format!(
+            "  ╭ {VERSION} ─────────────────────────────────────────────────────────────────────────────────────╮  "
+        );
         let expected = [
             "                                                                                                  ",
             version_row.as_str(),
@@ -723,8 +729,8 @@ mod tests {
             "  │                                                                                            │  ",
             "  │                                                                                            │  ",
             "  ╰────────────────────────────────────────────────────────────────────────────────────────────╯  ",
-            "                                                                                                  "
-            ];
+            "                                                                                                  ",
+        ];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
@@ -777,56 +783,58 @@ mod tests {
             })
             .unwrap();
 
-        let version_row =   format!(" ╭ {VERSION} ───────────────────────────────────────────────────────────────────────────────────────────────────╮ ");
+        let version_row = format!(
+            " ╭ {VERSION} ───────────────────────────────────────────────────────────────────────────────────────────────────╮ "
+        );
         let expected = [
-           "                                                                                                              ",
+            "                                                                                                              ",
             version_row.as_str(),
-          " │                                                                                                          │ ",
-          " │                                                  88                                                      │ ",
-          " │                                                  88                                                      │ ",
-          " │                                                  88                                                      │ ",
-          " │                         ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,                       │ ",
-          r#" │                        a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8                       │ "#,
-          r#" │                        8b       d8     )888(     8888[      8PP"""""""  88                               │ "#,
-          r#" │                        "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                               │ "#,
-          r#" │                         `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                               │ "#,
-          " │                                                                                                          │ ",
-          " │                             A simple tui to view & control docker containers                             │ ",
-          " │                                                                                                          │ ",
-          " │ ( 0 ) or ( 1 ) select next panel                                                                         │ ",
-          " │ ( 2 ) or ( 3 ) select previous panel                                                                     │ ",
-          " │ ( q ) or ( r ) scroll list down by one                                                                   │ ",
-          " │ ( y ) or ( z ) scroll list up by one                                                                     │ ",
-          " │ ( o ) or ( p ) scroll list down by many                                                                  │ ",
-          " │ ( w ) or ( x ) scroll list by up many                                                                    │ ",
-          " │ ( s ) or ( t ) scroll list to end                                                                        │ ",
-          " │ ( u ) or ( v ) scroll list to start                                                                      │ ",
-          " │ ( enter ) send docker container command                                                                  │ ",
-          " │ ( g ) or ( h ) exec into a container                                                                     │ ",
-          " │ ( Home ) or ( Del ) toggle this help information - or click heading                                      │ ",
-          " │ ( Home ) or ( Del ) save logs to file                                                                    │ ",
-          " │ ( Page Down ) or ( Page Up ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ",
-          " │ ( i ) or ( j ) enter filter mode                                                                         │ ",
-          " │ ( Up ) or ( Down ) reset container sorting                                                               │ ",
-          " │ ( 4 ) or ( 5 ) sort containers by name                                                                   │ ",
-          " │ ( 6 ) or ( 7 ) sort containers by state                                                                  │ ",
-          " │ ( 8 ) or ( 9 ) sort containers by status                                                                 │ ",
-          " │ ( F1 ) or ( F12 ) sort containers by cpu                                                                 │ ",
-          " │ ( # ) or ( - ) sort containers by memory                                                                 │ ",
-          " │ ( / ) or ( = ) sort containers by id                                                                     │ ",
-          r" │ ( , ) or ( \ ) sort containers by image                                                                  │ ",
-          " │ ( . ) or ( ] ) sort containers by rx                                                                     │ ",
-          " │ ( Backspace ) or ( Back Tab ) sort containers by tx                                                      │ ",
-          " │ ( a ) or ( b ) close dialog                                                                              │ ",
-          " │ ( k ) or ( l ) quit at any time                                                                          │ ",
-          " │                                                                                                          │ ",
-          " │                    currently an early work in progress, all and any input appreciated                    │ ",
-          " │                                   https://github.com/mrjackwills/oxker                                   │ ",
-          " │                                                                                                          │ ",
-          " │                                                                                                          │ ",
-          " ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯ ",
-          "                                                                                                              ",
-    ];
+            " │                                                                                                          │ ",
+            " │                                                  88                                                      │ ",
+            " │                                                  88                                                      │ ",
+            " │                                                  88                                                      │ ",
+            " │                         ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,                       │ ",
+            r#" │                        a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8                       │ "#,
+            r#" │                        8b       d8     )888(     8888[      8PP"""""""  88                               │ "#,
+            r#" │                        "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                               │ "#,
+            r#" │                         `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                               │ "#,
+            " │                                                                                                          │ ",
+            " │                             A simple tui to view & control docker containers                             │ ",
+            " │                                                                                                          │ ",
+            " │ ( 0 ) or ( 1 ) select next panel                                                                         │ ",
+            " │ ( 2 ) or ( 3 ) select previous panel                                                                     │ ",
+            " │ ( q ) or ( r ) scroll list down by one                                                                   │ ",
+            " │ ( y ) or ( z ) scroll list up by one                                                                     │ ",
+            " │ ( o ) or ( p ) scroll list down by many                                                                  │ ",
+            " │ ( w ) or ( x ) scroll list by up many                                                                    │ ",
+            " │ ( s ) or ( t ) scroll list to end                                                                        │ ",
+            " │ ( u ) or ( v ) scroll list to start                                                                      │ ",
+            " │ ( enter ) send docker container command                                                                  │ ",
+            " │ ( g ) or ( h ) exec into a container                                                                     │ ",
+            " │ ( Home ) or ( Del ) toggle this help information - or click heading                                      │ ",
+            " │ ( Home ) or ( Del ) save logs to file                                                                    │ ",
+            " │ ( Page Down ) or ( Page Up ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ",
+            " │ ( i ) or ( j ) enter filter mode                                                                         │ ",
+            " │ ( Up ) or ( Down ) reset container sorting                                                               │ ",
+            " │ ( 4 ) or ( 5 ) sort containers by name                                                                   │ ",
+            " │ ( 6 ) or ( 7 ) sort containers by state                                                                  │ ",
+            " │ ( 8 ) or ( 9 ) sort containers by status                                                                 │ ",
+            " │ ( F1 ) or ( F12 ) sort containers by cpu                                                                 │ ",
+            " │ ( # ) or ( - ) sort containers by memory                                                                 │ ",
+            " │ ( / ) or ( = ) sort containers by id                                                                     │ ",
+            r" │ ( , ) or ( \ ) sort containers by image                                                                  │ ",
+            " │ ( . ) or ( ] ) sort containers by rx                                                                     │ ",
+            " │ ( Backspace ) or ( Back Tab ) sort containers by tx                                                      │ ",
+            " │ ( a ) or ( b ) close dialog                                                                              │ ",
+            " │ ( k ) or ( l ) quit at any time                                                                          │ ",
+            " │                                                                                                          │ ",
+            " │                    currently an early work in progress, all and any input appreciated                    │ ",
+            " │                                   https://github.com/mrjackwills/oxker                                   │ ",
+            " │                                                                                                          │ ",
+            " │                                                                                                          │ ",
+            " ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯ ",
+            "                                                                                                              ",
+        ];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
@@ -881,7 +889,9 @@ mod tests {
             })
             .unwrap();
 
-        let version_row =   format!(" ╭ {VERSION} ───────────────────────────────────────────────────────────────────────────────────────────────────╮ ");
+        let version_row = format!(
+            " ╭ {VERSION} ───────────────────────────────────────────────────────────────────────────────────────────────────╮ "
+        );
         let expected = [
             "                                                                                                              ",
             version_row.as_str(),
@@ -930,7 +940,7 @@ mod tests {
             " │                                                                                                          │ ",
             " ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯ ",
             "                                                                                                              ",
-    ];
+        ];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);
@@ -958,9 +968,11 @@ mod tests {
             })
             .unwrap();
 
-        let version_row =   format!(" ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ ");
+        let version_row = format!(
+            " ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ "
+        );
         let expected = [
-             "                                                                                       ",
+            "                                                                                       ",
             version_row.as_str(),
             " │                                                                                   │ ",
             " │                                      88                                           │ ",
@@ -994,8 +1006,8 @@ mod tests {
             " │                                                                                   │ ",
             " │                                                                                   │ ",
             " ╰───────────────────────────────────────────────────────────────────────────────────╯ ",
-            "                                                                                       "
-            ];
+            "                                                                                       ",
+        ];
 
         for (row_index, result_row) in get_result(&setup, w) {
             let expected_row = expected_to_vec(&expected, row_index);

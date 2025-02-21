@@ -1,16 +1,16 @@
 use bollard::{
+    Docker,
     container::{
         ListContainersOptions, LogsOptions, MemoryStatsStats, RemoveContainerOptions,
         StartContainerOptions, Stats, StatsOptions,
     },
     service::ContainerSummary,
-    Docker,
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
-    sync::{atomic::AtomicUsize, Arc},
+    sync::{Arc, atomic::AtomicUsize},
 };
 use tokio::{
     sync::mpsc::{Receiver, Sender},
@@ -19,11 +19,11 @@ use tokio::{
 use uuid::Uuid;
 
 use crate::{
+    ENTRY_POINT,
     app_data::{AppData, ContainerId, DockerCommand, State},
     app_error::AppError,
     config::Config,
     ui::{GuiState, Status},
-    ENTRY_POINT,
 };
 mod message;
 pub use message::DockerMessage;

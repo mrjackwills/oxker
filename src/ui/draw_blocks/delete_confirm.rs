@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 use ratatui::{
+    Frame,
     layout::{Alignment, Direction, Layout},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, Paragraph},
-    Frame,
 };
 
 use super::{CONSTRAINT_BUTTONS, CONSTRAINT_POPUP};
@@ -14,8 +14,8 @@ use crate::{
     app_data::ContainerName,
     config::{AppColors, Keymap},
     ui::{
-        gui_state::{BoxLocation, Region},
         DeleteButton, GuiState,
+        gui_state::{BoxLocation, Region},
     },
 };
 
