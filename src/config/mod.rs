@@ -18,7 +18,7 @@ mod parse_config_file;
 pub struct Config {
     pub app_colors: AppColors,
     pub color_logs: bool,
-    pub docker_interval: u32,
+    pub docker_interval_ms: u32,
     pub gui: bool,
     pub host: Option<String>,
     pub in_container: bool,
@@ -38,7 +38,7 @@ impl From<&Args> for Config {
         Self {
             app_colors: AppColors::new(),
             color_logs: args.color,
-            docker_interval: args.docker_interval,
+            docker_interval_ms: args.docker_interval,
             gui: !args.gui,
             host: args.host.clone(),
             in_container: Self::check_if_in_container(),
@@ -60,7 +60,7 @@ impl From<ConfigFile> for Config {
         Self {
             app_colors: AppColors::from(config_file.colors),
             color_logs: config_file.color_logs.unwrap_or(false),
-            docker_interval: config_file.docker_interval.unwrap_or(1000),
+            docker_interval_ms: config_file.docker_interval.unwrap_or(1000),
             gui: config_file.gui.unwrap_or(true),
             host: config_file.host,
             in_container: Self::check_if_in_container(),
@@ -129,7 +129,7 @@ impl Config {
     /// make sure color_logs and raw_logs can't clash
     fn merge_args(mut self, config_from_cli: Self) -> Self {
         self.color_logs = config_from_cli.color_logs;
-        self.docker_interval = config_from_cli.docker_interval;
+        self.docker_interval_ms = config_from_cli.docker_interval_ms;
         self.gui = config_from_cli.gui;
         self.raw_logs = config_from_cli.raw_logs;
         self.show_self = config_from_cli.show_self;
@@ -137,8 +137,8 @@ impl Config {
         self.show_timestamp = config_from_cli.show_timestamp;
         self.use_cli = config_from_cli.use_cli;
 
-        if config_from_cli.docker_interval < 1000 {
-            self.docker_interval = 1000;
+        if config_from_cli.docker_interval_ms < 1000 {
+            self.docker_interval_ms = 1000;
         }
 
         if let Some(host) = config_from_cli.host {

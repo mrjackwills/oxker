@@ -123,7 +123,7 @@ pub mod tests {
     use crate::{
         app_data::{AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts},
         tests::{gen_appdata, gen_containers},
-        ui::{draw_frame, GuiState},
+        ui::{draw_frame, GuiState, Redraw},
     };
 
     use super::FrameData;
@@ -194,7 +194,8 @@ pub mod tests {
             app_data.containers_start();
         }
 
-        let gui_state = GuiState::default();
+        let redraw = Arc::new(Redraw::new());
+        let gui_state = GuiState::new(&redraw);
 
         let app_data = Arc::new(Mutex::new(app_data));
         let gui_state = Arc::new(Mutex::new(gui_state));

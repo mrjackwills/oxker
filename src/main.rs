@@ -23,7 +23,7 @@ mod exec;
 mod input_handler;
 mod ui;
 
-use ui::{GuiState, Status, Ui};
+use ui::{GuiState, Redraw, Status, Ui};
 
 use crate::docker_data::DockerMessage;
 
@@ -98,9 +98,10 @@ fn handler_init(
 async fn main() {
     setup_tracing();
     let config = config::Config::new();
+    let redraw = Arc::new(Redraw::new());
 
-    let app_data = Arc::new(Mutex::new(AppData::default(config.clone())));
-    let gui_state = Arc::new(Mutex::new(GuiState::default()));
+    let app_data = Arc::new(Mutex::new(AppData::new(config.clone(), &redraw)));
+    let gui_state = Arc::new(Mutex::new(GuiState::new(&redraw)));
     let is_running = Arc::new(AtomicBool::new(true));
     let (docker_tx, docker_rx) = tokio::sync::mpsc::channel(32);
 
@@ -109,7 +110,7 @@ async fn main() {
     if config.gui {
         let (input_tx, input_rx) = tokio::sync::mpsc::channel(32);
         handler_init(&app_data, &docker_tx, &gui_state, input_rx, &is_running);
-        Ui::start(app_data, gui_state, input_tx, is_running).await;
+        Ui::start(app_data, gui_state, input_tx, is_running, redraw).await;
     } else {
         info!("in debug mode\n");
         let mut now = std::time::Instant::now();
@@ -120,7 +121,7 @@ async fn main() {
                 error!("{}", err);
                 process::exit(1);
             }
-            if let Some(Ok(to_sleep)) = u128::from(config.docker_interval)
+            if let Some(Ok(to_sleep)) = u128::from(config.docker_interval_ms)
                 .checked_sub(now.elapsed().as_millis())
                 .map(u64::try_from)
             {
@@ -148,6 +149,8 @@ async fn main() {
 #[allow(clippy::unwrap_used)]
 mod tests {
 
+    use std::sync::Arc;
+
     use bollard::service::{ContainerSummary, Port};
 
     use crate::{
@@ -156,13 +159,14 @@ mod tests {
             RunningState, State, StatefulList,
         },
         config::{AppColors, Config, Keymap},
+        ui::Redraw,
     };
 
     /// Default test config, has timestamps turned off
     pub fn gen_config() -> Config {
         Config {
             color_logs: false,
-            docker_interval: 1000,
+            docker_interval_ms: 1000,
             gui: true,
             host: None,
             show_std_err: false,
@@ -200,8 +204,10 @@ mod tests {
         AppData {
             containers: StatefulList::new(containers.to_vec()),
             hidden_containers: vec![],
+            current_sorted_id: vec![],
             error: None,
             sorted_by: None,
+            redraw: Arc::new(Redraw::new()),
             filter: Filter::new(),
             config: gen_config(),
         }

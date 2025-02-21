@@ -625,7 +625,7 @@ impl InputHandler {
                         self.gui_state.lock().status_push(Status::Help);
                     }
 
-                    self.gui_state.lock().get_intersect_panel(mouse_point);
+                    self.gui_state.lock().check_panel_intersect(mouse_point);
                 }
                 _ => (),
             }
