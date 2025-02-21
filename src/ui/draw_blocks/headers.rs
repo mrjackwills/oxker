@@ -458,7 +458,7 @@ mod tests {
 
     #[test]
     /// Custom colors are applied correctly
-    fn test_draw_blocks_headers_cusomt_colors() {
+    fn test_draw_blocks_headers_custom_colors() {
         let (w, h) = (140, 1);
         let mut setup = test_setup(w, h, true, true);
         let uuid = Uuid::new_v4();

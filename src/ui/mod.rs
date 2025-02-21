@@ -139,11 +139,11 @@ impl Ui {
                 .terminal
                 .draw(|f| {
                     draw_blocks::error::draw(
-                        f,
+                        colors,
                         &AppError::DockerConnect,
+                        f,
                         &keymap,
                         Some(seconds),
-                        colors,
                     );
                 })
                 .is_err()
@@ -237,8 +237,8 @@ impl Ui {
 /// Frequent data required by multiple frame drawing functions, can reduce mutex reads by placing it all in here
 #[derive(Debug, Clone)]
 pub struct FrameData {
-    // app_colors: AppColors,
     chart_data: Option<(CpuTuple, MemTuple)>,
+    color_logs: bool,
     columns: Columns,
     container_title: String,
     delete_confirm: Option<ContainerId>,
@@ -272,8 +272,8 @@ impl From<&Ui> for FrameData {
 
         let (filter_by, filter_term) = app_data.get_filter();
         Self {
-            // app_colors: app_data.config.app_colors,
             chart_data: app_data.get_chart_data(),
+            color_logs: app_data.config.color_logs,
             columns: app_data.get_width(),
             container_title: app_data.get_container_title(),
             delete_confirm: gui_data.get_delete_container(),
@@ -303,7 +303,6 @@ fn draw_frame(
     f: &mut Frame,
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
-    // should pass in the colors here, then I only need to get it once from app+data
 ) {
     let whole_constraints = if fd.status.contains(&Status::Filter) {
         vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
@@ -393,10 +392,17 @@ fn draw_frame(
 
     // Check if error, and show popup if so
     if fd.status.contains(&Status::Help) {
-        draw_blocks::help::draw(f, colors, keymap);
+        let tz = app_data.lock().config.timezone.clone();
+        draw_blocks::help::draw(
+            colors,
+            f,
+            keymap,
+            app_data.lock().config.show_timestamp,
+            tz.as_ref(),
+        );
     }
 
     if let Some(error) = fd.has_error.as_ref() {
-        draw_blocks::error::draw(f, error, keymap, None, colors);
+        draw_blocks::error::draw(colors, error, f, keymap, None);
     }
 }

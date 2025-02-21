@@ -46,7 +46,7 @@ impl SpawnId {
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
 /// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
 /// Binate value is toggled when all handles have been spawned off
-/// Also effectively means that the docker_update interval minimum will be 1000ms
+/// Also effectively means that the minimum docker_update interval will be 1000ms
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 enum Binate {
     One,
@@ -64,8 +64,8 @@ impl Binate {
 
 pub struct DockerData {
     app_data: Arc<Mutex<AppData>>,
-    config: Config,
     binate: Binate,
+    config: Config,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
     receiver: Receiver<DockerMessage>,

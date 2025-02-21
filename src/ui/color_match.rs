@@ -7,7 +7,6 @@ pub mod log_sanitizer {
     };
 
     /// Attempt to colorize the given string to ratatui standards
-    /// TODO this is somewhat slow/cpu intensive
     pub fn colorize_logs<'a>(input: &str) -> Vec<Line<'a>> {
         vec![Line::from(
             categorise_text(input)
@@ -92,7 +91,7 @@ mod tests {
 
     #[test]
     /// Return test raw, as in show escape codes
-    fn color_match_raw() {
+    fn test_color_match_raw() {
         let result = log_sanitizer::raw(INPUT);
         let expected = vec![Line {
             spans: [Span {
@@ -110,7 +109,7 @@ mod tests {
 
     #[test]
     /// Use the escape codes to colorize the text
-    fn color_match_colorize() {
+    fn test_color_match_colorize() {
         let result = log_sanitizer::colorize_logs(INPUT);
         let expected = vec![Line {
             spans: vec![
@@ -143,7 +142,7 @@ mod tests {
 
     #[test]
     /// Remove all escape ansi codes from given input
-    fn color_match_remove_ansi() {
+    fn test_color_match_remove_ansi() {
         let result = log_sanitizer::remove_ansi(INPUT);
         let expected = vec![Line {
             spans: vec![Span {

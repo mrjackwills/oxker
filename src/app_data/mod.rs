@@ -585,7 +585,7 @@ impl AppData {
     /// Get the title for log panel for selected container, will be either
     /// 1) "logs x/x - container_name - container_image"
     /// 2) "logs - container_name - container_image" when no logs found
-    /// 3) "" no container currently selected - aka no containers on system
+    /// 3) " " no container currently selected - aka no containers on system
     pub fn get_log_title(&self) -> String {
         self.get_selected_container()
             .map_or_else(String::new, |ci| {
@@ -879,18 +879,27 @@ impl AppData {
     pub fn update_log_by_id(&mut self, logs: Vec<String>, id: &ContainerId) {
         let color = self.config.color_logs;
         let raw = self.config.raw_logs;
+        let format = self.config.timestamp_format.clone();
+        let config_tz = self.config.timezone.clone();
 
-        let timestamp = self.config.show_timestamp;
+        let show_timestamp = self.config.show_timestamp;
 
         if let Some(container) = self.get_any_container_by_id(id) {
             if !container.is_oxker {
                 container.last_updated = Self::get_systemtime();
                 let current_len = container.logs.len();
-
                 for mut i in logs {
-                    let tz = LogsTz::from(i.as_str());
-                    if !timestamp {
-                        i = i.replace(&tz.to_string(), "");
+                    let (log_tz, log_content) = LogsTz::splitter(i.as_str());
+                    if show_timestamp {
+                        i = format!(
+                            "{} {}",
+                            log_tz
+                                .display_with_formatter(config_tz.as_ref(), &format)
+                                .unwrap_or_else(|| log_tz.to_string()),
+                            log_content
+                        );
+                    } else {
+                        i = log_content;
                     }
                     let lines = if color {
                         log_sanitizer::colorize_logs(&i)
@@ -899,7 +908,7 @@ impl AppData {
                     } else {
                         log_sanitizer::remove_ansi(&i)
                     };
-                    container.logs.insert(ListItem::new(lines), tz);
+                    container.logs.insert(ListItem::new(lines), log_tz);
                 }
 
                 // Set the logs selected row for each container
@@ -1819,7 +1828,7 @@ mod tests {
         assert_eq!(result, " - container_1 - image_1");
 
         // On last line of logs
-        let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
+        let logs = (1..=3).map(|i| format!("{i} {i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[0]);
         let result = app_data.get_log_title();
         assert_eq!(result, " 3/3 - container_1 - image_1");
@@ -1851,7 +1860,7 @@ mod tests {
         assert_eq!(result, " - container_2 - image_2");
 
         // On last line of logs
-        let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
+        let logs = (1..=3).map(|i| format!("{i} {i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[1]);
         let result = app_data.get_log_title();
         assert_eq!(result, " 3/3 - container_2 - image_2");

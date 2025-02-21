@@ -266,6 +266,40 @@ check_allow_unused() {
 	fi
 }
 
+# build container for amd64 platform
+build_container_amd64() {
+	docker image rm oxker_amd64:latest
+	docker builder prune -a
+	echo -e "${YELLOW}docker build  --platform linux/amd64 -t oxker_amd64 -f containerised/Dockerfile .; docker save -o /tmp/oxker_amd64.tar oxker_amd64${RESET}"
+	docker build --platform linux/amd64 -t oxker_amd64 -f containerised/Dockerfile .
+	docker save -o /tmp/oxker_amd64.tar oxker_amd64
+}
+# build container for aarm64 platform
+build_container_arm64() {
+	docker image rm oxker_arm64:latest
+	docker builder prune -a
+	echo -e "${YELLOW}docker build  --platform linux/arm64 -t oxker_arm64 -f containerised/Dockerfile .; docker save -o /tmp/oxker_arm64.tar oxker_arm64${RESET}"
+	docker build --platform linux/arm64 -t oxker_arm64 -f containerised/Dockerfile .
+	docker save -o /tmp/oxker_arm64.tar oxker_arm64
+}
+# build container for armv6 platform
+build_container_armv6() {
+	docker image rm oxker_armv6:latest
+	docker builder prune -a
+	echo -e "${YELLOW}docker build  --platform linux/arm/v6 -t oxker_armv6 -f containerised/Dockerfile .; docker save -o /tmp/oxker_armv6.tar oxker_armv6${RESET}"
+	docker build --platform linux/arm/v6 -t oxker_armv6 -f containerised/Dockerfile .
+	docker save -o /tmp/oxker_armv6.tar oxker_armv6
+}
+
+# Build all the containers, this get executed in the github action
+build_container_all() {
+	build_container_amd64
+	ask_continue
+	build_container_arm64
+	ask_continue
+	build_container_armv6
+}
+
 # Full flow to create a new release
 release_flow() {
 	check_allow_unused
@@ -276,6 +310,7 @@ release_flow() {
 
 	cargo_test
 	cross_build_all
+	build_container_all
 	cargo_publish_dry_run
 
 	cd "${CWD}" || error_close "Can't find ${CWD}"
@@ -379,6 +414,45 @@ build_choice() {
 			;;
 		esac
 	done
+}
+
+build_container_choice() {
+	cmd=(dialog --backtitle "Choose option" --radiolist "choose" 14 80 16)
+	options=(
+		1 "x86 " off
+		2 "aarch64" off
+		3 "armv6" off
+		4 "all" off
+	)
+	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+	exitStatus=$?
+	clear
+	if [ $exitStatus -ne 0 ]; then
+		exit
+	fi
+	for choice in $choices; do
+		case $choice in
+		0)
+			exit
+			;;
+		1)
+			build_container_amd64
+			exit
+			;;
+		2)
+			build_container_arm64
+			exit
+			;;
+		3)
+			build_container_armv6
+			exit
+			;;
+		4)
+			build_container_all
+			exit
+			;;
+		esac
+	done
 
 }
 
@@ -388,6 +462,7 @@ main() {
 		1 "test" off
 		2 "release" off
 		3 "build" off
+		4 "docker builds" off
 	)
 	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 	exitStatus=$?
@@ -411,6 +486,11 @@ main() {
 			;;
 		3)
 			build_choice
+			main
+			break
+			;;
+		4)
+			build_container_choice
 			main
 			break
 			;;

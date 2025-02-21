@@ -172,6 +172,12 @@ impl From<Option<ConfigColors>> for AppColors {
                 Self::map_color(cc.start.as_deref(), &mut app_colors.commands.start);
             }
 
+            // Logs panel
+            if let Some(cl) = config_colors.logs {
+                Self::map_color(cl.background.as_deref(), &mut app_colors.logs.background);
+                Self::map_color(cl.text.as_deref(), &mut app_colors.logs.text);
+            }
+
             // Container State
             if let Some(cs) = config_colors.container_state {
                 Self::map_color(cs.dead.as_deref(), &mut app_colors.container_state.dead);
@@ -215,7 +221,8 @@ optional_config_struct!(
     ConfigCommands, background, pause, restart, stop, delete, resume, start;
     ConfigContainers, background, icon, text, text_rx, text_tx;
     ConfigContainerState, background, dead, exited, paused, removing, restarting, running_healthy, running_unhealthy, unknown;
-    ConfigHeadersBar, background, loading_spinner, text, text_selected
+    ConfigHeadersBar, background, loading_spinner, text, text_selected;
+    ConfigLogs, background, text
 );
 
 config_struct!(
@@ -227,6 +234,7 @@ config_struct!(
     Containers, background, icon, text, text_rx, text_tx;
     ContainerState, dead, exited, paused, removing, restarting, running_healthy, running_unhealthy, unknown;
     HeadersBar, background, text_selected, loading_spinner, text;
+    Logs, background, text;
     PopupDelete, background, text, text_highlight;
     PopupError, background, text;
     PopupHelp, background, text, text_highlight;
@@ -243,6 +251,7 @@ pub struct ConfigColors {
     container_state: Option<ConfigContainerState>,
     containers: Option<ConfigContainers>,
     headers_bar: Option<ConfigHeadersBar>,
+    logs: Option<ConfigLogs>,
     popup_delete: Option<ConfigBackgroundTextHighlight>,
     popup_error: Option<ConfigBackgroundText>,
     popup_help: Option<ConfigBackgroundTextHighlight>,
@@ -355,6 +364,17 @@ impl ContainerState {
         }
     }
 }
+
+/// Default colours for the logs panel, only applied if color_logs is false
+impl Logs {
+    const fn new() -> Self {
+        Self {
+            background: Color::Reset,
+            text: Color::Reset,
+        }
+    }
+}
+
 /// Default colours for the Error popup
 impl PopupError {
     const fn new() -> Self {
@@ -407,6 +427,7 @@ pub struct AppColors {
     pub container_state: ContainerState,
     pub containers: Containers,
     pub headers_bar: HeadersBar,
+    pub logs: Logs,
     pub popup_delete: PopupDelete,
     pub popup_error: PopupError,
     pub popup_help: PopupHelp,
@@ -424,6 +445,7 @@ impl AppColors {
             container_state: ContainerState::new(),
             containers: Containers::new(),
             headers_bar: HeadersBar::new(),
+            logs: Logs::new(),
             popup_delete: PopupDelete::new(),
             popup_error: PopupError::new(),
             popup_help: PopupHelp::new(),

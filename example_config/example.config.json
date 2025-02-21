@@ -7,6 +7,8 @@
 	"show_self": false,
 	"show_std_err": false,
 	"show_timestamp": true,
+	"timezone": "Etc/UTC",
+	"timestamp_format":"%Y-%m-%dT%H:%M:%S.%8f",
 	"use_cli": false,
 	"colors": {
 		"borders": {
@@ -67,6 +69,10 @@
 			"loading_spinner": "white",
 			"text": "black",
 			"text_selected": "gray"
+		},
+		"logs": {
+			"background": "reset",
+			"text": "reset"
 		},
 		"popup_delete": {
 			"background": "white",

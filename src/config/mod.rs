@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
+use jiff::tz::TimeZone;
 use parse_args::Args;
 use parse_config_file::ConfigFile;
 mod color_parser;
@@ -27,17 +28,19 @@ pub struct Config {
     pub show_self: bool,
     pub show_std_err: bool,
     pub show_timestamp: bool,
+    pub timezone: Option<TimeZone>,
+    pub timestamp_format: String,
     pub use_cli: bool,
 }
 
-impl From<Args> for Config {
-    fn from(args: Args) -> Self {
+impl From<&Args> for Config {
+    fn from(args: &Args) -> Self {
         Self {
             app_colors: AppColors::new(),
             color_logs: args.color,
             docker_interval: args.docker_interval,
             gui: !args.gui,
-            host: args.host,
+            host: args.host.clone(),
             in_container: Self::check_if_in_container(),
             keymap: Keymap::new(),
             raw_logs: args.raw,
@@ -45,6 +48,8 @@ impl From<Args> for Config {
             show_self: !args.show_self,
             show_std_err: !args.no_std_err,
             show_timestamp: !args.timestamp,
+            timezone: Self::parse_timezone(args.timezone.clone()),
+            timestamp_format: Self::parse_timestamp_format(None),
             use_cli: args.use_cli,
         }
     }
@@ -65,12 +70,43 @@ impl From<ConfigFile> for Config {
             show_self: config_file.show_self.unwrap_or(false),
             show_std_err: config_file.show_std_err.unwrap_or(true),
             show_timestamp: config_file.show_timestamp.unwrap_or(true),
+            timezone: Self::parse_timezone(config_file.timezone),
+            timestamp_format: Self::parse_timestamp_format(config_file.timestamp_format),
             use_cli: config_file.use_cli.unwrap_or(false),
         }
     }
 }
 
 impl Config {
+    /// A basic timestampt format parser, will only take 32 chars, and checks if the parsed timestamp isn't identical to the given formatter
+    fn parse_timestamp_format(input: Option<String>) -> String {
+        let default = || "%Y-%m-%dT%H:%M:%S.%8f".to_owned();
+        input.map_or_else(default, |input| {
+            if input.chars().count() >= 32
+                || jiff::Timestamp::now().strftime(&input).to_string() == input
+            {
+                default()
+            } else {
+                input
+            }
+        })
+    }
+
+    /// Attempt to parse a timezone into a jiff::tz::TimeZone
+    /// Also return a format to display the timesampt in
+    fn parse_timezone(input: Option<String>) -> Option<TimeZone> {
+        let timezone_str = input?;
+        let Ok(tz) = jiff::tz::TimeZone::get(&timezone_str) else {
+            return None;
+        };
+        let current_ts = jiff::Timestamp::now();
+        let offset = tz.to_offset(current_ts);
+        if jiff::tz::TimeZone::UTC.to_offset(current_ts) == offset {
+            None
+        } else {
+            Some(tz)
+        }
+    }
     /// Check if oxker is running inside of a container
     fn check_if_in_container() -> bool {
         std::env::var(ENV_KEY).is_ok_and(|i| i == ENV_VALUE)
@@ -89,28 +125,126 @@ impl Config {
         directories::BaseDirs::new().map(|base_dirs| base_dirs.home_dir().to_owned())
     }
 
+    /// Combine config from CLI into config file, the cli take priority
+    /// make sure color_logs and raw_logs can't clash
+    fn merge_args(mut self, config_from_cli: Self) -> Self {
+        self.color_logs = config_from_cli.color_logs;
+        self.docker_interval = config_from_cli.docker_interval;
+        self.gui = config_from_cli.gui;
+        self.raw_logs = config_from_cli.raw_logs;
+        self.show_self = config_from_cli.show_self;
+        self.show_std_err = config_from_cli.show_std_err;
+        self.show_timestamp = config_from_cli.show_timestamp;
+        self.use_cli = config_from_cli.use_cli;
+
+        if config_from_cli.docker_interval < 1000 {
+            self.docker_interval = 1000;
+        }
+
+        if let Some(host) = config_from_cli.host {
+            self.host = Some(host);
+        }
+
+        if let Some(x) = config_from_cli.save_dir {
+            self.save_dir = Some(x);
+        }
+
+        if let Some(tz) = config_from_cli.timezone {
+            self.timezone = Some(tz);
+        }
+
+        if config_from_cli.raw_logs {
+            self.color_logs = false;
+        }
+        if config_from_cli.color_logs {
+            self.raw_logs = false;
+        }
+        self
+    }
+
     /// Generate a new config file
     /// First check cli args,
     /// then if a config file location is given check then
     /// Else check the default location
     /// else just return the default config + the cli args
+    /// cli args will take precedence over config settings
     pub fn new() -> Self {
         let in_container = Self::check_if_in_container();
 
         let args = Args::parse();
+        let config_from_cli = Self::from(&args);
 
         if let Some(config_file) = &args.config_file {
             if let Some(config_file) =
                 parse_config_file::ConfigFile::try_parse_from_file(config_file)
             {
-                return Self::from(config_file);
+                return Self::from(config_file).merge_args(config_from_cli);
             }
         }
 
         if let Some(config_file) = parse_config_file::ConfigFile::try_parse(in_container) {
-            return Self::from(config_file);
+            return Self::from(config_file).merge_args(config_from_cli);
+        }
+        config_from_cli
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use jiff::tz::TimeZone;
+
+    /// Test the basic timestamp_format parsing/checker function
+    #[test]
+    fn test_config_parse_timestamp_format() {
+        let default = "%Y-%m-%dT%H:%M:%S.%8f";
+
+        let result = super::Config::parse_timestamp_format(None);
+        assert_eq!(result, default);
+
+        let result = super::Config::parse_timestamp_format(Some(String::new()));
+        assert_eq!(result, default);
+
+        let result = super::Config::parse_timestamp_format(Some(" ".to_owned()));
+        assert_eq!(result, default);
+
+        let result = super::Config::parse_timestamp_format(Some(" ".to_owned()));
+        assert_eq!(result, default);
+
+        let result =
+            super::Config::parse_timestamp_format(Some("not a valid formatter".to_owned()));
+        assert_eq!(result, default);
+
+        let result = super::Config::parse_timestamp_format(Some(
+            "%A, %B %d, %Y %I:%M %p %A, %B %d, %Y %I:%M %p".to_owned(),
+        ));
+        assert_eq!(result, default);
+
+        let input = "%Y-%m-%d %H:%M:%S";
+        let result = super::Config::parse_timestamp_format(Some(input.to_owned()));
+        assert_eq!(result, input);
+
+        let input = "%Y-%j";
+        let result = super::Config::parse_timestamp_format(Some(input.to_owned()));
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    /// Test various timezones get parsed correctly
+    fn test_config_parse_timezone() {
+        assert!(super::Config::parse_timezone(None).is_none());
+
+        // Timezone with no offset just return None
+        for i in ["Europe/London", "Africa/Accra"] {
+            assert!(super::Config::parse_timezone(Some(i.to_owned())).is_none());
         }
 
-        Self::from(args)
+        let expected = Some(TimeZone::get("Asia/Tokyo").unwrap());
+        // string case ignored
+        for i in ["ASIA/TOKYO", "asia/tokyo", "aSiA/tOkYo"] {
+            let result = super::Config::parse_timezone(Some(i.to_owned()));
+            assert!(result.is_some());
+            assert_eq!(result, expected);
+        }
     }
 }

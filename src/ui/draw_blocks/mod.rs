@@ -142,6 +142,7 @@ pub mod tests {
     pub const COLOR_TX: Color = Color::Rgb(205, 140, 140);
     pub const COLOR_ORANGE: Color = Color::Rgb(255, 178, 36);
 
+    /// Create a FrameData struct from two Arc<mutex>'s, instead of from UI
     impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
         fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
             let (app_data, gui_data) = (data.0.lock(), data.1.lock());
@@ -158,6 +159,7 @@ pub mod tests {
             Self {
                 chart_data: app_data.get_chart_data(),
                 columns: app_data.get_width(),
+                color_logs: app_data.config.color_logs,
                 container_title: app_data.get_container_title(),
                 delete_confirm: gui_data.get_delete_container(),
                 filter_by,
@@ -216,6 +218,7 @@ pub mod tests {
             .collect::<Vec<_>>()
     }
 
+    /// Just a shorthand for when enumerating over result cells
     pub fn get_result(
         setup: &TuiTestSetup,
         w: u16,

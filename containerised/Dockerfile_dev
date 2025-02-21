@@ -13,9 +13,13 @@ COPY ./target/x86_64-unknown-linux-musl/release/oxker /app/
 # this is used in the application itself, to stop itself show when running from a docker container, so DO NOT EDIT
 ENTRYPOINT [ "/app/oxker"]
 
+
 # Dev build for testing
 # docker build -t oxker_dev -f containerised/Dockerfile_dev . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
 
+# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro --volume ./example_config/example.config.toml:/config.toml:ro oxker_dev --config-file /config.toml 
+
+# docker run --rm -it --volume /etc/timezone:/etc/timezone:ro --volume /etc/localtime:/etc/localtime:ro  --volume /var/run/docker.sock:/var/run/docker.sock:ro --volume ./example_config/example.config.toml:/config.toml:ro oxker_dev --config-file /config.toml 
 # Dev build one liner, x86 host
 # docker image prune -a; cargo build --release --target x86_64-unknown-linux-musl && docker build -t oxker_dev -f containerised/Dockerfile_dev . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
 

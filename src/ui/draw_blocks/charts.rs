@@ -73,8 +73,6 @@ impl ChartType {
     }
 }
 
-// mem_stats, mem_dataset, mem.1, "", cpu.2
-// current, dataset, max, name, state
 /// Create charts
 fn make_chart<'a, T: Stats + Display>(
     chart_type: ChartType,
@@ -98,7 +96,6 @@ fn make_chart<'a, T: Stats + Display>(
                         .fg(chart_type.get_title_color(colors, state))
                         .add_modifier(Modifier::BOLD),
                 ))
-                // .bg(chart_type.get_bg_color(colors))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(chart_type.get_border_color(colors))),
@@ -113,16 +110,10 @@ fn make_chart<'a, T: Stats + Display>(
                         Style::default().add_modifier(Modifier::BOLD).fg(max_color),
                     ),
                 ])
-                .style(
-                    Style::new()
-                        // .bg(chart_type.get_bg_color(colors))
-                        .fg(chart_type.get_y_axis_color(colors)),
-                )
+                .style(Style::new().fg(chart_type.get_y_axis_color(colors)))
                 // Add 0.01, so that max point is always visible?
                 .bounds([0.0, max.get_value() + 0.01]),
         )
-
-    // .style(Style::new().bg(chart_type.get_bg_color(colors)))
 }
 
 /// Draw the cpu + mem charts
@@ -440,7 +431,7 @@ mod tests {
 
     #[test]
     /// Custom colos correctly applied to each part of the charts
-    fn test_custom_colors() {
+    fn test_draw_blocks_charts_custom_colors() {
         let mut colors = AppColors::new();
 
         colors.chart_cpu.background = Color::White;

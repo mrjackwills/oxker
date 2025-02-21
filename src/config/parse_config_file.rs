@@ -20,6 +20,7 @@ enum ConfigFileType {
 impl TryFrom<&PathBuf> for ConfigFileType {
     type Error = AppError;
 
+    /// Only allow toml, json, or jsonc files
     fn try_from(value: &PathBuf) -> Result<Self, AppError> {
         let err = || AppError::IO(format!("Can't parse give config file: {}", value.display()));
         let Some(ext) = value.extension() else {
@@ -47,8 +48,8 @@ impl ConfigFileType {
                 .map(|base_dirs| base_dirs.config_local_dir().join(env!("CARGO_PKG_NAME")))
         }
     }
-    // should take in a pathbuf as well?
-    fn get_default_filename(self, in_container: bool) -> PathBuf {
+    /// Return the default filename + path for a given filetype
+    fn get_default_path_name(self, in_container: bool) -> PathBuf {
         let suffix = match self {
             Self::Json | Self::JsoncAsJson => "config.json",
             Self::Jsonc => "config.jsonc",
@@ -58,34 +59,34 @@ impl ConfigFileType {
     }
 }
 
-// impl ConfigFileType
-
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct ConfigFile {
     pub color_logs: Option<bool>,
+    pub colors: Option<ConfigColors>,
     pub docker_interval: Option<u32>,
     pub gui: Option<bool>,
     pub host: Option<String>,
+    pub keymap: Option<ConfigKeymap>,
     pub raw_logs: Option<bool>,
-    pub show_timestamp: Option<bool>,
     pub save_dir: Option<String>,
     pub show_self: Option<bool>,
     pub show_std_err: Option<bool>,
+    pub show_timestamp: Option<bool>,
+    pub timestamp_format: Option<String>,
+    pub timezone: Option<String>,
     pub use_cli: Option<bool>,
-    pub colors: Option<ConfigColors>,
-    pub keymap: Option<ConfigKeymap>,
 }
 
 impl ConfigFile {
-    /// Attempt to create an example.config.toml file, will attempt to recursively create the directories as well
-    fn create_example_file(in_container: bool) -> Result<(), AppError> {
+    /// Attempt to create a config.toml file, will attempt to recursively create the directories as well
+    fn crate_config_file(in_container: bool) -> Result<(), AppError> {
         if in_container {
             return Ok(());
         }
 
         let config_dir = ConfigFileType::get_config_dir(in_container)
             .ok_or_else(|| AppError::IO("config_dir".to_owned()))?;
-        let file_name = config_dir.join("example.config.toml");
+        let file_name = config_dir.join("config.toml");
 
         if !std::fs::exists(&file_name).map_err(|i| AppError::IO(i.to_string()))? {
             if !std::fs::exists(&config_dir).map_err(|i| AppError::IO(i.to_string()))? {
@@ -134,6 +135,7 @@ impl ConfigFile {
 
     /// Resolve conflict in the args, this is handled automatically by Clap, basically just by rejecting it
     /// But here we can just change the options - although maybe should be also reject to follow the same behaviour as Clap?
+    /// TODO I think this is duplicated with the merge_args fn
     fn resolve_conflict(&mut self) {
         if let Some(color) = self.color_logs.as_ref() {
             if *color {
@@ -171,7 +173,7 @@ impl ConfigFile {
             ConfigFileType::Json,
         ] {
             if let Ok(mut config_file) =
-                Self::parse_config_file(file_type, &file_type.get_default_filename(in_container))
+                Self::parse_config_file(file_type, &file_type.get_default_path_name(in_container))
             {
                 Self::resolve_conflict(&mut config_file);
 
@@ -181,7 +183,7 @@ impl ConfigFile {
         }
 
         if config.is_none() {
-            Self::create_example_file(in_container).ok();
+            Self::crate_config_file(in_container).ok();
         }
 
         config

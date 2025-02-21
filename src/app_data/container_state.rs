@@ -6,6 +6,7 @@ use std::{
 };
 
 use bollard::service::Port;
+use jiff::{tz::TimeZone, Timestamp};
 use ratatui::{
     style::Color,
     widgets::{ListItem, ListState},
@@ -34,6 +35,7 @@ impl ContainerId {
     }
 
     /// Only return first 8 chars of id, is usually more than enough for uniqueness
+    /// TODO container id is a hex string, so can assume that 0..=8 will always return a 8 char ascii &str - need to update tests to use real ids, or atleast strings of the correct-ish length
     pub fn get_short(&self) -> String {
         self.0.chars().take(8).collect::<String>()
     }
@@ -513,18 +515,31 @@ pub type CpuTuple = (Vec<(f64, f64)>, CpuStats, State);
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct LogsTz(String);
 
-/// The docker log, which should always contain a timestamp, is in the format `2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet`
-/// So just split at the inclusive index of the first space, needs to be inclusive, hence the use of format to at the space, so that we can remove the whole thing when the `-t` flag is set
-/// Need to make sure that this isn't an empty string?!
-impl From<&str> for LogsTz {
-    fn from(value: &str) -> Self {
-        Self(value.split_inclusive(' ').take(1).collect::<String>())
-    }
-}
-
 impl fmt::Display for LogsTz {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl LogsTz {
+    /// With a given &str, split into a logtz and content, so that we only need to `use split_once()` once
+    /// The docker log, which should always contain a timestamp, is in the format `2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet`
+    pub fn splitter(input: &str) -> (Self, String) {
+        let (tz, content) = input.split_once(' ').unwrap_or_default();
+        (Self(tz.to_owned()), content.to_owned())
+    }
+
+    /// Display the timestamp in a given format, and if provided, with a timezone offset
+    pub fn display_with_formatter(&self, tz: Option<&TimeZone>, format: &str) -> Option<String> {
+        self.0.parse::<Timestamp>().map_or(None, |t| {
+            if let Some(tz) = tz.as_ref() {
+                let tz = tz.iana_name()?;
+                let z = t.in_tz(tz).ok()?;
+                Some(z.strftime(format).to_string())
+            } else {
+                Some(t.strftime(format).to_string())
+            }
+        })
     }
 }
 
@@ -745,15 +760,18 @@ impl Columns {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
+
+    use jiff::tz::TimeZone;
     use ratatui::widgets::ListItem;
 
     use crate::{
-        app_data::{ContainerImage, Logs, RunningState},
+        app_data::{ContainerImage, Logs, LogsTz, RunningState},
         ui::log_sanitizer,
     };
 
-    use super::{ByteStats, ContainerName, ContainerStatus, CpuStats, LogsTz, State};
+    use super::{ByteStats, ContainerName, ContainerStatus, CpuStats, State};
 
     #[test]
     /// Display CpuStats as a string
@@ -814,10 +832,75 @@ mod tests {
     }
 
     #[test]
+    /// LogzTz correctly splits a line by timestamp
+    fn test_container_state_logz_splitter() {
+        let input = "2023-01-14T12:01:20.012345678Z Lorem ipsum dolor sit amet";
+        let log_tz = LogsTz::splitter(input);
+
+        assert_eq!(
+            log_tz.0,
+            super::LogsTz("2023-01-14T12:01:20.012345678Z".to_owned())
+        );
+        assert_eq!(log_tz.1, "Lorem ipsum dolor sit amet");
+    }
+
+    #[test]
+    /// LogsTz display correctly formats with a given timestamp string
+    fn test_container_state_logz_display() {
+        let input = "2023-01-14T12:01:20.012345678Z Lorem ipsum dolor sit amet";
+        let log_tz = LogsTz::splitter(input);
+
+        let result = log_tz
+            .0
+            .display_with_formatter(None, "%Y-%m-%dT%H:%M:%S.%8f");
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!(result, "2023-01-14T12:01:20.01234567");
+
+        let result = log_tz.0.display_with_formatter(None, "%Y-%m-%d %H:%M:%S");
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!(result, "2023-01-14 12:01:20");
+
+        let result = log_tz.0.display_with_formatter(None, "%Y-%j");
+        assert!(result.is_some());
+        let result = result.unwrap();
+
+        assert_eq!(result, "2023-014");
+    }
+
+    #[test]
+    /// LogsTz display correctly formats with a given timestamp string & timezone
+    fn test_container_state_logz_display_with_timezone() {
+        let input = "2023-01-14T12:01:20.012345678Z Lorem ipsum dolor sit amet";
+        let log_tz = LogsTz::splitter(input);
+
+        let timezone = Some(TimeZone::get("Asia/Tokyo").unwrap());
+        let result = log_tz
+            .0
+            .display_with_formatter(timezone.as_ref(), "%Y-%m-%dT%H:%M:%S.%8f");
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!(result, "2023-01-14T21:01:20.01234567");
+
+        let result = log_tz
+            .0
+            .display_with_formatter(timezone.as_ref(), "%Y-%m-%d %H:%M:%S");
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!(result, "2023-01-14 21:01:20");
+
+        let result = log_tz.0.display_with_formatter(timezone.as_ref(), "%Y-%j");
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!(result, "2023-014");
+    }
+
+    #[test]
     /// Logs can only contain 1 entry per LogzTz
     fn test_container_state_logz() {
         let input = "2023-01-14T19:13:30.783138328Z Lorem ipsum dolor sit amet";
-        let tz = LogsTz::from(input);
+        let (tz, _) = LogsTz::splitter(input);
         let mut logs = Logs::default();
         let line = log_sanitizer::remove_ansi(input);
 
@@ -828,7 +911,7 @@ mod tests {
         assert_eq!(logs.logs.items.len(), 1);
 
         let input = "2023-01-15T19:13:30.783138328Z Lorem ipsum dolor sit amet";
-        let tz = LogsTz::from(input);
+        let (tz, _) = LogsTz::splitter(input);
         let line = log_sanitizer::remove_ansi(input);
 
         logs.insert(ListItem::new(line.clone()), tz.clone());

@@ -87,10 +87,10 @@ fn handler_init(
 ) {
     tokio::spawn(input_handler::InputHandler::start(
         Arc::clone(app_data),
-        input_rx,
         docker_sx.clone(),
         Arc::clone(gui_state),
         Arc::clone(is_running),
+        input_rx,
     ));
 }
 
@@ -159,7 +159,7 @@ mod tests {
     };
 
     /// Default test config, has timestamps turned off
-    pub const fn gen_config() -> Config {
+    pub fn gen_config() -> Config {
         Config {
             color_logs: false,
             docker_interval: 1000,
@@ -172,8 +172,10 @@ mod tests {
             show_self: false,
             app_colors: AppColors::new(),
             keymap: Keymap::new(),
+            timestamp_format: "HH:MM:SS.NNNNN dd-mm-yyyy".to_owned(),
             show_timestamp: false,
             use_cli: false,
+            timezone: None,
         }
     }
 
