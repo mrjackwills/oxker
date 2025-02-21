@@ -1,16 +1,16 @@
 use std::{
     io::{Read, Stdout, Write},
-    sync::{atomic::AtomicBool, mpsc::Sender, Arc},
+    sync::{Arc, atomic::AtomicBool, mpsc::Sender},
 };
 
 use bollard::{
-    exec::{CreateExecOptions, ResizeExecOptions, StartExecOptions, StartExecResults},
     Docker,
+    exec::{CreateExecOptions, ResizeExecOptions, StartExecOptions, StartExecResults},
 };
 use crossterm::terminal::enable_raw_mode;
 use futures_util::StreamExt;
 use parking_lot::Mutex;
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use tokio::{
     fs::File,
     io::{AsyncReadExt, AsyncWriteExt},
@@ -253,10 +253,7 @@ impl ExecMode {
             )
             .await
         {
-            if let Ok(StartExecResults::Attached {
-                mut output,
-                mut input,
-            }) = docker
+            match docker
                 .start_exec(
                     &exec_result.id,
                     Some(StartExecOptions {
@@ -266,40 +263,46 @@ impl ExecMode {
                 )
                 .await
             {
-                if let Some(tty) = AsyncTTY::get(&cancel_token) {
-                    tokio::spawn(async move {
-                        enable_raw_mode().ok();
-                        let mut stdout = std::io::stdout();
-                        stdout.write_all(CURSOR_POS.as_bytes()).ok();
-                        stdout.flush().ok();
-                        while let Some(Ok(x)) = output.next().await {
-                            stdout.write_all(&x.into_bytes()).ok();
+                Ok(StartExecResults::Attached {
+                    mut output,
+                    mut input,
+                }) => {
+                    if let Some(tty) = AsyncTTY::get(&cancel_token) {
+                        tokio::spawn(async move {
+                            enable_raw_mode().ok();
+                            let mut stdout = std::io::stdout();
+                            stdout.write_all(CURSOR_POS.as_bytes()).ok();
                             stdout.flush().ok();
+                            while let Some(Ok(x)) = output.next().await {
+                                stdout.write_all(&x.into_bytes()).ok();
+                                stdout.flush().ok();
+                            }
+                            cancel_token.cancel();
+                        });
+
+                        if let Some(terminal_size) = terminal_size {
+                            docker
+                                .resize_exec(
+                                    &exec_result.id,
+                                    ResizeExecOptions {
+                                        height: terminal_size.height,
+                                        width: terminal_size.width,
+                                    },
+                                )
+                                .await
+                                .ok();
                         }
-                        cancel_token.cancel();
-                    });
 
-                    if let Some(terminal_size) = terminal_size {
-                        docker
-                            .resize_exec(
-                                &exec_result.id,
-                                ResizeExecOptions {
-                                    height: terminal_size.height,
-                                    width: terminal_size.width,
-                                },
-                            )
-                            .await
-                            .ok();
+                        while let Ok(x) = tty.rx.recv() {
+                            input.write_all(&[x]).await.ok();
+                        }
+
+                        self.internal_cleanup()?;
                     }
-
-                    while let Ok(x) = tty.rx.recv() {
-                        input.write_all(&[x]).await.ok();
-                    }
-
-                    self.internal_cleanup()?;
                 }
-            } else {
-                return Err(AppError::Terminal);
+                _ => {
+                    return Err(AppError::Terminal);
+                }
             }
         }
         Ok(())

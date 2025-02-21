@@ -1,6 +1,6 @@
 use app_data::AppData;
 use app_error::AppError;
-use bollard::{Docker, API_DEFAULT_VERSION};
+use bollard::{API_DEFAULT_VERSION, Docker};
 use config::Config;
 use docker_data::DockerData;
 use input_handler::InputMessages;
@@ -8,12 +8,12 @@ use parking_lot::Mutex;
 use std::{
     process,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
 };
 use tokio::sync::mpsc::{Receiver, Sender};
-use tracing::{error, info, Level};
+use tracing::{Level, error, info};
 
 mod app_data;
 mod app_error;

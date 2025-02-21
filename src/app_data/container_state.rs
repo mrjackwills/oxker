@@ -6,7 +6,7 @@ use std::{
 };
 
 use bollard::service::Port;
-use jiff::{tz::TimeZone, Timestamp};
+use jiff::{Timestamp, tz::TimeZone};
 use ratatui::{
     style::Color,
     widgets::{ListItem, ListState},
@@ -177,25 +177,24 @@ impl<T> StatefulList<T> {
 
     pub fn next(&mut self) {
         if !self.items.is_empty() {
-            self.state.select(Some(self.state.selected().map_or(0, |i| {
-                if i < self.items.len() - 1 {
-                    i + 1
-                } else {
-                    i
-                }
-            })));
+            self.state.select(Some(
+                self.state.selected().map_or(
+                    0,
+                    |i| {
+                        if i < self.items.len() - 1 { i + 1 } else { i }
+                    },
+                ),
+            ));
         }
     }
 
     pub fn previous(&mut self) {
         if !self.items.is_empty() {
-            self.state.select(Some(self.state.selected().map_or(0, |i| {
-                if i == 0 {
-                    0
-                } else {
-                    i - 1
-                }
-            })));
+            self.state.select(Some(
+                self.state
+                    .selected()
+                    .map_or(0, |i| if i == 0 { 0 } else { i - 1 }),
+            ));
         }
     }
 
@@ -697,7 +696,7 @@ impl ContainerItem {
         self.cpu_stats
             .iter()
             .enumerate()
-            .map(|i| (i.0 as f64, i.1 .0))
+            .map(|i| (i.0 as f64, i.1.0))
             .collect::<Vec<_>>()
     }
 
@@ -707,7 +706,7 @@ impl ContainerItem {
         self.mem_stats
             .iter()
             .enumerate()
-            .map(|i| (i.0 as f64, i.1 .0 as f64))
+            .map(|i| (i.0 as f64, i.1.0 as f64))
             .collect::<Vec<_>>()
     }
 

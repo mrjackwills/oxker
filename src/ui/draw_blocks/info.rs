@@ -2,15 +2,15 @@ use std::{sync::Arc, time::Instant};
 
 use parking_lot::Mutex;
 use ratatui::{
+    Frame,
     layout::Alignment,
     style::Style,
     widgets::{Block, Borders, Clear, Paragraph},
-    Frame,
 };
 
 use crate::{
     config::AppColors,
-    ui::{gui_state::BoxLocation, GuiState},
+    ui::{GuiState, gui_state::BoxLocation},
 };
 
 use super::{max_line_width, popup};

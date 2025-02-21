@@ -11,10 +11,10 @@ use std::{
 mod container_state;
 
 use crate::{
+    ENTRY_POINT,
     app_error::AppError,
     config::Config,
-    ui::{log_sanitizer, GuiState, Redraw, Status},
-    ENTRY_POINT,
+    ui::{GuiState, Redraw, Status, log_sanitizer},
 };
 pub use container_state::*;
 
