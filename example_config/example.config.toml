@@ -31,7 +31,7 @@ host = "/var/run/docker.sock"
 timezone = "Etc/UTC"
 
 # Display the timestamp in a custom format, if given option is invalid, it will default to %Y-%m-%dT%H:%M:%S.%8f -> 2025-02-18T12:34:56.012345678Z
-# *Should* accept any valid strftime string up to 32 chars
+# *Should* accept any valid strftime string up to 32 chars, see https://strftime.org/
 timestamp_format="%Y-%m-%dT%H:%M:%S.%8f"
 
 # Directory for saving exported logs, defaults to `$HOME`, this is automatically *correctly* calculated for Linux, Mac, and Windows
