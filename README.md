@@ -32,18 +32,19 @@ cargo install oxker
 
 ### Docker
 
-Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a> and <a href='https://ghcr.io/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>ghcr.io</a>,
+Published on <a href='https://ghcr.io/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>ghcr.io</a> and  <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>,
 with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
 
-**via Docker Hub**
-```shell
-docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker
-```
 
 **via ghcr.io**
 
 ```shell
 docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always ghcr.io/mrjackwills/oxker
+```
+
+**via Docker Hub**
+```shell
+docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker
 ```
 
 ### Nix
@@ -126,7 +127,7 @@ Available command line arguments
 |```-t```| Remove timestamps from each log entry.|
 |```-s```| If running via Docker, will display the oxker container.|
 |```-g```| No TUI, essentially a debugging mode with limited functionality, for now.|
-|```--config-file [string]```| Location of a `config.toml`/`config.json`/`config.jsonc`. By default will check the users local config figuration directory.|
+|```--config-file [string]```| Location of a `config.toml`/`config.json`/`config.jsonc`. By default will check the users local config directory.|
 |```--host [string]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
 |```--no-stderr```| Do not include stderr output in logs.|
 |```--save-dir [string]```| Save exported logs into a custom directory. Defaults to `$HOME`.|
@@ -136,18 +137,19 @@ Available command line arguments
 ### Config File
 
 
-A config file enables the user to persist settings, it also enables the user to create a custom keymap, and set the color scheme used by the application.
+A config file enables the user to persist settings, create a custom keymap, set the color scheme used by the application, and more.
 <br>
 <br>
-By default, if not found, `oxker` will create a config file in the user's local config directory. Command line arguments take priority over values from the config file.
+Examples of the config file, alsong with explanations of each value, can be found in the [example_config](https://github.com/mrjackwills/oxker/tree/main/example_config) directory. `oxker` supports `.toml`,`.json`, and `.jsonc` file formats. 
 <br>
 <br>
-`oxker` supports `.toml`,`.json`, and `.jsonc` file formats. Examples of each can be found in the [example_config](https://github.com/mrjackwills/oxker/tree/main/example_config) directory.
-
-If running an `oxker` container, the default config location will be `/config.toml` rather than the automatically detected platform-specific local config directory.
+If not config file is found, `oxker` will create a `config.toml` in the user's local config directory. Command line arguments will take priority over values from the config file.
+<br>
+<br>
+If running an `oxker` container, the default config location will be `/` rather than the automatically detected platform-specific local config directory, and can be mounted as follows;
 
 ```shell
-docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro -v /some/location/config.toml:/config.toml:ro oxker
+docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro -v /some_location/config.toml:/config.toml:ro ghcr.io/mrjackwills/oxker
 ```
 
 ## Build step
