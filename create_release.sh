@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# rust create_release v0.6.1
-# 2024-10-21
+# rust create_release v0.6.2
+# 2025-02-22
 
 STAR_LINE='****************************************'
 CWD=$(pwd)
@@ -268,26 +268,20 @@ check_allow_unused() {
 
 # build container for amd64 platform
 build_container_amd64() {
-	docker image rm oxker_amd64:latest
-	docker builder prune -a
-	echo -e "${YELLOW}docker build  --platform linux/amd64 -t oxker_amd64 -f containerised/Dockerfile .; docker save -o /tmp/oxker_amd64.tar oxker_amd64${RESET}"
-	docker build --platform linux/amd64 -t oxker_amd64 -f containerised/Dockerfile .
+	echo -e "${YELLOW}docker build  --platform linux/amd64 --no-cache -t oxker_amd64 --no-cache -f containerised/Dockerfile .; docker save -o /tmp/oxker_amd64.tar oxker_amd64${RESET}"
+	docker build --platform linux/amd64 --no-cache -t oxker_amd64 -f containerised/Dockerfile .
 	docker save -o /tmp/oxker_amd64.tar oxker_amd64
 }
 # build container for aarm64 platform
 build_container_arm64() {
-	docker image rm oxker_arm64:latest
-	docker builder prune -a
-	echo -e "${YELLOW}docker build  --platform linux/arm64 -t oxker_arm64 -f containerised/Dockerfile .; docker save -o /tmp/oxker_arm64.tar oxker_arm64${RESET}"
-	docker build --platform linux/arm64 -t oxker_arm64 -f containerised/Dockerfile .
+	echo -e "${YELLOW}docker build  --platform linux/arm64 --no-cache -t oxker_arm64 --no-cache -f containerised/Dockerfile .; docker save -o /tmp/oxker_arm64.tar oxker_arm64${RESET}"
+	docker build --platform linux/arm64 --no-cache -t oxker_arm64 -f containerised/Dockerfile .
 	docker save -o /tmp/oxker_arm64.tar oxker_arm64
 }
 # build container for armv6 platform
 build_container_armv6() {
-	docker image rm oxker_armv6:latest
-	docker builder prune -a
-	echo -e "${YELLOW}docker build  --platform linux/arm/v6 -t oxker_armv6 -f containerised/Dockerfile .; docker save -o /tmp/oxker_armv6.tar oxker_armv6${RESET}"
-	docker build --platform linux/arm/v6 -t oxker_armv6 -f containerised/Dockerfile .
+	echo -e "${YELLOW}docker build  --platform linux/arm/v6 --no-cache -t oxker_armv6 --no-cache -f containerised/Dockerfile .; docker save -o /tmp/oxker_armv6.tar oxker_armv6${RESET}"
+	docker build --platform linux/arm/v6 --no-cache -t oxker_armv6 -f containerised/Dockerfile .
 	docker save -o /tmp/oxker_armv6.tar oxker_armv6
 }
 
