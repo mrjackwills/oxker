@@ -3,7 +3,7 @@
 #############
 FROM scratch
 
-# Set env that we're running in a container, so that the application can sleep for 250ms at start
+# Set env that we're running in a container
 ENV OXKER_RUNTIME=container
 
 # Copy application binary from builder image
@@ -17,38 +17,23 @@ ENTRYPOINT [ "/app/oxker"]
 # Dev build for testing
 # docker build -t oxker_dev -f containerised/Dockerfile_dev . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
 
-# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro --volume ./example_config/example.config.toml:/config.toml:ro oxker_dev --config-file /config.toml 
-
-# docker run --rm -it --volume /etc/timezone:/etc/timezone:ro --volume /etc/localtime:/etc/localtime:ro  --volume /var/run/docker.sock:/var/run/docker.sock:ro --volume ./example_config/example.config.toml:/config.toml:ro oxker_dev --config-file /config.toml 
 # Dev build one liner, x86 host
 # docker image prune -a; cargo build --release --target x86_64-unknown-linux-musl && docker build -t oxker_dev -f containerised/Dockerfile_dev . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
-
-## One liner to build musl program, build docker image, then execute the image
-# cargo build --release --target x86_64-unknown-linux-musl && docker build -t oxker_dev -f containerised/Dockerfile . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
-
-# Build production version
-# docker build --platform linux/arm/v6 --platform linux/arm64 --platform linux/amd64 -t oxker_dev -f containerised/Dockerfile . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
 
 # Buildx command to build musl version for all three platforms, should probably be executed in create_release
 # docker buildx create --use
 # docker buildx build --platform linux/arm/v6,linux/arm64,linux/amd64 -t oxker_dev_all -o type=tar,dest=/tmp/oxker_dev_all.tar -f containerised/Dockerfile .
 
-
-# Build production version for x86 only, then run
-# docker build  --platform linux/amd64 -t oxker_dev -f containerised/Dockerfile . && docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev
-
-# docker build  --platform linux/arm/v6 -t oxker_dev -f containerised/Dockerfile . 
-
 ### Build docker files and save to .tar file
 
-# docker build  --platform linux/amd64 -t oxker_dev_amd64 -f containerised/Dockerfile .; docker save -o ./oxker_dev_amd64.tar oxker_dev_amd64
-# docker load -i oxker_dev_amd64.tar
-# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev_amd64
+# docker build  --platform linux/amd64 -t oxker_amd64 -f containerised/Dockerfile .; docker save -o ./oxker_amd64.tar oxker_amd64
+# docker load -i oxker_amd64.tar
+# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_amd64
 
-# docker build  --platform linux/arm64 -t oxker_dev_arm64 -f containerised/Dockerfile .; docker save -o ./oxker_dev_arm64.tar oxker_dev_arm64
-# docker load -i oxker_dev_arm64.tar
-# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev oxker_dev_arm64
+# docker build  --platform linux/arm64 -t oxker_arm64 -f containerised/Dockerfile .; docker save -o ./oxker_arm64.tar oxker_arm64
+# docker load -i oxker_arm64.tar
+# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_arm64
 
-# docker build  --platform linux/arm/v6 -t oxker_dev_armv6 -f containerised/Dockerfile .; docker save -o ./oxker_dev_armv6.tar oxker_dev_armv6
-# docker load -i oxker_dev_armv6.tar
-# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_dev_armv6
+# docker build  --platform linux/arm/v6 -t oxker_armv6 -f containerised/Dockerfile .; docker save -o ./oxker_armv6.tar oxker_armv6
+# docker load -i oxker_armv6.tar
+# docker run --rm -it --volume /var/run/docker.sock:/var/run/docker.sock:ro oxker_armv6
