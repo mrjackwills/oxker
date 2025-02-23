@@ -297,9 +297,10 @@ impl GuiState {
             self.status.insert(Status::DeleteConfirm);
         } else {
             self.intersect_delete.clear();
-            self.status.remove(&Status::DeleteConfirm);
+            self.status_del(Status::DeleteConfirm);
         }
         self.delete_container = id;
+        self.redraw.set_true();
     }
 
     /// Return a copy of the Status HashSet

@@ -350,6 +350,7 @@ impl DockerData {
             GuiState::start_loading_animation(&gui_state, uuid);
             if match control {
                 DockerCommand::Delete => {
+                    gui_state.lock().set_delete_container(None);
                     docker
                         .remove_container(
                             id.get(),
