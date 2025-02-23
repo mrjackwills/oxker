@@ -317,7 +317,7 @@ impl AppData {
         self.sorted_by
     }
 
-    /// Get a vec of the containers ID's
+    /// Get a vec of the containers ID's in the order they are displayed in the containers panel
     fn get_current_ids(&self) -> Vec<ContainerId> {
         self.containers
             .items
