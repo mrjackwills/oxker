@@ -5,7 +5,7 @@
 + Rust 1.84 linting, [3065265e26c30d78ba738cfe731d3901ec1948d0]
 
 ### Features
-+ Config file implement, including customizing color scheme of application, closes #47, [f4d54e1ba8ea1516394aef19511a63e6271f27bf]
++ Config file implemented, including customizing color scheme of application, closes #47, [f4d54e1ba8ea1516394aef19511a63e6271f27bf]
 + Enable log timestamps to be set to any given timezone, plus custom timestamp format via the config file, closes #56, [7a5e7a25873d2c270e5808730721ebb5427a051]
 + update Rust edition to 2024, [7e4a960b888f1dab524d6045504162cea1171d20]
 
