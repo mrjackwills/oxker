@@ -15,7 +15,7 @@ use crate::{
     ui::{FrameData, GuiState, Status, gui_state::Region},
 };
 
-/// Generate a header paragrah with it's width
+/// Generate a header paragraph with it's width
 fn gen_header<'a>(
     colors: AppColors,
     fd: &FrameData,
