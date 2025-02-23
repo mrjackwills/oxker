@@ -1,15 +1,15 @@
 use std::fmt::Display;
 
 use ratatui::{
+    Frame,
     layout::{Alignment, Direction, Layout, Rect},
     style::{Color, Modifier, Style, Stylize},
     symbols,
     text::Span,
     widgets::{Axis, Block, BorderType, Borders, Chart, Dataset, GraphType},
-    Frame,
 };
 
-use super::{FrameData, CONSTRAINT_50_50};
+use super::{CONSTRAINT_50_50, FrameData};
 use crate::{
     app_data::{ByteStats, CpuStats, State, Stats},
     config::AppColors,
@@ -73,8 +73,6 @@ impl ChartType {
     }
 }
 
-// mem_stats, mem_dataset, mem.1, "", cpu.2
-// current, dataset, max, name, state
 /// Create charts
 fn make_chart<'a, T: Stats + Display>(
     chart_type: ChartType,
@@ -98,7 +96,6 @@ fn make_chart<'a, T: Stats + Display>(
                         .fg(chart_type.get_title_color(colors, state))
                         .add_modifier(Modifier::BOLD),
                 ))
-                // .bg(chart_type.get_bg_color(colors))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(chart_type.get_border_color(colors))),
@@ -113,16 +110,10 @@ fn make_chart<'a, T: Stats + Display>(
                         Style::default().add_modifier(Modifier::BOLD).fg(max_color),
                     ),
                 ])
-                .style(
-                    Style::new()
-                        // .bg(chart_type.get_bg_color(colors))
-                        .fg(chart_type.get_y_axis_color(colors)),
-                )
+                .style(Style::new().fg(chart_type.get_y_axis_color(colors)))
                 // Add 0.01, so that max point is always visible?
                 .bounds([0.0, max.get_value() + 0.01]),
         )
-
-    // .style(Style::new().bg(chart_type.get_bg_color(colors)))
 }
 
 /// Draw the cpu + mem charts
@@ -133,16 +124,20 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
             .constraints(CONSTRAINT_50_50)
             .split(area);
 
-        let cpu_dataset = vec![Dataset::default()
-            .marker(symbols::Marker::Dot)
-            .style(Style::default().fg(colors.chart_cpu.points))
-            .graph_type(GraphType::Line)
-            .data(&cpu.0)];
-        let mem_dataset = vec![Dataset::default()
-            .marker(symbols::Marker::Dot)
-            .style(Style::default().fg(colors.chart_memory.points))
-            .graph_type(GraphType::Line)
-            .data(&mem.0)];
+        let cpu_dataset = vec![
+            Dataset::default()
+                .marker(symbols::Marker::Dot)
+                .style(Style::default().fg(colors.chart_cpu.points))
+                .graph_type(GraphType::Line)
+                .data(&cpu.0),
+        ];
+        let mem_dataset = vec![
+            Dataset::default()
+                .marker(symbols::Marker::Dot)
+                .style(Style::default().fg(colors.chart_memory.points))
+                .graph_type(GraphType::Line)
+                .data(&mem.0),
+        ];
 
         let cpu_stats = CpuStats::new(cpu.0.last().map_or(0.00, |f| f.1));
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -178,10 +173,10 @@ mod tests {
         app_data::State,
         config::AppColors,
         ui::{
-            draw_blocks::tests::{
-                expected_to_vec, get_result, insert_chart_data, test_setup, COLOR_ORANGE,
-            },
             FrameData,
+            draw_blocks::tests::{
+                COLOR_ORANGE, expected_to_vec, get_result, insert_chart_data, test_setup,
+            },
         },
     };
 
@@ -440,7 +435,7 @@ mod tests {
 
     #[test]
     /// Custom colos correctly applied to each part of the charts
-    fn test_custom_colors() {
+    fn test_draw_blocks_charts_custom_colors() {
         let mut colors = AppColors::new();
 
         colors.chart_cpu.background = Color::White;

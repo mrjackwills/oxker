@@ -32,18 +32,19 @@ cargo install oxker
 
 ### Docker
 
-Published on <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a> and <a href='https://ghcr.io/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>ghcr.io</a>,
+Published on <a href='https://ghcr.io/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>ghcr.io</a> and  <a href='https://hub.docker.com/r/mrjackwills/oxker' target='_blank' rel='noopener noreferrer'>Docker Hub</a>,
 with images built for `linux/amd64`, `linux/arm64`, and `linux/arm/v6`
 
-**via Docker Hub**
-```shell
-docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker
-```
 
 **via ghcr.io**
 
 ```shell
 docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always ghcr.io/mrjackwills/oxker
+```
+
+**via Docker Hub**
+```shell
+docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro --pull=always mrjackwills/oxker
 ```
 
 ### Nix
@@ -100,8 +101,7 @@ curl https://raw.githubusercontent.com/mrjackwills/oxker/main/install.sh | bash
 ```shell
 oxker
 ```
-
-In application controls
+In application controls, these, amongst many other settings, can be customized with the [config file](#Config-File)
 | button| result|
 |--|--|
 | ```( tab )``` or ```( shift+tab )``` | Change panel, clicking on a panel also changes the selected panel.|
@@ -118,6 +118,7 @@ In application controls
 | ```( esc )``` | Close dialog.|
 
 Available command line arguments
+
 | argument|result|
 |--|--|
 |```-d [number > 0]```| Set the minimum update interval for docker information in milliseconds. Defaults to 1000 (1 second).|
@@ -126,10 +127,30 @@ Available command line arguments
 |```-t```| Remove timestamps from each log entry.|
 |```-s```| If running via Docker, will display the oxker container.|
 |```-g```| No TUI, essentially a debugging mode with limited functionality, for now.|
+|```--config-file [string]```| Location of a `config.toml`/`config.json`/`config.jsonc`. By default will check the users local config directory.|
 |```--host [string]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
 |```--no-stderr```| Do not include stderr output in logs.|
 |```--save-dir [string]```| Save exported logs into a custom directory. Defaults to `$HOME`.|
+|```--timezone [string]```| Display the Docker logs timestamps in a given [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). Defaults to `Etc/UTC`.|
 |```--use-cli```| Use the Docker application when exec-ing into a container, instead of the Docker API.|
+
+### Config File
+
+
+A config file enables the user to persist settings, create a custom keymap, set the color scheme used by the application, and more.
+<br>
+<br>
+Examples of the config file, alsong with explanations of each value, can be found in the [example_config](https://github.com/mrjackwills/oxker/tree/main/example_config) directory. `oxker` supports `.toml`,`.json`, and `.jsonc` file formats. 
+<br>
+<br>
+If not config file is found, `oxker` will create a `config.toml` in the user's local config directory. Command line arguments will take priority over values from the config file.
+<br>
+<br>
+If running an `oxker` container, the default config location will be `/` rather than the automatically detected platform-specific local config directory, and can be mounted as follows;
+
+```shell
+docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro -v /some_location/config.toml:/config.toml:ro ghcr.io/mrjackwills/oxker
+```
 
 ## Build step
 
@@ -163,7 +184,9 @@ If no memory information available, try appending either ```/boot/cmdline.txt```
 
 see <a href="https://forums.raspberrypi.com/viewtopic.php?t=203128" target='_blank' rel='noopener noreferrer'>https://forums.raspberrypi.com/viewtopic.php?t=203128</a> and <a href="https://github.com/docker/for-linux/issues/1112" target='_blank' rel='noopener noreferrer'>https://github.com/docker/for-linux/issues/1112</a> 
 
+
 ### Untested on other platforms
+
 
 ## Tests
 

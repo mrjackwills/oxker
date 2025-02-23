@@ -2,18 +2,18 @@ use anyhow::Result;
 use crossterm::{
     event::{self, DisableMouseCapture, Event},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use parking_lot::Mutex;
 use ratatui::{
+    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Position},
-    Frame, Terminal,
 };
 use std::{
     collections::HashSet,
     io::{self, Stdout, Write},
-    sync::{atomic::Ordering, Arc},
+    sync::{Arc, atomic::Ordering},
     time::Duration,
 };
 use std::{sync::atomic::AtomicBool, time::Instant};
@@ -23,6 +23,8 @@ use tracing::error;
 mod color_match;
 mod draw_blocks;
 mod gui_state;
+mod redraw;
+pub use redraw::Redraw;
 
 pub use self::color_match::*;
 pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
@@ -37,16 +39,19 @@ use crate::{
     input_handler::InputMessages,
 };
 
-const POLL_RATE: Duration = std::time::Duration::from_millis(100);
+const POLL_RATE: Duration = std::time::Duration::from_millis(50);
+
+// could have a render struct, which takes in poll rate, and docker
 
 pub struct Ui {
     app_data: Arc<Mutex<AppData>>,
+    cursor_position: Position,
     gui_state: Arc<Mutex<GuiState>>,
     input_tx: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
     now: Instant,
+    redraw: Arc<Redraw>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
-    cursor_position: Position,
 }
 
 impl Ui {
@@ -68,26 +73,31 @@ impl Ui {
         gui_state: Arc<Mutex<GuiState>>,
         input_tx: Sender<InputMessages>,
         is_running: Arc<AtomicBool>,
+        redraw: Arc<Redraw>,
     ) {
-        if let Ok(mut terminal) = Self::setup_terminal() {
-            let cursor_position = terminal.get_cursor_position().unwrap_or_default();
-            let mut ui = Self {
-                app_data,
-                cursor_position,
-                gui_state,
-                input_tx,
-                is_running,
-                now: Instant::now(),
-                terminal,
-            };
-            if let Err(e) = ui.draw_ui().await {
-                error!("{e}");
+        match Self::setup_terminal() {
+            Ok(mut terminal) => {
+                let cursor_position = terminal.get_cursor_position().unwrap_or_default();
+                let mut ui = Self {
+                    app_data,
+                    cursor_position,
+                    gui_state,
+                    input_tx,
+                    is_running,
+                    now: Instant::now(),
+                    redraw,
+                    terminal,
+                };
+                if let Err(e) = ui.draw_ui().await {
+                    error!("{e}");
+                }
+                if let Err(e) = ui.reset_terminal() {
+                    error!("{e}");
+                };
             }
-            if let Err(e) = ui.reset_terminal() {
-                error!("{e}");
-            };
-        } else {
-            error!("Terminal Error");
+            _ => {
+                error!("Terminal Error");
+            }
         }
     }
 
@@ -126,30 +136,35 @@ impl Ui {
         let mut seconds = 5;
         let colors = self.app_data.lock().config.app_colors;
         let keymap = self.app_data.lock().config.keymap.clone();
+        let mut redraw = true;
         loop {
             if self.now.elapsed() >= std::time::Duration::from_secs(1) {
                 seconds -= 1;
                 self.now = Instant::now();
+                redraw = true;
                 if seconds < 1 {
                     break;
                 }
             }
 
-            if self
-                .terminal
-                .draw(|f| {
-                    draw_blocks::error::draw(
-                        f,
-                        &AppError::DockerConnect,
-                        &keymap,
-                        Some(seconds),
-                        colors,
-                    );
-                })
-                .is_err()
+            if redraw
+                && self
+                    .terminal
+                    .draw(|f| {
+                        draw_blocks::error::draw(
+                            colors,
+                            &AppError::DockerConnect,
+                            f,
+                            &keymap,
+                            Some(seconds),
+                        );
+                    })
+                    .is_err()
             {
                 return Err(AppError::Terminal);
             }
+            redraw = false;
+            std::thread::sleep(POLL_RATE);
         }
         Ok(())
     }
@@ -173,25 +188,41 @@ impl Ui {
         self.gui_state.lock().status_del(Status::Exec);
     }
 
+    /// Use the previously redrawn time, the current time, the docker_interval, and the redraw struct, to calculate
+    /// if the screen should be redrawn or not
+    fn should_redraw(&self, previous: &mut Instant, docker_interval_ms: u128) -> bool {
+        let result = self.redraw.swap() || previous.elapsed().as_millis() >= docker_interval_ms;
+        if result {
+            *previous = std::time::Instant::now();
+        }
+        result
+    }
+
     /// The loop for drawing the main UI to the terminal
     async fn gui_loop(&mut self) -> Result<(), AppError> {
         let colors = self.app_data.lock().config.app_colors;
         let keymap = self.app_data.lock().config.keymap.clone();
-        while self.is_running.load(Ordering::SeqCst) {
-            let fd = FrameData::from(&*self);
-            let exec = fd.status.contains(&Status::Exec);
-            if exec {
-                self.exec().await;
-            }
+        let docker_interval_ms = u128::from(self.app_data.lock().config.docker_interval_ms);
+        let mut drawn_at = std::time::Instant::now();
 
-            if self
-                .terminal
-                .draw(|frame| {
-                    draw_frame(&self.app_data, colors, &keymap, frame, &fd, &self.gui_state);
-                })
-                .is_err()
-            {
-                return Err(AppError::Terminal);
+        while self.is_running.load(Ordering::SeqCst) {
+            if self.should_redraw(&mut drawn_at, docker_interval_ms) {
+                let fd = FrameData::from(&*self);
+
+                let exec = fd.status.contains(&Status::Exec);
+                if exec {
+                    self.exec().await;
+                }
+
+                if self
+                    .terminal
+                    .draw(|frame| {
+                        draw_frame(&self.app_data, colors, &keymap, frame, &fd, &self.gui_state);
+                    })
+                    .is_err()
+                {
+                    return Err(AppError::Terminal);
+                }
             }
 
             if crossterm::event::poll(POLL_RATE).unwrap_or(false) {
@@ -237,8 +268,8 @@ impl Ui {
 /// Frequent data required by multiple frame drawing functions, can reduce mutex reads by placing it all in here
 #[derive(Debug, Clone)]
 pub struct FrameData {
-    // app_colors: AppColors,
     chart_data: Option<(CpuTuple, MemTuple)>,
+    color_logs: bool,
     columns: Columns,
     container_title: String,
     delete_confirm: Option<ContainerId>,
@@ -272,8 +303,8 @@ impl From<&Ui> for FrameData {
 
         let (filter_by, filter_term) = app_data.get_filter();
         Self {
-            // app_colors: app_data.config.app_colors,
             chart_data: app_data.get_chart_data(),
+            color_logs: app_data.config.color_logs,
             columns: app_data.get_width(),
             container_title: app_data.get_container_title(),
             delete_confirm: gui_data.get_delete_container(),
@@ -303,7 +334,6 @@ fn draw_frame(
     f: &mut Frame,
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
-    // should pass in the colors here, then I only need to get it once from app+data
 ) {
     let whole_constraints = if fd.status.contains(&Status::Filter) {
         vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
@@ -353,7 +383,7 @@ fn draw_frame(
 
     // Draw filter bar
     if let Some(rect) = whole_layout.get(2) {
-        draw_blocks::filter::draw(*rect, f, fd);
+        draw_blocks::filter::draw(*rect, colors, f, fd);
     }
 
     if let Some(id) = fd.delete_confirm.as_ref() {
@@ -393,10 +423,17 @@ fn draw_frame(
 
     // Check if error, and show popup if so
     if fd.status.contains(&Status::Help) {
-        draw_blocks::help::draw(f, colors, keymap);
+        let tz = app_data.lock().config.timezone.clone();
+        draw_blocks::help::draw(
+            colors,
+            f,
+            keymap,
+            app_data.lock().config.show_timestamp,
+            tz.as_ref(),
+        );
     }
 
     if let Some(error) = fd.has_error.as_ref() {
-        draw_blocks::error::draw(f, error, keymap, None, colors);
+        draw_blocks::error::draw(colors, error, f, keymap, None);
     }
 }

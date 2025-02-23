@@ -1,16 +1,16 @@
 use bollard::{
+    Docker,
     container::{
         ListContainersOptions, LogsOptions, MemoryStatsStats, RemoveContainerOptions,
         StartContainerOptions, Stats, StatsOptions,
     },
     service::ContainerSummary,
-    Docker,
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
-    sync::{atomic::AtomicUsize, Arc},
+    sync::{Arc, atomic::AtomicUsize},
 };
 use tokio::{
     sync::mpsc::{Receiver, Sender},
@@ -19,11 +19,11 @@ use tokio::{
 use uuid::Uuid;
 
 use crate::{
+    ENTRY_POINT,
     app_data::{AppData, ContainerId, DockerCommand, State},
     app_error::AppError,
     config::Config,
     ui::{GuiState, Status},
-    ENTRY_POINT,
 };
 mod message;
 pub use message::DockerMessage;
@@ -46,7 +46,7 @@ impl SpawnId {
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
 /// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
 /// Binate value is toggled when all handles have been spawned off
-/// Also effectively means that the docker_update interval minimum will be 1000ms
+/// Also effectively means that the minimum docker_update interval will be 1000ms
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 enum Binate {
     One,
@@ -64,8 +64,8 @@ impl Binate {
 
 pub struct DockerData {
     app_data: Arc<Mutex<AppData>>,
-    config: Config,
     binate: Binate,
+    config: Config,
     docker: Arc<Docker>,
     gui_state: Arc<Mutex<GuiState>>,
     receiver: Receiver<DockerMessage>,
@@ -350,6 +350,7 @@ impl DockerData {
             GuiState::start_loading_animation(&gui_state, uuid);
             if match control {
                 DockerCommand::Delete => {
+                    gui_state.lock().set_delete_container(None);
                     docker
                         .remove_container(
                             id.get(),
@@ -400,7 +401,8 @@ impl DockerData {
 
     /// Send an update message every x ms, where x is the args.docker_interval
     fn heartbeat(config: &Config, docker_tx: Sender<DockerMessage>) {
-        let update_duration = std::time::Duration::from_millis(u64::from(config.docker_interval));
+        let update_duration =
+            std::time::Duration::from_millis(u64::from(config.docker_interval_ms));
         let mut now = std::time::Instant::now();
         tokio::spawn(async move {
             loop {

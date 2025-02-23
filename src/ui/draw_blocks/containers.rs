@@ -3,11 +3,11 @@ use std::sync::Arc;
 use super::MARGIN;
 use parking_lot::Mutex;
 use ratatui::{
+    Frame,
     layout::{Alignment, Rect},
     style::{Modifier, Style, Stylize},
     text::{Line, Span},
     widgets::{List, ListItem, Paragraph},
-    Frame,
 };
 
 use crate::{
@@ -16,7 +16,7 @@ use crate::{
     ui::{FrameData, GuiState, SelectablePanel},
 };
 
-use super::{generate_block, CIRCLE};
+use super::{CIRCLE, generate_block};
 
 /// Format the container data to display nicely on the screen
 fn format_containers<'a>(colors: AppColors, i: &ContainerItem, widths: &Columns) -> Line<'a> {
@@ -142,11 +142,11 @@ mod tests {
         app_data::{ContainerImage, ContainerName, ContainerStatus, State, StatefulList},
         config::AppColors,
         ui::{
-            draw_blocks::tests::{
-                expected_to_vec, get_result, test_setup, TuiTestSetup, BORDER_CHARS, COLOR_ORANGE,
-                COLOR_RX, COLOR_TX,
-            },
             FrameData,
+            draw_blocks::tests::{
+                BORDER_CHARS, COLOR_ORANGE, COLOR_RX, COLOR_TX, TuiTestSetup, expected_to_vec,
+                get_result, test_setup,
+            },
         },
     };
 
@@ -318,7 +318,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
@@ -671,13 +671,13 @@ mod tests {
         setup.app_data.lock().containers.items[0].state = State::from(("running", &status));
         setup.app_data.lock().containers.items[0].status = status;
 
-        let expected= [
+        let expected = [
             "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
             "│⚪  container_1   ! running   Up 1 hour (unhealthy)   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB        │",
             "│   container_2   ✓ running   Up 2 hour               00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB        │",
             "│   container_3   ✓ running   Up 3 hour               00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB        │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
@@ -778,7 +778,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let mut colors = AppColors::new();
@@ -852,7 +852,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -898,7 +898,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -945,7 +945,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -991,7 +991,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -1037,7 +1037,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -1083,7 +1083,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -1129,7 +1129,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -1175,7 +1175,7 @@ mod tests {
             "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
             "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
             "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
         ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));

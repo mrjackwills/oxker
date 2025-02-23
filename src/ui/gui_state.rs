@@ -13,6 +13,8 @@ use crate::{
     exec::ExecMode,
 };
 
+use super::Redraw;
+
 #[derive(Debug, Default, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SelectablePanel {
     #[default]
@@ -171,22 +173,40 @@ pub enum Status {
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct GuiState {
     delete_container: Option<ContainerId>,
     exec_mode: Option<ExecMode>,
-    loading_handle: Option<JoinHandle<()>>,
-    loading_index: u8,
-    loading_set: HashSet<Uuid>,
     intersect_delete: HashMap<DeleteButton, Rect>,
     intersect_heading: HashMap<Header, Rect>,
     intersect_help: Option<Rect>,
     intersect_panel: HashMap<SelectablePanel, Rect>,
+    loading_handle: Option<JoinHandle<()>>,
+    loading_index: u8,
+    loading_set: HashSet<Uuid>,
+    redraw: Arc<Redraw>,
     selected_panel: SelectablePanel,
     status: HashSet<Status>,
     pub info_box_text: Option<(String, Instant)>,
 }
 impl GuiState {
+    pub fn new(redraw: &Arc<Redraw>) -> Self {
+        Self {
+            delete_container: None,
+            exec_mode: None,
+            info_box_text: None,
+            intersect_delete: HashMap::new(),
+            intersect_heading: HashMap::new(),
+            intersect_help: None,
+            intersect_panel: HashMap::new(),
+            loading_handle: None,
+            loading_index: 0,
+            loading_set: HashSet::new(),
+            redraw: Arc::clone(redraw),
+            selected_panel: SelectablePanel::default(),
+            status: HashSet::new(),
+        }
+    }
     /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
     pub fn clear_area_map(&mut self) {
         self.intersect_panel.clear();
@@ -198,7 +218,7 @@ impl GuiState {
     }
 
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
-    pub fn get_intersect_panel(&mut self, rect: Rect) {
+    pub fn check_panel_intersect(&mut self, rect: Rect) {
         if let Some(data) = self
             .intersect_panel
             .iter()
@@ -207,6 +227,7 @@ impl GuiState {
             .first()
         {
             self.selected_panel = *data.0;
+            self.redraw.set_true();
         }
     }
 
@@ -276,9 +297,10 @@ impl GuiState {
             self.status.insert(Status::DeleteConfirm);
         } else {
             self.intersect_delete.clear();
-            self.status.remove(&Status::DeleteConfirm);
+            self.status_del(Status::DeleteConfirm);
         }
         self.delete_container = id;
+        self.redraw.set_true();
     }
 
     /// Return a copy of the Status HashSet
@@ -299,6 +321,7 @@ impl GuiState {
             }
             _ => (),
         }
+        self.redraw.set_true();
     }
 
     /// Inset the ExecMode into self, and set the Status as exec
@@ -307,6 +330,7 @@ impl GuiState {
     pub fn set_exec_mode(&mut self, mode: ExecMode) {
         self.exec_mode = Some(mode);
         self.status.insert(Status::Exec);
+        self.redraw.set_true();
     }
 
     pub fn get_exec_mode(&self) -> Option<ExecMode> {
@@ -316,22 +340,22 @@ impl GuiState {
     /// Insert a gui_status into the current gui_status HashSet
     /// If the status is Exec, it won't get inserted, set_exec_mode() should be used instead
     pub fn status_push(&mut self, status: Status) {
-        match status {
-            Status::Exec => (),
-            _ => {
-                self.status.insert(status);
-            }
+        if status != Status::Exec {
+            self.status.insert(status);
+            self.redraw.set_true();
         }
     }
 
     /// Change to next selectable panel
     pub fn next_panel(&mut self) {
         self.selected_panel = self.selected_panel.next();
+        self.redraw.set_true();
     }
 
     /// Change to previous selectable panel
     pub fn previous_panel(&mut self) {
         self.selected_panel = self.selected_panel.prev();
+        self.redraw.set_true();
     }
 
     /// Insert a new loading_uuid into HashSet, and advance the loading_index by one frame, or reset to 0 if at end of array
@@ -342,6 +366,7 @@ impl GuiState {
             self.loading_index += 1;
         }
         self.loading_set.insert(uuid);
+        self.redraw.set_true();
     }
 
     pub fn is_loading(&self) -> bool {
@@ -374,6 +399,7 @@ impl GuiState {
     /// Stop the loading_spin function, and reset gui loading status
     pub fn stop_loading_animation(&mut self, loading_uuid: Uuid) {
         self.loading_set.remove(&loading_uuid);
+        self.redraw.set_true();
         if self.loading_set.is_empty() {
             self.loading_index = 0;
             if let Some(h) = &self.loading_handle {
@@ -386,10 +412,12 @@ impl GuiState {
     /// Set info box content
     pub fn set_info_box(&mut self, text: &str) {
         self.info_box_text = Some((text.to_owned(), std::time::Instant::now()));
+        self.redraw.set_true();
     }
 
     /// Remove info box content
     pub fn reset_info_box(&mut self) {
         self.info_box_text = None;
+        self.redraw.set_true();
     }
 }

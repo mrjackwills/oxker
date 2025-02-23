@@ -11,10 +11,10 @@ use std::{
 mod container_state;
 
 use crate::{
+    ENTRY_POINT,
     app_error::AppError,
     config::Config,
-    ui::{log_sanitizer, GuiState, Status},
-    ENTRY_POINT,
+    ui::{GuiState, Redraw, Status, log_sanitizer},
 };
 pub use container_state::*;
 
@@ -122,7 +122,9 @@ pub struct AppData {
     error: Option<AppError>,
     filter: Filter,
     hidden_containers: Vec<ContainerItem>,
+    redraw: Arc<Redraw>,
     sorted_by: Option<(Header, SortedOrder)>,
+    current_sorted_id: Vec<ContainerId>,
     pub config: Config,
 }
 
@@ -134,18 +136,22 @@ pub struct AppData {
     pub error: Option<AppError>,
     pub filter: Filter,
     pub hidden_containers: Vec<ContainerItem>,
+    pub current_sorted_id: Vec<ContainerId>,
+    pub redraw: Arc<Redraw>,
     pub sorted_by: Option<(Header, SortedOrder)>,
 }
 
 impl AppData {
     /// Generate a default app_state
-    pub fn default(config: Config) -> Self {
+    pub fn new(config: Config, redraw: &Arc<Redraw>) -> Self {
         Self {
             config,
             containers: StatefulList::new(vec![]),
+            current_sorted_id: vec![],
             error: None,
             filter: Filter::new(),
             hidden_containers: vec![],
+            redraw: Arc::clone(redraw),
             sorted_by: None,
         }
     }
@@ -167,7 +173,7 @@ impl AppData {
 
     /// Check if a given container can be inserted into the "visible" list, based on current filter term and filter_by
     fn can_insert(&self, container: &ContainerItem) -> bool {
-        self.filter.term.as_ref().map_or(true, |term| {
+        self.filter.term.as_ref().is_none_or(|term| {
             let term = term.to_lowercase();
             match self.filter.by {
                 FilterBy::All => {
@@ -186,6 +192,7 @@ impl AppData {
     /// sets the state to start if any filtering has occurred
     /// Also search in the "hidden" vec for items and insert back into the main containers vec
     fn filter_containers(&mut self) {
+        self.redraw.set_true();
         let pre_len = self.get_container_len();
 
         if !self.hidden_containers.is_empty() {
@@ -289,6 +296,7 @@ impl AppData {
     /// Remove the sorted header & order, and sort by default - created datetime
     pub fn reset_sorted(&mut self) {
         self.set_sorted(None);
+        self.redraw.set_true();
     }
 
     /// Sort containers based on a given header, if headings match, and already ascending, remove sorting
@@ -309,10 +317,19 @@ impl AppData {
         self.sorted_by
     }
 
+    /// Get a vec of the containers ID's in the order they are displayed in the containers panel
+    fn get_current_ids(&self) -> Vec<ContainerId> {
+        self.containers
+            .items
+            .iter()
+            .map(|i| i.id.clone())
+            .collect::<Vec<_>>()
+    }
     /// Sort the containers vec, based on a heading (and if clash, then by name), either ascending or descending,
     /// If not sort set, then sort by created time
     pub fn sort_containers(&mut self) {
         if let Some((head, ord)) = self.sorted_by {
+            let pre_order = self.get_current_ids();
             let sort_closure = |a: &ContainerItem, b: &ContainerItem| -> std::cmp::Ordering {
                 let item_ord = match ord {
                     SortedOrder::Asc => (a, b),
@@ -372,13 +389,19 @@ impl AppData {
                         .then_with(|| item_ord.0.id.cmp(&item_ord.1.id)),
                 }
             };
+
             self.containers.items.sort_by(sort_closure);
-        } else {
+            if pre_order != self.get_current_ids() {
+                self.redraw.set_true();
+            }
+        } else if self.current_sorted_id != self.get_current_ids() {
             self.containers.items.sort_by(|a, b| {
                 a.created
                     .cmp(&b.created)
                     .then_with(|| a.name.get().cmp(b.name.get()))
             });
+            self.redraw.set_true();
+            self.current_sorted_id = self.get_current_ids();
         }
     }
 
@@ -414,21 +437,25 @@ impl AppData {
     /// Select the first container
     pub fn containers_start(&mut self) {
         self.containers.start();
+        self.redraw.set_true();
     }
 
     /// select the last container
     pub fn containers_end(&mut self) {
         self.containers.end();
+        self.redraw.set_true();
     }
 
     /// Select the next container
     pub fn containers_next(&mut self) {
         self.containers.next();
+        self.redraw.set_true();
     }
 
     /// select the previous container
     pub fn containers_previous(&mut self) {
         self.containers.previous();
+        self.redraw.set_true();
     }
 
     /// Get ListState of containers
@@ -521,6 +548,11 @@ impl AppData {
         self.get_selected_container().map(|i| i.id.clone())
     }
 
+    /// Check if a given ID matches the currently selected container
+    pub fn is_selected_container(&self, id: &ContainerId) -> bool {
+        self.get_selected_container().is_some_and(|i| &i.id == id)
+    }
+
     /// Get the Id and State for the currently selected container - used by the exec check method
     pub fn get_selected_container_id_state_name(&self) -> Option<(ContainerId, State, String)> {
         self.get_selected_container()
@@ -545,6 +577,7 @@ impl AppData {
     pub fn docker_controls_next(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.next();
+            self.redraw.set_true();
         }
     }
 
@@ -552,6 +585,7 @@ impl AppData {
     pub fn docker_controls_previous(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.previous();
+            self.redraw.set_true();
         }
     }
 
@@ -559,6 +593,7 @@ impl AppData {
     pub fn docker_controls_start(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.start();
+            self.redraw.set_true();
         }
     }
 
@@ -566,6 +601,7 @@ impl AppData {
     pub fn docker_controls_end(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.end();
+            self.redraw.set_true();
         }
     }
 
@@ -585,7 +621,7 @@ impl AppData {
     /// Get the title for log panel for selected container, will be either
     /// 1) "logs x/x - container_name - container_image"
     /// 2) "logs - container_name - container_image" when no logs found
-    /// 3) "" no container currently selected - aka no containers on system
+    /// 3) " " no container currently selected - aka no containers on system
     pub fn get_log_title(&self) -> String {
         self.get_selected_container()
             .map_or_else(String::new, |ci| {
@@ -603,6 +639,7 @@ impl AppData {
     pub fn log_next(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.next();
+            self.redraw.set_true();
         }
     }
 
@@ -610,6 +647,7 @@ impl AppData {
     pub fn log_previous(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.previous();
+            self.redraw.set_true();
         }
     }
 
@@ -617,6 +655,7 @@ impl AppData {
     pub fn log_end(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.end();
+            self.redraw.set_true();
         }
     }
 
@@ -624,6 +663,7 @@ impl AppData {
     pub fn log_start(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.start();
+            self.redraw.set_true();
         }
     }
 
@@ -664,12 +704,14 @@ impl AppData {
     /// Remove single app_state error
     pub fn remove_error(&mut self) {
         self.error = None;
+        self.redraw.set_true();
     }
 
     /// Insert single app_state error
     pub fn set_error(&mut self, error: AppError, gui_state: &Arc<Mutex<GuiState>>, status: Status) {
         gui_state.lock().status_push(status);
         self.error = Some(error);
+        self.redraw.set_true();
     }
 
     /// Check if the selected container is a dockerised version of oxker
@@ -758,6 +800,9 @@ impl AppData {
             container.tx.update(tx);
             container.mem_limit.update(mem_limit);
         }
+        if self.is_selected_container(id) {
+            self.redraw.set_true();
+        }
         self.sort_containers();
     }
 
@@ -793,6 +838,9 @@ impl AppData {
                 // Check is some, else can cause out of bounds error, if containers get removed before a docker update
                 if self.containers.items.get(index).is_some() {
                     self.containers.items.remove(index);
+                    if self.is_selected_container(id) {
+                        self.redraw.set_true();
+                    }
                 }
             }
         }
@@ -872,6 +920,7 @@ impl AppData {
                     }
                 }
             }
+            // self.redraw.set_true("update_containers");
         }
     }
 
@@ -879,18 +928,27 @@ impl AppData {
     pub fn update_log_by_id(&mut self, logs: Vec<String>, id: &ContainerId) {
         let color = self.config.color_logs;
         let raw = self.config.raw_logs;
+        let format = self.config.timestamp_format.clone();
+        let config_tz = self.config.timezone.clone();
 
-        let timestamp = self.config.show_timestamp;
+        let show_timestamp = self.config.show_timestamp;
 
         if let Some(container) = self.get_any_container_by_id(id) {
             if !container.is_oxker {
                 container.last_updated = Self::get_systemtime();
                 let current_len = container.logs.len();
-
                 for mut i in logs {
-                    let tz = LogsTz::from(i.as_str());
-                    if !timestamp {
-                        i = i.replace(&tz.to_string(), "");
+                    let (log_tz, log_content) = LogsTz::splitter(i.as_str());
+                    if show_timestamp {
+                        i = format!(
+                            "{} {}",
+                            log_tz
+                                .display_with_formatter(config_tz.as_ref(), &format)
+                                .unwrap_or_else(|| log_tz.to_string()),
+                            log_content
+                        );
+                    } else {
+                        i = log_content;
                     }
                     let lines = if color {
                         log_sanitizer::colorize_logs(&i)
@@ -899,7 +957,7 @@ impl AppData {
                     } else {
                         log_sanitizer::remove_ansi(&i)
                     };
-                    container.logs.insert(ListItem::new(lines), tz);
+                    container.logs.insert(ListItem::new(lines), log_tz);
                 }
 
                 // Set the logs selected row for each container
@@ -909,6 +967,9 @@ impl AppData {
                 {
                     container.logs.end();
                 }
+            }
+            if self.is_selected_container(id) {
+                self.redraw.set_true();
             }
         }
     }
@@ -1819,7 +1880,7 @@ mod tests {
         assert_eq!(result, " - container_1 - image_1");
 
         // On last line of logs
-        let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
+        let logs = (1..=3).map(|i| format!("{i} {i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[0]);
         let result = app_data.get_log_title();
         assert_eq!(result, " 3/3 - container_1 - image_1");
@@ -1851,7 +1912,7 @@ mod tests {
         assert_eq!(result, " - container_2 - image_2");
 
         // On last line of logs
-        let logs = (1..=3).map(|i| format!("{i}")).collect::<Vec<_>>();
+        let logs = (1..=3).map(|i| format!("{i} {i}")).collect::<Vec<_>>();
         app_data.update_log_by_id(logs, &ids[1]);
         let result = app_data.get_log_title();
         assert_eq!(result, " 3/3 - container_2 - image_2");

@@ -1,8 +1,5 @@
-# Example toml config file
-
-# This needs to be renamed to "config.toml" in order for oxker to automatically load
+# oxker config file
 # oxker will also read .jsonc and .json files which use the same key/value structure & format as this file
-
 # Every key is optional, with defaults that oxker will choose if missing or invalid
 # The `--config-file` cli argument can be used to load configuration files from any readable location
 
@@ -29,6 +26,13 @@ gui = true
 
 # Docker host location
 host = "/var/run/docker.sock"
+
+# Display the container logs timestamp with a given timezone, if timezone is unknown, defaults to UTC
+timezone = "Etc/UTC"
+
+# Display the timestamp in a custom format, if given option is invalid, it will default to %Y-%m-%dT%H:%M:%S.%8f -> 2025-02-18T12:34:56.012345678Z
+# *Should* accept any valid strftime string up to 32 chars, see https://strftime.org/
+timestamp_format="%Y-%m-%dT%H:%M:%S.%8f"
 
 # Directory for saving exported logs, defaults to `$HOME`, this is automatically *correctly* calculated for Linux, Mac, and Windows
 # save_dir = "$HOME"
@@ -141,6 +145,13 @@ text_rx="#FFE9C1"
 # Text color of the TX column
 text_tx="#CD8C8C"
 
+# The logs panel, will only be applied if color_logs is false
+[colors.logs]
+# Background color of panel
+background = "reset"
+# text color
+text="reset"
+
 # Each state of a container has a color, which is used in multiple places, i.e. chart titles, state/status/cpu/memory columns in the container section
 [colors.container_state]
 dead="red"
@@ -151,6 +162,20 @@ restarting ="lightgreen"
 running_healthy ="green"
 running_unhealthy="#FFB224"
 unknown="red"
+
+# The filter panel
+[colors.filter]
+# Background color of panel
+background = "reset"
+# color of text
+text="gray"
+# background color of the selected filter by item (Name/Image/Status/All)
+selected_filter_background="gray"
+# text color of the selected filter by item (Name/Image/Status/All)
+selected_filter_text="black"
+# Highlighted text color
+highlight="magenta"
+
 
 # The color the of Docker commands available for each container
 [colors.commands]

@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::config::AppColors;
 
-use super::{gui_state::Region, FrameData, GuiState, SelectablePanel, Status};
+use super::{FrameData, GuiState, SelectablePanel, Status, gui_state::Region};
 
 pub mod charts;
 pub mod commands;
@@ -118,12 +118,12 @@ pub mod tests {
     };
 
     use parking_lot::Mutex;
-    use ratatui::{backend::TestBackend, layout::Rect, style::Color, Terminal};
+    use ratatui::{Terminal, backend::TestBackend, layout::Rect, style::Color};
 
     use crate::{
         app_data::{AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts},
         tests::{gen_appdata, gen_containers},
-        ui::{draw_frame, GuiState},
+        ui::{GuiState, Redraw, draw_frame},
     };
 
     use super::FrameData;
@@ -142,6 +142,7 @@ pub mod tests {
     pub const COLOR_TX: Color = Color::Rgb(205, 140, 140);
     pub const COLOR_ORANGE: Color = Color::Rgb(255, 178, 36);
 
+    /// Create a FrameData struct from two Arc<mutex>'s, instead of from UI
     impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
         fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
             let (app_data, gui_data) = (data.0.lock(), data.1.lock());
@@ -158,6 +159,7 @@ pub mod tests {
             Self {
                 chart_data: app_data.get_chart_data(),
                 columns: app_data.get_width(),
+                color_logs: app_data.config.color_logs,
                 container_title: app_data.get_container_title(),
                 delete_confirm: gui_data.get_delete_container(),
                 filter_by,
@@ -192,7 +194,8 @@ pub mod tests {
             app_data.containers_start();
         }
 
-        let gui_state = GuiState::default();
+        let redraw = Arc::new(Redraw::new());
+        let gui_state = GuiState::new(&redraw);
 
         let app_data = Arc::new(Mutex::new(app_data));
         let gui_state = Arc::new(Mutex::new(gui_state));
@@ -216,6 +219,7 @@ pub mod tests {
             .collect::<Vec<_>>()
     }
 
+    /// Just a shorthand for when enumerating over result cells
     pub fn get_result(
         setup: &TuiTestSetup,
         w: u16,
@@ -378,7 +382,7 @@ pub mod tests {
             "│      │••       •••                                            ││         │••      •••                                          ││                            │",
             "│      │                                                        ││         │                                                     ││                            │",
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
-                ];
+        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
         let keymap = setup.app_data.lock().config.keymap.clone();
@@ -435,7 +439,7 @@ pub mod tests {
             "│      │                                                        ││         │                                                     ││                            │",
             "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯",
             " Esc  clear  ← by →   Name  Image  Status  All  term: r_1                                                                                                       ",
-            ];
+        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal

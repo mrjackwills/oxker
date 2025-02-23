@@ -1,7 +1,7 @@
 {
 	// Example JSONC config file
 	// This needs to be renamed to "config.jsonc" ("config.json" will also work, even if the file is actually a jsonc) in order for oxker to automatically load
-	// oxker will also read .jsonc and .json files which use the same key/value structure & format as this file
+	// oxker will also read .toml and .json files which use the same key/value structure & format as this file
 	// Every key is optional, with defaults that oxker will choose if missing or invalid
 	// The `--config-file` cli argument can be used to load configuration files from any readable location
 	// Docker update interval in ms, minimum effectively 1000
@@ -20,6 +20,11 @@
 	"gui": true,
 	// Docker host location
 	"host": "/var/run/docker.sock",
+	// Display the timestamp in a custom format, if given option is invalid, it will default to %Y-%m-%dT%H:%M:%S.%8f -> 2025-02-18T12:34:56.01234567
+	// *Should* accept any valid strftime string up to 32 chars, see https://strftime.org/
+	"timestamp_format": "%Y-%m-%dT%H:%M:%S.%8f",
+	// Display the container logs timestamp with a given timezone, if timezone is unknown, defaults to UTC
+	"timezone": "Etc/UTC",
 	// Directory for saving exported logs, defaults to `$HOME`, this is automatically *correctly* calculated for Linux, Mac, and Windows
 	// "save_dir": "$HOME",
 	// Force use of docker cli when execing into containers, honestly mostly pointless
@@ -245,6 +250,26 @@
 			"headings": "yellow",
 			// Ports & IP listing text
 			"text": "white"
+		},
+		// The filter panel
+		"filter": {
+			// Background color of panel
+			"background": "reset",
+			// color of text
+			"text": "gray",
+			// background color of the selected filter by item (Name/Image/Status/All)
+			"selected_filter_background": "gray",
+			// text color of the selected filter by item (Name/Image/Status/All)
+			"selected_filter_text": "black",
+			// Highlighted text color
+			"highlight": "magenta"
+		},
+		// The logs panel, will only be applied if color_logs is false
+		"logs": {
+			// Background color of panel
+			"background": "reset",
+			// text color
+			"text": "reset"
 		},
 		// The help popup
 		"popup_help": {

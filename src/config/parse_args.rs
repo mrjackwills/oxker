@@ -37,6 +37,10 @@ pub struct Args {
     #[clap(long = "no-stderr")]
     pub no_std_err: bool,
 
+    /// Display the container logs timestamp with a given timezone, default is UTC
+    #[clap(long="timezone", short = None)]
+    pub timezone: Option<String>,
+
     /// Directory for saving exported logs, defaults to `$HOME`
     #[clap(long="save-dir", short = None)]
     pub save_dir: Option<String>,

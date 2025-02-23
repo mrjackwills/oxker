@@ -1,11 +1,11 @@
 use ratatui::{
+    Frame,
     layout::Alignment,
     style::Style,
     widgets::{Block, BorderType, Borders, Clear, Paragraph},
-    Frame,
 };
 
-use super::{max_line_width, NAME, VERSION};
+use super::{NAME, VERSION, max_line_width};
 use crate::{
     app_error::AppError,
     config::{AppColors, Keymap},
@@ -16,11 +16,11 @@ use super::popup;
 
 /// Draw an error popup over whole screen
 pub fn draw(
-    f: &mut Frame,
+    colors: AppColors,
     error: &AppError,
+    f: &mut Frame,
     keymap: &Keymap,
     seconds: Option<u8>,
-    colors: AppColors,
 ) {
     let block = Block::default()
         .title(" Error ")
@@ -106,16 +106,20 @@ mod tests {
 
     #[test]
     /// Test that the error popup is centered, red background, white border, white text, and displays the correct text
-    fn test_draw_blocks_docker_connect_error() {
+    fn test_draw_blocks_error_docker_connect_error() {
         let (w, h) = (46, 9);
         let mut setup = test_setup(w, h, true, true);
-        let app_colors = setup.app_data.lock().config.app_colors;
-        let keymap = &setup.app_data.lock().config.keymap;
 
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, &AppError::DockerConnect, keymap, Some(4), app_colors);
+                super::draw(
+                    AppColors::new(),
+                    &AppError::DockerConnect,
+                    f,
+                    &Keymap::new(),
+                    Some(4),
+                );
             })
             .unwrap();
 
@@ -153,17 +157,20 @@ mod tests {
 
     #[test]
     /// Test that the clearable error popup is centered, red background, white border, white text, and displays the correct text
-    fn test_draw_blocks_clearable_error() {
+    fn test_draw_blocks_error_clearable_error() {
         let (w, h) = (39, 11);
         let mut setup = test_setup(w, h, true, true);
-
-        let app_colors = setup.app_data.lock().config.app_colors;
-        let keymap = &setup.app_data.lock().config.keymap;
 
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, &AppError::DockerExec, keymap, Some(4), app_colors);
+                super::draw(
+                    AppColors::new(),
+                    &AppError::DockerExec,
+                    f,
+                    &Keymap::new(),
+                    Some(4),
+                );
             })
             .unwrap();
 
@@ -203,11 +210,9 @@ mod tests {
 
     #[test]
     /// Custom colors applied to the error popup correctly
-    fn test_draw_blocks_clearable_error_custom_colors() {
+    fn test_draw_blocks_error_custom_colors() {
         let (w, h) = (39, 11);
         let mut setup = test_setup(w, h, true, true);
-
-        let keymap = &setup.app_data.lock().config.keymap;
 
         let mut colors = AppColors::new();
         colors.popup_error.background = Color::Yellow;
@@ -216,7 +221,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, &AppError::DockerExec, keymap, Some(4), colors);
+                super::draw(colors, &AppError::DockerExec, f, &Keymap::new(), Some(4));
             })
             .unwrap();
 
@@ -256,7 +261,7 @@ mod tests {
 
     #[test]
     /// Custom keymap applied correct with both 1 and 2 definitions
-    fn test_draw_blocks_clearable_error_custom_keymap() {
+    fn test_draw_blocks_error_custom_keymap() {
         let (w, h) = (39, 11);
         let mut setup = test_setup(w, h, true, true);
 
@@ -267,7 +272,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, &AppError::DockerExec, &keymap, None, AppColors::new());
+                super::draw(AppColors::new(), &AppError::DockerExec, f, &keymap, None);
             })
             .unwrap();
 
@@ -299,7 +304,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, &AppError::DockerExec, &keymap, None, AppColors::new());
+                super::draw(AppColors::new(), &AppError::DockerExec, f, &keymap, None);
             })
             .unwrap();
 
@@ -330,7 +335,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(f, &AppError::DockerExec, &keymap, None, AppColors::new());
+                super::draw(AppColors::new(), &AppError::DockerExec, f, &keymap, None);
             })
             .unwrap();
 

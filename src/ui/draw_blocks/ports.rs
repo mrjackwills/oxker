@@ -1,9 +1,9 @@
 use ratatui::{
+    Frame,
     layout::{Alignment, Rect},
     style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph},
-    Frame,
 };
 
 use crate::{app_data::State, config::AppColors, ui::FrameData};
@@ -24,12 +24,12 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .style(Style::new().fg(colors.chart_ports.border))
-            // .bg(colors.chart_ports.border))
             .title_alignment(Alignment::Center)
             .title(Span::styled(
                 " ports ",
                 Style::default()
                     .fg(get_port_title_color(colors, ports.1))
+                    .bg(colors.chart_ports.background)
                     .add_modifier(Modifier::BOLD),
             ));
 
@@ -42,7 +42,8 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
             };
             let paragraph = Paragraph::new(Span::from(text).add_modifier(Modifier::BOLD))
                 .alignment(Alignment::Center)
-                .block(block);
+                .block(block)
+                .bg(colors.chart_ports.background);
             f.render_widget(paragraph, area);
         } else {
             let mut output = vec![Line::from(
@@ -62,7 +63,9 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
                 ];
                 output.push(Line::from(line));
             }
-            let paragraph = Paragraph::new(output).block(block);
+            let paragraph = Paragraph::new(output)
+                .block(block)
+                .bg(colors.chart_ports.background);
             f.render_widget(paragraph, area);
         }
     }
@@ -76,10 +79,13 @@ mod tests {
     use ratatui::style::{Color, Modifier};
 
     use crate::{
-        app_data::{ContainerPorts, State},
+        app_data::{ContainerPorts, RunningState, State},
+        config::AppColors,
         ui::{
-            draw_blocks::tests::{expected_to_vec, get_result, test_setup},
             FrameData,
+            draw_blocks::tests::{
+                COLOR_ORANGE, COLOR_RX, COLOR_TX, expected_to_vec, get_result, test_setup,
+            },
         },
     };
 
@@ -313,6 +319,128 @@ mod tests {
                 if let (0, 12..=18) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Red);
                     assert_eq!(result_cell.modifier, Modifier::BOLD);
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Custom colors applied to ports panel
+    fn test_draw_blocks_ports_custom_colors() {
+        let (w, h) = (32, 8);
+        let mut setup = test_setup(w, h, true, true);
+
+        let mut colors = AppColors::new();
+        colors.chart_ports.background = Color::Black;
+        colors.chart_ports.border = Color::Yellow;
+        colors.chart_ports.headings = Color::Red;
+        colors.chart_ports.text = Color::Green;
+        colors.chart_ports.title = Color::Magenta;
+
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(setup.area, colors, f, &fd);
+            })
+            .unwrap();
+
+        let expected = [
+            "╭─────────── ports ────────────╮",
+            "│   ip   private   public      │",
+            "│           8001               │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "╰──────────────────────────────╯",
+        ];
+
+        for (row_index, result_row) in get_result(&setup, w) {
+            let expected_row = expected_to_vec(&expected, row_index);
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Black);
+
+                match (row_index, result_cell_index) {
+                    // title => {
+                    (0, 12..=18) => {
+                        assert_eq!(result_cell.fg, Color::Magenta);
+                    }
+                    // title
+                    (1, 1..=24) => {
+                        assert_eq!(result_cell.fg, Color::Red);
+                    }
+                    // text
+                    (2, 1..=24) => {
+                        assert_eq!(result_cell.fg, Color::Green);
+                    }
+                    // border & everything else
+                    _ => {
+                        assert_eq!(result_cell.fg, Color::Yellow);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Custom state color applied to ports panel title
+    fn test_draw_blocks_ports_custom_colors_state() {
+        let (w, h) = (32, 8);
+        let mut setup = test_setup(w, h, true, true);
+
+        let mut colors = AppColors::new();
+        colors.container_state.dead = Color::Green;
+        colors.container_state.exited = Color::Magenta;
+        colors.container_state.paused = Color::Gray;
+        colors.container_state.removing = COLOR_ORANGE;
+        colors.container_state.restarting = COLOR_RX;
+        colors.container_state.running_healthy = COLOR_TX;
+        colors.container_state.running_unhealthy = Color::Cyan;
+        colors.container_state.unknown = Color::LightMagenta;
+
+        colors.chart_ports.title = Color::DarkGray;
+
+        let expected = [
+            "╭─────────── ports ────────────╮",
+            "│   ip   private   public      │",
+            "│           8001               │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "│                              │",
+            "╰──────────────────────────────╯",
+        ];
+
+        for i in [
+            (State::Dead, Color::Green),
+            (State::Exited, Color::Magenta),
+            (State::Paused, Color::Gray),
+            (State::Removing, COLOR_ORANGE),
+            (State::Restarting, COLOR_RX),
+            (State::Unknown, Color::LightMagenta),
+            (State::Running(RunningState::Healthy), Color::DarkGray),
+            (State::Running(RunningState::Unhealthy), Color::DarkGray),
+        ] {
+            setup.app_data.lock().containers.items[0].state = i.0;
+
+            let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+            setup
+                .terminal
+                .draw(|f| {
+                    super::draw(setup.area, colors, f, &fd);
+                })
+                .unwrap();
+
+            for (row_index, result_row) in get_result(&setup, w) {
+                let expected_row = expected_to_vec(&expected, row_index);
+                for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                    assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+
+                    if row_index == 0 && (12..=18).contains(&result_cell_index) {
+                        assert_eq!(result_cell.fg, i.1);
+                    }
                 }
             }
         }
