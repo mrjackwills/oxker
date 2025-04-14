@@ -1,0 +1,13 @@
+---
+source: src/ui/draw_blocks/error.rs
+expression: setup.terminal.backend()
+---
+"                                              "
+"╭────────────────── Error ───────────────────╮"
+"│                                            │"
+"│       Unable to access docker daemon       │"
+"│                                            │"
+"│     oxker::v0.10.0 closing in 04 seconds   │"
+"│                                            │"
+"╰────────────────────────────────────────────╯"
+"                                              "

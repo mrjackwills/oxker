@@ -76,6 +76,7 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr};
 
+    use insta::assert_snapshot;
     use ratatui::style::{Color, Modifier};
 
     use crate::{
@@ -83,9 +84,7 @@ mod tests {
         config::AppColors,
         ui::{
             FrameData,
-            draw_blocks::tests::{
-                COLOR_ORANGE, COLOR_RX, COLOR_TX, expected_to_vec, get_result, test_setup,
-            },
+            draw_blocks::tests::{COLOR_ORANGE, COLOR_RX, COLOR_TX, get_result, test_setup},
         },
     };
 
@@ -103,22 +102,10 @@ mod tests {
                 super::draw(setup.area, setup.app_data.lock().config.app_colors, f, &fd);
             })
             .unwrap();
+        assert_snapshot!(setup.terminal.backend());
 
-        let expected = [
-            "╭────────── ports ───────────╮",
-            "│          no ports          │",
-            "│                            │",
-            "│                            │",
-            "│                            │",
-            "│                            │",
-            "│                            │",
-            "╰────────────────────────────╯",
-        ];
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 match (row_index, result_cell_index) {
                     (0, 11..=17) => {
                         assert_eq!(result_cell.bg, Color::Reset);
@@ -138,8 +125,25 @@ mod tests {
                 }
             }
         }
+    }
 
-        // When state is "State::Running | State::Paused | State::Restarting, won't show "no ports"
+    #[test]
+    /// Port section when container has no ports
+    // When state is "State::Running | State::Paused | State::Restarting, won't show "no ports"
+    fn test_draw_blocks_ports_no_ports_dead() {
+        let (w, h) = (30, 8);
+        let mut setup = test_setup(w, h, true, true);
+        setup.app_data.lock().containers.items[0].ports = vec![];
+
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(setup.area, setup.app_data.lock().config.app_colors, f, &fd);
+            })
+            .unwrap();
+        // split
+
         setup.app_data.lock().containers.items[0].state = State::Dead;
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -150,21 +154,10 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            "╭────────── ports ───────────╮",
-            "│                            │",
-            "│                            │",
-            "│                            │",
-            "│                            │",
-            "│                            │",
-            "│                            │",
-            "╰────────────────────────────╯",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 if let (0, 11..=17) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Red);
@@ -204,22 +197,10 @@ mod tests {
                 super::draw(setup.area, setup.app_data.lock().config.app_colors, f, &fd);
             })
             .unwrap();
+        assert_snapshot!(setup.terminal.backend());
 
-        let expected = [
-            "╭─────────── ports ────────────╮",
-            "│       ip   private   public  │",
-            "│               8001           │",
-            "│               8002           │",
-            "│127.0.0.1      8003     8003  │",
-            "│                              │",
-            "│                              │",
-            "╰──────────────────────────────╯",
-        ];
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
 
                 match (row_index, result_cell_index) {
@@ -258,21 +239,10 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            "╭─────────── ports ────────────╮",
-            "│   ip   private   public      │",
-            "│           8001               │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "╰──────────────────────────────╯",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 if let (0, 12..=18) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Green);
@@ -290,10 +260,8 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 if let (0, 12..=18) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Yellow);
@@ -311,10 +279,8 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 if let (0, 12..=18) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Red);
@@ -345,21 +311,10 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            "╭─────────── ports ────────────╮",
-            "│   ip   private   public      │",
-            "│           8001               │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "╰──────────────────────────────╯",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Black);
 
                 match (row_index, result_cell_index) {
@@ -402,17 +357,6 @@ mod tests {
 
         colors.chart_ports.title = Color::DarkGray;
 
-        let expected = [
-            "╭─────────── ports ────────────╮",
-            "│   ip   private   public      │",
-            "│           8001               │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "╰──────────────────────────────╯",
-        ];
-
         for i in [
             (State::Dead, Color::Green),
             (State::Exited, Color::Magenta),
@@ -433,11 +377,10 @@ mod tests {
                 })
                 .unwrap();
 
-            for (row_index, result_row) in get_result(&setup, w) {
-                let expected_row = expected_to_vec(&expected, row_index);
-                for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                    assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+            // assert_snapshot!(setup.terminal.backend());
 
+            for (row_index, result_row) in get_result(&setup) {
+                for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                     if row_index == 0 && (12..=18).contains(&result_cell_index) {
                         assert_eq!(result_cell.fg, i.1);
                     }

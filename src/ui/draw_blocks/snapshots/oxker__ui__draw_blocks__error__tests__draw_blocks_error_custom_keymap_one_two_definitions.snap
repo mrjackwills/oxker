@@ -1,0 +1,15 @@
+---
+source: src/ui/draw_blocks/error.rs
+expression: setup.terminal.backend()
+---
+"                                       "
+" ╭────────────── Error ──────────────╮ "
+" │                                   │ "
+" │   Unable to exec into container   │ "
+" │                                   │ "
+" │         ( c ) clear error         │ "
+" │                                   │ "
+" │      ( F4 | End ) quit oxker      │ "
+" │                                   │ "
+" ╰───────────────────────────────────╯ "
+"                                       "

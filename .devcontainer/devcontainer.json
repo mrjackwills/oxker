@@ -15,7 +15,7 @@
 		"--security-opt",
 		"seccomp=unconfined"
 	],
-	"postCreateCommand": "cargo install cross typos-cli cargo-expand",
+	"postCreateCommand": "cargo install cross typos-cli cargo-expand cargo-insta",
 	"customizations": {
 		"vscode": {
 			// Add the IDs of extensions you want installed when the container is created.

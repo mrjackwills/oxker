@@ -167,6 +167,7 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use insta::assert_snapshot;
     use ratatui::style::{Color, Modifier};
 
     use crate::{
@@ -174,14 +175,12 @@ mod tests {
         config::AppColors,
         ui::{
             FrameData,
-            draw_blocks::tests::{
-                COLOR_ORANGE, expected_to_vec, get_result, insert_chart_data, test_setup,
-            },
+            draw_blocks::tests::{COLOR_ORANGE, get_result, insert_chart_data, test_setup},
         },
     };
 
     /// CPU and Memory charts used in multiple tests, based on data from above insert_chart_data()
-    const EXPECTED: [&str; 10] = [
+    const _EXPECTED: [&str; 10] = [
         "╭───────────── cpu 03.00% ─────────────╮╭────────── memory 30.00 kB ───────────╮",
         "│10.00%│    •                          ││100.00 kB│   ••                       │",
         "│      │   ••                          ││         │   ••                       │",
@@ -246,25 +245,10 @@ mod tests {
                 super::draw(setup.area, setup.app_data.lock().config.app_colors, f, &fd);
             })
             .unwrap();
+        assert_snapshot!(setup.terminal.backend());
 
-        let expected = [
-            "╭───────────── cpu 00.00% ─────────────╮╭─────────── memory 0.00 kB ───────────╮",
-            "│00.00%│                               ││0.00 kB│                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "╰──────────────────────────────────────╯╰──────────────────────────────────────╯",
-        ];
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match (row_index, result_cell_index) {
                     (0, 14..=25 | 52..=67) => {
                         assert_eq!(result_cell.fg, Color::Green);
@@ -303,11 +287,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&EXPECTED, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     (0, 14..=25 | 51..=67) => {
                         assert_eq!(result_cell.fg, Color::Green);
@@ -355,11 +338,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&EXPECTED, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     (0, 14..=25 | 51..=67) | (1, 1..=6 | 41..=49) => {
                         assert_eq!(result_cell.fg, Color::Yellow);
@@ -401,12 +383,9 @@ mod tests {
                 super::draw(setup.area, setup.app_data.lock().config.app_colors, f, &fd);
             })
             .unwrap();
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&EXPECTED, row_index);
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match (row_index, result_cell_index) {
                     (0, 14..=25 | 51..=67) | (1, 1..=6 | 41..=49) => {
                         assert_eq!(result_cell.fg, Color::Red);
@@ -465,10 +444,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&EXPECTED, row_index);
+        assert_snapshot!(setup.terminal.backend());
+
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::White);
 
                 match (row_index, result_cell_index) {

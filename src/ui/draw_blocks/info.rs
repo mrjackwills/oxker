@@ -57,11 +57,12 @@ pub fn draw(
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use insta::assert_snapshot;
     use ratatui::style::Color;
 
     use crate::{
         config::AppColors,
-        ui::draw_blocks::tests::{expected_to_vec, get_result, test_setup},
+        ui::draw_blocks::tests::{get_result, test_setup},
     };
 
     #[test]
@@ -70,17 +71,6 @@ mod tests {
         let (w, h) = (45, 9);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                    test     ",
-            "                                             ",
-        ];
         let colors = setup.app_data.lock().config.app_colors;
 
         setup
@@ -96,11 +86,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 let (bg, fg) = match (row_index, result_cell_index) {
                     (6..=8, 32..=44) => (Color::Blue, Color::White),
                     _ => (Color::Reset, Color::Reset),
@@ -120,17 +109,6 @@ mod tests {
         let mut colors = AppColors::new();
         colors.popup_info.background = Color::Red;
         colors.popup_info.text = Color::Black;
-        let expected = [
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                             ",
-            "                                    test     ",
-            "                                             ",
-        ];
 
         setup
             .terminal
@@ -145,11 +123,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 let (bg, fg) = match (row_index, result_cell_index) {
                     (6..=8, 32..=44) => (Color::Red, Color::Black),
                     _ => (Color::Reset, Color::Reset),

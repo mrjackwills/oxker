@@ -136,6 +136,7 @@ pub fn draw(
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use insta::assert_snapshot;
     use ratatui::style::{Color, Modifier};
 
     use crate::{
@@ -144,8 +145,8 @@ mod tests {
         ui::{
             FrameData,
             draw_blocks::tests::{
-                BORDER_CHARS, COLOR_ORANGE, COLOR_RX, COLOR_TX, TuiTestSetup, expected_to_vec,
-                get_result, test_setup,
+                BORDER_CHARS, COLOR_ORANGE, COLOR_RX, COLOR_TX, TuiTestSetup, get_result,
+                test_setup,
             },
         },
     };
@@ -153,18 +154,9 @@ mod tests {
     #[test]
     /// No containers, panel unselected, then selected, border color changes correctly
     fn test_draw_blocks_containers_none() {
-        let (w, h) = (25, 6);
+        let (w, h) = (40, 6);
         let mut setup = test_setup(w, h, true, true);
         setup.app_data.lock().containers = StatefulList::new(vec![]);
-
-        let expected = [
-            "╭ Containers ───────────╮",
-            "│ no containers running │",
-            "│                       │",
-            "│                       │",
-            "│                       │",
-            "╰───────────────────────╯",
-        ];
 
         setup.gui_state.lock().next_panel();
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -184,10 +176,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        assert_snapshot!(setup.terminal.backend());
+        for (_, result_row) in get_result(&setup) {
+            for result_cell in result_row {
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::Gray);
                 }
@@ -211,10 +202,8 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        for (_, result_row) in get_result(&setup) {
+            for result_cell in result_row {
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::LightCyan);
                 }
@@ -228,14 +217,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✓ running   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         let colors = setup.app_data.lock().config.app_colors;
 
         setup
@@ -252,11 +233,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::LightCyan);
                 }
@@ -294,11 +273,8 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
+        for (_, result_row) in get_result(&setup) {
+            for result_cell in result_row {
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::Gray);
                 }
@@ -312,14 +288,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✓ running   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
 
@@ -337,12 +305,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match (row_index, result_cell_index) {
                     //border
                     (0 | 5, _) | (1..=4, 0 | 129) => {
@@ -380,14 +346,6 @@ mod tests {
         setup.app_data.lock().containers.items[0].image =
             ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  a_long_container_name_for_the…   ॥ paused    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   a_long_image_name_for_the_pur…   0.00 kB   0.00 kB                  │",
-            "│   container_2                      ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2                          0.00 kB   0.00 kB                  │",
-            "│   container_3                      ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3                          0.00 kB   0.00 kB                  │",
-            "│                                                                                                                                                                        │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
         setup.app_data.lock().containers.items[0].state = State::Paused;
@@ -405,22 +363,14 @@ mod tests {
                 );
             })
             .unwrap();
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-            }
-        }
+        assert_snapshot!(setup.terminal.backend());
     }
 
     // Check that the correct colour is applied to the state/status/cpu/memory section
-    fn check_expected(expected: [&str; 6], w: u16, _h: u16, setup: &TuiTestSetup, color: Color) {
-        for (row_index, result_row) in get_result(setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
 
+    fn check_colour(setup: &TuiTestSetup, color: Color) {
+        for (row_index, result_row) in get_result(setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     // border
                     (0 | 5, _) | (1..=4, 0 | 129) => {
@@ -458,14 +408,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ॥ paused    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
         setup.app_data.lock().containers.items[0].state = State::Paused;
@@ -484,23 +426,14 @@ mod tests {
             })
             .unwrap();
 
-        check_expected(expected, w, h, &setup, Color::Yellow);
+        check_colour(&setup, Color::Yellow);
+        assert_snapshot!(setup.terminal.backend());
     }
 
     #[test]
     /// When container is dead, correct colors displayed
     fn test_draw_blocks_containers_dead() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
-
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✖ dead      Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
+        let mut setup = test_setup(130, 6, true, true);
         setup.app_data.lock().containers.items[0].state = State::Dead;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
@@ -519,7 +452,8 @@ mod tests {
             })
             .unwrap();
 
-        check_expected(expected, w, h, &setup, Color::Red);
+        check_colour(&setup, Color::Red);
+        assert_snapshot!(setup.terminal.backend());
     }
 
     #[test]
@@ -528,14 +462,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✖ exited    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         setup.app_data.lock().containers.items[0].state = State::Exited;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
@@ -554,7 +480,8 @@ mod tests {
             })
             .unwrap();
 
-        check_expected(expected, w, h, &setup, Color::Red);
+        check_colour(&setup, Color::Red);
+        assert_snapshot!(setup.terminal.backend());
     }
     #[test]
     /// When container is paused, correct colors displayed
@@ -562,14 +489,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   removing    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         setup.app_data.lock().containers.items[0].state = State::Removing;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
@@ -588,7 +507,8 @@ mod tests {
             })
             .unwrap();
 
-        check_expected(expected, w, h, &setup, Color::LightRed);
+        check_colour(&setup, Color::LightRed);
+        assert_snapshot!(setup.terminal.backend());
     }
 
     #[test]
@@ -597,14 +517,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ↻ restarting   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                 │",
-            "│   container_2   ✓ running      Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                 │",
-            "│   container_3   ✓ running      Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                 │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         setup.app_data.lock().containers.items[0].state = State::Restarting;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
@@ -623,11 +535,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     // border
                     (0 | 5, _) | (1..=4, 0 | 129) => {
@@ -671,14 +582,6 @@ mod tests {
         setup.app_data.lock().containers.items[0].state = State::from(("running", &status));
         setup.app_data.lock().containers.items[0].status = status;
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ! running   Up 1 hour (unhealthy)   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB        │",
-            "│   container_2   ✓ running   Up 2 hour               00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB        │",
-            "│   container_3   ✓ running   Up 3 hour               00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB        │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
 
@@ -696,10 +599,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 match (row_index, result_cell_index) {
                     // border
                     (0 | 5, _) | (1..=4, 0 | 129) => {
@@ -737,14 +640,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ? unknown   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         setup.app_data.lock().containers.items[0].state = State::Unknown;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
@@ -763,7 +658,8 @@ mod tests {
             })
             .unwrap();
 
-        check_expected(expected, w, h, &setup, Color::Red);
+        check_colour(&setup, Color::Red);
+        assert_snapshot!(setup.terminal.backend());
     }
 
     #[test]
@@ -772,14 +668,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✓ running   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let mut colors = AppColors::new();
         colors.borders.selected = Color::Green;
@@ -804,11 +692,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 // The highlight symbol can't correctly be colored
                 if (row_index, result_cell_index) != (1, 2) {
                     assert_eq!(result_cell.bg, Color::Black);
@@ -846,14 +732,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✓ running   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         // Healthy
@@ -874,11 +752,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if let (1..=3, 18..=70) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Magenta);
                 }
@@ -891,15 +767,6 @@ mod tests {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
 
-        // Unhealthy
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ! running   Up 1 hour (unhealthy)   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB        │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         let mut colors = AppColors::new();
@@ -922,11 +789,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if let (1, 18..=70) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Red);
                 }
@@ -939,14 +804,6 @@ mod tests {
     fn test_draw_blocks_containers_custom_colors_state_dead() {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✖ dead      Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -967,12 +824,9 @@ mod tests {
                 );
             })
             .unwrap();
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if let (1, 18..=70) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Magenta);
                 }
@@ -985,14 +839,6 @@ mod tests {
     fn test_draw_blocks_containers_custom_colors_state_exited() {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ✖ exited    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -1014,11 +860,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if let (1, 18..=70) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Gray);
                 }
@@ -1031,14 +876,6 @@ mod tests {
     fn test_draw_blocks_containers_custom_colors_state_paused() {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ॥ paused    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -1059,12 +896,10 @@ mod tests {
                 );
             })
             .unwrap();
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if let (1, 18..=70) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Cyan);
                 }
@@ -1077,14 +912,6 @@ mod tests {
     fn test_draw_blocks_containers_custom_colors_state_removing() {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   removing    Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -1105,12 +932,10 @@ mod tests {
                 );
             })
             .unwrap();
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if let (1, 18..=70) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::White);
                 }
@@ -1123,14 +948,6 @@ mod tests {
     fn test_draw_blocks_containers_custom_colors_state_restarting() {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ↻ restarting   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                 │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -1152,11 +969,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if let (1, 18..=70) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::LightYellow);
                 }
@@ -1169,14 +985,6 @@ mod tests {
     fn test_draw_blocks_containers_custom_colors_state_unknown() {
         let (w, h) = (130, 6);
         let mut setup = test_setup(w, h, true, true);
-        let expected = [
-            "╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-            "│⚪  container_1   ? unknown   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                    │",
-            "│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │",
-            "│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │",
-            "│                                                                                                                                │",
-            "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯",
-        ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -1198,11 +1006,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if let (1, 18..=70) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, COLOR_ORANGE);
                 }
