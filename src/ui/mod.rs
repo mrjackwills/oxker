@@ -93,7 +93,7 @@ impl Ui {
                 }
                 if let Err(e) = ui.reset_terminal() {
                     error!("{e}");
-                };
+                }
             }
             _ => {
                 error!("Terminal Error");
@@ -180,7 +180,7 @@ impl Ui {
                 self.app_data
                     .lock()
                     .set_error(e, &self.gui_state, Status::Error);
-            };
+            }
         }
         self.terminal.clear().ok();
         self.reset_terminal().ok();

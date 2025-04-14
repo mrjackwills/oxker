@@ -167,7 +167,7 @@ impl InputHandler {
                 .set_info_box("✓ mouse capture enabled");
         } else {
             err();
-        };
+        }
 
         self.mouse_capture = !self.mouse_capture;
     }
@@ -264,7 +264,7 @@ impl InputHandler {
                 // Poor way of disallowing commands to be sent to a containerised okxer
                 if self.app_data.lock().is_oxker_in_container() {
                     return;
-                };
+                }
                 let option_id = self.app_data.lock().get_selected_container_id();
                 if let Some(id) = option_id {
                     match command {
@@ -639,7 +639,7 @@ impl InputHandler {
             SelectablePanel::Containers => self.app_data.lock().containers_next(),
             SelectablePanel::Logs => self.app_data.lock().log_next(),
             SelectablePanel::Commands => self.app_data.lock().docker_controls_next(),
-        };
+        }
     }
 
     /// Change state to previous, depending which panel is currently in focus

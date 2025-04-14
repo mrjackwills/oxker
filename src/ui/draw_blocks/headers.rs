@@ -46,8 +46,8 @@ fn gen_header_block<'a>(colors: AppColors, fd: &FrameData, header: Header) -> (C
                 SortedOrder::Desc => suffix = " ▼",
             }
             color = colors.headers_bar.text_selected;
-        };
-    };
+        }
+    }
 
     (color, suffix)
 }

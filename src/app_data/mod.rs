@@ -237,7 +237,7 @@ impl AppData {
             term.push(c);
         } else {
             self.filter.term = Some(format!("{c}"));
-        };
+        }
         self.filter_containers();
     }
 
@@ -275,7 +275,7 @@ impl AppData {
         while let Some(i) = self.hidden_containers.pop() {
             if self.get_container_by_id(&i.id).is_none() {
                 self.containers.items.push(i);
-            };
+            }
         }
         self.sort_containers();
     }
@@ -420,6 +420,8 @@ impl AppData {
     }
 
     /// Get all the ContainerItems
+	/// Thnk this allow block can be removed with the 1.87 release of Clippy
+	#[allow(clippy::missing_const_for_fn)]
     pub fn get_container_items(&self) -> &[ContainerItem] {
         &self.containers.items
     }
@@ -459,7 +461,7 @@ impl AppData {
     }
 
     /// Get ListState of containers
-    pub fn get_container_state(&mut self) -> &mut ListState {
+    pub const fn get_container_state(&mut self) -> &mut ListState {
         &mut self.containers.state
     }
 
@@ -886,10 +888,10 @@ impl AppData {
                 if let Some(item) = self.get_any_container_by_id(&id) {
                     if item.name.get() != name {
                         item.name.set(name);
-                    };
+                    }
                     if item.status != status {
                         item.status = status;
-                    };
+                    }
                     if item.state != state {
                         item.docker_controls.items = DockerCommand::gen_vec(state);
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
@@ -898,15 +900,15 @@ impl AppData {
                                 item.docker_controls.state.select(None);
                             }
                             _ => item.docker_controls.start(),
-                        };
+                        }
                         item.state = state;
-                    };
+                    }
 
                     item.ports = ports;
 
                     if item.image.get() != image {
                         item.image.set(image);
-                    };
+                    }
                 } else {
                     // container not known, so make new ContainerItem and push into containers Ve
                     let container = ContainerItem::new(

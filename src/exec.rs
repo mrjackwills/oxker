@@ -330,7 +330,7 @@ impl ExecMode {
                             if byte_sequence_valid(&bytes) {
                                 waiting_thread.store(false, std::sync::atomic::Ordering::SeqCst);
                             }
-                        };
+                        }
                     }
                 });
 
