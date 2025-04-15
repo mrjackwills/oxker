@@ -86,8 +86,7 @@ mod tests {
     /// Filter row is drawn correctly & colors are correct
     /// Colours change when filter_by option is changed
     fn test_draw_blocks_filter_row() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
 
         setup
             .gui_state
@@ -133,8 +132,7 @@ mod tests {
     #[test]
     /// Colours change when filter_by option is changed
     fn test_draw_blocks_filter_row_text() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
 
         setup
             .gui_state
@@ -193,8 +191,7 @@ mod tests {
     #[test]
     /// Colours change when filter_by option is changed
     fn test_draw_blocks_filter_row_filter_by() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
 
         setup
             .gui_state
@@ -242,8 +239,7 @@ mod tests {
     #[test]
     /// Make sure custom colors are applied
     fn test_draw_blocks_filter_row_custom_colors() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
 
         setup
             .gui_state

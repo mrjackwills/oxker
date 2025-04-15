@@ -238,8 +238,7 @@ mod tests {
     #[test]
     /// Heading back only has show/exit help when no containers, correctly coloured
     fn test_draw_blocks_headers_no_containers_show_help() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         setup.app_data.lock().containers = StatefulList::new(vec![]);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -271,8 +270,7 @@ mod tests {
     #[test]
     /// Heading back only has show/exit help when no containers, correctly coloured
     fn test_draw_blocks_headers_no_containers_exit_help() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         setup.app_data.lock().containers = StatefulList::new(vec![]);
 
         let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -303,8 +301,7 @@ mod tests {
     #[test]
     /// Show all headings when containers present, colors valid
     fn test_draw_blocks_headers_some_containers() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
@@ -340,8 +337,7 @@ mod tests {
     #[test]
     /// Only show the headings that fit the reduced-in-size header section
     fn test_draw_blocks_headers_some_containers_reduced_width() {
-        let (w, h) = (80, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 1, true, true);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
@@ -378,8 +374,7 @@ mod tests {
     #[test]
     /// Show animation
     fn test_draw_blocks_headers_animation() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -418,8 +413,7 @@ mod tests {
     #[test]
     /// Custom colors are applied correctly
     fn test_draw_blocks_headers_custom_colors() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -459,8 +453,7 @@ mod tests {
     #[test]
     /// Custom keymap for help panel is correctly display, with one definitions
     fn test_draw_blocks_headers_custom_keymap_one_definition() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let mut keymap = Keymap::new();
 
@@ -486,8 +479,7 @@ mod tests {
     #[test]
     /// Custom keymap for help panel is correctly display, two definitions
     fn test_draw_blocks_headers_custom_keymap_two_definitions() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let mut keymap = Keymap::new();
 

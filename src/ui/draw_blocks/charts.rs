@@ -235,8 +235,7 @@ mod tests {
     #[test]
     /// When status is Running, but not data, charts drawn without dots etc, colours correct
     fn test_draw_blocks_charts_running_none() {
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
@@ -274,8 +273,7 @@ mod tests {
     #[test]
     /// When status is Running, charts correctly drawn
     fn test_draw_blocks_charts_running_some() {
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
 
         insert_chart_data(&setup);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -324,8 +322,7 @@ mod tests {
     #[test]
     /// Whens status paused, some text is now Yellow
     fn test_draw_blocks_charts_paused() {
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
 
         insert_chart_data(&setup);
         setup.app_data.lock().containers.items[0].state = State::Paused;
@@ -371,8 +368,7 @@ mod tests {
     #[test]
     /// When dead, text is red
     fn test_draw_blocks_charts_dead() {
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
         insert_chart_data(&setup);
         setup.app_data.lock().containers.items[0].state = State::Dead;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -431,8 +427,7 @@ mod tests {
         colors.chart_memory.points = Color::Black;
         colors.chart_memory.y_axis = Color::Blue;
 
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
 
         insert_chart_data(&setup);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));

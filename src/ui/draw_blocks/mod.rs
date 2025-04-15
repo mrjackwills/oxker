@@ -263,8 +263,7 @@ pub mod tests {
     #[test]
     /// Check that the whole layout is drawn correctly
     fn test_draw_blocks_whole_layout() {
-        let (w, h) = (160, 30);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(160, 30, true, true);
 
         insert_chart_data(&setup);
         insert_logs(&setup);
@@ -293,8 +292,7 @@ pub mod tests {
     #[allow(clippy::too_many_lines)]
     /// Check that the whole layout is drawn correctly
     fn test_draw_blocks_whole_layout_with_filter_bar() {
-        let (w, h) = (160, 30);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(160, 30, true, true);
         insert_chart_data(&setup);
         insert_logs(&setup);
 
@@ -329,8 +327,7 @@ pub mod tests {
     #[test]
     /// Check that the whole layout is drawn correctly when have long container name and long image name
     fn test_draw_blocks_whole_layout_long_name() {
-        let (w, h) = (190, 30);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(190, 30, true, true);
 
         insert_chart_data(&setup);
         insert_logs(&setup);

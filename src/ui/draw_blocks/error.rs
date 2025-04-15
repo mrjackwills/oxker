@@ -106,8 +106,7 @@ mod tests {
     #[test]
     /// Test that the error popup is centered, red background, white border, white text, and displays the correct text
     fn test_draw_blocks_error_docker_connect_error() {
-        let (w, h) = (46, 9);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(46, 9, true, true);
 
         setup
             .terminal
@@ -138,8 +137,7 @@ mod tests {
     #[test]
     /// Test that the clearable error popup is centered, red background, white border, white text, and displays the correct text
     fn test_draw_blocks_error_clearable_error() {
-        let (w, h) = (39, 11);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(39, 11, true, true);
 
         setup
             .terminal
@@ -176,8 +174,7 @@ mod tests {
     #[test]
     /// Custom colors applied to the error popup correctly
     fn test_draw_blocks_error_custom_colors() {
-        let (w, h) = (39, 11);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(39, 11, true, true);
 
         let mut colors = AppColors::new();
         colors.popup_error.background = Color::Yellow;
@@ -212,8 +209,7 @@ mod tests {
     #[test]
     /// Custom keymap applied correctly
     fn test_draw_blocks_error_custom_keymap() {
-        let (w, h) = (39, 11);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(39, 11, true, true);
 
         let mut keymap = Keymap::new();
         keymap.clear = (KeyCode::BackTab, None);
@@ -230,8 +226,7 @@ mod tests {
     #[test]
     /// Custom keymap applied with two definitions for each option
     fn test_draw_blocks_error_custom_keymap_two_definitions() {
-        let (w, h) = (39, 11);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(39, 11, true, true);
 
         let mut keymap = Keymap::new();
         keymap.clear = (KeyCode::BackTab, Some(KeyCode::Char('m')));
@@ -249,8 +244,7 @@ mod tests {
     #[test]
     /// Custom keymap applied correctly, with 1 definition for the first option, and 2 definitions for the other
     fn test_draw_blocks_error_custom_keymap_one_two_definitions() {
-        let (w, h) = (39, 11);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(39, 11, true, true);
 
         let mut keymap = Keymap::new();
         keymap.quit = (KeyCode::F(4), Some(KeyCode::End));

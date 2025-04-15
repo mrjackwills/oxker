@@ -72,8 +72,7 @@ mod tests {
     /// Test that when DockerCommands are available, they are drawn correctly, dependant on container state
     /// In this case, no commands are drawn
     fn test_draw_blocks_commands_none() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, false, false);
+        let mut setup = test_setup(12, 6, false, false);
 
         let colors = setup.app_data.lock().config.app_colors;
         setup
@@ -97,8 +96,7 @@ mod tests {
     /// Test that when DockerCommands are available, they are drawn correctly, dependant on container state
     /// In this test, container is running
     fn test_draw_blocks_commands_some() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(12, 6, true, true);
 
         let colors = setup.app_data.lock().config.app_colors;
         setup
@@ -149,8 +147,7 @@ mod tests {
     /// Test that when DockerCommands are available, they are drawn correctly, dependant on container state
     /// In this test, container is paused
     fn test_draw_blocks_commands_some_paused() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(12, 6, true, true);
 
         let colors = setup.app_data.lock().config.app_colors;
         setup
@@ -217,8 +214,7 @@ mod tests {
     #[test]
     /// When control panel is selected, the border is blue, if not then white, selected text is highlighted
     fn test_draw_blocks_commands_panel_selected_color() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(12, 6, true, true);
         let colors = setup.app_data.lock().config.app_colors;
         // Unselected, has a grey border
         setup
@@ -282,8 +278,7 @@ mod tests {
     #[test]
     /// Custom colors are rendered correctly
     fn test_draw_blocks_commands_custom_colors_running() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(12, 6, true, true);
         let mut colors = AppColors::new();
         colors.commands.background = Color::White;
         colors.commands.pause = Color::Black;
@@ -336,8 +331,7 @@ mod tests {
     #[test]
     /// Custom colors are rendered correctly
     fn test_draw_blocks_commands_custom_colors_paused() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(12, 6, true, true);
         let mut colors = AppColors::new();
         colors.commands.background = Color::White;
         colors.commands.pause = Color::Black;

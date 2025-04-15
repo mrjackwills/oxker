@@ -426,8 +426,7 @@ mod tests {
     #[test]
     /// This will cause issues once the version has more than the current 5 chars (0.5.0)
     fn test_draw_blocks_help() {
-        let (w, h) = (87, 33);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(87, 33, true, true);
         let tz = setup.app_data.lock().config.timezone.clone();
 
         setup
@@ -489,8 +488,7 @@ mod tests {
     #[test]
     /// Test that the help panel gets drawn with custom colors
     fn test_draw_blocks_help_custom_colors() {
-        let (w, h) = (87, 33);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(87, 33, true, true);
         let mut colors = AppColors::new();
         let tz = setup.app_data.lock().config.timezone.clone();
 
@@ -557,8 +555,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with one definition for each entry
     fn test_draw_blocks_help_custom_keymap_one_definition() {
-        let (w, h) = (98, 47);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(98, 47, true, true);
 
         let input = Keymap {
             clear: (KeyCode::Char('a'), None),
@@ -603,8 +600,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with two definition for each entry
     fn test_draw_blocks_help_custom_keymap_two_definitions() {
-        let (w, h) = (110, 47);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(110, 47, true, true);
 
         let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('b'))),
@@ -649,8 +645,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with either one or two definition for each entry
     fn test_draw_blocks_help_one_and_two_definitions() {
-        let (w, h) = (110, 47);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(110, 47, true, true);
 
         let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('b'))),
@@ -696,8 +691,7 @@ mod tests {
 
     #[test]
     fn test_draw_blocks_help_show_timezone() {
-        let (w, h) = (87, 35);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(87, 35, true, true);
 
         setup
             .terminal

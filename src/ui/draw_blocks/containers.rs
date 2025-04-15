@@ -154,8 +154,7 @@ mod tests {
     #[test]
     /// No containers, panel unselected, then selected, border color changes correctly
     fn test_draw_blocks_containers_none() {
-        let (w, h) = (40, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(40, 6, true, true);
         setup.app_data.lock().containers = StatefulList::new(vec![]);
 
         setup.gui_state.lock().next_panel();
@@ -214,8 +213,7 @@ mod tests {
     #[test]
     /// Containers panel drawn, selected line is bold, border is blue
     fn test_draw_blocks_containers_selected_bold() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let colors = setup.app_data.lock().config.app_colors;
 
@@ -285,8 +283,7 @@ mod tests {
     #[test]
     /// Columns on all rows are coloured correctly
     fn test_draw_blocks_containers_colors() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
@@ -339,8 +336,7 @@ mod tests {
     #[test]
     /// Long container + image name is truncated correctly
     fn test_draw_blocks_containers_long_name_image() {
-        let (w, h) = (170, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(170, 6, true, true);
         setup.app_data.lock().containers.items[0].name =
             ContainerName::from("a_long_container_name_for_the_purposes_of_this_test");
         setup.app_data.lock().containers.items[0].image =
@@ -405,8 +401,7 @@ mod tests {
     #[test]
     /// When container is paused, correct colors displayed
     fn test_draw_blocks_containers_paused() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
@@ -459,8 +454,7 @@ mod tests {
     #[test]
     /// When container is exited, correct colors displayed
     fn test_draw_blocks_containers_exited() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         setup.app_data.lock().containers.items[0].state = State::Exited;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -486,8 +480,7 @@ mod tests {
     #[test]
     /// When container is paused, correct colors displayed
     fn test_draw_blocks_containers_removing() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         setup.app_data.lock().containers.items[0].state = State::Removing;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -514,8 +507,7 @@ mod tests {
     #[test]
     /// When container state is restarting, correct colors displayed
     fn test_draw_blocks_containers_restarting() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         setup.app_data.lock().containers.items[0].state = State::Restarting;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -575,8 +567,7 @@ mod tests {
     #[test]
     /// When container state is unhealthy, correct colors displayed
     fn test_draw_blocks_containers_unhealthy() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let status = ContainerStatus::from("Up 1 hour (unhealthy)".to_owned());
         setup.app_data.lock().containers.items[0].state = State::from(("running", &status));
@@ -637,8 +628,7 @@ mod tests {
     #[test]
     /// When container state is unknown, correct colors displayed
     fn test_draw_blocks_containers_unknown() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         setup.app_data.lock().containers.items[0].state = State::Unknown;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -665,8 +655,7 @@ mod tests {
     #[test]
     /// Custom colors applied correctly
     fn test_draw_blocks_containers_custom_colors() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let mut colors = AppColors::new();
@@ -729,8 +718,7 @@ mod tests {
     #[test]
     /// Make sure that the state has the correctly color applied to it
     fn test_draw_blocks_containers_custom_colors_state_healthy() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -764,8 +752,7 @@ mod tests {
     #[test]
     /// Make sure that the state has the correctly color applied to it
     fn test_draw_blocks_containers_custom_colors_state_unhealthy() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -802,8 +789,7 @@ mod tests {
     #[test]
     /// Make sure that the state has the correctly color applied to it
     fn test_draw_blocks_containers_custom_colors_state_dead() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -837,8 +823,7 @@ mod tests {
     #[test]
     /// Make sure that the state has the correctly color applied to it
     fn test_draw_blocks_containers_custom_colors_state_exited() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -874,8 +859,7 @@ mod tests {
     #[test]
     /// Make sure that the state has the correctly color applied to it
     fn test_draw_blocks_containers_custom_colors_state_paused() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -910,8 +894,7 @@ mod tests {
     #[test]
     /// Make sure that the state has the correctly color applied to it
     fn test_draw_blocks_containers_custom_colors_state_removing() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -946,8 +929,7 @@ mod tests {
     #[test]
     /// Make sure that the state has the correctly color applied to it
     fn test_draw_blocks_containers_custom_colors_state_restarting() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -983,8 +965,7 @@ mod tests {
     #[test]
     /// Make sure that the state has the correctly color applied to it
     fn test_draw_blocks_containers_custom_colors_state_unknown() {
-        let (w, h) = (130, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(130, 6, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 

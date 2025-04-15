@@ -90,8 +90,7 @@ mod tests {
     #[test]
     /// No logs, panel unselected, then selected, border color changes correctly
     fn test_draw_blocks_logs_none() {
-        let (w, h) = (35, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(35, 6, true, true);
 
         let colors = setup.app_data.lock().config.app_colors;
 
@@ -156,8 +155,7 @@ mod tests {
     #[test]
     /// Parsing logs, first frame spinner visible
     fn test_draw_blocks_logs_parsing_frame_one() {
-        let (w, h) = (32, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(32, 6, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
 
@@ -197,8 +195,7 @@ mod tests {
     #[test]
     /// Parsing logs, second frame spinner visible
     fn test_draw_blocks_logs_parsing_frame_two() {
-        let (w, h) = (32, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(32, 6, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
 
@@ -245,8 +242,7 @@ mod tests {
     #[test]
     /// Logs correct displayed, changing log state also draws correctly
     fn test_draw_blocks_logs_some_line_three() {
-        let (w, h) = (36, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(36, 6, true, true);
 
         insert_logs(&setup);
 
@@ -287,8 +283,7 @@ mod tests {
     #[test]
     /// Logs correct displayed, changing log state also draws correctly
     fn test_draw_blocks_logs_some_line_two() {
-        let (w, h) = (36, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(36, 6, true, true);
 
         insert_logs(&setup);
 
@@ -345,8 +340,7 @@ mod tests {
     #[test]
     /// Full (long) name displayed in logs border
     fn test_draw_blocks_logs_long_name() {
-        let (w, h) = (80, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 6, true, true);
         setup.app_data.lock().containers.items[0].name =
             ContainerName::from("a_long_container_name_for_the_purposes_of_this_test");
         setup.app_data.lock().containers.items[0].image =
@@ -374,8 +368,7 @@ mod tests {
 
     #[test]
     fn test_draw_blocks_logs_custom_colors_parsing() {
-        let (w, h) = (32, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(32, 6, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
 
@@ -440,8 +433,7 @@ mod tests {
     #[test]
 
     fn test_draw_blocks_logs_custom_colors_no_logs() {
-        let (w, h) = (35, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(35, 6, true, true);
 
         let mut colors = AppColors::new();
         colors.logs.background = Color::Green;
@@ -500,8 +492,7 @@ mod tests {
     #[test]
     /// Logs correct displayed with custom colors
     fn test_draw_blocks_logs_custom_colors_logs() {
-        let (w, h) = (36, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(36, 6, true, true);
         insert_logs(&setup);
 
         let mut colors = setup.app_data.lock().config.app_colors;

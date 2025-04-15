@@ -140,8 +140,7 @@ mod tests {
     #[test]
     /// Delete container popup is drawn correctly
     fn test_draw_blocks_delete() {
-        let (w, h) = (82, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(82, 10, true, true);
 
         let colors = setup.app_data.lock().config.app_colors;
         let keymap = &setup.app_data.lock().config.keymap;
@@ -184,8 +183,7 @@ mod tests {
     #[test]
     /// Delete container popup is drawn correctly
     fn test_draw_blocks_delete_long_name() {
-        let (w, h) = (106, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(106, 10, true, true);
         let name = ContainerName::from("container_1_container_1_container_1");
         setup.app_data.lock().containers.items[0].name = name.clone();
 
@@ -223,8 +221,7 @@ mod tests {
     #[test]
     /// Custom colors applied correctly to delete popup
     fn test_draw_blocks_delete_custom_colors() {
-        let (w, h) = (82, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(82, 10, true, true);
         let mut colors = AppColors::new();
         colors.popup_delete.background = Color::Black;
         colors.popup_delete.text = Color::Yellow;
@@ -269,8 +266,7 @@ mod tests {
     #[test]
     /// Custom keymap, with multiple definitions for each button, applied correctly to delete popup
     fn test_draw_blocks_delete_custom_keymap_one_definition() {
-        let (w, h) = (82, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(82, 10, true, true);
         let mut keymap = Keymap::new();
         keymap.delete_confirm = (KeyCode::F(10), None);
         keymap.delete_deny = (KeyCode::End, None);
@@ -291,8 +287,7 @@ mod tests {
     #[test]
     /// Custom keymap, with multiple definitions for each button, applied correctly to delete popup
     fn test_draw_blocks_delete_custom_keymap_two_definition() {
-        let (w, h) = (82, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(82, 10, true, true);
         let mut keymap = Keymap::new();
         keymap.delete_confirm = (KeyCode::F(10), Some(KeyCode::Char('L')));
         keymap.delete_deny = (KeyCode::End, Some(KeyCode::Up));
@@ -313,8 +308,7 @@ mod tests {
     #[test]
     /// Custom keymap, with multiple definitions for each button, applied correctly to delete popup
     fn test_draw_blocks_delete_custom_keymap_one_two_definition() {
-        let (w, h) = (82, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(82, 10, true, true);
         let mut keymap = Keymap::new();
         keymap.delete_confirm = (KeyCode::F(10), None);
         keymap.delete_deny = (KeyCode::End, Some(KeyCode::Up));

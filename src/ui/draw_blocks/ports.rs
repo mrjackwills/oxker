@@ -91,8 +91,7 @@ mod tests {
     #[test]
     /// Port section when container has no ports
     fn test_draw_blocks_ports_no_ports() {
-        let (w, h) = (30, 8);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(30, 8, true, true);
         setup.app_data.lock().containers.items[0].ports = vec![];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -131,8 +130,7 @@ mod tests {
     /// Port section when container has no ports
     // When state is "State::Running | State::Paused | State::Restarting, won't show "no ports"
     fn test_draw_blocks_ports_no_ports_dead() {
-        let (w, h) = (30, 8);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(30, 8, true, true);
         setup.app_data.lock().containers.items[0].ports = vec![];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -173,8 +171,7 @@ mod tests {
     #[test]
     /// Port section when container has multiple ports
     fn test_draw_blocks_ports_multiple_ports() {
-        let (w, h) = (32, 8);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(32, 8, true, true);
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
@@ -228,8 +225,7 @@ mod tests {
     #[test]
     /// Port section title color correct dependant on state
     fn test_draw_blocks_ports_container_state() {
-        let (w, h) = (32, 8);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(32, 8, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
@@ -293,8 +289,7 @@ mod tests {
     #[test]
     /// Custom colors applied to ports panel
     fn test_draw_blocks_ports_custom_colors() {
-        let (w, h) = (32, 8);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(32, 8, true, true);
 
         let mut colors = AppColors::new();
         colors.chart_ports.background = Color::Black;
@@ -342,8 +337,7 @@ mod tests {
     #[test]
     // Custom state color applied to ports panel title
     fn test_draw_blocks_ports_custom_colors_state() {
-        let (w, h) = (32, 8);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(32, 8, true, true);
 
         let mut colors = AppColors::new();
         colors.container_state.dead = Color::Green;

@@ -68,8 +68,7 @@ mod tests {
     #[test]
     /// Info box drawn in bottom right
     fn test_draw_blocks_info() {
-        let (w, h) = (45, 9);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(45, 9, true, true);
 
         let colors = setup.app_data.lock().config.app_colors;
 
@@ -103,8 +102,7 @@ mod tests {
     #[test]
     /// Info box drawn in bottom right with custom colors applied
     fn test_draw_blocks_info_custom_color() {
-        let (w, h) = (45, 9);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(45, 9, true, true);
 
         let mut colors = AppColors::new();
         colors.popup_info.background = Color::Red;
