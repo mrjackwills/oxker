@@ -475,8 +475,8 @@ mod tests {
 
         assert_snapshot!(setup.terminal.backend());
     }
-    
-	#[test]
+
+    #[test]
     /// Custom keymap for help panel is correctly display, two definitions
     fn test_draw_blocks_headers_custom_keymap_two_definitions() {
         let mut setup = test_setup(140, 1, true, true);

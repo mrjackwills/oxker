@@ -36,7 +36,7 @@ impl ContainerId {
 
     /// Only return first 8 chars of id, is usually more than enough for uniqueness
     /// TODO container id is a hex string, so can assume that 0..=8 will always return a 8 char ascii &str
-	/// need to update tests to use real ids, or atleast strings of the correct-ish length
+    /// need to update tests to use real ids, or atleast strings of the correct-ish length
     pub fn get_short(&self) -> String {
         self.0.chars().take(8).collect::<String>()
     }

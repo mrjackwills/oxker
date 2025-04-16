@@ -133,33 +133,13 @@ impl ConfigFile {
         Self::parse(file_type, &input)
     }
 
-    /// Resolve conflict in the args, this is handled automatically by Clap, basically just by rejecting it
-    /// But here we can just change the options - although maybe should be also reject to follow the same behaviour as Clap?
-    /// TODO I think this is duplicated with the merge_args fn
-    fn resolve_conflict(&mut self) {
-        if let Some(color) = self.color_logs.as_ref() {
-            if *color {
-                self.raw_logs = Some(false);
-            }
-        }
-        if let Some(interval) = self.docker_interval.as_ref() {
-            if interval < &1000 {
-                self.docker_interval = Some(1000);
-            }
-        }
-    }
-
     /// Try to parse the config file when the path is user supplied via cliargs
     pub fn try_parse_from_file(path: &str) -> Option<Self> {
         let path = PathBuf::from(path);
         let Ok(file_type) = ConfigFileType::try_from(&path) else {
             return None;
         };
-
-        Self::parse_config_file(file_type, &path).map_or(None, |mut config_file| {
-            config_file.resolve_conflict();
-            Some(config_file)
-        })
+        Self::parse_config_file(file_type, &path).ok()
     }
 
     /// Parse a config file using default config_file location
@@ -172,11 +152,9 @@ impl ConfigFile {
             ConfigFileType::JsoncAsJson,
             ConfigFileType::Json,
         ] {
-            if let Ok(mut config_file) =
+            if let Ok(config_file) =
                 Self::parse_config_file(file_type, &file_type.get_default_path_name(in_container))
             {
-                Self::resolve_conflict(&mut config_file);
-
                 config = Some(config_file);
                 break;
             }

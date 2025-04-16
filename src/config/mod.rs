@@ -126,19 +126,44 @@ impl Config {
     }
 
     /// Combine config from CLI into config file, the cli take priority
-    /// make sure color_logs and raw_logs can't clash
+    /// and also make sure color_logs and raw_logs can't clash
     fn merge_args(mut self, config_from_cli: Self) -> Self {
-        self.color_logs = config_from_cli.color_logs;
-        self.docker_interval_ms = config_from_cli.docker_interval_ms;
-        self.gui = config_from_cli.gui;
-        self.raw_logs = config_from_cli.raw_logs;
-        self.show_self = config_from_cli.show_self;
-        self.show_std_err = config_from_cli.show_std_err;
-        self.show_timestamp = config_from_cli.show_timestamp;
-        self.use_cli = config_from_cli.use_cli;
+        let default_args = Args::default();
+
+        if config_from_cli.color_logs != default_args.color {
+            self.color_logs = config_from_cli.color_logs;
+        }
+
+        if config_from_cli.gui != default_args.gui {
+            self.gui = config_from_cli.gui;
+        }
+
+        if config_from_cli.docker_interval_ms != default_args.docker_interval {
+            self.docker_interval_ms = config_from_cli.docker_interval_ms;
+        }
 
         if config_from_cli.docker_interval_ms < 1000 {
-            self.docker_interval_ms = 1000;
+            self.docker_interval_ms = default_args.docker_interval;
+        }
+
+        if config_from_cli.raw_logs != default_args.raw {
+            self.raw_logs = config_from_cli.raw_logs;
+        }
+
+        if config_from_cli.show_self != default_args.show_self {
+            self.show_self = config_from_cli.show_self;
+        }
+
+        if config_from_cli.show_std_err != default_args.no_std_err {
+            self.show_std_err = config_from_cli.show_std_err;
+        }
+
+        if config_from_cli.show_timestamp != default_args.timestamp {
+            self.show_timestamp = config_from_cli.show_timestamp;
+        }
+
+        if config_from_cli.use_cli != default_args.use_cli {
+            self.use_cli = config_from_cli.use_cli;
         }
 
         if let Some(host) = config_from_cli.host {
@@ -153,10 +178,7 @@ impl Config {
             self.timezone = Some(tz);
         }
 
-        if config_from_cli.raw_logs {
-            self.color_logs = false;
-        }
-        if config_from_cli.color_logs {
+        if self.color_logs && self.raw_logs {
             self.raw_logs = false;
         }
         self
