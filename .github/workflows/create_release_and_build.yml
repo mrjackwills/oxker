@@ -135,7 +135,7 @@ jobs:
   # Publish to crates.io #
   ########################
 
-  # THis could be moved to before a github release is made
+  # This could be moved to before a github release is made
   dry_run_cargo_publish:
     runs-on: ubuntu-latest
     needs: [container_image_build]
