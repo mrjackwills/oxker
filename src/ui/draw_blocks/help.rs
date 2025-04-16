@@ -279,7 +279,7 @@ impl HelpInfo {
                 km.toggle_help,
                 "toggle this help information - or click heading",
             ),
-            or_secondary(km.toggle_help, "save logs to file"),
+            or_secondary(km.save_logs, "save logs to file"),
             or_secondary(
                 km.toggle_mouse_capture,
                 "toggle mouse capture - if disabled, text on screen can be selected & copied",
@@ -415,21 +415,18 @@ pub fn draw(
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::too_many_lines)]
 mod tests {
-    use crate::{
-        config::{AppColors, Keymap},
-        ui::draw_blocks::VERSION,
-    };
+    use crate::config::{AppColors, Keymap};
     use crossterm::event::KeyCode;
+    use insta::assert_snapshot;
     use jiff::tz::TimeZone;
     use ratatui::style::{Color, Modifier};
 
-    use crate::ui::draw_blocks::tests::{expected_to_vec, get_result, test_setup};
+    use crate::ui::draw_blocks::tests::{get_result, test_setup};
 
     #[test]
     /// This will cause issues once the version has more than the current 5 chars (0.5.0)
     fn test_draw_blocks_help() {
-        let (w, h) = (87, 33);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(87, 33, true, true);
         let tz = setup.app_data.lock().config.timezone.clone();
 
         setup
@@ -445,50 +442,10 @@ mod tests {
             })
             .unwrap();
 
-        let version_row = format!(
-            " ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ "
-        );
-        let expected = [
-            "                                                                                       ",
-            version_row.as_str(),
-            " │                                                                                   │ ",
-            " │                                      88                                           │ ",
-            " │                                      88                                           │ ",
-            " │                                      88                                           │ ",
-            " │             ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,            │ ",
-            r#" │            a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8            │ "#,
-            r#" │            8b       d8     )888(     8888[      8PP"""""""  88                    │ "#,
-            r#" │            "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                    │ "#,
-            r#" │             `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                    │ "#,
-            " │                                                                                   │ ",
-            " │                 A simple tui to view & control docker containers                  │ ",
-            " │                                                                                   │ ",
-            " │ ( tab ) or ( shift+tab ) change panels                                            │ ",
-            " │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) change selected line        │ ",
-            " │ ( enter ) send docker container command                                           │ ",
-            " │ ( e ) exec into a container                                                       │ ",
-            " │ ( h ) toggle this help information - or click heading                             │ ",
-            " │ ( s ) save logs to file                                                           │ ",
-            " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ",
-            " │ ( F1 ) or ( / ) enter filter mode                                                 │ ",
-            " │ ( 0 ) stop sort                                                                   │ ",
-            " │ ( 1 - 9 ) sort by header - or click header                                        │ ",
-            " │ ( esc ) close dialog                                                              │ ",
-            " │ ( q ) quit at any time                                                            │ ",
-            " │                                                                                   │ ",
-            " │        currently an early work in progress, all and any input appreciated         │ ",
-            " │                       https://github.com/mrjackwills/oxker                        │ ",
-            " │                                                                                   │ ",
-            " │                                                                                   │ ",
-            " ╰───────────────────────────────────────────────────────────────────────────────────╯ ",
-            "                                                                                       ",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
                     (0 | 32, _) | (0..=33, 0 | 86) => {
@@ -531,8 +488,7 @@ mod tests {
     #[test]
     /// Test that the help panel gets drawn with custom colors
     fn test_draw_blocks_help_custom_colors() {
-        let (w, h) = (87, 33);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(87, 33, true, true);
         let mut colors = AppColors::new();
         let tz = setup.app_data.lock().config.timezone.clone();
 
@@ -553,50 +509,10 @@ mod tests {
             })
             .unwrap();
 
-        let version_row = format!(
-            " ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ "
-        );
-        let expected = [
-            "                                                                                       ",
-            version_row.as_str(),
-            " │                                                                                   │ ",
-            " │                                      88                                           │ ",
-            " │                                      88                                           │ ",
-            " │                                      88                                           │ ",
-            " │             ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,            │ ",
-            r#" │            a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8            │ "#,
-            r#" │            8b       d8     )888(     8888[      8PP"""""""  88                    │ "#,
-            r#" │            "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                    │ "#,
-            r#" │             `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                    │ "#,
-            " │                                                                                   │ ",
-            " │                 A simple tui to view & control docker containers                  │ ",
-            " │                                                                                   │ ",
-            " │ ( tab ) or ( shift+tab ) change panels                                            │ ",
-            " │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) change selected line        │ ",
-            " │ ( enter ) send docker container command                                           │ ",
-            " │ ( e ) exec into a container                                                       │ ",
-            " │ ( h ) toggle this help information - or click heading                             │ ",
-            " │ ( s ) save logs to file                                                           │ ",
-            " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ",
-            " │ ( F1 ) or ( / ) enter filter mode                                                 │ ",
-            " │ ( 0 ) stop sort                                                                   │ ",
-            " │ ( 1 - 9 ) sort by header - or click header                                        │ ",
-            " │ ( esc ) close dialog                                                              │ ",
-            " │ ( q ) quit at any time                                                            │ ",
-            " │                                                                                   │ ",
-            " │        currently an early work in progress, all and any input appreciated         │ ",
-            " │                       https://github.com/mrjackwills/oxker                        │ ",
-            " │                                                                                   │ ",
-            " │                                                                                   │ ",
-            " ╰───────────────────────────────────────────────────────────────────────────────────╯ ",
-            "                                                                                       ",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
                     (0 | 32, _) | (0..=33, 0 | 86) => {
@@ -639,8 +555,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with one definition for each entry
     fn test_draw_blocks_help_custom_keymap_one_definition() {
-        let (w, h) = (98, 47);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(98, 47, true, true);
 
         let input = Keymap {
             clear: (KeyCode::Char('a'), None),
@@ -679,72 +594,13 @@ mod tests {
             })
             .unwrap();
 
-        let version_row = format!(
-            "  ╭ {VERSION} ─────────────────────────────────────────────────────────────────────────────────────╮  "
-        );
-        let expected = [
-            "                                                                                                  ",
-            version_row.as_str(),
-            "  │                                                                                            │  ",
-            "  │                                           88                                               │  ",
-            "  │                                           88                                               │  ",
-            "  │                                           88                                               │  ",
-            "  │                  ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,                │  ",
-            r#"  │                 a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8                │  "#,
-            r#"  │                 8b       d8     )888(     8888[      8PP"""""""  88                        │  "#,
-            r#"  │                 "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                        │  "#,
-            r#"  │                  `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                        │  "#,
-            "  │                                                                                            │  ",
-            "  │                      A simple tui to view & control docker containers                      │  ",
-            "  │                                                                                            │  ",
-            "  │ ( 0 ) select next panel                                                                    │  ",
-            "  │ ( 2 ) select previous panel                                                                │  ",
-            "  │ ( q ) scroll list down by one                                                              │  ",
-            "  │ ( y ) scroll list up by one                                                                │  ",
-            "  │ ( o ) scroll list down by many                                                             │  ",
-            "  │ ( w ) scroll list by up many                                                               │  ",
-            "  │ ( s ) scroll list to end                                                                   │  ",
-            "  │ ( u ) scroll list to start                                                                 │  ",
-            "  │ ( enter ) send docker container command                                                    │  ",
-            "  │ ( g ) exec into a container                                                                │  ",
-            "  │ ( Home ) toggle this help information - or click heading                                   │  ",
-            "  │ ( Home ) save logs to file                                                                 │  ",
-            "  │ ( Page Down ) toggle mouse capture - if disabled, text on screen can be selected & copied  │  ",
-            "  │ ( i ) enter filter mode                                                                    │  ",
-            "  │ ( Up ) reset container sorting                                                             │  ",
-            "  │ ( 4 ) sort containers by name                                                              │  ",
-            "  │ ( 6 ) sort containers by state                                                             │  ",
-            "  │ ( 8 ) sort containers by status                                                            │  ",
-            "  │ ( F1 ) sort containers by cpu                                                              │  ",
-            "  │ ( # ) sort containers by memory                                                            │  ",
-            "  │ ( / ) sort containers by id                                                                │  ",
-            "  │ ( , ) sort containers by image                                                             │  ",
-            "  │ ( . ) sort containers by rx                                                                │  ",
-            "  │ ( Backspace ) sort containers by tx                                                        │  ",
-            "  │ ( a ) close dialog                                                                         │  ",
-            "  │ ( k ) quit at any time                                                                     │  ",
-            "  │                                                                                            │  ",
-            "  │             currently an early work in progress, all and any input appreciated             │  ",
-            "  │                            https://github.com/mrjackwills/oxker                            │  ",
-            "  │                                                                                            │  ",
-            "  │                                                                                            │  ",
-            "  ╰────────────────────────────────────────────────────────────────────────────────────────────╯  ",
-            "                                                                                                  ",
-        ];
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-            }
-        }
+        assert_snapshot!(setup.terminal.backend());
     }
 
     #[test]
     /// Help panel will show custom keymap if in use, with two definition for each entry
     fn test_draw_blocks_help_custom_keymap_two_definitions() {
-        let (w, h) = (110, 47);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(110, 47, true, true);
 
         let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('b'))),
@@ -783,72 +639,13 @@ mod tests {
             })
             .unwrap();
 
-        let version_row = format!(
-            " ╭ {VERSION} ───────────────────────────────────────────────────────────────────────────────────────────────────╮ "
-        );
-        let expected = [
-            "                                                                                                              ",
-            version_row.as_str(),
-            " │                                                                                                          │ ",
-            " │                                                  88                                                      │ ",
-            " │                                                  88                                                      │ ",
-            " │                                                  88                                                      │ ",
-            " │                         ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,                       │ ",
-            r#" │                        a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8                       │ "#,
-            r#" │                        8b       d8     )888(     8888[      8PP"""""""  88                               │ "#,
-            r#" │                        "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                               │ "#,
-            r#" │                         `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                               │ "#,
-            " │                                                                                                          │ ",
-            " │                             A simple tui to view & control docker containers                             │ ",
-            " │                                                                                                          │ ",
-            " │ ( 0 ) or ( 1 ) select next panel                                                                         │ ",
-            " │ ( 2 ) or ( 3 ) select previous panel                                                                     │ ",
-            " │ ( q ) or ( r ) scroll list down by one                                                                   │ ",
-            " │ ( y ) or ( z ) scroll list up by one                                                                     │ ",
-            " │ ( o ) or ( p ) scroll list down by many                                                                  │ ",
-            " │ ( w ) or ( x ) scroll list by up many                                                                    │ ",
-            " │ ( s ) or ( t ) scroll list to end                                                                        │ ",
-            " │ ( u ) or ( v ) scroll list to start                                                                      │ ",
-            " │ ( enter ) send docker container command                                                                  │ ",
-            " │ ( g ) or ( h ) exec into a container                                                                     │ ",
-            " │ ( Home ) or ( Del ) toggle this help information - or click heading                                      │ ",
-            " │ ( Home ) or ( Del ) save logs to file                                                                    │ ",
-            " │ ( Page Down ) or ( Page Up ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ",
-            " │ ( i ) or ( j ) enter filter mode                                                                         │ ",
-            " │ ( Up ) or ( Down ) reset container sorting                                                               │ ",
-            " │ ( 4 ) or ( 5 ) sort containers by name                                                                   │ ",
-            " │ ( 6 ) or ( 7 ) sort containers by state                                                                  │ ",
-            " │ ( 8 ) or ( 9 ) sort containers by status                                                                 │ ",
-            " │ ( F1 ) or ( F12 ) sort containers by cpu                                                                 │ ",
-            " │ ( # ) or ( - ) sort containers by memory                                                                 │ ",
-            " │ ( / ) or ( = ) sort containers by id                                                                     │ ",
-            r" │ ( , ) or ( \ ) sort containers by image                                                                  │ ",
-            " │ ( . ) or ( ] ) sort containers by rx                                                                     │ ",
-            " │ ( Backspace ) or ( Back Tab ) sort containers by tx                                                      │ ",
-            " │ ( a ) or ( b ) close dialog                                                                              │ ",
-            " │ ( k ) or ( l ) quit at any time                                                                          │ ",
-            " │                                                                                                          │ ",
-            " │                    currently an early work in progress, all and any input appreciated                    │ ",
-            " │                                   https://github.com/mrjackwills/oxker                                   │ ",
-            " │                                                                                                          │ ",
-            " │                                                                                                          │ ",
-            " ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯ ",
-            "                                                                                                              ",
-        ];
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-            }
-        }
+        assert_snapshot!(setup.terminal.backend());
     }
 
     #[test]
     /// Help panel will show custom keymap if in use, with either one or two definition for each entry
     fn test_draw_blocks_help_one_and_two_definitions() {
-        let (w, h) = (110, 47);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(110, 47, true, true);
 
         let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('b'))),
@@ -889,71 +686,12 @@ mod tests {
             })
             .unwrap();
 
-        let version_row = format!(
-            " ╭ {VERSION} ───────────────────────────────────────────────────────────────────────────────────────────────────╮ "
-        );
-        let expected = [
-            "                                                                                                              ",
-            version_row.as_str(),
-            " │                                                                                                          │ ",
-            " │                                                  88                                                      │ ",
-            " │                                                  88                                                      │ ",
-            " │                                                  88                                                      │ ",
-            " │                         ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,                       │ ",
-            r#" │                        a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8                       │ "#,
-            r#" │                        8b       d8     )888(     8888[      8PP"""""""  88                               │ "#,
-            r#" │                        "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                               │ "#,
-            r#" │                         `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                               │ "#,
-            " │                                                                                                          │ ",
-            " │                             A simple tui to view & control docker containers                             │ ",
-            " │                                                                                                          │ ",
-            " │ ( 0 ) select next panel                                                                                  │ ",
-            " │ ( 2 ) or ( 3 ) select previous panel                                                                     │ ",
-            " │ ( q ) or ( r ) scroll list down by one                                                                   │ ",
-            " │ ( y ) or ( z ) scroll list up by one                                                                     │ ",
-            " │ ( o ) scroll list down by many                                                                           │ ",
-            " │ ( w ) scroll list by up many                                                                             │ ",
-            " │ ( s ) scroll list to end                                                                                 │ ",
-            " │ ( u ) or ( v ) scroll list to start                                                                      │ ",
-            " │ ( enter ) send docker container command                                                                  │ ",
-            " │ ( g ) exec into a container                                                                              │ ",
-            " │ ( Home ) toggle this help information - or click heading                                                 │ ",
-            " │ ( Home ) save logs to file                                                                               │ ",
-            " │ ( Page Down ) or ( Page Up ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ",
-            " │ ( i ) or ( j ) enter filter mode                                                                         │ ",
-            " │ ( Up ) or ( Down ) reset container sorting                                                               │ ",
-            " │ ( 4 ) sort containers by name                                                                            │ ",
-            " │ ( 6 ) or ( 7 ) sort containers by state                                                                  │ ",
-            " │ ( 8 ) sort containers by status                                                                          │ ",
-            " │ ( F1 ) or ( F12 ) sort containers by cpu                                                                 │ ",
-            " │ ( # ) sort containers by memory                                                                          │ ",
-            " │ ( / ) or ( = ) sort containers by id                                                                     │ ",
-            " │ ( , ) sort containers by image                                                                           │ ",
-            " │ ( . ) or ( ] ) sort containers by rx                                                                     │ ",
-            " │ ( Backspace ) sort containers by tx                                                                      │ ",
-            " │ ( a ) or ( b ) close dialog                                                                              │ ",
-            " │ ( k ) quit at any time                                                                                   │ ",
-            " │                                                                                                          │ ",
-            " │                    currently an early work in progress, all and any input appreciated                    │ ",
-            " │                                   https://github.com/mrjackwills/oxker                                   │ ",
-            " │                                                                                                          │ ",
-            " │                                                                                                          │ ",
-            " ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯ ",
-            "                                                                                                              ",
-        ];
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-            }
-        }
+        assert_snapshot!(setup.terminal.backend());
     }
 
     #[test]
     fn test_draw_blocks_help_show_timezone() {
-        let (w, h) = (87, 35);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(87, 35, true, true);
 
         setup
             .terminal
@@ -968,49 +706,9 @@ mod tests {
             })
             .unwrap();
 
-        let version_row = format!(
-            " ╭ {VERSION} ────────────────────────────────────────────────────────────────────────────╮ "
-        );
-        let expected = [
-            "                                                                                       ",
-            version_row.as_str(),
-            " │                                                                                   │ ",
-            " │                                      88                                           │ ",
-            " │                                      88                                           │ ",
-            " │                                      88                                           │ ",
-            " │             ,adPPYba,   8b,     ,d8  88   ,d8    ,adPPYba,  8b,dPPYba,            │ ",
-            r#" │            a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8            │ "#,
-            r#" │            8b       d8     )888(     8888[      8PP"""""""  88                    │ "#,
-            r#" │            "8a,   ,a8"   ,d8" "8b,   88`"Yba,   "8b,   ,aa  88                    │ "#,
-            r#" │             `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88                    │ "#,
-            " │                                                                                   │ ",
-            " │                 A simple tui to view & control docker containers                  │ ",
-            " │                                                                                   │ ",
-            " │                             logs timezone: Asia/Tokyo                             │ ",
-            " │                                                                                   │ ",
-            " │ ( tab ) or ( shift+tab ) change panels                                            │ ",
-            " │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) change selected line        │ ",
-            " │ ( enter ) send docker container command                                           │ ",
-            " │ ( e ) exec into a container                                                       │ ",
-            " │ ( h ) toggle this help information - or click heading                             │ ",
-            " │ ( s ) save logs to file                                                           │ ",
-            " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ ",
-            " │ ( F1 ) or ( / ) enter filter mode                                                 │ ",
-            " │ ( 0 ) stop sort                                                                   │ ",
-            " │ ( 1 - 9 ) sort by header - or click header                                        │ ",
-            " │ ( esc ) close dialog                                                              │ ",
-            " │ ( q ) quit at any time                                                            │ ",
-            " │                                                                                   │ ",
-            " │        currently an early work in progress, all and any input appreciated         │ ",
-            " │                       https://github.com/mrjackwills/oxker                        │ ",
-            " │                                                                                   │ ",
-            " │                                                                                   │ ",
-            " ╰───────────────────────────────────────────────────────────────────────────────────╯ ",
-            "                                                                                       ",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     (14, 31..=45) => {
@@ -1021,7 +719,6 @@ mod tests {
                     }
                     _ => (),
                 }
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
             }
         }
     }

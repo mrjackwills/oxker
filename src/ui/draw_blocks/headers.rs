@@ -222,6 +222,7 @@ mod tests {
     use std::ops::RangeInclusive;
 
     use crossterm::event::KeyCode;
+    use insta::assert_snapshot;
     use ratatui::style::Color;
     use uuid::Uuid;
 
@@ -230,22 +231,17 @@ mod tests {
         config::{AppColors, Keymap},
         ui::{
             FrameData, Status,
-            draw_blocks::tests::{expected_to_vec, get_result, test_setup},
+            draw_blocks::tests::{TuiTestSetup, get_result, test_setup},
         },
     };
 
     #[test]
     /// Heading back only has show/exit help when no containers, correctly coloured
-    fn test_draw_blocks_headers_no_containers() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+    fn test_draw_blocks_headers_no_containers_show_help() {
+        let mut setup = test_setup(140, 1, true, true);
         setup.app_data.lock().containers = StatefulList::new(vec![]);
 
-        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
-
-        let expected = [
-            "                                                                                                                          ( h ) show help   ",
-        ];
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
             .terminal
@@ -261,19 +257,24 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+        assert_snapshot!(setup.terminal.backend());
+
+        for (_, result_row) in get_result(&setup) {
+            for result_cell in result_row {
                 assert_eq!(result_cell.bg, Color::Magenta);
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.fg, Color::Gray,);
             }
         }
+    }
 
+    #[test]
+    /// Heading back only has show/exit help when no containers, correctly coloured
+    fn test_draw_blocks_headers_no_containers_exit_help() {
+        let mut setup = test_setup(140, 1, true, true);
+        setup.app_data.lock().containers = StatefulList::new(vec![]);
+
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
         fd.status.insert(Status::Help);
-        let expected = [
-            "                                                                                                                          ( h ) exit help   ",
-        ];
         setup
             .terminal
             .draw(|f| {
@@ -287,11 +288,10 @@ mod tests {
                 );
             })
             .unwrap();
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        for (_, result_row) in get_result(&setup) {
+            for result_cell in result_row {
                 assert_eq!(result_cell.bg, Color::Magenta);
                 assert_eq!(result_cell.fg, Color::Black);
             }
@@ -301,13 +301,8 @@ mod tests {
     #[test]
     /// Show all headings when containers present, colors valid
     fn test_draw_blocks_headers_some_containers() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
-
-        let expected = [
-            "    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-        ];
         setup
             .terminal
             .draw(|f| {
@@ -321,11 +316,10 @@ mod tests {
                 );
             })
             .unwrap();
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (_, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Magenta);
                 assert_eq!(
                     result_cell.fg,
@@ -343,12 +337,9 @@ mod tests {
     #[test]
     /// Only show the headings that fit the reduced-in-size header section
     fn test_draw_blocks_headers_some_containers_reduced_width() {
-        let (w, h) = (80, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 1, true, true);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
-        let expected =
-            ["    name          state       status      cpu                 ( h ) show help   "];
         setup
             .terminal
             .draw(|f| {
@@ -363,10 +354,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+        for (_, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Magenta);
                 assert_eq!(
                     result_cell.fg,
@@ -382,202 +372,12 @@ mod tests {
     }
 
     #[test]
-    /// Test all combination of headers & sort by
-    #[allow(clippy::too_many_lines)]
-    fn test_draw_blocks_headers_sort_containers() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
-        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
-
-        // Actual test, used for each header and sorted type
-        let mut test =
-            |expected: &[&str], range: RangeInclusive<usize>, x: (Header, SortedOrder)| {
-                fd.sorted_by = Some(x);
-
-                setup
-                    .terminal
-                    .draw(|f| {
-                        super::draw(
-                            setup.area,
-                            AppColors::new(),
-                            f,
-                            &fd,
-                            &setup.gui_state,
-                            &Keymap::new(),
-                        );
-                    })
-                    .unwrap();
-
-                for (row_index, result_row) in get_result(&setup, w) {
-                    let expected_row = expected_to_vec(expected, row_index);
-                    for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                        assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
-                        assert_eq!(result_cell.bg, Color::Magenta);
-                        assert_eq!(
-                            result_cell.fg,
-                            match result_cell_index {
-                                0..=3 => Color::White,
-                                122..=139 => Color::Gray,
-                                // given range | help section
-                                x if range.contains(&x) => Color::Gray,
-                                112..=121 => Color::Reset,
-                                _ => Color::Black,
-                            }
-                        );
-                    }
-                }
-            };
-
-        // Name
-        test(
-            &[
-                "    name ▲        state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            1..=17,
-            (Header::Name, SortedOrder::Asc),
-        );
-        test(
-            &[
-                "    name ▼        state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            1..=17,
-            (Header::Name, SortedOrder::Desc),
-        );
-        // state
-        test(
-            &[
-                "    name          state ▲     status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            18..=29,
-            (Header::State, SortedOrder::Asc),
-        );
-        test(
-            &[
-                "    name          state ▼     status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            18..=29,
-            (Header::State, SortedOrder::Desc),
-        );
-        // status
-        test(
-            &[
-                "    name          state       status ▲    cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            30..=41,
-            (Header::Status, SortedOrder::Asc),
-        );
-        test(
-            &[
-                "    name          state       status ▼    cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            30..=41,
-            (Header::Status, SortedOrder::Desc),
-        );
-        // cpu
-        test(
-            &[
-                "    name          state       status      cpu ▲    memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            42..=50,
-            (Header::Cpu, SortedOrder::Asc),
-        );
-        test(
-            &[
-                "    name          state       status      cpu ▼    memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            42..=50,
-            (Header::Cpu, SortedOrder::Desc),
-        );
-        // memory
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit ▲      id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            51..=70,
-            (Header::Memory, SortedOrder::Asc),
-        );
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit ▼      id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            51..=70,
-            (Header::Memory, SortedOrder::Desc),
-        );
-        //id
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit        id ▲       image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            71..=81,
-            (Header::Id, SortedOrder::Asc),
-        );
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit        id ▼       image     ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            71..=81,
-            (Header::Id, SortedOrder::Desc),
-        );
-        // image
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit        id         image ▲   ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            82..=91,
-            (Header::Image, SortedOrder::Asc),
-        );
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit        id         image ▼   ↓ rx      ↑ tx                ( h ) show help   ",
-            ],
-            82..=91,
-            (Header::Image, SortedOrder::Desc),
-        );
-        // rx
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit        id         image     ↓ rx ▲    ↑ tx                ( h ) show help   ",
-            ],
-            92..=101,
-            (Header::Rx, SortedOrder::Asc),
-        );
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit        id         image     ↓ rx ▼    ↑ tx                ( h ) show help   ",
-            ],
-            92..=101,
-            (Header::Rx, SortedOrder::Desc),
-        );
-        // tx
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx ▲              ( h ) show help   ",
-            ],
-            102..=111,
-            (Header::Tx, SortedOrder::Asc),
-        );
-        test(
-            &[
-                "    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx ▼              ( h ) show help   ",
-            ],
-            102..=111,
-            (Header::Tx, SortedOrder::Desc),
-        );
-    }
-
-    #[test]
     /// Show animation
     fn test_draw_blocks_headers_animation() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
-
-        let expected = [
-            " ⠙  name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-        ];
 
         setup
             .terminal
@@ -593,10 +393,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+        for (_, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Magenta);
                 assert_eq!(
                     result_cell.fg,
@@ -614,8 +413,7 @@ mod tests {
     #[test]
     /// Custom colors are applied correctly
     fn test_draw_blocks_headers_custom_colors() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -627,10 +425,6 @@ mod tests {
         colors.headers_bar.text = Color::Blue;
         colors.headers_bar.text_selected = Color::Yellow;
 
-        let expected = [
-            " ⠙  name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( h ) show help   ",
-        ];
-
         setup
             .terminal
             .draw(|f| {
@@ -638,10 +432,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+
+        for (_, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Black);
                 assert_eq!(
                     result_cell.fg,
@@ -657,18 +451,14 @@ mod tests {
     }
 
     #[test]
-    /// Custom keymap for help panel is correctly display, with one and two definitions
-    fn test_draw_blocks_headers_custom_keymap() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+    /// Custom keymap for help panel is correctly display, with one definitions
+    fn test_draw_blocks_headers_custom_keymap_one_definition() {
+        let mut setup = test_setup(140, 1, true, true);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let mut keymap = Keymap::new();
 
         keymap.toggle_help = (KeyCode::Char('T'), None);
 
-        let expected = [
-            "    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx                ( T ) show help   ",
-        ];
         setup
             .terminal
             .draw(|f| {
@@ -683,17 +473,17 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-            }
-        }
+        assert_snapshot!(setup.terminal.backend());
+    }
+    
+	#[test]
+    /// Custom keymap for help panel is correctly display, two definitions
+    fn test_draw_blocks_headers_custom_keymap_two_definitions() {
+        let mut setup = test_setup(140, 1, true, true);
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        let mut keymap = Keymap::new();
 
         keymap.toggle_help = (KeyCode::Char('T'), Some(KeyCode::Tab));
-        let expected = [
-            "    name          state       status      cpu      memory/limit        id         image     ↓ rx      ↑ tx          ( T | Tab ) show help   ",
-        ];
         setup
             .terminal
             .draw(|f| {
@@ -708,11 +498,178 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+    }
+
+    fn check_color(setup: &TuiTestSetup, range: RangeInclusive<usize>) {
+        for (_, result_row) in get_result(setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                assert_eq!(result_cell.bg, Color::Magenta);
+                assert_eq!(
+                    result_cell.fg,
+                    match result_cell_index {
+                        0..=3 => Color::White,
+                        122..=139 => Color::Gray,
+                        // given range | help section
+                        x if range.contains(&x) => Color::Gray,
+                        112..=121 => Color::Reset,
+                        _ => Color::Black,
+                    }
+                );
             }
         }
     }
+
+    /// As a macro - headers test, check for asc/desc icon and colors
+    macro_rules! test_draw_blocks_headers_sort {
+        ($name:ident, $header:expr, $order:expr, $color_range:expr) => {
+            #[test]
+            fn $name() {
+                let mut setup = test_setup(140, 1, true, true);
+                let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
+                fd.sorted_by = Some(($header, $order));
+                setup
+                    .terminal
+                    .draw(|f| {
+                        super::draw(
+                            setup.area,
+                            AppColors::new(),
+                            f,
+                            &fd,
+                            &setup.gui_state,
+                            &Keymap::new(),
+                        );
+                    })
+                    .unwrap();
+                assert_snapshot!(setup.terminal.backend());
+                check_color(&setup, $color_range);
+            }
+        };
+    }
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_name_asc,
+        Header::Name,
+        SortedOrder::Asc,
+        1..=17
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_name_desc,
+        Header::Name,
+        SortedOrder::Desc,
+        1..=17
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_state_asc,
+        Header::State,
+        SortedOrder::Asc,
+        18..=29
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_state_desc,
+        Header::State,
+        SortedOrder::Desc,
+        18..=29
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_status_asc,
+        Header::Status,
+        SortedOrder::Asc,
+        30..=41
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_status_desc,
+        Header::Status,
+        SortedOrder::Desc,
+        30..=41
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_cpu_asc,
+        Header::Cpu,
+        SortedOrder::Asc,
+        42..=50
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_cpu_desc,
+        Header::Cpu,
+        SortedOrder::Desc,
+        42..=50
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_memory_asc,
+        Header::Memory,
+        SortedOrder::Asc,
+        51..=70
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_memory_desc,
+        Header::Memory,
+        SortedOrder::Desc,
+        51..=70
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_id_asc,
+        Header::Id,
+        SortedOrder::Asc,
+        71..=81
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_id_desc,
+        Header::Id,
+        SortedOrder::Desc,
+        71..=81
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_image_asc,
+        Header::Image,
+        SortedOrder::Asc,
+        82..=91
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_image_desc,
+        Header::Image,
+        SortedOrder::Desc,
+        82..=91
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_rx_asc,
+        Header::Rx,
+        SortedOrder::Asc,
+        92..=101
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_rx_desc,
+        Header::Rx,
+        SortedOrder::Desc,
+        92..=101
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_tx_asc,
+        Header::Tx,
+        SortedOrder::Asc,
+        102..=111
+    );
+
+    test_draw_blocks_headers_sort!(
+        test_draw_blocks_headers_sort_containers_tx_desc,
+        Header::Tx,
+        SortedOrder::Desc,
+        102..=111
+    );
 }

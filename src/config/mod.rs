@@ -232,11 +232,9 @@ mod tests {
     #[test]
     /// Test various timezones get parsed correctly
     fn test_config_parse_timezone() {
-        assert!(super::Config::parse_timezone(None).is_none());
-
         // Timezone with no offset just return None
-        for i in ["Europe/London", "Africa/Accra"] {
-            assert!(super::Config::parse_timezone(Some(i.to_owned())).is_none());
+        for i in [None, Some("UTC".to_owned())] {
+            assert!(super::Config::parse_timezone(i).is_none());
         }
 
         let expected = Some(TimeZone::get("Asia/Tokyo").unwrap());

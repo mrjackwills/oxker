@@ -1,0 +1,10 @@
+---
+source: src/ui/draw_blocks/containers.rs
+expression: setup.terminal.backend()
+---
+"╭ Containers 1/3 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮"
+"│⚪ container_1   ↻ restarting   Up 1 hour   00.00%   0.00 kB / 0.00 kB          1   image_1   0.00 kB   0.00 kB                 │" Hidden by multi-width symbols: [(2, " ")]
+"│   container_2   ✓ running   Up 2 hour   00.00%   0.00 kB / 0.00 kB          2   image_2   0.00 kB   0.00 kB                    │"
+"│   container_3   ✓ running   Up 3 hour   00.00%   0.00 kB / 0.00 kB          3   image_3   0.00 kB   0.00 kB                    │"
+"│                                                                                                                                │"
+"╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
