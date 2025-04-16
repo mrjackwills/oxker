@@ -16,12 +16,12 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ChartType {
+enum ChartVariant {
     Cpu,
     Memory,
 }
 
-impl ChartType {
+impl ChartVariant {
     const fn name(self) -> &'static str {
         match self {
             Self::Cpu => "cpu",
@@ -75,7 +75,7 @@ impl ChartType {
 
 /// Create charts
 fn make_chart<'a, T: Stats + Display>(
-    chart_type: ChartType,
+    chart_type: ChartVariant,
     colors: AppColors,
     current: &'a T,
     dataset: Vec<Dataset<'a>>,
@@ -143,7 +143,7 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
         let cpu_chart = make_chart(
-            ChartType::Cpu,
+            ChartVariant::Cpu,
             colors,
             &cpu_stats,
             cpu_dataset,
@@ -151,7 +151,7 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
             cpu.2,
         );
         let mem_chart = make_chart(
-            ChartType::Memory,
+            ChartVariant::Memory,
             colors,
             &mem_stats,
             mem_dataset,
