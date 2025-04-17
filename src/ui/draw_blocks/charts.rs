@@ -75,30 +75,30 @@ impl ChartVariant {
 
 /// Create charts
 fn make_chart<'a, T: Stats + Display>(
-    chart_type: ChartVariant,
+    chart_variant: ChartVariant,
     colors: AppColors,
     current: &'a T,
     dataset: Vec<Dataset<'a>>,
     max: &'a T,
     state: State,
 ) -> Chart<'a> {
-    let max_color = chart_type.get_max_color(colors, state);
+    let max_color = chart_variant.get_max_color(colors, state);
 
     Chart::new(dataset)
-        .bg(chart_type.get_bg_color(colors))
+        .bg(chart_variant.get_bg_color(colors))
         .block(
             Block::default()
-                .style(Style::default().bg(chart_type.get_bg_color(colors)))
+                .style(Style::default().bg(chart_variant.get_bg_color(colors)))
                 .title_alignment(Alignment::Center)
                 .title(Span::styled(
-                    format!(" {} {current} ", chart_type.name()),
+                    format!(" {} {current} ", chart_variant.name()),
                     Style::default()
-                        .fg(chart_type.get_title_color(colors, state))
+                        .fg(chart_variant.get_title_color(colors, state))
                         .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(chart_type.get_border_color(colors))),
+                .border_style(Style::default().fg(chart_variant.get_border_color(colors))),
         )
         .x_axis(Axis::default().bounds([0.00, 60.0]))
         .y_axis(
@@ -110,7 +110,7 @@ fn make_chart<'a, T: Stats + Display>(
                         Style::default().add_modifier(Modifier::BOLD).fg(max_color),
                     ),
                 ])
-                .style(Style::new().fg(chart_type.get_y_axis_color(colors)))
+                .style(Style::new().fg(chart_variant.get_y_axis_color(colors)))
                 // Add 0.01, so that max point is always visible?
                 .bounds([0.0, max.get_value() + 0.01]),
         )
