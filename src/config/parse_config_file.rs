@@ -152,9 +152,10 @@ impl ConfigFile {
             ConfigFileFormat::JsoncAsJson,
             ConfigFileFormat::Json,
         ] {
-            if let Ok(config_file) =
-                Self::parse_config_file(file_format, &file_format.get_default_path_name(in_container))
-            {
+            if let Ok(config_file) = Self::parse_config_file(
+                file_format,
+                &file_format.get_default_path_name(in_container),
+            ) {
                 config = Some(config_file);
                 break;
             }
@@ -206,7 +207,8 @@ mod tests {
     /// All configs parsed and are equal
     fn test_parse_config_keymap_all() {
         let example_jsonc = include_str!("../../example_config/example.config.jsonc");
-        let result_jsonc = ConfigFile::parse(super::ConfigFileFormat::Jsonc, example_jsonc).unwrap();
+        let result_jsonc =
+            ConfigFile::parse(super::ConfigFileFormat::Jsonc, example_jsonc).unwrap();
         assert!(result_jsonc.keymap.is_some());
         let result_jsonc = result_jsonc.keymap.unwrap();
 
@@ -241,7 +243,8 @@ mod tests {
     /// All configs parsed and are equal
     fn test_parse_config_colors_all() {
         let example_jsonc = include_str!("../../example_config/example.config.jsonc");
-        let result_jsonc = ConfigFile::parse(super::ConfigFileFormat::Jsonc, example_jsonc).unwrap();
+        let result_jsonc =
+            ConfigFile::parse(super::ConfigFileFormat::Jsonc, example_jsonc).unwrap();
         assert!(result_jsonc.colors.is_some());
         let result_jsonc = result_jsonc.colors.unwrap();
 

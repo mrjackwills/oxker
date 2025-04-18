@@ -1,6 +1,6 @@
 [package]
 name = "oxker"
-version = "0.10.0"
+version = "0.10.1"
 edition = "2024"
 authors = ["Jack Wills <email@mrjackwills.com>"]
 description = "A simple tui to view & control docker containers"
