@@ -74,6 +74,7 @@ pub fn draw(
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use insta::assert_snapshot;
     use ratatui::style::{Color, Modifier};
     use uuid::Uuid;
 
@@ -82,26 +83,15 @@ mod tests {
         config::AppColors,
         ui::{
             FrameData, Status,
-            draw_blocks::tests::{
-                BORDER_CHARS, expected_to_vec, get_result, insert_logs, test_setup,
-            },
+            draw_blocks::tests::{BORDER_CHARS, get_result, insert_logs, test_setup},
         },
     };
 
     #[test]
     /// No logs, panel unselected, then selected, border color changes correctly
     fn test_draw_blocks_logs_none() {
-        let (w, h) = (35, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(35, 6, true, true);
 
-        let expected = [
-            "╭ Logs - container_1 - image_1 ───╮",
-            "│          no logs found          │",
-            "│                                 │",
-            "│                                 │",
-            "│                                 │",
-            "╰─────────────────────────────────╯",
-        ];
         let colors = setup.app_data.lock().config.app_colors;
 
         setup
@@ -117,11 +107,10 @@ mod tests {
                 );
             })
             .unwrap();
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 match (row_index, result_cell_index) {
                     (0 | 5, 0..=34) | (1..=4, 0) | (1..=5, 34) => {
                         assert_eq!(result_cell.bg, Color::Reset);
@@ -154,10 +143,8 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        for (_, result_row) in get_result(&setup) {
+            for result_cell in result_row {
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::LightCyan);
                 }
@@ -166,21 +153,11 @@ mod tests {
     }
 
     #[test]
-    /// Parsing logs, spinner visible, and then animates by one frame
-    fn test_draw_blocks_logs_parsing() {
-        let (w, h) = (32, 6);
-        let mut setup = test_setup(w, h, true, true);
+    /// Parsing logs, first frame spinner visible
+    fn test_draw_blocks_logs_parsing_frame_one() {
+        let mut setup = test_setup(32, 6, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
-
-        let expected = [
-            "╭ Logs - container_1 - image_1 ╮",
-            "│        parsing logs ⠙        │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "╰──────────────────────────────╯",
-        ];
 
         let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
         fd.status.insert(Status::Init);
@@ -199,11 +176,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 match (row_index, result_cell_index) {
                     (0, 0..=31) | (1..=4, 0) | (1..=5, 31) | (5, 0..=30) => {
                         assert_eq!(result_cell.bg, Color::Reset);
@@ -216,18 +191,19 @@ mod tests {
                 }
             }
         }
+    }
+    #[test]
+    /// Parsing logs, second frame spinner visible
+    fn test_draw_blocks_logs_parsing_frame_two() {
+        let mut setup = test_setup(32, 6, true, true);
+        let uuid = Uuid::new_v4();
+        setup.gui_state.lock().next_loading(uuid);
+
+        let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        fd.status.insert(Status::Init);
 
         // animation moved by one frame
         setup.gui_state.lock().next_loading(uuid);
-
-        let expected = [
-            "╭ Logs - container_1 - image_1 ╮",
-            "│        parsing logs ⠹        │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "╰──────────────────────────────╯",
-        ];
 
         let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
         fd.status.insert(Status::Init);
@@ -245,10 +221,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 match (row_index, result_cell_index) {
                     (0, 0..=31) | (1..=4, 0) | (1..=5, 31) | (5, 0..=30) => {
                         assert_eq!(result_cell.bg, Color::Reset);
@@ -265,9 +241,8 @@ mod tests {
 
     #[test]
     /// Logs correct displayed, changing log state also draws correctly
-    fn test_draw_blocks_logs_some() {
-        let (w, h) = (36, 6);
-        let mut setup = test_setup(w, h, true, true);
+    fn test_draw_blocks_logs_some_line_three() {
+        let mut setup = test_setup(36, 6, true, true);
 
         insert_logs(&setup);
 
@@ -285,19 +260,12 @@ mod tests {
                 );
             })
             .unwrap();
-        let expected = [
-            "╭ Logs 3/3 - container_1 - image_1 ╮",
-            "│  line 1                          │",
-            "│  line 2                          │",
-            "│▶ line 3                          │",
-            "│                                  │",
-            "╰──────────────────────────────────╯",
-        ];
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
+            // let expected_row = expected_to_vec(&expected, row_index);
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+                // assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 if let (1..=4, 1..=34) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Reset);
@@ -311,7 +279,28 @@ mod tests {
                 }
             }
         }
-        // Change selected log line
+    }
+    #[test]
+    /// Logs correct displayed, changing log state also draws correctly
+    fn test_draw_blocks_logs_some_line_two() {
+        let mut setup = test_setup(36, 6, true, true);
+
+        insert_logs(&setup);
+
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    &setup.app_data,
+                    setup.area,
+                    AppColors::new(),
+                    f,
+                    &fd,
+                    &setup.gui_state,
+                );
+            })
+            .unwrap();
         setup.app_data.lock().log_previous();
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -329,19 +318,10 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            "╭ Logs 2/3 - container_1 - image_1 ╮",
-            "│  line 1                          │",
-            "│▶ line 2                          │",
-            "│  line 3                          │",
-            "│                                  │",
-            "╰──────────────────────────────────╯",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 if let (1..=4, 1..=34) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Reset);
@@ -360,22 +340,12 @@ mod tests {
     #[test]
     /// Full (long) name displayed in logs border
     fn test_draw_blocks_logs_long_name() {
-        let (w, h) = (80, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 6, true, true);
         setup.app_data.lock().containers.items[0].name =
             ContainerName::from("a_long_container_name_for_the_purposes_of_this_test");
         setup.app_data.lock().containers.items[0].image =
             ContainerImage::from("a_long_image_name_for_the_purposes_of_this_test");
         insert_logs(&setup);
-
-        let expected = [
-            "╭ Logs 3/3 - a_long_container_name_for_the_purposes_of_this_test - a_long_image╮",
-            "│  line 1                                                                      │",
-            "│  line 2                                                                      │",
-            "│▶ line 3                                                                      │",
-            "│                                                                              │",
-            "╰──────────────────────────────────────────────────────────────────────────────╯",
-        ];
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
@@ -393,29 +363,14 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-            }
-        }
+        assert_snapshot!(setup.terminal.backend());
     }
 
     #[test]
     fn test_draw_blocks_logs_custom_colors_parsing() {
-        let (w, h) = (32, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(32, 6, true, true);
         let uuid = Uuid::new_v4();
         setup.gui_state.lock().next_loading(uuid);
-
-        let expected = [
-            "╭ Logs - container_1 - image_1 ╮",
-            "│        parsing logs ⠙        │",
-            "│                              │",
-            "│                              │",
-            "│                              │",
-            "╰──────────────────────────────╯",
-        ];
 
         let mut fd = FrameData::from((&setup.app_data, &setup.gui_state));
         fd.status.insert(Status::Init);
@@ -438,11 +393,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Green);
                 if let (1..=4, 1..=29) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Black);
@@ -466,11 +420,8 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 if let (1..=4, 1..=29) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Reset);
@@ -482,17 +433,8 @@ mod tests {
     #[test]
 
     fn test_draw_blocks_logs_custom_colors_no_logs() {
-        let (w, h) = (35, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(35, 6, true, true);
 
-        let expected = [
-            "╭ Logs - container_1 - image_1 ───╮",
-            "│          no logs found          │",
-            "│                                 │",
-            "│                                 │",
-            "│                                 │",
-            "╰─────────────────────────────────╯",
-        ];
         let mut colors = AppColors::new();
         colors.logs.background = Color::Green;
         colors.logs.text = Color::Black;
@@ -511,10 +453,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Green);
                 if let (1..=4, 1..=29) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Black);
@@ -537,10 +479,8 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 if let (1..=4, 1..=29) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Reset);
@@ -552,8 +492,7 @@ mod tests {
     #[test]
     /// Logs correct displayed with custom colors
     fn test_draw_blocks_logs_custom_colors_logs() {
-        let (w, h) = (36, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(36, 6, true, true);
         insert_logs(&setup);
 
         let mut colors = setup.app_data.lock().config.app_colors;
@@ -576,19 +515,10 @@ mod tests {
                 );
             })
             .unwrap();
-        let expected = [
-            "╭ Logs 3/3 - container_1 - image_1 ╮",
-            "│  line 1                          │",
-            "│  line 2                          │",
-            "│▶ line 3                          │",
-            "│                                  │",
-            "╰──────────────────────────────────╯",
-        ];
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 if let (1..=4, 1..=34) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Reset);
@@ -617,10 +547,8 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Green);
                 if let (1..=4, 1..=34) = (row_index, result_cell_index) {
                     assert_eq!(result_cell.fg, Color::Black);

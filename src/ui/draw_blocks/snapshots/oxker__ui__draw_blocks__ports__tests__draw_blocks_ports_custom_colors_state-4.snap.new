@@ -1,0 +1,13 @@
+---
+source: src/ui/draw_blocks/ports.rs
+assertion_line: 381
+expression: setup.terminal.backend()
+---
+"╭─────────── ports ────────────╮"
+"│   ip   private   public      │"
+"│           8001               │"
+"│                              │"
+"│                              │"
+"│                              │"
+"│                              │"
+"╰──────────────────────────────╯"

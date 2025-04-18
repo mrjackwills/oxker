@@ -10,14 +10,14 @@ use crate::app_error::AppError;
 use super::{color_parser::ConfigColors, keymap_parser::ConfigKeymap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ConfigFileType {
+enum ConfigFileFormat {
     Toml,
     Jsonc,
     Json,
     JsoncAsJson,
 }
 
-impl TryFrom<&PathBuf> for ConfigFileType {
+impl TryFrom<&PathBuf> for ConfigFileFormat {
     type Error = AppError;
 
     /// Only allow toml, json, or jsonc files
@@ -38,7 +38,7 @@ impl TryFrom<&PathBuf> for ConfigFileType {
     }
 }
 
-impl ConfigFileType {
+impl ConfigFileFormat {
     /// Get the local config directory, to be used by default config parser
     fn get_config_dir(in_container: bool) -> Option<PathBuf> {
         if in_container {
@@ -48,7 +48,7 @@ impl ConfigFileType {
                 .map(|base_dirs| base_dirs.config_local_dir().join(env!("CARGO_PKG_NAME")))
         }
     }
-    /// Return the default filename + path for a given filetype
+    /// Return the default filename + path for a given fileformat
     fn get_default_path_name(self, in_container: bool) -> PathBuf {
         let suffix = match self {
             Self::Json | Self::JsoncAsJson => "config.json",
@@ -84,7 +84,7 @@ impl ConfigFile {
             return Ok(());
         }
 
-        let config_dir = ConfigFileType::get_config_dir(in_container)
+        let config_dir = ConfigFileFormat::get_config_dir(in_container)
             .ok_or_else(|| AppError::IO("config_dir".to_owned()))?;
         let file_name = config_dir.join("config.toml");
 
@@ -105,22 +105,22 @@ impl ConfigFile {
     }
 
     /// parse a given &str (read from the configfile) into Self
-    fn parse(file_type: ConfigFileType, input: &str) -> Result<Self, AppError> {
-        match file_type {
-            ConfigFileType::Json => {
+    fn parse(file_format: ConfigFileFormat, input: &str) -> Result<Self, AppError> {
+        match file_format {
+            ConfigFileFormat::Json => {
                 serde_json::from_str::<Self>(input).map_err(|i| AppError::Parse(i.to_string()))
             }
-            ConfigFileType::Jsonc | ConfigFileType::JsoncAsJson => {
+            ConfigFileFormat::Jsonc | ConfigFileFormat::JsoncAsJson => {
                 serde_jsonc::from_str::<Self>(input).map_err(|i| AppError::Parse(i.to_string()))
             }
-            ConfigFileType::Toml => {
+            ConfigFileFormat::Toml => {
                 toml::from_str::<Self>(input).map_err(|i| AppError::Parse(i.message().to_owned()))
             }
         }
     }
 
     /// Read the config file path to string, then attempt to parse
-    fn parse_config_file(file_type: ConfigFileType, path: &PathBuf) -> Result<Self, AppError> {
+    fn parse_config_file(file_format: ConfigFileFormat, path: &PathBuf) -> Result<Self, AppError> {
         let mut file = std::fs::File::open(path).map_err(|_| {
             AppError::IO(
                 path.to_str()
@@ -130,53 +130,32 @@ impl ConfigFile {
         let mut input = String::new();
         file.read_to_string(&mut input)
             .map_err(|i| AppError::IO(i.to_string()))?;
-        Self::parse(file_type, &input)
-    }
-
-    /// Resolve conflict in the args, this is handled automatically by Clap, basically just by rejecting it
-    /// But here we can just change the options - although maybe should be also reject to follow the same behaviour as Clap?
-    /// TODO I think this is duplicated with the merge_args fn
-    fn resolve_conflict(&mut self) {
-        if let Some(color) = self.color_logs.as_ref() {
-            if *color {
-                self.raw_logs = Some(false);
-            }
-        }
-        if let Some(interval) = self.docker_interval.as_ref() {
-            if interval < &1000 {
-                self.docker_interval = Some(1000);
-            }
-        }
+        Self::parse(file_format, &input)
     }
 
     /// Try to parse the config file when the path is user supplied via cliargs
     pub fn try_parse_from_file(path: &str) -> Option<Self> {
         let path = PathBuf::from(path);
-        let Ok(file_type) = ConfigFileType::try_from(&path) else {
+        let Ok(file_format) = ConfigFileFormat::try_from(&path) else {
             return None;
         };
-
-        Self::parse_config_file(file_type, &path).map_or(None, |mut config_file| {
-            config_file.resolve_conflict();
-            Some(config_file)
-        })
+        Self::parse_config_file(file_format, &path).ok()
     }
 
     /// Parse a config file using default config_file location
     /// This is executed first, then the CLI args are read, and if they contain a "--config-file" entry, then Self::try_parse_from_file() is executed
     pub fn try_parse(in_container: bool) -> Option<Self> {
         let mut config = None;
-        for file_type in [
-            ConfigFileType::Toml,
-            ConfigFileType::Jsonc,
-            ConfigFileType::JsoncAsJson,
-            ConfigFileType::Json,
+        for file_format in [
+            ConfigFileFormat::Toml,
+            ConfigFileFormat::Jsonc,
+            ConfigFileFormat::JsoncAsJson,
+            ConfigFileFormat::Json,
         ] {
-            if let Ok(mut config_file) =
-                Self::parse_config_file(file_type, &file_type.get_default_path_name(in_container))
-            {
-                Self::resolve_conflict(&mut config_file);
-
+            if let Ok(config_file) = Self::parse_config_file(
+                file_format,
+                &file_format.get_default_path_name(in_container),
+            ) {
                 config = Some(config_file);
                 break;
             }
@@ -202,7 +181,7 @@ mod tests {
     /// ./config.toml parses fine - as this is used to write a file on disk, it's vital that this is always valid
     fn test_parse_config_toml_valid() {
         let example_toml = include_str!("./config.toml");
-        let result = ConfigFile::parse(super::ConfigFileType::Toml, example_toml);
+        let result = ConfigFile::parse(super::ConfigFileFormat::Toml, example_toml);
         assert!(result.is_ok());
     }
 
@@ -210,7 +189,7 @@ mod tests {
     /// make sure config.toml matches the default keymap
     fn test_parse_config_keymap_toml() {
         let example_toml = include_str!("./config.toml");
-        let result = ConfigFile::parse(super::ConfigFileType::Toml, example_toml).unwrap();
+        let result = ConfigFile::parse(super::ConfigFileFormat::Toml, example_toml).unwrap();
         assert!(result.keymap.is_some());
         assert_eq!(Keymap::from(result.keymap), Keymap::new());
     }
@@ -219,7 +198,7 @@ mod tests {
     /// make sure example.config.jsonc matches the default keymap
     fn test_parse_config_keymap_jsonc() {
         let example_jsonc = include_str!("../../example_config/example.config.jsonc");
-        let result = ConfigFile::parse(super::ConfigFileType::Jsonc, example_jsonc).unwrap();
+        let result = ConfigFile::parse(super::ConfigFileFormat::Jsonc, example_jsonc).unwrap();
         assert!(result.keymap.is_some());
         assert_eq!(Keymap::from(result.keymap), Keymap::new());
     }
@@ -228,12 +207,13 @@ mod tests {
     /// All configs parsed and are equal
     fn test_parse_config_keymap_all() {
         let example_jsonc = include_str!("../../example_config/example.config.jsonc");
-        let result_jsonc = ConfigFile::parse(super::ConfigFileType::Jsonc, example_jsonc).unwrap();
+        let result_jsonc =
+            ConfigFile::parse(super::ConfigFileFormat::Jsonc, example_jsonc).unwrap();
         assert!(result_jsonc.keymap.is_some());
         let result_jsonc = result_jsonc.keymap.unwrap();
 
         let example_toml = include_str!("./config.toml");
-        let result_toml = ConfigFile::parse(super::ConfigFileType::Toml, example_toml).unwrap();
+        let result_toml = ConfigFile::parse(super::ConfigFileFormat::Toml, example_toml).unwrap();
         assert!(result_toml.keymap.is_some());
         let result_toml = result_toml.keymap.unwrap();
 
@@ -245,7 +225,7 @@ mod tests {
     /// make sure config.toml matches the default app colors
     fn test_parse_config_colors_toml() {
         let example_toml = include_str!("./config.toml");
-        let result = ConfigFile::parse(super::ConfigFileType::Toml, example_toml).unwrap();
+        let result = ConfigFile::parse(super::ConfigFileFormat::Toml, example_toml).unwrap();
         assert!(result.colors.is_some());
         assert_eq!(AppColors::from(result.colors), AppColors::new());
     }
@@ -254,7 +234,7 @@ mod tests {
     /// make sure config.toml matches the default app colors
     fn test_parse_config_colors_jsonc() {
         let example_jsonc = include_str!("../../example_config/example.config.jsonc");
-        let result = ConfigFile::parse(super::ConfigFileType::Jsonc, example_jsonc).unwrap();
+        let result = ConfigFile::parse(super::ConfigFileFormat::Jsonc, example_jsonc).unwrap();
         assert!(result.colors.is_some());
         assert_eq!(AppColors::from(result.colors), AppColors::new());
     }
@@ -263,12 +243,13 @@ mod tests {
     /// All configs parsed and are equal
     fn test_parse_config_colors_all() {
         let example_jsonc = include_str!("../../example_config/example.config.jsonc");
-        let result_jsonc = ConfigFile::parse(super::ConfigFileType::Jsonc, example_jsonc).unwrap();
+        let result_jsonc =
+            ConfigFile::parse(super::ConfigFileFormat::Jsonc, example_jsonc).unwrap();
         assert!(result_jsonc.colors.is_some());
         let result_jsonc = result_jsonc.colors.unwrap();
 
         let example_toml = include_str!("./config.toml");
-        let result_toml = ConfigFile::parse(super::ConfigFileType::Toml, example_toml).unwrap();
+        let result_toml = ConfigFile::parse(super::ConfigFileFormat::Toml, example_toml).unwrap();
         assert!(result_toml.colors.is_some());
         let result_toml = result_toml.colors.unwrap();
 

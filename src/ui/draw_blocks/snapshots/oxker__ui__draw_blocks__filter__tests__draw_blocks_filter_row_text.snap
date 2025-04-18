@@ -1,0 +1,5 @@
+---
+source: src/ui/draw_blocks/filter.rs
+expression: setup.terminal.backend()
+---
+" Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                    "

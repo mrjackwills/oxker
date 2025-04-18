@@ -16,12 +16,12 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ChartType {
+enum ChartVariant {
     Cpu,
     Memory,
 }
 
-impl ChartType {
+impl ChartVariant {
     const fn name(self) -> &'static str {
         match self {
             Self::Cpu => "cpu",
@@ -75,30 +75,30 @@ impl ChartType {
 
 /// Create charts
 fn make_chart<'a, T: Stats + Display>(
-    chart_type: ChartType,
+    chart_variant: ChartVariant,
     colors: AppColors,
     current: &'a T,
     dataset: Vec<Dataset<'a>>,
     max: &'a T,
     state: State,
 ) -> Chart<'a> {
-    let max_color = chart_type.get_max_color(colors, state);
+    let max_color = chart_variant.get_max_color(colors, state);
 
     Chart::new(dataset)
-        .bg(chart_type.get_bg_color(colors))
+        .bg(chart_variant.get_bg_color(colors))
         .block(
             Block::default()
-                .style(Style::default().bg(chart_type.get_bg_color(colors)))
+                .style(Style::default().bg(chart_variant.get_bg_color(colors)))
                 .title_alignment(Alignment::Center)
                 .title(Span::styled(
-                    format!(" {} {current} ", chart_type.name()),
+                    format!(" {} {current} ", chart_variant.name()),
                     Style::default()
-                        .fg(chart_type.get_title_color(colors, state))
+                        .fg(chart_variant.get_title_color(colors, state))
                         .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(chart_type.get_border_color(colors))),
+                .border_style(Style::default().fg(chart_variant.get_border_color(colors))),
         )
         .x_axis(Axis::default().bounds([0.00, 60.0]))
         .y_axis(
@@ -110,7 +110,7 @@ fn make_chart<'a, T: Stats + Display>(
                         Style::default().add_modifier(Modifier::BOLD).fg(max_color),
                     ),
                 ])
-                .style(Style::new().fg(chart_type.get_y_axis_color(colors)))
+                .style(Style::new().fg(chart_variant.get_y_axis_color(colors)))
                 // Add 0.01, so that max point is always visible?
                 .bounds([0.0, max.get_value() + 0.01]),
         )
@@ -143,7 +143,7 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mem_stats = ByteStats::new(mem.0.last().map_or(0, |f| f.1 as u64));
         let cpu_chart = make_chart(
-            ChartType::Cpu,
+            ChartVariant::Cpu,
             colors,
             &cpu_stats,
             cpu_dataset,
@@ -151,7 +151,7 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
             cpu.2,
         );
         let mem_chart = make_chart(
-            ChartType::Memory,
+            ChartVariant::Memory,
             colors,
             &mem_stats,
             mem_dataset,
@@ -167,6 +167,7 @@ pub fn draw(area: Rect, colors: AppColors, f: &mut Frame, fd: &FrameData) {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use insta::assert_snapshot;
     use ratatui::style::{Color, Modifier};
 
     use crate::{
@@ -174,14 +175,12 @@ mod tests {
         config::AppColors,
         ui::{
             FrameData,
-            draw_blocks::tests::{
-                COLOR_ORANGE, expected_to_vec, get_result, insert_chart_data, test_setup,
-            },
+            draw_blocks::tests::{COLOR_ORANGE, get_result, insert_chart_data, test_setup},
         },
     };
 
     /// CPU and Memory charts used in multiple tests, based on data from above insert_chart_data()
-    const EXPECTED: [&str; 10] = [
+    const _EXPECTED: [&str; 10] = [
         "╭───────────── cpu 03.00% ─────────────╮╭────────── memory 30.00 kB ───────────╮",
         "│10.00%│    •                          ││100.00 kB│   ••                       │",
         "│      │   ••                          ││         │   ••                       │",
@@ -236,8 +235,7 @@ mod tests {
     #[test]
     /// When status is Running, but not data, charts drawn without dots etc, colours correct
     fn test_draw_blocks_charts_running_none() {
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
@@ -246,25 +244,10 @@ mod tests {
                 super::draw(setup.area, setup.app_data.lock().config.app_colors, f, &fd);
             })
             .unwrap();
+        assert_snapshot!(setup.terminal.backend());
 
-        let expected = [
-            "╭───────────── cpu 00.00% ─────────────╮╭─────────── memory 0.00 kB ───────────╮",
-            "│00.00%│                               ││0.00 kB│                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "│      │                               ││       │                              │",
-            "╰──────────────────────────────────────╯╰──────────────────────────────────────╯",
-        ];
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match (row_index, result_cell_index) {
                     (0, 14..=25 | 52..=67) => {
                         assert_eq!(result_cell.fg, Color::Green);
@@ -290,8 +273,7 @@ mod tests {
     #[test]
     /// When status is Running, charts correctly drawn
     fn test_draw_blocks_charts_running_some() {
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
 
         insert_chart_data(&setup);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -303,11 +285,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&EXPECTED, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     (0, 14..=25 | 51..=67) => {
                         assert_eq!(result_cell.fg, Color::Green);
@@ -341,8 +322,7 @@ mod tests {
     #[test]
     /// Whens status paused, some text is now Yellow
     fn test_draw_blocks_charts_paused() {
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
 
         insert_chart_data(&setup);
         setup.app_data.lock().containers.items[0].state = State::Paused;
@@ -355,11 +335,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&EXPECTED, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        assert_snapshot!(setup.terminal.backend());
 
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     (0, 14..=25 | 51..=67) | (1, 1..=6 | 41..=49) => {
                         assert_eq!(result_cell.fg, Color::Yellow);
@@ -389,8 +368,7 @@ mod tests {
     #[test]
     /// When dead, text is red
     fn test_draw_blocks_charts_dead() {
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
         insert_chart_data(&setup);
         setup.app_data.lock().containers.items[0].state = State::Dead;
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -401,12 +379,9 @@ mod tests {
                 super::draw(setup.area, setup.app_data.lock().config.app_colors, f, &fd);
             })
             .unwrap();
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&EXPECTED, row_index);
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match (row_index, result_cell_index) {
                     (0, 14..=25 | 51..=67) | (1, 1..=6 | 41..=49) => {
                         assert_eq!(result_cell.fg, Color::Red);
@@ -452,8 +427,7 @@ mod tests {
         colors.chart_memory.points = Color::Black;
         colors.chart_memory.y_axis = Color::Blue;
 
-        let (w, h) = (80, 10);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(80, 10, true, true);
 
         insert_chart_data(&setup);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
@@ -465,10 +439,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&EXPECTED, row_index);
+        assert_snapshot!(setup.terminal.backend());
+
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::White);
 
                 match (row_index, result_cell_index) {

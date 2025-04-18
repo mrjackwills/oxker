@@ -16,7 +16,7 @@ raw_logs = false
 show_self = false
 
 # Show std_err in logs
-show_std_err = false
+show_std_err = true
 
 # Show a timestamp for every log entry
 show_timestamp = true

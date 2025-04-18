@@ -71,23 +71,22 @@ pub fn draw(area: Rect, colors: AppColors, frame: &mut Frame, fd: &FrameData) {
 #[allow(clippy::unwrap_used)]
 mod tests {
 
+    use insta::assert_snapshot;
     use ratatui::style::{Color, Modifier};
 
     use crate::{
         config::AppColors,
         ui::{
             FrameData,
-            draw_blocks::tests::{expected_to_vec, get_result, test_setup},
+            draw_blocks::tests::{get_result, test_setup},
         },
     };
 
     #[test]
-    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     /// Filter row is drawn correctly & colors are correct
     /// Colours change when filter_by option is changed
     fn test_draw_blocks_filter_row() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
 
         setup
             .gui_state
@@ -100,15 +99,10 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            " Esc  clear  ← by →   Name  Image  Status  All  term:                                                                                        ",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (_, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match result_cell_index {
                     0..=4 | 12..=19 => {
                         assert_eq!(result_cell.bg, Color::Magenta);
@@ -134,6 +128,22 @@ mod tests {
                 }
             }
         }
+    }
+    #[test]
+    /// Colours change when filter_by option is changed
+    fn test_draw_blocks_filter_row_text() {
+        let mut setup = test_setup(140, 1, true, true);
+
+        setup
+            .gui_state
+            .lock()
+            .status_push(crate::ui::Status::Filter);
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(setup.area, AppColors::new(), f, &setup.fd);
+            })
+            .unwrap();
 
         // Test when char added to search term
         setup.app_data.lock().filter_term_push('c');
@@ -147,15 +157,10 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     ",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (_, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
-
                 match result_cell_index {
                     0..=4 | 12..=19 => {
                         assert_eq!(result_cell.bg, Color::Magenta);
@@ -181,35 +186,39 @@ mod tests {
                 }
             }
         }
+    }
 
-        // Test when filter_by changes
+    #[test]
+    /// Colours change when filter_by option is changed
+    fn test_draw_blocks_filter_row_filter_by() {
+        let mut setup = test_setup(140, 1, true, true);
+
+        setup
+            .gui_state
+            .lock()
+            .status_push(crate::ui::Status::Filter);
         setup.app_data.lock().filter_by_next();
-        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {
-                super::draw(setup.area, AppColors::new(), f, &fd);
+                super::draw(setup.area, AppColors::new(), f, &setup.fd);
             })
             .unwrap();
 
-        let expected = [
-            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     ",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (_, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 match result_cell_index {
                     0..=4 | 12..=19 => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    5..=11 | 21..=26 | 34..=46 | 54..=55 => {
+                    5..=11 | 27..=46 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
-                    27..=33 => {
+                    21..=26 => {
                         assert_eq!(result_cell.bg, Color::Gray);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
@@ -230,8 +239,7 @@ mod tests {
     #[test]
     /// Make sure custom colors are applied
     fn test_draw_blocks_filter_row_custom_colors() {
-        let (w, h) = (140, 1);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(140, 1, true, true);
 
         setup
             .gui_state
@@ -256,14 +264,10 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            " Esc  clear  ← by →   Name  Image  Status  All  term: cd                                                                                     ",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (_, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 match result_cell_index {
                     0..=4 | 12..=19 => {
                         assert_eq!(result_cell.bg, Color::Blue);

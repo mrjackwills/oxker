@@ -322,7 +322,7 @@ impl DockerData {
                     self.config.show_std_err,
                 )));
             }
-        };
+        }
         self.update_all_container_stats();
         self.app_data.lock().sort_containers();
     }

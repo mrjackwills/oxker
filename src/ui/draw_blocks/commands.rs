@@ -55,6 +55,7 @@ pub fn draw(
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use insta::assert_snapshot;
     use ratatui::style::{Color, Modifier};
 
     use crate::{
@@ -62,16 +63,16 @@ mod tests {
         tests::gen_container_summary,
         ui::{
             FrameData,
-            draw_blocks::tests::{BORDER_CHARS, expected_to_vec, get_result, test_setup},
+            draw_blocks::tests::{BORDER_CHARS, get_result, test_setup},
         },
     };
 
     // cusomt border colors
     #[test]
     /// Test that when DockerCommands are available, they are drawn correctly, dependant on container state
+    /// In this case, no commands are drawn
     fn test_draw_blocks_commands_none() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, false, false);
+        let mut setup = test_setup(12, 6, false, false);
 
         let colors = setup.app_data.lock().config.app_colors;
         setup
@@ -88,28 +89,14 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            "╭──────────╮",
-            "│          │",
-            "│          │",
-            "│          │",
-            "│          │",
-            "╰──────────╯",
-        ];
-
-        for (row_index, row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (cell_index, cell) in row.iter().enumerate() {
-                assert_eq!(cell.symbol(), expected_row[cell_index]);
-            }
-        }
+        assert_snapshot!(setup.terminal.backend());
     }
 
     #[test]
     /// Test that when DockerCommands are available, they are drawn correctly, dependant on container state
+    /// In this test, container is running
     fn test_draw_blocks_commands_some() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, true, true);
+        let mut setup = test_setup(12, 6, true, true);
 
         let colors = setup.app_data.lock().config.app_colors;
         setup
@@ -126,19 +113,10 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            "╭──────────╮",
-            "│▶ pause   │",
-            "│  restart │",
-            "│  stop    │",
-            "│  delete  │",
-            "╰──────────╯",
-        ];
+        assert_snapshot!(setup.terminal.backend());
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 match (row_index, result_cell_index) {
                     // Borders & delete
@@ -163,21 +141,35 @@ mod tests {
                 }
             }
         }
-        // Change the controls state
+    }
+
+    #[test]
+    /// Test that when DockerCommands are available, they are drawn correctly, dependant on container state
+    /// In this test, container is paused
+    fn test_draw_blocks_commands_some_paused() {
+        let mut setup = test_setup(12, 6, true, true);
+
+        let colors = setup.app_data.lock().config.app_colors;
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    &setup.app_data,
+                    setup.area,
+                    colors,
+                    f,
+                    &setup.fd,
+                    &setup.gui_state,
+                );
+            })
+            .unwrap();
+
+        // Set the container state to paused
         setup
             .app_data
             .lock()
             .update_containers(vec![gen_container_summary(1, "paused")]);
         setup.app_data.lock().docker_controls_next();
-
-        let expected = [
-            "╭──────────╮",
-            "│  resume  │",
-            "│▶ stop    │",
-            "│  delete  │",
-            "│          │",
-            "╰──────────╯",
-        ];
 
         setup
             .terminal
@@ -193,10 +185,10 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::Reset);
                 match (row_index, result_cell_index) {
                     // resume
@@ -222,16 +214,7 @@ mod tests {
     #[test]
     /// When control panel is selected, the border is blue, if not then white, selected text is highlighted
     fn test_draw_blocks_commands_panel_selected_color() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, true, true);
-        let expected = [
-            "╭──────────╮",
-            "│▶ pause   │",
-            "│  restart │",
-            "│  stop    │",
-            "│  delete  │",
-            "╰──────────╯",
-        ];
+        let mut setup = test_setup(12, 6, true, true);
         let colors = setup.app_data.lock().config.app_colors;
         // Unselected, has a grey border
         setup
@@ -248,10 +231,9 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
-            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
+        assert_snapshot!(setup.terminal.backend());
+        for (_, result_row) in get_result(&setup) {
+            for result_cell in result_row {
                 if BORDER_CHARS.contains(&result_cell.symbol()) {
                     assert_eq!(result_cell.fg, Color::Gray);
                 }
@@ -275,10 +257,8 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 if row_index == 0
                     || row_index == 5
                     || result_cell_index == 0
@@ -296,10 +276,9 @@ mod tests {
     }
 
     #[test]
-    /// Custom colors are rendered correctlty
-    fn test_draw_blocks_commands_custom_colors() {
-        let (w, h) = (12, 6);
-        let mut setup = test_setup(w, h, true, true);
+    /// Custom colors are rendered correctly
+    fn test_draw_blocks_commands_custom_colors_running() {
+        let mut setup = test_setup(12, 6, true, true);
         let mut colors = AppColors::new();
         colors.commands.background = Color::White;
         colors.commands.pause = Color::Black;
@@ -323,19 +302,9 @@ mod tests {
             })
             .unwrap();
 
-        let expected = [
-            "╭──────────╮",
-            "│▶ pause   │",
-            "│  restart │",
-            "│  stop    │",
-            "│  delete  │",
-            "╰──────────╯",
-        ];
-
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        assert_snapshot!(setup.terminal.backend());
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::White);
                 match (row_index, result_cell_index) {
                     // pause
@@ -358,21 +327,19 @@ mod tests {
                 }
             }
         }
-        // Change the controls state
-        setup
-            .app_data
-            .lock()
-            .update_containers(vec![gen_container_summary(1, "paused")]);
-        setup.app_data.lock().docker_controls_next();
-
-        let expected = [
-            "╭──────────╮",
-            "│  resume  │",
-            "│▶ stop    │",
-            "│  delete  │",
-            "│          │",
-            "╰──────────╯",
-        ];
+    }
+    #[test]
+    /// Custom colors are rendered correctly
+    fn test_draw_blocks_commands_custom_colors_paused() {
+        let mut setup = test_setup(12, 6, true, true);
+        let mut colors = AppColors::new();
+        colors.commands.background = Color::White;
+        colors.commands.pause = Color::Black;
+        colors.commands.restart = Color::Green;
+        colors.commands.stop = Color::Blue;
+        colors.commands.delete = Color::Magenta;
+        colors.commands.resume = Color::Yellow;
+        colors.commands.start = Color::Cyan;
 
         setup
             .terminal
@@ -388,10 +355,31 @@ mod tests {
             })
             .unwrap();
 
-        for (row_index, result_row) in get_result(&setup, w) {
-            let expected_row = expected_to_vec(&expected, row_index);
+        // Set the controls state
+        setup
+            .app_data
+            .lock()
+            .update_containers(vec![gen_container_summary(1, "paused")]);
+        setup.app_data.lock().docker_controls_next();
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    &setup.app_data,
+                    setup.area,
+                    colors,
+                    f,
+                    &setup.fd,
+                    &setup.gui_state,
+                );
+            })
+            .unwrap();
+
+        assert_snapshot!(setup.terminal.backend());
+
+        for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                assert_eq!(result_cell.symbol(), expected_row[result_cell_index]);
                 assert_eq!(result_cell.bg, Color::White);
 
                 match (row_index, result_cell_index) {

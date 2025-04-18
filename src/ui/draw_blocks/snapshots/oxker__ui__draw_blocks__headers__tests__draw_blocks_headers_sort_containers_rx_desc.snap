@@ -1,0 +1,5 @@
+---
+source: src/ui/draw_blocks/headers.rs
+expression: setup.terminal.backend()
+---
+"    name          state       status      cpu      memory/limit        id         image     ↓ rx ▼    ↑ tx                ( h ) show help   "

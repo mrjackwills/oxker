@@ -35,7 +35,7 @@ impl ContainerId {
     }
 
     /// Only return first 8 chars of id, is usually more than enough for uniqueness
-    /// TODO container id is a hex string, so can assume that 0..=8 will always return a 8 char ascii &str - need to update tests to use real ids, or atleast strings of the correct-ish length
+    /// need to update tests to use real ids, or atleast strings of the correct-ish length
     pub fn get_short(&self) -> String {
         self.0.chars().take(8).collect::<String>()
     }
@@ -481,7 +481,7 @@ impl ByteStats {
     pub const fn new(value: u64) -> Self {
         Self(value)
     }
-    pub fn update(&mut self, value: u64) {
+    pub const fn update(&mut self, value: u64) {
         self.0 = value;
     }
 }
@@ -567,7 +567,7 @@ impl Logs {
     pub fn insert(&mut self, line: ListItem<'static>, tz: LogsTz) {
         if self.tz.insert(tz) {
             self.logs.items.push(line);
-        };
+        }
     }
 
     pub fn to_vec(&self) -> Vec<ListItem<'static>> {
@@ -598,7 +598,7 @@ impl Logs {
         self.logs.items.len()
     }
 
-    pub fn state(&mut self) -> &mut ListState {
+    pub const fn state(&mut self) -> &mut ListState {
         &mut self.logs.state
     }
 }

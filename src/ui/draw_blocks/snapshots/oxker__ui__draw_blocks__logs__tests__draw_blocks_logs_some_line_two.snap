@@ -1,0 +1,10 @@
+---
+source: src/ui/draw_blocks/logs.rs
+expression: setup.terminal.backend()
+---
+"╭ Logs 2/3 - container_1 - image_1 ╮"
+"│  line 1                          │"
+"│▶ line 2                          │"
+"│  line 3                          │"
+"│                                  │"
+"╰──────────────────────────────────╯"

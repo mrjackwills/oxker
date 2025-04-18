@@ -53,3 +53,22 @@ pub struct Args {
     #[clap(long="use-cli", short = None)]
     pub use_cli: bool,
 }
+
+impl Default for Args {
+    fn default() -> Self {
+        Self {
+            docker_interval: 1000,
+            timestamp: true,
+            color: false,
+            raw: false,
+            show_self: false,
+            gui: true,
+            host: None,
+            no_std_err: true,
+            timezone: None,
+            save_dir: None,
+            config_file: None,
+            use_cli: false,
+        }
+    }
+}

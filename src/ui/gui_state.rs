@@ -282,7 +282,7 @@ impl GuiState {
             Region::HelpPanel => {
                 self.intersect_help = Some(area);
             }
-        };
+        }
     }
 
     /// Check if an ContainerId is set in the delete_container field

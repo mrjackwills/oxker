@@ -1,0 +1,10 @@
+---
+source: src/ui/draw_blocks/commands.rs
+expression: setup.terminal.backend()
+---
+"╭──────────╮"
+"│  resume  │"
+"│▶ stop    │"
+"│  delete  │"
+"│          │"
+"╰──────────╯"
