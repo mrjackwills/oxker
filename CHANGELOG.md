@@ -1,3 +1,9 @@
+### Chores
++ dependencies updated, [1345ecb1a2b17ad3d288f2de2058c0777b84f93b]
+
+### Tests
++ use a fixed version String, `0.00.000`, in tests, [230174b3c327c3f217cdcf8fce07d5d9ddea1033]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.10.1'>v0.10.1</a>
 ### 2025-04-18
 
