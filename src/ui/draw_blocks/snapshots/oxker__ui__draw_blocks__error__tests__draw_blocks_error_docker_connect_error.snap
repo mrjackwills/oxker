@@ -7,7 +7,7 @@ expression: setup.terminal.backend()
 "│                                            │"
 "│       Unable to access docker daemon       │"
 "│                                            │"
-"│     oxker::v0.10.0 closing in 04 seconds   │"
+"│    oxker::v0.00.000 closing in 04 seconds  │"
 "│                                            │"
 "╰────────────────────────────────────────────╯"
 "                                              "

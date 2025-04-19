@@ -35,12 +35,16 @@ a8"     "8a   `Y8, ,8P'   88 ,a8"    a8P_____88  88P'   "Y8
  `"YbbdP"'   8P'     `Y8  88   `Y8a   `"Ybbd8"'  88        "#;
 
 pub const NAME: &str = env!("CARGO_PKG_NAME");
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const REPO: &str = env!("CARGO_PKG_REPOSITORY");
 pub const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 pub const MARGIN: &str = "   ";
 pub const RIGHT_ARROW: &str = "▶ ";
 pub const CIRCLE: &str = "⚪ ";
+
+#[cfg(not(test))]
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+#[cfg(test)]
+pub const VERSION: &str = "0.00.000";
 
 pub const CONSTRAINT_50_50: [Constraint; 2] =
     [Constraint::Percentage(50), Constraint::Percentage(50)];
