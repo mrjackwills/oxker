@@ -247,9 +247,10 @@ impl Keymap {
                     "f10" => Some(KeyCode::F(10)),
                     "f11" => Some(KeyCode::F(11)),
                     "f12" => Some(KeyCode::F(12)),
+                    // Might fail on MacOS, see note above
                     "backspace" => Some(KeyCode::Backspace),
-                    // See MacOS not above
                     "backtab" => Some(KeyCode::BackTab),
+                    // Might fail on MacOS, see note above
                     "delete" => Some(KeyCode::Delete),
                     "down" => Some(KeyCode::Down),
                     "end" => Some(KeyCode::End),
