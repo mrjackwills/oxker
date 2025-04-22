@@ -215,6 +215,8 @@ impl From<Option<ConfigKeymap>> for Keymap {
 
 impl Keymap {
     /// Try to parse a &[String] into a Vec of keycodes, at most the output will have 2 entries
+    /// This might fail on MacOS due to Backspace and Delete working in a different manner as to how they work on Linux & Windows
+    /// I think that on MacOS `Del` becomes `Fwd Del`, and `Backspace` becomes `Delete`
     fn try_parse_keycode(input: &[String]) -> Option<Vec<KeyCode>> {
         let mut output = vec![];
 
@@ -245,8 +247,10 @@ impl Keymap {
                     "f10" => Some(KeyCode::F(10)),
                     "f11" => Some(KeyCode::F(11)),
                     "f12" => Some(KeyCode::F(12)),
+                    // Might fail on MacOS, see note above
                     "backspace" => Some(KeyCode::Backspace),
                     "backtab" => Some(KeyCode::BackTab),
+                    // Might fail on MacOS, see note above
                     "delete" => Some(KeyCode::Delete),
                     "down" => Some(KeyCode::Down),
                     "end" => Some(KeyCode::End),
@@ -394,7 +398,7 @@ mod tests {
             sort_by_id: gen_v(("[", "]")),
             sort_by_image: gen_v(("A", "B")),
             sort_by_rx: gen_v(("C", "D")),
-            sort_by_tx: gen_v(("backspace", "TAB")),
+            sort_by_tx: gen_v(("insert", "TAB")),
             sort_reset: gen_v(("up", "down")),
             toggle_help: gen_v(("home", "end")),
             toggle_mouse_capture: gen_v(("pagedown", "PAGEUP")),
@@ -426,7 +430,7 @@ mod tests {
             sort_by_id: (KeyCode::Char('['), Some(KeyCode::Char(']'))),
             sort_by_image: (KeyCode::Char('A'), Some(KeyCode::Char('B'))),
             sort_by_rx: (KeyCode::Char('C'), Some(KeyCode::Char('D'))),
-            sort_by_tx: (KeyCode::Backspace, Some(KeyCode::Tab)),
+            sort_by_tx: (KeyCode::Insert, Some(KeyCode::Tab)),
             sort_reset: (KeyCode::Up, Some(KeyCode::Down)),
             toggle_help: (KeyCode::Home, Some(KeyCode::End)),
             toggle_mouse_capture: (KeyCode::PageDown, Some(KeyCode::PageUp)),

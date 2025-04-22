@@ -1,3 +1,12 @@
+# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.10.3'>v0.10.3</a>
+### 2025-04-22
+
+### Chores
++ dependencies updated, [bbfd2462](https://github.com/mrjackwills/oxker/commit/bbfd2462a1f45008587b488e8c6049ee76da72f2)
+
+### Tests
++ fix tests for MacOS, closes [#61](https://github.com/mrjackwills/oxker/issues/61), [cfc2decd](https://github.com/mrjackwills/oxker/commit/cfc2decd8d237f1ac3f0bdb2b3d5581684064448)
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.10.2'>v0.10.2</a>
 ### 2025-04-19
 

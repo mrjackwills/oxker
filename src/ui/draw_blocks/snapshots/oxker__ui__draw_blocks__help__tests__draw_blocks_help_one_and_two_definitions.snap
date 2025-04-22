@@ -39,7 +39,7 @@ expression: setup.terminal.backend()
 " │ ( / ) or ( = ) sort containers by id                                                                     │ "
 " │ ( , ) sort containers by image                                                                           │ "
 " │ ( . ) or ( ] ) sort containers by rx                                                                     │ "
-" │ ( Backspace ) sort containers by tx                                                                      │ "
+" │ ( Insert ) sort containers by tx                                                                         │ "
 " │ ( a ) or ( b ) close dialog                                                                              │ "
 " │ ( k ) quit at any time                                                                                   │ "
 " │                                                                                                          │ "
