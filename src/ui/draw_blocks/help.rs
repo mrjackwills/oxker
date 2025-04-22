@@ -628,7 +628,7 @@ mod tests {
             sort_by_rx: (KeyCode::Char('.'), Some(KeyCode::Char(']'))),
             sort_by_tx: (KeyCode::Insert, Some(KeyCode::BackTab)),
             sort_reset: (KeyCode::Up, Some(KeyCode::Down)),
-            toggle_help: (KeyCode::Home, Some(KeyCode::Delete)),
+            toggle_help: (KeyCode::Home, Some(KeyCode::End)),
             toggle_mouse_capture: (KeyCode::PageDown, Some(KeyCode::PageUp)),
         };
 
