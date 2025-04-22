@@ -1,9 +1,9 @@
-### 2025-04-19
+### 2025-04-22
 
 ### Chores
-+ dependencies updated, [1345ecb1a2b17ad3d288f2de2058c0777b84f93b]
++ dependencies updated, [bbfd2462a1f45008587b488e8c6049ee76da72f2]
 
 ### Tests
-+ use a fixed version String, `0.00.000`, in tests, [230174b3c327c3f217cdcf8fce07d5d9ddea1033]
++ fix tests for MacOS, closes #61, [cfc2decd8d237f1ac3f0bdb2b3d5581684064448]
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details
