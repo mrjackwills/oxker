@@ -123,7 +123,10 @@ pub mod tests {
 
     use insta::assert_snapshot;
     use parking_lot::Mutex;
-    use ratatui::{Terminal, backend::TestBackend, layout::Rect, style::Color};
+    use ratatui::buffer::{Buffer, Cell};
+    use ratatui::style::{Color, Modifier};
+    use ratatui::{Terminal, backend::TestBackend, layout::Rect};
+    use unicode_width::UnicodeWidthChar;
 
     use crate::{
         app_data::{AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts},
@@ -261,7 +264,70 @@ pub mod tests {
         }
     }
 
-    // *************** //
+    pub(super) fn buffer_to_text(buffer: &Buffer) -> String {
+        buffer_to_strings(buffer, |c| c.symbol().chars().next().unwrap())
+    }
+
+    pub(super) fn buffer_to_fg(buffer: &Buffer) -> String {
+        buffer_to_strings(buffer, |c| color_char(c.fg))
+    }
+
+    pub(super) fn buffer_to_bold(buffer: &Buffer) -> String {
+        buffer_to_strings(buffer, |c| {
+            if c.modifier == Modifier::BOLD {
+                'b'
+            } else {
+                '.'
+            }
+        })
+    }
+
+    fn color_char(color: Color) -> char {
+        match color {
+            Color::Reset => '-',
+            Color::Black => 'X',
+            Color::Red => 'R',
+            Color::Green => 'G',
+            Color::Yellow => 'Y',
+            Color::Blue => 'B',
+            Color::Magenta => 'M',
+            Color::Cyan => 'C',
+            Color::Gray => ':',
+            Color::DarkGray => 'x',
+            Color::LightRed => 'r',
+            Color::LightGreen => 'g',
+            Color::LightYellow => 'y',
+            Color::LightBlue => 'b',
+            Color::LightMagenta => 'm',
+            Color::LightCyan => 'c',
+            Color::White => '.',
+            Color::Rgb(_, _, _) => '*',
+            Color::Indexed(_) => 'i',
+        }
+    }
+
+    fn buffer_to_strings(buffer: &Buffer, extract: impl Fn(&Cell) -> char) -> String {
+        let width = buffer.area.width as usize;
+
+        let mut text = String::new();
+        let mut skip = 0;
+        for (index, cell) in buffer.content.iter().enumerate() {
+            if skip == 0 {
+                let ch = extract(cell);
+                text.push(ch);
+                skip = ch.width().unwrap_or(0);
+            }
+            skip = skip.saturating_sub(1);
+
+            if (index + 1) % width == 0 {
+                text += "\n";
+                skip = 0;
+            }
+        }
+        text
+    }
+
+    // **************** //
     // The whole layout //
     // **************** //
     #[test]
@@ -289,7 +355,9 @@ pub mod tests {
             })
             .unwrap();
 
-        assert_snapshot!(setup.terminal.backend());
+        assert_snapshot!(buffer_to_text(setup.terminal.backend().buffer()));
+        assert_snapshot!(buffer_to_fg(setup.terminal.backend().buffer()));
+        assert_snapshot!(buffer_to_bold(setup.terminal.backend().buffer()));
     }
 
     #[test]

@@ -55,3 +55,4 @@ debug = false
 
 [dev-dependencies]
 insta = "1.42.2"
+unicode-width = "0.2.0"
