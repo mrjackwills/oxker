@@ -407,7 +407,7 @@ impl AppData {
 
     /// Container state methods
     /// Get the total number of none "hidden" containers
-    pub fn get_container_len(&self) -> usize {
+    pub const fn get_container_len(&self) -> usize {
         self.containers.items.len()
     }
 

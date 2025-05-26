@@ -30,7 +30,7 @@ impl From<&str> for ContainerId {
 }
 
 impl ContainerId {
-    pub fn get(&self) -> &str {
+    pub const fn get(&self) -> &str {
         self.0.as_str()
     }
 
@@ -76,7 +76,7 @@ macro_rules! unit_struct {
         }
 
         impl $name {
-            pub fn get(&self) -> &str {
+            pub const fn get(&self) -> &str {
                 self.0.as_str()
             }
 
@@ -594,7 +594,7 @@ impl Logs {
         self.logs.start();
     }
 
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.logs.items.len()
     }
 
