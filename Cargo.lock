@@ -448,7 +448,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.60.0",
+ "windows-sys 0.60.1",
 ]
 
 [[package]]
@@ -2132,9 +2132,9 @@ dependencies = [
 
 [[package]]
 name = "windows-sys"
-version = "0.60.0"
+version = "0.60.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e5de29ca9cfd0b9822d586cfdcb4e2fe54d71011b33212473628cef1b23a0fe"
+checksum = "b36e9ed89376c545e20cbf5a13c306b49106b21b9d1d4f9cb9a1cb6b1e9ee06a"
 dependencies = [
  "windows-targets 0.53.1",
 ]
