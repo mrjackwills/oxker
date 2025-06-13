@@ -132,6 +132,12 @@ impl Config {
 
         if config_from_cli.color_logs != default_args.color {
             self.color_logs = config_from_cli.color_logs;
+            self.raw_logs = !self.color_logs;
+        }
+
+        if config_from_cli.raw_logs != default_args.raw {
+            self.raw_logs = config_from_cli.raw_logs;
+            self.color_logs = !self.raw_logs;
         }
 
         if config_from_cli.gui != default_args.gui {
