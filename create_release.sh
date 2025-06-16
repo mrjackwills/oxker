@@ -211,7 +211,6 @@ cross_build_x86_linux() {
 
 # Build, using cross-rs, for linux arm64 musl
 cross_build_aarch64_linux() {
-	clear
 	check_cross
 	echo -e "${YELLOW}cross build --target aarch64-unknown-linux-musl --release${RESET}"
 	cross build --target aarch64-unknown-linux-musl --release
@@ -236,6 +235,12 @@ zig_build_aarch64_apple() {
 	# mkdir /workspace/oxker/target
 	echo -e "${YELLOW}docker run --rm -v $(pwd):/io -w /io ghcr.io/rust-cross/cargo-zigbuild cargo zigbuild --release --target aarch64-apple-darwin${RESET}"
 	docker run --rm -v "$(pwd):/io" -w /io ghcr.io/rust-cross/cargo-zigbuild cargo zigbuild --release --target aarch64-apple-darwin
+	if ask_yn "sudo chown $(pwd)/target"; then
+		echo -e "${YELLOW}sudo chown -R vscode:vscode $(pwd)/target${RESET}"
+		sudo chown -R vscode:vscode "$(pwd)/target"
+		exit
+	fi
+
 }
 
 # Build all releases that GitHub workflow would
@@ -392,7 +397,6 @@ build_choice() {
 	)
 	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 	exitStatus=$?
-	clear
 	if [ $exitStatus -ne 0 ]; then
 		exit
 	fi
@@ -439,7 +443,6 @@ build_container_choice() {
 	)
 	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 	exitStatus=$?
-	clear
 	if [ $exitStatus -ne 0 ]; then
 		exit
 	fi
@@ -479,7 +482,6 @@ main() {
 	)
 	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 	exitStatus=$?
-	clear
 	if [ $exitStatus -ne 0 ]; then
 		exit
 	fi
