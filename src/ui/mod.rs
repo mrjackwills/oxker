@@ -302,25 +302,11 @@ impl From<&Ui> for FrameData {
     fn from(ui: &Ui) -> Self {
         let (app_data, gui_data) = (ui.app_data.lock(), ui.gui_state.lock());
 
-        // set a flag if the - or = button has been pressed, and if so use that calc, else use this calc
-        // set max height for container section, needs +5 to deal with docker commands list and borders
-        // TODO fix this
-        // let container_len = app_data.get_container_len();
-        // let container_section_height = if container_len < 12 {
-        //     // u16::try_from(container_len + 5).unwrap_or_default()
-        // 	8
-        // } else {
-        //     12
-        // };
-        // TODO work out what to do with this
-        // container_section_height = 8;
-
         let (filter_by, filter_term) = app_data.get_filter();
         Self {
             chart_data: app_data.get_chart_data(),
             color_logs: app_data.config.color_logs,
             columns: app_data.get_width(),
-            // container_section_height,
             container_title: app_data.get_container_title(),
             delete_confirm: gui_data.get_delete_container(),
             filter_by,
@@ -351,15 +337,13 @@ fn draw_frame(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let whole_constraints = if fd.status.contains(&Status::Filter) {
-        vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
-    } else {
-        vec![Constraint::Max(1), Constraint::Min(1)]
-    };
-
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(whole_constraints)
+        .constraints(if fd.status.contains(&Status::Filter) {
+            vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
+        } else {
+            vec![Constraint::Max(1), Constraint::Min(1)]
+        })
         .split(f.area());
 
     draw_blocks::headers::draw(whole_layout[0], colors, f, fd, gui_state, keymap);
@@ -369,45 +353,36 @@ fn draw_frame(
         draw_blocks::filter::draw(*rect, colors, f, fd);
     }
 
-    // What we should do is work out the container+logs size, and then set the percentage to height - 6
-
-    let container_logs_section_constraints = if fd.show_logs {
-        vec![Constraint::Min(6), Constraint::Percentage(fd.log_height)]
-    } else {
-        vec![Constraint::Percentage(100)]
-    };
-
-    let upper_main_constraints = if fd.has_containers {
-        vec![Constraint::Percentage(75), Constraint::Percentage(25)]
-    } else {
-        vec![Constraint::Percentage(100), Constraint::Percentage(0)]
-    };
     let upper_main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(upper_main_constraints)
+        .constraints(if fd.has_containers {
+            vec![Constraint::Percentage(75), Constraint::Percentage(25)]
+        } else {
+            vec![Constraint::Percentage(100), Constraint::Percentage(0)]
+        })
         .split(whole_layout[1]);
 
     let containers_logs_section = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(container_logs_section_constraints)
+        .constraints(if fd.show_logs {
+            vec![Constraint::Min(6), Constraint::Percentage(fd.log_height)]
+        } else {
+            vec![Constraint::Percentage(100)]
+        })
         .split(upper_main[0]);
-
-    // Containers & Command Horizontal split
-    let container_command_constraints = if fd.has_containers {
-        vec![Constraint::Percentage(90), Constraint::Percentage(10)]
-    } else {
-        vec![Constraint::Percentage(100)]
-    };
 
     // Containers + docker commands
     let containers_commands = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(container_command_constraints)
+        .constraints(if fd.has_containers {
+            vec![Constraint::Percentage(90), Constraint::Percentage(10)]
+        } else {
+            vec![Constraint::Percentage(100)]
+        })
         .split(containers_logs_section[0]);
 
     draw_blocks::containers::draw(app_data, containers_commands[0], colors, f, fd, gui_state);
 
-    // TODO redraw logs
     if fd.show_logs {
         draw_blocks::logs::draw(
             app_data,
