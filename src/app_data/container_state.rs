@@ -586,10 +586,25 @@ impl Logs {
         }
     }
 
-    pub fn to_vec(&self) -> Vec<ListItem<'static>> {
-        self.logs.items.clone()
+    /// Get the logs vec, but instead of cloning to whole vec, only clone items with x of the currently selected index
+    /// Where x is the abs different of the index plus the panel height & a padding
+    /// The rest can be just empty list items
+    /// TODO test me, pass in 1000 lines of "something", expect response to be different!
+    pub fn to_vec(&self, height: usize, padding: usize) -> Vec<ListItem<'static>> {
+        let current_index = self.logs.state.selected().unwrap_or_default();
+        self.logs
+            .items
+            .iter()
+            .enumerate()
+            .map(|(index, item)| {
+                if current_index.abs_diff(index) <= height + padding {
+                    item.clone()
+                } else {
+                    ListItem::from("")
+                }
+            })
+            .collect()
     }
-
     /// The rest of the methods are basically forwarding from the underlying StatefulList
     pub fn get_state_title(&self) -> String {
         self.logs.get_state_title()

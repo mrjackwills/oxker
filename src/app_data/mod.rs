@@ -677,12 +677,12 @@ impl AppData {
     }
 
     /// Get mutable Vec of current containers logs
-    pub fn get_logs(&self) -> Vec<ListItem<'static>> {
+    pub fn get_logs(&self, height: u16, padding: usize) -> Vec<ListItem<'static>> {
         self.containers
             .state
             .selected()
             .and_then(|i| self.containers.items.get(i))
-            .map_or(vec![], |i| i.logs.to_vec())
+            .map_or(vec![], |i| i.logs.to_vec(height.into(), padding))
     }
 
     /// Get mutable Option of the currently selected container Logs state
@@ -1953,7 +1953,7 @@ mod tests {
         assert_eq!(result.as_ref().unwrap().selected(), Some(2));
         assert_eq!(result.unwrap().offset(), 0);
 
-        let result = app_data.get_logs();
+        let result = app_data.get_logs(4, 1);
         assert_eq!(result.len(), 3);
 
         let result = app_data.get_log_title();
@@ -2323,5 +2323,63 @@ mod tests {
 
         let result = app_data.get_log_state();
         assert!(result.is_none());
+    }
+
+    // *************** //
+    // Get logs method //
+    // *************** //
+
+    #[test]
+    /// get_logs() returns vec of item, but the items are empty unless they are in the *visible" zone, based on height, index, and padding
+    fn test_app_data_update_get_logs() {
+        let (ids, containers) = gen_containers();
+
+        let mut app_data = gen_appdata(&containers);
+
+        app_data.containers_start();
+        let logs = (0..=999).map(|i| format!("{i} {i}")).collect::<Vec<_>>();
+
+        app_data.update_log_by_id(logs, &ids[0]);
+
+        let result = app_data.get_logs(10, 10);
+        for (index, item) in result.iter().enumerate() {
+            if index < 979 {
+                assert_eq!(item, &ListItem::new(""));
+            } else {
+                assert_eq!(item, &ListItem::new(format!("{index}")));
+            }
+        }
+
+        let result = app_data.get_logs(100, 20);
+        for (index, item) in result.iter().enumerate() {
+            if index < 879 {
+                assert_eq!(item, &ListItem::new(""));
+            } else {
+                assert_eq!(item, &ListItem::new(format!("{index}")));
+            }
+        }
+
+        app_data.log_start();
+        let result = app_data.get_logs(10, 10);
+        for (index, item) in result.iter().enumerate() {
+            if index > 20 {
+                assert_eq!(item, &ListItem::new(""));
+            } else {
+                assert_eq!(item, &ListItem::new(format!("{index}")));
+            }
+        }
+
+        for _ in 0..=500 {
+            app_data.log_next();
+        }
+
+        let result = app_data.get_logs(10, 10);
+        for (index, item) in result.iter().enumerate() {
+            if (481..=521).contains(&index) {
+                assert_eq!(item, &ListItem::new(format!("{index}")));
+            } else {
+                assert_eq!(item, &ListItem::new(""));
+            }
+        }
     }
 }
