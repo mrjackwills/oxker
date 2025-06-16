@@ -1,5 +1,6 @@
 ---
 source: src/ui/draw_blocks/help.rs
+assertion_line: 456
 expression: setup.terminal.backend()
 ---
 "                                                                                       "
@@ -26,6 +27,8 @@ expression: setup.terminal.backend()
 " │ ( F1 ) or ( / ) enter filter mode                                                 │ "
 " │ ( 0 ) stop sort                                                                   │ "
 " │ ( 1 - 9 ) sort by header - or click header                                        │ "
+" │ ( - = ) change log section height                                                 │ "
+" │ ( \ ) toggle log section visibility                                               │ "
 " │ ( esc ) close dialog                                                              │ "
 " │ ( q ) quit at any time                                                            │ "
 " │                                                                                   │ "

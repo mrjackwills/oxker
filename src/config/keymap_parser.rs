@@ -39,6 +39,9 @@ optional_config_struct!(
     delete_confirm,
     exec,
     filter_mode,
+    log_section_height_increase,
+    log_section_height_decrease,
+    log_section_toggle,
     quit,
     save_logs,
     scroll_down_many,
@@ -70,6 +73,9 @@ config_struct!(
     delete_confirm,
     exec,
     filter_mode,
+    log_section_height_increase,
+    log_section_height_decrease,
+    log_section_toggle,
     quit,
     save_logs,
     scroll_down_many,
@@ -98,10 +104,13 @@ impl Keymap {
     pub const fn new() -> Self {
         Self {
             clear: (KeyCode::Char('c'), Some(KeyCode::Esc)),
-            delete_deny: (KeyCode::Char('n'), None),
             delete_confirm: (KeyCode::Char('y'), None),
+            delete_deny: (KeyCode::Char('n'), None),
             exec: (KeyCode::Char('e'), None),
             filter_mode: (KeyCode::Char('/'), Some(KeyCode::F(1))),
+            log_section_height_decrease: (KeyCode::Char('-'), None),
+            log_section_height_increase: (KeyCode::Char('='), None),
+            log_section_toggle: (KeyCode::Char('\\'), None),
             quit: (KeyCode::Char('q'), None),
             save_logs: (KeyCode::Char('s'), None),
             scroll_down_many: (KeyCode::PageDown, None),
@@ -112,14 +121,14 @@ impl Keymap {
             scroll_up_one: (KeyCode::Up, Some(KeyCode::Char('k'))),
             select_next_panel: (KeyCode::Tab, None),
             select_previous_panel: (KeyCode::BackTab, None),
-            sort_by_name: (KeyCode::Char('1'), None),
-            sort_by_state: (KeyCode::Char('2'), None),
-            sort_by_status: (KeyCode::Char('3'), None),
             sort_by_cpu: (KeyCode::Char('4'), None),
-            sort_by_memory: (KeyCode::Char('5'), None),
             sort_by_id: (KeyCode::Char('6'), None),
             sort_by_image: (KeyCode::Char('7'), None),
+            sort_by_memory: (KeyCode::Char('5'), None),
+            sort_by_name: (KeyCode::Char('1'), None),
             sort_by_rx: (KeyCode::Char('8'), None),
+            sort_by_state: (KeyCode::Char('2'), None),
+            sort_by_status: (KeyCode::Char('3'), None),
             sort_by_tx: (KeyCode::Char('9'), None),
             sort_reset: (KeyCode::Char('0'), None),
             toggle_help: (KeyCode::Char('h'), None),
@@ -162,6 +171,22 @@ impl From<Option<ConfigKeymap>> for Keymap {
             update_keymap(ck.clear, &mut keymap.clear, &mut clash);
             update_keymap(ck.delete_deny, &mut keymap.delete_deny, &mut clash);
             update_keymap(ck.delete_confirm, &mut keymap.delete_confirm, &mut clash);
+            update_keymap(
+                ck.log_section_height_decrease,
+                &mut keymap.log_section_height_decrease,
+                &mut clash,
+            );
+            update_keymap(
+                ck.log_section_height_increase,
+                &mut keymap.log_section_height_increase,
+                &mut clash,
+            );
+            update_keymap(
+                ck.log_section_toggle,
+                &mut keymap.log_section_toggle,
+                &mut clash,
+            );
+
             update_keymap(ck.exec, &mut keymap.exec, &mut clash);
             update_keymap(ck.filter_mode, &mut keymap.filter_mode, &mut clash);
             update_keymap(ck.quit, &mut keymap.quit, &mut clash);
@@ -339,6 +364,8 @@ mod tests {
             delete_deny: Some(vec!["s".to_owned()]),
             delete_confirm: None,
             exec: None,
+            log_section_height_decrease: None,
+            log_section_height_increase: None,
             filter_mode: None,
             quit: None,
             save_logs: None,
@@ -349,6 +376,7 @@ mod tests {
             scroll_up_many: None,
             scroll_up_one: None,
             select_next_panel: None,
+            log_section_toggle: None,
             select_previous_panel: None,
             sort_by_name: None,
             sort_by_state: None,
@@ -376,10 +404,13 @@ mod tests {
 
         let input = ConfigKeymap {
             clear: gen_v(("a", "b")),
-            delete_deny: gen_v(("c", "d")),
             delete_confirm: gen_v(("e", "f")),
+            delete_deny: gen_v(("c", "d")),
             exec: gen_v(("g", "h")),
             filter_mode: gen_v(("i", "j")),
+            log_section_height_decrease: gen_v(("-", "Z")),
+            log_section_height_increase: gen_v(("=", "X")),
+            log_section_toggle: gen_v(("Y", "W")),
             quit: gen_v(("k", "l")),
             save_logs: gen_v(("m", "n")),
             scroll_down_many: gen_v(("o", "p")),
@@ -390,14 +421,14 @@ mod tests {
             scroll_up_one: gen_v(("y", "z")),
             select_next_panel: gen_v(("0", "1")),
             select_previous_panel: gen_v(("2", "3")),
-            sort_by_name: gen_v(("4", "5")),
-            sort_by_state: gen_v(("6", "7")),
-            sort_by_status: gen_v(("8", "9")),
             sort_by_cpu: gen_v(("F1", "F12")),
-            sort_by_memory: gen_v(("/", "\\")),
             sort_by_id: gen_v(("[", "]")),
             sort_by_image: gen_v(("A", "B")),
+            sort_by_memory: gen_v(("/", "\\")),
+            sort_by_name: gen_v(("4", "5")),
             sort_by_rx: gen_v(("C", "D")),
+            sort_by_state: gen_v(("6", "7")),
+            sort_by_status: gen_v(("8", "9")),
             sort_by_tx: gen_v(("insert", "TAB")),
             sort_reset: gen_v(("up", "down")),
             toggle_help: gen_v(("home", "end")),
@@ -410,6 +441,9 @@ mod tests {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('b'))),
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('d'))),
             delete_confirm: (KeyCode::Char('e'), Some(KeyCode::Char('f'))),
+            log_section_height_decrease: (KeyCode::Char('-'), Some(KeyCode::Char('Z'))),
+            log_section_height_increase: (KeyCode::Char('='), Some(KeyCode::Char('X'))),
+            log_section_toggle: (KeyCode::Char('Y'), Some(KeyCode::Char('W'))),
             exec: (KeyCode::Char('g'), Some(KeyCode::Char('h'))),
             filter_mode: (KeyCode::Char('i'), Some(KeyCode::Char('j'))),
             quit: (KeyCode::Char('k'), Some(KeyCode::Char('l'))),

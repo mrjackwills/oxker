@@ -30,6 +30,14 @@ impl From<&str> for ContainerId {
 }
 
 impl ContainerId {
+    // TODO remove this once zigbuild uses Rust v1.87.0
+    #[cfg(target_os = "macos")]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn get(&self) -> &str {
+        self.0.as_str()
+    }
+
+    #[cfg(not(target_os = "macos"))]
     pub const fn get(&self) -> &str {
         self.0.as_str()
     }
@@ -76,6 +84,14 @@ macro_rules! unit_struct {
         }
 
         impl $name {
+            #[cfg(target_os = "macos")]
+            #[allow(clippy::missing_const_for_fn)]
+            // TODO remove this once zigbuild uses Rust v1.87.0
+            pub fn get(&self) -> &str {
+                self.0.as_str()
+            }
+
+            #[cfg(not(target_os = "macos"))]
             pub const fn get(&self) -> &str {
                 self.0.as_str()
             }
@@ -594,6 +610,14 @@ impl Logs {
         self.logs.start();
     }
 
+    // TODO remove this once zigbuild uses Rust v1.87.0
+    #[cfg(target_os = "macos")]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn len(&self) -> usize {
+        self.logs.items.len()
+    }
+
+    #[cfg(not(target_os = "macos"))]
     pub const fn len(&self) -> usize {
         self.logs.items.len()
     }

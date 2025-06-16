@@ -9,11 +9,11 @@ use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use crate::{
-    app_data::{ContainerId, Header},
+    app_data::{AppData, ContainerId, Header},
     exec::ExecMode,
 };
 
-use super::Redraw;
+use super::Rerender;
 
 #[derive(Debug, Default, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SelectablePanel {
@@ -184,13 +184,15 @@ pub struct GuiState {
     loading_handle: Option<JoinHandle<()>>,
     loading_index: u8,
     loading_set: HashSet<Uuid>,
-    redraw: Arc<Redraw>,
+    log_height: u16,
+    rerender: Arc<Rerender>,
     selected_panel: SelectablePanel,
+    show_logs: bool,
     status: HashSet<Status>,
     pub info_box_text: Option<(String, Instant)>,
 }
 impl GuiState {
-    pub fn new(redraw: &Arc<Redraw>) -> Self {
+    pub fn new(redraw: &Arc<Rerender>, show_logs: bool) -> Self {
         Self {
             delete_container: None,
             exec_mode: None,
@@ -202,11 +204,61 @@ impl GuiState {
             loading_handle: None,
             loading_index: 0,
             loading_set: HashSet::new(),
-            redraw: Arc::clone(redraw),
+            log_height: 75,
+            rerender: Arc::clone(redraw),
             selected_panel: SelectablePanel::default(),
+            show_logs,
             status: HashSet::new(),
         }
     }
+    /// Increase the height of the log panel, then rerender
+    pub fn log_height_increase(&mut self) {
+        if self.show_logs {
+            if self.log_height <= 75 {
+                self.log_height = self.log_height.saturating_add(5);
+            }
+        } else {
+            self.log_height = 5;
+        }
+        self.show_logs = true;
+        self.rerender.update();
+    }
+
+    /// Reduce the height of the logs panel, then rerender
+    /// Unselect logs panel if currently selected
+    pub fn log_height_decrease(&mut self) {
+        if self.show_logs {
+            self.log_height = self.log_height.saturating_sub(5);
+            if self.log_height == 0 && self.selected_panel == SelectablePanel::Logs {
+                self.show_logs = false;
+                self.selected_panel = SelectablePanel::Containers;
+            }
+            self.rerender.update();
+        }
+    }
+
+    pub const fn get_show_logs(&self) -> bool {
+        self.show_logs
+    }
+
+    pub fn toggle_show_logs(&mut self) {
+        self.show_logs = !self.show_logs;
+        if !self.show_logs && self.selected_panel == SelectablePanel::Logs {
+            self.selected_panel = SelectablePanel::Containers;
+        }
+        self.rerender.update();
+    }
+
+    /// Set the log_height to zero, used if show_logs=false in the config file
+    pub const fn log_height_zero(&mut self) {
+        self.log_height = 0;
+    }
+
+    /// Get the log height, *should* be a u8 between 0 and 80, essentially a percentage
+    pub const fn get_log_height(&self) -> u16 {
+        self.log_height
+    }
+
     /// Clear panels hash map, so on resize can fix the sizes for mouse clicks
     pub fn clear_area_map(&mut self) {
         self.intersect_panel.clear();
@@ -227,7 +279,7 @@ impl GuiState {
             .first()
         {
             self.selected_panel = *data.0;
-            self.redraw.set_true();
+            self.rerender.update();
         }
     }
 
@@ -300,7 +352,7 @@ impl GuiState {
             self.status_del(Status::DeleteConfirm);
         }
         self.delete_container = id;
-        self.redraw.set_true();
+        self.rerender.update();
     }
 
     /// Return a copy of the Status HashSet
@@ -321,7 +373,7 @@ impl GuiState {
             }
             _ => (),
         }
-        self.redraw.set_true();
+        self.rerender.update();
     }
 
     /// Inset the ExecMode into self, and set the Status as exec
@@ -330,7 +382,7 @@ impl GuiState {
     pub fn set_exec_mode(&mut self, mode: ExecMode) {
         self.exec_mode = Some(mode);
         self.status.insert(Status::Exec);
-        self.redraw.set_true();
+        self.rerender.update();
     }
 
     pub fn get_exec_mode(&self) -> Option<ExecMode> {
@@ -342,20 +394,32 @@ impl GuiState {
     pub fn status_push(&mut self, status: Status) {
         if status != Status::Exec {
             self.status.insert(status);
-            self.redraw.set_true();
+            self.rerender.update();
         }
     }
 
     /// Change to next selectable panel
-    pub fn next_panel(&mut self) {
+    pub fn selectable_panel_next(&mut self, app_data: &Arc<Mutex<AppData>>) {
         self.selected_panel = self.selected_panel.next();
-        self.redraw.set_true();
+        if (app_data.lock().get_container_len() == 0
+            && self.get_selected_panel() == SelectablePanel::Commands)
+            || (self.log_height == 0 && self.get_selected_panel() == SelectablePanel::Logs)
+        {
+            self.selected_panel = self.selected_panel.next();
+        }
+        self.rerender.update();
     }
 
     /// Change to previous selectable panel
-    pub fn previous_panel(&mut self) {
+    pub fn selectable_panel_previous(&mut self, app_data: &Arc<Mutex<AppData>>) {
         self.selected_panel = self.selected_panel.prev();
-        self.redraw.set_true();
+        if (app_data.lock().get_container_len() == 0
+            && self.get_selected_panel() == SelectablePanel::Commands)
+            || (self.log_height == 0 && self.get_selected_panel() == SelectablePanel::Logs)
+        {
+            self.selected_panel = self.selected_panel.prev();
+        }
+        self.rerender.update();
     }
 
     /// Insert a new loading_uuid into HashSet, and advance the loading_index by one frame, or reset to 0 if at end of array
@@ -366,7 +430,7 @@ impl GuiState {
             self.loading_index += 1;
         }
         self.loading_set.insert(uuid);
-        self.redraw.set_true();
+        self.rerender.update();
     }
 
     pub fn is_loading(&self) -> bool {
@@ -399,7 +463,7 @@ impl GuiState {
     /// Stop the loading_spin function, and reset gui loading status
     pub fn stop_loading_animation(&mut self, loading_uuid: Uuid) {
         self.loading_set.remove(&loading_uuid);
-        self.redraw.set_true();
+        self.rerender.update();
         if self.loading_set.is_empty() {
             self.loading_index = 0;
             if let Some(h) = &self.loading_handle {
@@ -412,12 +476,12 @@ impl GuiState {
     /// Set info box content
     pub fn set_info_box(&mut self, text: &str) {
         self.info_box_text = Some((text.to_owned(), std::time::Instant::now()));
-        self.redraw.set_true();
+        self.rerender.update();
     }
 
     /// Remove info box content
     pub fn reset_info_box(&mut self) {
         self.info_box_text = None;
-        self.redraw.set_true();
+        self.rerender.update();
     }
 }

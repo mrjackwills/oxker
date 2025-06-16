@@ -128,7 +128,7 @@ pub mod tests {
     use crate::{
         app_data::{AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts},
         tests::{gen_appdata, gen_containers},
-        ui::{GuiState, Redraw, draw_frame},
+        ui::{GuiState, Rerender, draw_frame},
     };
 
     use super::FrameData;
@@ -152,32 +152,33 @@ pub mod tests {
         fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
             let (app_data, gui_data) = (data.0.lock(), data.1.lock());
 
-            // set max height for container section, needs +5 to deal with docker commands list and borders
-            let height = app_data.get_container_len();
-            let height = if height < 12 {
-                u16::try_from(height + 5).unwrap_or_default()
-            } else {
-                12
-            };
+            // let container_section_height = app_data.get_container_len();
+            // let container_section_height = if container_section_height < 12 {
+            //     u16::try_from(container_section_height + 5).unwrap_or_default()
+            // } else {
+            //     12
+            // };
 
             let (filter_by, filter_term) = app_data.get_filter();
             Self {
                 chart_data: app_data.get_chart_data(),
-                columns: app_data.get_width(),
                 color_logs: app_data.config.color_logs,
+                columns: app_data.get_width(),
+                // container_section_height,
                 container_title: app_data.get_container_title(),
                 delete_confirm: gui_data.get_delete_container(),
                 filter_by,
                 filter_term: filter_term.cloned(),
                 has_containers: app_data.get_container_len() > 0,
                 has_error: app_data.get_error(),
-                height,
-                ports: app_data.get_selected_ports(),
-                port_max_lens: app_data.get_longest_port(),
+                show_logs: gui_data.get_show_logs(),
                 info_text: gui_data.info_box_text.clone(),
                 is_loading: gui_data.is_loading(),
                 loading_icon: gui_data.get_loading().to_string(),
+                log_height: gui_data.get_log_height(),
                 log_title: app_data.get_log_title(),
+                port_max_lens: app_data.get_longest_port(),
+                ports: app_data.get_selected_ports(),
                 selected_panel: gui_data.get_selected_panel(),
                 sorted_by: app_data.get_sorted(),
                 status: gui_data.get_status(),
@@ -199,8 +200,8 @@ pub mod tests {
             app_data.containers_start();
         }
 
-        let redraw = Arc::new(Redraw::new());
-        let gui_state = GuiState::new(&redraw);
+        let redraw = Arc::new(Rerender::new());
+        let gui_state = GuiState::new(&redraw, app_data.config.show_logs);
 
         let app_data = Arc::new(Mutex::new(app_data));
         let gui_state = Arc::new(Mutex::new(gui_state));
@@ -351,6 +352,67 @@ pub mod tests {
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
         let keymap = setup.app_data.lock().config.keymap.clone();
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(&setup.app_data, colors, &keymap, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        assert_snapshot!(setup.terminal.backend());
+    }
+
+    #[test]
+    /// Check that the whole layout is drawn correctly when the logs panel is removed
+    fn test_draw_blocks_whole_layout_no_logs() {
+        let mut setup = test_setup(160, 30, true, true);
+
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                private: 8003,
+                public: Some(8003),
+            });
+        let colors = setup.app_data.lock().config.app_colors;
+        let keymap = setup.app_data.lock().config.keymap.clone();
+        setup.gui_state.lock().log_height_zero();
+
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(&setup.app_data, colors, &keymap, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        assert_snapshot!(setup.terminal.backend());
+    }
+
+    #[test]
+    /// Check that the whole layout is drawn correctly when the logs panel height is ~4
+    fn test_draw_blocks_whole_layout_short_height_logs() {
+        let mut setup = test_setup(160, 30, true, true);
+
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                private: 8003,
+                public: Some(8003),
+            });
+        let colors = setup.app_data.lock().config.app_colors;
+        let keymap = setup.app_data.lock().config.keymap.clone();
+        setup.gui_state.lock().log_height_zero();
+
+        for _ in 0..=3 {
+            setup.gui_state.lock().log_height_increase();
+        }
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
             .draw(|f| {

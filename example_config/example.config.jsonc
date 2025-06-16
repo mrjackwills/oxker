@@ -29,6 +29,8 @@
 	// "save_dir": "$HOME",
 	// Force use of docker cli when execing into containers, honestly mostly pointless
 	"use_cli": false,
+	// Show the logs section - this can be changed during operation with the container_height_decrease / container_height_increase keys
+	"show_logs": true,
 	//////////////////
 	// Custom Keymap //
 	//////////////////
@@ -144,6 +146,18 @@
 		// Toggle mouse capture
 		"toggle_mouse_capture": [
 			"m"
+		],
+		// Reduce the height of the logs list section
+		"log_section_height_decrease": [
+			"-"
+		],
+		// Increase the height of the logs list section
+		"log_section_height_increase": [
+			"+"
+		],
+		// Toggle visibility of the log section
+		"log_section_toggle": [
+			"\\"
 		]
 	},
 	////////////////////

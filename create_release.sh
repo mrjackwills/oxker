@@ -211,6 +211,7 @@ cross_build_x86_linux() {
 
 # Build, using cross-rs, for linux arm64 musl
 cross_build_aarch64_linux() {
+	clear
 	check_cross
 	echo -e "${YELLOW}cross build --target aarch64-unknown-linux-musl --release${RESET}"
 	cross build --target aarch64-unknown-linux-musl --release
@@ -371,7 +372,7 @@ release_flow() {
 }
 
 build_choice() {
-	cmd=(dialog --backtitle "Choose option" --radiolist "choose" 14 80 16)
+	cmd=(dialog --backtitle "Choose option" --keep-tite --radiolist "choose" 14 80 16)
 	options=(
 		1 "x86 musl linux" off
 		2 "aarch64 musl linux" off
@@ -415,7 +416,7 @@ build_choice() {
 }
 
 build_container_choice() {
-	cmd=(dialog --backtitle "Choose option" --radiolist "choose" 14 80 16)
+	cmd=(dialog --backtitle "Choose option" --keep-tite --radiolist "choose" 14 80 16)
 	options=(
 		1 "x86 " off
 		2 "aarch64" off
@@ -455,7 +456,7 @@ build_container_choice() {
 }
 
 main() {
-	cmd=(dialog --backtitle "Choose option" --radiolist "choose" 14 80 16)
+	cmd=(dialog --backtitle "Choose option" --keep-tite --radiolist "choose" 14 80 16)
 	options=(
 		1 "test" off
 		2 "release" off

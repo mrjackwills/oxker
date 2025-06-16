@@ -85,6 +85,7 @@ impl HelpInfo {
     }
 
     /// Generate the button information span + metadata
+    #[allow(clippy::too_many_lines)]
     fn gen_keymap_info(colors: AppColors, zone: Option<&TimeZone>, show_timestamp: bool) -> Self {
         let button_item = |x: &str| Self::highlighted_text_span(&format!(" ( {x} ) "), colors);
         let button_desc = |x: &str| Self::text_span(x, colors);
@@ -154,6 +155,16 @@ impl HelpInfo {
             ]),
             Line::from(vec![
                 space(),
+                button_item("- ="),
+                button_desc("change log section height"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("\\"),
+                button_desc("toggle log section visibility"),
+            ]),
+            Line::from(vec![
+                space(),
                 button_item("esc"),
                 button_desc("close dialog"),
             ]),
@@ -212,15 +223,6 @@ impl HelpInfo {
     fn custom_text<'a>(colors: AppColors, _keymap: &Keymap, zone: Option<&TimeZone>) -> Line<'a> {
         let highlighted = |x: &str| Self::highlighted_text_span(x, colors);
         let text = |x: &str| Self::text_span(x, colors);
-
-        // if keymap != &Keymap::new() {
-        //     op.push(highlighted("customised keymap, "));
-        // }
-
-        // if colors != AppColors::new() {
-        //     op.push(highlighted("customised app colors, "));
-        // };
-
         let zone = zone.and_then(|i| i.iana_name()).unwrap_or("Etc/UTC");
         Line::from(Vec::from([text("logs timezone: "), highlighted(zone)])).centered()
     }
@@ -295,6 +297,15 @@ impl HelpInfo {
             or_secondary(km.sort_by_image, "sort containers by image"),
             or_secondary(km.sort_by_rx, "sort containers by rx"),
             or_secondary(km.sort_by_tx, "sort containers by tx"),
+            or_secondary(
+                km.log_section_height_decrease,
+                "decrease log section height",
+            ),
+            or_secondary(
+                km.log_section_height_increase,
+                "increase log section height",
+            ),
+            or_secondary(km.log_section_toggle, "toggle log section visibility"),
             or_secondary(km.clear, "close dialog"),
             or_secondary(km.quit, "quit at any time"),
         ];
@@ -426,7 +437,7 @@ mod tests {
     #[test]
     /// This will cause issues once the version has more than the current 5 chars (0.5.0)
     fn test_draw_blocks_help() {
-        let mut setup = test_setup(87, 33, true, true);
+        let mut setup = test_setup(87, 35, true, true);
         let tz = setup.app_data.lock().config.timezone.clone();
 
         setup
@@ -448,29 +459,29 @@ mod tests {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
-                    (0 | 32, _) | (0..=33, 0 | 86) => {
+                    (0 | 34, _) | (0..=33, 0 | 86) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
                     // border is black on magenta
-                    (1 | 31, _) | (1..=31, 1 | 85) => {
+                    (1 | 32, _) | (1..=31, 1 | 85) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                      // oxker logo && description
-                      (2..=10, 2..=85) | (12, 19..=66)
-                    // button in the brackets
+                    // oxker logo && description
+                    (2..=10, 2..=85)
+                    | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
                     | (15, 2..=10 | 13..=21 | 24..=40 | 43..=56)
                     | (16 | 23, 2..=12)
-                    | (17..=20 | 22 | 25, 2..=8)
+                    | (17..=20 | 22 | 25 | 27, 2..=8)
                     | (21, 2..=9 | 12..=18)
-                    | (24, 2..=10) => {
+                    | (24 | 26, 2..=10) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // The URL is white and underlined
-                    (28, 25..=60) => {
+                    (30, 25..=60) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::White);
                         assert_eq!(result_cell.modifier, Modifier::UNDERLINED);
@@ -488,7 +499,7 @@ mod tests {
     #[test]
     /// Test that the help panel gets drawn with custom colors
     fn test_draw_blocks_help_custom_colors() {
-        let mut setup = test_setup(87, 33, true, true);
+        let mut setup = test_setup(87, 35, true, true);
         let mut colors = AppColors::new();
         let tz = setup.app_data.lock().config.timezone.clone();
 
@@ -515,29 +526,29 @@ mod tests {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
-                    (0 | 32, _) | (0..=33, 0 | 86) => {
+                    (0 | 34, _) | (0..=33, 0 | 86) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
-                    // border is black on magenta
-                    (1 | 31, _) | (1..=31, 1 | 85) => {
+                    // border is red on black
+                    (1 | 32, _) | (1..=31, 1 | 85) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Red);
                     }
-                      // oxker logo && description
-                      (2..=10, 2..=85) | (12, 19..=66)
-                    // button in the brackets
+                    // oxker logo && description
+                    (2..=10, 2..=85)
+                    | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
                     | (15, 2..=10 | 13..=21 | 24..=40 | 43..=56)
                     | (16 | 23, 2..=12)
-                    | (17..=20 | 22 | 25, 2..=8)
+                    | (17..=20 | 22 | 25 | 27, 2..=8)
                     | (21, 2..=9 | 12..=18)
-                    | (24, 2..=10) => {
+                    | (24 | 26, 2..=10) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Yellow);
                     }
                     // The URL is yellow and underlined
-                    (28, 25..=60) => {
+                    (30, 25..=60) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Yellow);
                         assert_eq!(result_cell.modifier, Modifier::UNDERLINED);
@@ -562,6 +573,9 @@ mod tests {
             delete_deny: (KeyCode::Char('c'), None),
             delete_confirm: (KeyCode::Char('e'), None),
             exec: (KeyCode::Char('g'), None),
+            log_section_height_decrease: (KeyCode::Char('z'), None),
+            log_section_height_increase: (KeyCode::Char('x'), None),
+            log_section_toggle: (KeyCode::Char('W'), None),
             filter_mode: (KeyCode::Char('i'), None),
             quit: (KeyCode::Char('k'), None),
             save_logs: (KeyCode::Char('m'), None),
@@ -607,6 +621,9 @@ mod tests {
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('d'))),
             delete_confirm: (KeyCode::Char('e'), Some(KeyCode::Char('f'))),
             exec: (KeyCode::Char('g'), Some(KeyCode::Char('h'))),
+            log_section_height_decrease: (KeyCode::Char('A'), Some(KeyCode::Char('Z'))),
+            log_section_height_increase: (KeyCode::Char('B'), Some(KeyCode::Char('X'))),
+            log_section_toggle: (KeyCode::Char('C'), Some(KeyCode::Char('W'))),
             filter_mode: (KeyCode::Char('i'), Some(KeyCode::Char('j'))),
             quit: (KeyCode::Char('k'), Some(KeyCode::Char('l'))),
             save_logs: (KeyCode::Char('m'), Some(KeyCode::Char('n'))),
@@ -653,6 +670,9 @@ mod tests {
             delete_confirm: (KeyCode::Char('e'), Some(KeyCode::Char('f'))),
             exec: (KeyCode::Char('g'), None),
             filter_mode: (KeyCode::Char('i'), Some(KeyCode::Char('j'))),
+            log_section_height_decrease: (KeyCode::Char('A'), Some(KeyCode::Char('Z'))),
+            log_section_height_increase: (KeyCode::Char('B'), Some(KeyCode::Char('X'))),
+            log_section_toggle: (KeyCode::Char('C'), Some(KeyCode::Char('W'))),
             quit: (KeyCode::Char('k'), None),
             save_logs: (KeyCode::Char('m'), Some(KeyCode::Char('n'))),
             scroll_down_many: (KeyCode::Char('o'), None),
@@ -691,7 +711,7 @@ mod tests {
 
     #[test]
     fn test_draw_blocks_help_show_timezone() {
-        let mut setup = test_setup(87, 35, true, true);
+        let mut setup = test_setup(87, 37, true, true);
 
         setup
             .terminal
