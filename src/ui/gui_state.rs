@@ -175,7 +175,7 @@ pub enum Status {
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug)]
 pub struct GuiState {
-    delete_container: Option<ContainerId>,
+    delete_container_id: Option<ContainerId>,
     exec_mode: Option<ExecMode>,
     intersect_delete: HashMap<DeleteButton, Rect>,
     intersect_heading: HashMap<Header, Rect>,
@@ -194,7 +194,7 @@ pub struct GuiState {
 impl GuiState {
     pub fn new(redraw: &Arc<Rerender>, show_logs: bool) -> Self {
         Self {
-            delete_container: None,
+            delete_container_id: None,
             exec_mode: None,
             info_box_text: None,
             intersect_delete: HashMap::new(),
@@ -335,7 +335,7 @@ impl GuiState {
 
     /// Check if an ContainerId is set in the delete_container field
     pub fn get_delete_container(&self) -> Option<ContainerId> {
-        self.delete_container.clone()
+        self.delete_container_id.clone()
     }
 
     /// Set either a ContainerId, or None, to the delete_container field
@@ -347,7 +347,7 @@ impl GuiState {
             self.intersect_delete.clear();
             self.status_del(Status::DeleteConfirm);
         }
-        self.delete_container = id;
+        self.delete_container_id = id;
         self.rerender.update();
     }
 
