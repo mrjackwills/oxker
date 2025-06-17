@@ -244,7 +244,8 @@ impl GuiState {
         self.rerender.update();
     }
 
-    /// Set the log_height to zero, used if show_logs=false in the config file
+    /// Set the log_height to zero, for now only used by tests
+    #[cfg(test)]
     pub const fn log_height_zero(&mut self) {
         self.log_height = 0;
     }
