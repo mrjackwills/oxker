@@ -15,8 +15,8 @@
 + merge args color/raw fix, [d198398795698a21d81d3fd20231c482cc346ab5]
 
 ### Refactors
++ reduce log entry clones, can expect 40-50% reduction in CPU and memory usage in certain common situations, [ecefa302b9ef5320ad4cce0b606aca70a7b459e2]
 + dead code removed, [b40b6b197e4e5fbdab083bc918d1a5d2750597f3]
-+ reduce lines of log cloned, can expect 40-50% reduction in CPU and memory usage in certain common situations, [ecefa302b9ef5320ad4cce0b606aca70a7b459e2]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.10.3'>v0.10.3</a>
 ### 2025-04-22
