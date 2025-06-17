@@ -5,7 +5,8 @@ use std::{
     time::SystemTime,
 };
 
-use bollard::container::LogsOptions;
+use bollard::query_parameters::LogsOptions;
+// use bollard::container::LogsOptions;
 use cansi::v3::categorise_text;
 use crossterm::{
     event::{DisableMouseCapture, KeyCode, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
@@ -187,7 +188,7 @@ impl InputHandler {
 
                 let path = log_path.join(format!("{name}_{now}.log"));
 
-                let options = Some(LogsOptions::<String> {
+                let options = Some(LogsOptions {
                     stderr: true,
                     stdout: true,
                     timestamps: args.show_timestamp,

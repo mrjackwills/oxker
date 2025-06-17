@@ -342,6 +342,54 @@ impl From<(&str, &ContainerStatus)> for State {
     }
 }
 
+/// Need status, to check if container is unhealthy or not
+impl
+    From<(
+        &bollard::secret::ContainerSummaryStateEnum,
+        &ContainerStatus,
+    )> for State
+{
+    fn from(
+        (input, status): (
+            &bollard::secret::ContainerSummaryStateEnum,
+            &ContainerStatus,
+        ),
+    ) -> Self {
+        match input {
+            bollard::secret::ContainerSummaryStateEnum::DEAD => Self::Dead,
+            bollard::secret::ContainerSummaryStateEnum::EXITED => Self::Exited,
+            bollard::secret::ContainerSummaryStateEnum::PAUSED => Self::Paused,
+            bollard::secret::ContainerSummaryStateEnum::REMOVING => Self::Removing,
+            bollard::secret::ContainerSummaryStateEnum::RESTARTING => Self::Restarting,
+            bollard::secret::ContainerSummaryStateEnum::RUNNING => {
+                if status.unhealthy() {
+                    Self::Running(RunningState::Unhealthy)
+                } else {
+                    Self::Running(RunningState::Healthy)
+                }
+            }
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// Again, need status, to check if container is unhealthy or not
+impl
+    From<(
+        Option<&bollard::secret::ContainerSummaryStateEnum>,
+        &ContainerStatus,
+    )> for State
+{
+    fn from(
+        (input, status): (
+            Option<&bollard::secret::ContainerSummaryStateEnum>,
+            &ContainerStatus,
+        ),
+    ) -> Self {
+        input.map_or(Self::Unknown, |input| Self::from((input, status)))
+    }
+}
+
 /// Again, need status, to check if container is unhealthy or not
 impl From<(Option<String>, &ContainerStatus)> for State {
     fn from((input, status): (Option<String>, &ContainerStatus)) -> Self {
@@ -589,7 +637,6 @@ impl Logs {
     /// Get the logs vec, but instead of cloning to whole vec, only clone items with x of the currently selected index
     /// Where x is the abs different of the index plus the panel height & a padding
     /// The rest can be just empty list items
-    /// TODO test me, pass in 1000 lines of "something", expect response to be different!
     pub fn to_vec(&self, height: usize, padding: usize) -> Vec<ListItem<'static>> {
         let current_index = self.logs.state.selected().unwrap_or_default();
         self.logs
