@@ -213,15 +213,10 @@ impl GuiState {
     }
     /// Increase the height of the log panel, then rerender
     pub fn log_height_increase(&mut self) {
-        if self.show_logs {
-            if self.log_height <= 75 {
-                self.log_height = self.log_height.saturating_add(5);
-            }
-        } else {
-            self.log_height = 5;
+        if self.show_logs && self.log_height <= 75 {
+            self.log_height = self.log_height.saturating_add(5);
+            self.rerender.update();
         }
-        self.show_logs = true;
-        self.rerender.update();
     }
 
     /// Reduce the height of the logs panel, then rerender
