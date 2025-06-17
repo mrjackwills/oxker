@@ -111,7 +111,7 @@ In application controls, these, amongst many other settings, can be customized w
 | ```( 0 )``` | Stop sorting.|
 | ```( F1 )``` or ```( / )``` | Enter filter mode. |
 | ```( - ) ``` or ```(=)``` | Reduce or increase the height of the logs panel.|
-| ```( z )``` | Toggle the visibility of the logs panel.|
+| ```( \ )``` | Toggle the visibility of the logs panel.|
 | ```( e )``` | Exec into the selected container - not available on Windows.|
 | ```( h )``` | Toggle help menu.|
 | ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
