@@ -110,6 +110,8 @@ In application controls, these, amongst many other settings, can be customized w
 | ```( 1-9 )``` | Sort containers by heading, clicking on headings also sorts the selected column. |
 | ```( 0 )``` | Stop sorting.|
 | ```( F1 )``` or ```( / )``` | Enter filter mode. |
+| ```( - ) ``` or ```(=)``` | Reduce or increase the height of the logs panel.|
+| ```( z )``` | Toggle the visibility of the logs panel.|
 | ```( e )``` | Exec into the selected container - not available on Windows.|
 | ```( h )``` | Toggle help menu.|
 | ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
@@ -143,7 +145,10 @@ A config file enables the user to persist settings, create a custom keymap, set 
 Examples of the config file, alsong with explanations of each value, can be found in the [example_config](https://github.com/mrjackwills/oxker/tree/main/example_config) directory. `oxker` supports `.toml`,`.json`, and `.jsonc` file formats. 
 <br>
 <br>
-If not config file is found, `oxker` will create a `config.toml` in the user's local config directory. Command line arguments will take priority over values from the config file.
+If no config file is found, a `config.toml` file will be created in an `oxker` directory in the user's local config directory, as found by the [directories crate](https://docs.rs/directories/6.0.0/directories/struct.BaseDirs.html#method.config_local_dir).
+<br>
+<br>
+Command line arguments will take priority over values from the config file.
 <br>
 <br>
 If running an `oxker` container, the default config location will be `/` rather than the automatically detected platform-specific local config directory, and can be mounted as follows;
