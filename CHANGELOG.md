@@ -5,6 +5,7 @@
 
 ### Docs
 + example config files updated updated, [63ab7de72897de460f31181c5a42befbee2f91d3], [8fb5ac4a945b75f3fcd118c53be1202ccbc43c59]
++ README.md updated, link to directories crate, closes #65, [c2bfe3296563daf4b7f077469f3eeff6895720b0]
 
 ### Features
 + build for aarch64-apple-darwin, closes #62, personally untested on MacOS - but others suggest it works as expected, [e7114d2f5e0ed8935943be64726fc2d90464a777], [2e8500902a515a246f9d9a503b4350849d634978]
