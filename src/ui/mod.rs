@@ -205,10 +205,6 @@ impl Ui {
         let docker_interval_ms = u128::from(self.app_data.lock().config.docker_interval_ms);
         let mut drawn_at = std::time::Instant::now();
 
-        if !self.app_data.lock().config.show_logs {
-            self.gui_state.lock().log_height_zero();
-        }
-
         while self.is_running.load(Ordering::SeqCst) {
             if self.should_redraw(&mut drawn_at, docker_interval_ms) {
                 let fd = FrameData::from(&*self);
