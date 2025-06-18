@@ -239,7 +239,6 @@ zig_build_aarch64_apple() {
 		echo -e "${YELLOW}sudo chown -R vscode:vscode $(pwd)/target${RESET}"
 		sudo chown -R vscode:vscode "$(pwd)/target"
 	fi
-
 }
 
 # Build all releases that GitHub workflow would
@@ -310,6 +309,7 @@ build_container_all() {
 	build_container_arm64
 	ask_continue
 	build_container_armv6
+	ask_continue
 }
 
 # Full flow to create a new release
