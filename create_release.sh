@@ -238,7 +238,6 @@ zig_build_aarch64_apple() {
 	if ask_yn "sudo chown $(pwd)/target"; then
 		echo -e "${YELLOW}sudo chown -R vscode:vscode $(pwd)/target${RESET}"
 		sudo chown -R vscode:vscode "$(pwd)/target"
-		exit
 	fi
 
 }
