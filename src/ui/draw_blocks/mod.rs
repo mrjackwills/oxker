@@ -127,8 +127,9 @@ pub mod tests {
 
     use crate::{
         app_data::{AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts},
+        app_error::AppError,
         tests::{gen_appdata, gen_containers},
-        ui::{GuiState, Rerender, draw_frame},
+        ui::{GuiState, Rerender, Status, draw_frame},
     };
 
     use super::FrameData;
@@ -412,6 +413,130 @@ pub mod tests {
         for _ in 0..=3 {
             setup.gui_state.lock().log_height_increase();
         }
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(&setup.app_data, colors, &keymap, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        assert_snapshot!(setup.terminal.backend());
+    }
+
+    #[test]
+    /// Check that the whole layout is drawn with the help panel visible
+    fn test_draw_blocks_whole_layout_help_panel() {
+        let mut setup = test_setup(160, 40, true, true);
+
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                private: 8003,
+                public: Some(8003),
+            });
+        let colors = setup.app_data.lock().config.app_colors;
+        let keymap = setup.app_data.lock().config.keymap.clone();
+
+        setup.gui_state.lock().status_push(Status::Help);
+
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(&setup.app_data, colors, &keymap, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        assert_snapshot!(setup.terminal.backend());
+    }
+
+    #[test]
+    /// Check that the whole layout is drawn with the error box is visible
+    fn test_draw_blocks_whole_layout_error() {
+        let mut setup = test_setup(160, 40, true, true);
+
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                private: 8003,
+                public: Some(8003),
+            });
+        let colors = setup.app_data.lock().config.app_colors;
+        let keymap = setup.app_data.lock().config.keymap.clone();
+
+        setup.app_data.lock().set_error(
+            AppError::DockerCommand(crate::app_data::DockerCommand::Pause),
+            &setup.gui_state,
+            Status::Error,
+        );
+
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(&setup.app_data, colors, &keymap, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        assert_snapshot!(setup.terminal.backend());
+    }
+
+    #[test]
+    /// Check that the whole layout is drawn with the delete box is visible
+    fn test_draw_blocks_whole_layout_delete() {
+        let mut setup = test_setup(160, 40, true, true);
+
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                private: 8003,
+                public: Some(8003),
+            });
+        let colors = setup.app_data.lock().config.app_colors;
+        let keymap = setup.app_data.lock().config.keymap.clone();
+        setup
+            .gui_state
+            .lock()
+            .set_delete_container(setup.app_data.lock().get_selected_container_id());
+
+        let fd = FrameData::from((&setup.app_data, &setup.gui_state));
+        setup
+            .terminal
+            .draw(|f| {
+                draw_frame(&setup.app_data, colors, &keymap, f, &fd, &setup.gui_state);
+            })
+            .unwrap();
+
+        assert_snapshot!(setup.terminal.backend());
+    }
+
+    #[test]
+    /// Check that the whole layout is drawn with the info box is visible
+    fn test_draw_blocks_whole_layout_info_box() {
+        let mut setup = test_setup(160, 40, true, true);
+
+        insert_chart_data(&setup);
+        insert_logs(&setup);
+        setup.app_data.lock().containers.items[0]
+            .ports
+            .push(ContainerPorts {
+                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                private: 8003,
+                public: Some(8003),
+            });
+        let colors = setup.app_data.lock().config.app_colors;
+        let keymap = setup.app_data.lock().config.keymap.clone();
+        setup.gui_state.lock().set_info_box("This is a test");
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal
