@@ -157,7 +157,10 @@ mod tests {
         let mut setup = test_setup(40, 6, true, true);
         setup.app_data.lock().containers = StatefulList::new(vec![]);
 
-        setup.gui_state.lock().next_panel();
+        setup
+            .gui_state
+            .lock()
+            .selectable_panel_next(&setup.app_data);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         let colors = setup.app_data.lock().config.app_colors;
 
@@ -184,7 +187,10 @@ mod tests {
             }
         }
 
-        setup.gui_state.lock().previous_panel();
+        setup
+            .gui_state
+            .lock()
+            .selectable_panel_previous(&setup.app_data);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
@@ -255,7 +261,10 @@ mod tests {
         }
 
         // Change selected panel, border is now no longer blue
-        setup.gui_state.lock().next_panel();
+        setup
+            .gui_state
+            .lock()
+            .selectable_panel_next(&setup.app_data);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal

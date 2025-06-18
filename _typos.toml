@@ -1,2 +1,5 @@
 [default.extend-words]
 ratatui = "ratatui"
+
+[default]
+extend-ignore-words-re = ["[(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{40})]"]

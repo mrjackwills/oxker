@@ -30,6 +30,7 @@ pub struct Config {
     pub show_timestamp: bool,
     pub timezone: Option<TimeZone>,
     pub timestamp_format: String,
+    pub show_logs: bool,
     pub use_cli: bool,
 }
 
@@ -51,6 +52,7 @@ impl From<&Args> for Config {
             timezone: Self::parse_timezone(args.timezone.clone()),
             timestamp_format: Self::parse_timestamp_format(None),
             use_cli: args.use_cli,
+            show_logs: true,
         }
     }
 }
@@ -73,6 +75,7 @@ impl From<ConfigFile> for Config {
             timezone: Self::parse_timezone(config_file.timezone),
             timestamp_format: Self::parse_timestamp_format(config_file.timestamp_format),
             use_cli: config_file.use_cli.unwrap_or(false),
+            show_logs: config_file.show_logs.unwrap_or(true),
         }
     }
 }
@@ -132,6 +135,12 @@ impl Config {
 
         if config_from_cli.color_logs != default_args.color {
             self.color_logs = config_from_cli.color_logs;
+            self.raw_logs = !self.color_logs;
+        }
+
+        if config_from_cli.raw_logs != default_args.raw {
+            self.raw_logs = config_from_cli.raw_logs;
+            self.color_logs = !self.raw_logs;
         }
 
         if config_from_cli.gui != default_args.gui {

@@ -241,7 +241,10 @@ mod tests {
         }
 
         // Control panel now selected, should have a blue border
-        setup.gui_state.lock().next_panel();
+        setup
+            .gui_state
+            .lock()
+            .selectable_panel_next(&setup.app_data);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
             .terminal

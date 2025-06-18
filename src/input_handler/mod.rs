@@ -5,7 +5,8 @@ use std::{
     time::SystemTime,
 };
 
-use bollard::container::LogsOptions;
+use bollard::query_parameters::LogsOptions;
+// use bollard::container::LogsOptions;
 use cansi::v3::categorise_text;
 use crossterm::{
     event::{DisableMouseCapture, KeyCode, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
@@ -187,7 +188,7 @@ impl InputHandler {
 
                 let path = log_path.join(format!("{name}_{now}.log"));
 
-                let options = Some(LogsOptions::<String> {
+                let options = Some(LogsOptions {
                     stderr: true,
                     stdout: true,
                     timestamps: args.show_timestamp,
@@ -288,23 +289,15 @@ impl InputHandler {
     /// Change the the "next" selectable panel
     /// If no containers, and on Commands panel, skip to next panel, as Commands panel isn't visible in this state
     fn next_panel_key(&self) {
-        self.gui_state.lock().next_panel();
-        if self.app_data.lock().get_container_len() == 0
-            && self.gui_state.lock().get_selected_panel() == SelectablePanel::Commands
-        {
-            self.gui_state.lock().next_panel();
-        }
+        self.gui_state.lock().selectable_panel_next(&self.app_data);
     }
 
     /// Change to previously selected panel
     /// Need to skip the commands planel if there no are current containers running
     fn previous_panel_key(&self) {
-        self.gui_state.lock().previous_panel();
-        if self.app_data.lock().get_container_len() == 0
-            && self.gui_state.lock().get_selected_panel() == SelectablePanel::Commands
-        {
-            self.gui_state.lock().previous_panel();
-        }
+        self.gui_state
+            .lock()
+            .selectable_panel_previous(&self.app_data);
     }
 
     fn scroll_start_key(&self) {
@@ -458,9 +451,25 @@ impl InputHandler {
         }
     }
 
+    // Increase the log panel height
+    fn log_panel_height_increase(&self) {
+        self.gui_state.lock().log_height_increase();
+    }
+
+    // Decrease the log panel height
+    fn log_panel_height_decrease(&self) {
+        self.gui_state.lock().log_height_decrease();
+    }
+
+    // Toggle visibility of the log panel
+    fn log_panel_toggle(&self) {
+        self.gui_state.lock().toggle_show_logs();
+    }
+
     /// Handle button presses in all other scenarios
     async fn handle_others(&mut self, key_code: KeyCode) {
         self.handle_sort(key_code);
+        // shift key plus arrows
         match key_code {
             _ if self.keymap.exec.0 == key_code || self.keymap.exec.1 == Some(key_code) => {
                 self.exec_key().await;
@@ -476,6 +485,23 @@ impl InputHandler {
                 || self.keymap.toggle_mouse_capture.1 == Some(key_code) =>
             {
                 self.mouse_capture_key();
+            }
+            _ if self.keymap.log_section_height_decrease.0 == key_code
+                || self.keymap.log_section_height_decrease.1 == Some(key_code) =>
+            {
+                self.log_panel_height_decrease();
+            }
+
+            _ if self.keymap.log_section_height_increase.0 == key_code
+                || self.keymap.log_section_height_increase.1 == Some(key_code) =>
+            {
+                self.log_panel_height_increase();
+            }
+
+            _ if self.keymap.log_section_toggle.0 == key_code
+                || self.keymap.log_section_toggle.1 == Some(key_code) =>
+            {
+                self.log_panel_toggle();
             }
 
             _ if self.keymap.save_logs.0 == key_code

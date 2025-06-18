@@ -23,7 +23,7 @@ mod exec;
 mod input_handler;
 mod ui;
 
-use ui::{GuiState, Redraw, Status, Ui};
+use ui::{GuiState, Rerender, Status, Ui};
 
 use crate::docker_data::DockerMessage;
 
@@ -98,10 +98,10 @@ fn handler_init(
 async fn main() {
     setup_tracing();
     let config = config::Config::new();
-    let redraw = Arc::new(Redraw::new());
+    let redraw = Arc::new(Rerender::new());
 
     let app_data = Arc::new(Mutex::new(AppData::new(config.clone(), &redraw)));
-    let gui_state = Arc::new(Mutex::new(GuiState::new(&redraw)));
+    let gui_state = Arc::new(Mutex::new(GuiState::new(&redraw, config.show_logs)));
     let is_running = Arc::new(AtomicBool::new(true));
     let (docker_tx, docker_rx) = tokio::sync::mpsc::channel(32);
 
@@ -149,7 +149,7 @@ async fn main() {
 #[allow(clippy::unwrap_used)]
 mod tests {
 
-    use std::sync::Arc;
+    use std::{str::FromStr, sync::Arc};
 
     use bollard::service::{ContainerSummary, Port};
 
@@ -159,7 +159,7 @@ mod tests {
             RunningState, State, StatefulList,
         },
         config::{AppColors, Config, Keymap},
-        ui::Redraw,
+        ui::Rerender,
     };
 
     /// Default test config, has timestamps turned off
@@ -179,6 +179,7 @@ mod tests {
             timestamp_format: "HH:MM:SS.NNNNN dd-mm-yyyy".to_owned(),
             show_timestamp: false,
             use_cli: false,
+            show_logs: true,
             timezone: None,
         }
     }
@@ -207,7 +208,7 @@ mod tests {
             current_sorted_id: vec![],
             error: None,
             sorted_by: None,
-            redraw: Arc::new(Redraw::new()),
+            redraw: Arc::new(Rerender::new()),
             filter: Filter::new(),
             config: gen_config(),
         }
@@ -227,6 +228,7 @@ mod tests {
 
     pub fn gen_container_summary(index: usize, state: &str) -> ContainerSummary {
         ContainerSummary {
+            image_manifest_descriptor: None,
             id: Some(format!("{index}")),
             names: Some(vec![format!("container_{}", index)]),
             image: Some(format!("image_{index}")),
@@ -242,7 +244,7 @@ mod tests {
             size_rw: None,
             size_root_fs: None,
             labels: None,
-            state: Some(state.to_owned()),
+            state: Some(bollard::secret::ContainerSummaryStateEnum::from_str(state).unwrap()),
             status: Some(format!("Up {index} hour")),
             host_config: None,
             network_settings: None,

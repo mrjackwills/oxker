@@ -2,7 +2,6 @@
 source: src/ui/draw_blocks/help.rs
 expression: setup.terminal.backend()
 ---
-"                                                                                                              "
 " ╭ 0.00.000 ────────────────────────────────────────────────────────────────────────────────────────────────╮ "
 " │                                                                                                          │ "
 " │                                                  88                                                      │ "
@@ -40,12 +39,13 @@ expression: setup.terminal.backend()
 " │ ( , ) sort containers by image                                                                           │ "
 " │ ( . ) or ( ] ) sort containers by rx                                                                     │ "
 " │ ( Insert ) sort containers by tx                                                                         │ "
+" │ ( A ) or ( Z ) decrease log section height                                                               │ "
+" │ ( B ) or ( X ) increase log section height                                                               │ "
+" │ ( C ) or ( W ) toggle log section visibility                                                             │ "
 " │ ( a ) or ( b ) close dialog                                                                              │ "
 " │ ( k ) quit at any time                                                                                   │ "
 " │                                                                                                          │ "
 " │                    currently an early work in progress, all and any input appreciated                    │ "
 " │                                   https://github.com/mrjackwills/oxker                                   │ "
 " │                                                                                                          │ "
-" │                                                                                                          │ "
 " ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯ "
-"                                                                                                              "

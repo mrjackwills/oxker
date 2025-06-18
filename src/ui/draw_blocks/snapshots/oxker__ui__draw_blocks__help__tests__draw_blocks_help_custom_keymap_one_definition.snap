@@ -2,7 +2,6 @@
 source: src/ui/draw_blocks/help.rs
 expression: setup.terminal.backend()
 ---
-"                                                                                                  "
 "  ╭ 0.00.000 ──────────────────────────────────────────────────────────────────────────────────╮  "
 "  │                                                                                            │  "
 "  │                                           88                                               │  "
@@ -40,12 +39,13 @@ expression: setup.terminal.backend()
 "  │ ( , ) sort containers by image                                                             │  "
 "  │ ( . ) sort containers by rx                                                                │  "
 "  │ ( Insert ) sort containers by tx                                                           │  "
+"  │ ( z ) decrease log section height                                                          │  "
+"  │ ( x ) increase log section height                                                          │  "
+"  │ ( W ) toggle log section visibility                                                        │  "
 "  │ ( a ) close dialog                                                                         │  "
 "  │ ( k ) quit at any time                                                                     │  "
 "  │                                                                                            │  "
 "  │             currently an early work in progress, all and any input appreciated             │  "
 "  │                            https://github.com/mrjackwills/oxker                            │  "
 "  │                                                                                            │  "
-"  │                                                                                            │  "
 "  ╰────────────────────────────────────────────────────────────────────────────────────────────╯  "
-"                                                                                                  "

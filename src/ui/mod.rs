@@ -24,7 +24,7 @@ mod color_match;
 mod draw_blocks;
 mod gui_state;
 mod redraw;
-pub use redraw::Redraw;
+pub use redraw::Rerender;
 
 pub use self::color_match::*;
 pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
@@ -50,7 +50,7 @@ pub struct Ui {
     input_tx: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
     now: Instant,
-    redraw: Arc<Redraw>,
+    redraw: Arc<Rerender>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
@@ -73,7 +73,7 @@ impl Ui {
         gui_state: Arc<Mutex<GuiState>>,
         input_tx: Sender<InputMessages>,
         is_running: Arc<AtomicBool>,
-        redraw: Arc<Redraw>,
+        redraw: Arc<Rerender>,
     ) {
         match Self::setup_terminal() {
             Ok(mut terminal) => {
@@ -245,6 +245,8 @@ impl Ui {
                         }
                     } else if let Event::Resize(_, _) = event {
                         self.gui_state.lock().clear_area_map();
+                        // self.gui_state.lock().set_window_height(row);
+
                         self.terminal.autoresize().ok();
                     }
                 }
@@ -267,6 +269,7 @@ impl Ui {
 
 /// Frequent data required by multiple frame drawing functions, can reduce mutex reads by placing it all in here
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct FrameData {
     chart_data: Option<(CpuTuple, MemTuple)>,
     color_logs: bool,
@@ -276,8 +279,10 @@ pub struct FrameData {
     filter_by: FilterBy,
     filter_term: Option<String>,
     has_containers: bool,
+    // container_section_height: u16,
+    log_height: u16,
+    show_logs: bool,
     has_error: Option<AppError>,
-    height: u16,
     info_text: Option<(String, Instant)>,
     is_loading: bool,
     loading_icon: String,
@@ -293,14 +298,6 @@ impl From<&Ui> for FrameData {
     fn from(ui: &Ui) -> Self {
         let (app_data, gui_data) = (ui.app_data.lock(), ui.gui_state.lock());
 
-        // set max height for container section, needs +5 to deal with docker commands list and borders
-        let height = app_data.get_container_len();
-        let height = if height < 12 {
-            u16::try_from(height + 5).unwrap_or_default()
-        } else {
-            12
-        };
-
         let (filter_by, filter_term) = app_data.get_filter();
         Self {
             chart_data: app_data.get_chart_data(),
@@ -312,10 +309,11 @@ impl From<&Ui> for FrameData {
             filter_term: filter_term.cloned(),
             has_containers: app_data.get_container_len() > 0,
             has_error: app_data.get_error(),
-            height,
             info_text: gui_data.info_box_text.clone(),
             is_loading: gui_data.is_loading(),
+            show_logs: gui_data.get_show_logs(),
             loading_icon: gui_data.get_loading().to_string(),
+            log_height: gui_data.get_log_height(),
             log_title: app_data.get_log_title(),
             port_max_lens: app_data.get_longest_port(),
             ports: app_data.get_selected_ports(),
@@ -335,55 +333,61 @@ fn draw_frame(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
-    let whole_constraints = if fd.status.contains(&Status::Filter) {
-        vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
-    } else {
-        vec![Constraint::Max(1), Constraint::Min(1)]
-    };
-
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(whole_constraints)
+        .constraints(if fd.status.contains(&Status::Filter) {
+            vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
+        } else {
+            vec![Constraint::Max(1), Constraint::Min(1)]
+        })
         .split(f.area());
-
-    // Split into 3, containers+controls, logs, then graphs
-    let upper_main = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Max(fd.height), Constraint::Min(1)].as_ref())
-        .split(whole_layout[1]);
-
-    let top_split = if fd.has_containers {
-        vec![Constraint::Percentage(90), Constraint::Percentage(10)]
-    } else {
-        vec![Constraint::Percentage(100)]
-    };
-    // Containers + docker commands
-    let top_panel = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(top_split)
-        .split(upper_main[0]);
-
-    let lower_split = if fd.has_containers {
-        vec![Constraint::Percentage(70), Constraint::Percentage(30)]
-    } else {
-        vec![Constraint::Percentage(100)]
-    };
-
-    // Split into 2, logs and charts
-    let lower_main = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(lower_split)
-        .split(upper_main[1]);
-
-    draw_blocks::containers::draw(app_data, top_panel[0], colors, f, fd, gui_state);
-
-    draw_blocks::logs::draw(app_data, lower_main[0], colors, f, fd, gui_state);
 
     draw_blocks::headers::draw(whole_layout[0], colors, f, fd, gui_state, keymap);
 
-    // Draw filter bar
+    // If required, draw filter bar
     if let Some(rect) = whole_layout.get(2) {
         draw_blocks::filter::draw(*rect, colors, f, fd);
+    }
+
+    let upper_main = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(if fd.has_containers {
+            vec![Constraint::Percentage(75), Constraint::Percentage(25)]
+        } else {
+            vec![Constraint::Percentage(100), Constraint::Percentage(0)]
+        })
+        .split(whole_layout[1]);
+
+    let containers_logs_section = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(if fd.show_logs {
+            vec![Constraint::Min(6), Constraint::Percentage(fd.log_height)]
+        } else {
+            vec![Constraint::Percentage(100)]
+        })
+        .split(upper_main[0]);
+
+    // Containers + docker commands
+    let containers_commands = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(if fd.has_containers {
+            vec![Constraint::Percentage(90), Constraint::Percentage(10)]
+        } else {
+            vec![Constraint::Percentage(100)]
+        })
+        .split(containers_logs_section[0]);
+
+    draw_blocks::containers::draw(app_data, containers_commands[0], colors, f, fd, gui_state);
+
+    if fd.show_logs {
+        draw_blocks::logs::draw(
+            app_data,
+            containers_logs_section[1],
+            colors,
+            f,
+            fd,
+            gui_state,
+        );
     }
 
     if let Some(id) = fd.delete_confirm.as_ref() {
@@ -400,7 +404,7 @@ fn draw_frame(
     }
 
     // only draw commands + charts if there are containers
-    if let Some(rect) = top_panel.get(1) {
+    if let Some(rect) = containers_commands.get(1) {
         draw_blocks::commands::draw(app_data, *rect, colors, f, fd, gui_state);
 
         // Can calculate the max string length here, and then use that to keep the ports section as small as possible (+4 for some padding + border)
@@ -411,7 +415,7 @@ fn draw_frame(
         let lower = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Min(1), Constraint::Max(ports_len)])
-            .split(lower_main[1]);
+            .split(upper_main[1]);
 
         draw_blocks::charts::draw(lower[0], colors, f, fd);
         draw_blocks::ports::draw(lower[1], colors, f, fd);

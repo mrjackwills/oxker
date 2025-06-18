@@ -1,14 +1,14 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Debug)]
-pub struct Redraw(AtomicBool);
+pub struct Rerender(AtomicBool);
 
-impl Redraw {
+impl Rerender {
     pub const fn new() -> Self {
         Self(AtomicBool::new(true))
     }
 
-    pub fn set_true(&self) {
+    pub fn update(&self) {
         self.0.store(true, Ordering::SeqCst);
     }
 

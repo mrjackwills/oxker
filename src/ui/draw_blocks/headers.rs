@@ -154,10 +154,9 @@ fn draw_columns(
             })
             .collect::<Vec<_>>();
 
-        let container_splits = header_data.iter().map(|i| i.2).collect::<Vec<_>>();
         let headers_section = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(container_splits)
+            .constraints(header_data.iter().map(|i| i.2))
             .split(split_bar[1]);
 
         for (index, (paragraph, header, _)) in header_data.into_iter().enumerate() {
@@ -196,19 +195,18 @@ pub fn draw(
 
     let column_width = usize::from(area.width).saturating_sub(help_width);
     let column_width = if column_width > 0 { column_width } else { 1 };
-    let splits = if fd.has_containers {
-        vec![
-            Constraint::Max(4),
-            Constraint::Max(column_width.try_into().unwrap_or_default()),
-            Constraint::Max(help_width.try_into().unwrap_or_default()),
-        ]
-    } else {
-        CONSTRAINT_100.to_vec()
-    };
 
     let split_bar = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(splits)
+        .constraints(if fd.has_containers {
+            vec![
+                Constraint::Max(4),
+                Constraint::Max(column_width.try_into().unwrap_or_default()),
+                Constraint::Max(help_width.try_into().unwrap_or_default()),
+            ]
+        } else {
+            CONSTRAINT_100.to_vec()
+        })
         .split(area);
 
     draw_loading_spinner(colors, f, fd, split_bar[0]);

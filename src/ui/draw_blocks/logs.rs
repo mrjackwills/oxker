@@ -39,7 +39,8 @@ pub fn draw(
         }
         f.render_widget(paragraph, area);
     } else {
-        let logs = app_data.lock().get_logs();
+        let padding = usize::from(area.height / 5);
+        let logs = app_data.lock().get_logs(area.height, padding);
         if logs.is_empty() {
             let mut paragraph = Paragraph::new("no logs found")
                 .block(block)
@@ -52,6 +53,7 @@ pub fn draw(
             let items = List::new(logs)
                 .block(block)
                 .highlight_symbol(RIGHT_ARROW)
+                .scroll_padding(padding)
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
             // This should always return Some, as logs is not empty
             if let Some(log_state) = app_data.lock().get_log_state() {
@@ -124,8 +126,14 @@ mod tests {
             }
         }
 
-        setup.gui_state.lock().next_panel();
-        setup.gui_state.lock().next_panel();
+        setup
+            .gui_state
+            .lock()
+            .selectable_panel_next(&setup.app_data);
+        setup
+            .gui_state
+            .lock()
+            .selectable_panel_next(&setup.app_data);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         // When selected, has a blue border

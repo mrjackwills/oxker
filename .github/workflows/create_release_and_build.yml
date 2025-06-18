@@ -22,6 +22,9 @@ jobs:
           - target: arm-unknown-linux-musleabihf
             output_name: linux_armv6.tar.gz
 
+          - target: aarch64-apple-darwin
+            output_name: apple_darwin_aarch64.tar.gz
+
           - target: x86_64-pc-windows-gnu
             output_name: windows_x86_64.zip
 
@@ -38,8 +41,15 @@ jobs:
       - name: install cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
-      # Build binary
+      # Build binary for arm MacOS using Docker Zigbuild
       - name: build
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: |
+          docker run --rm -v $(pwd):/io -w /io ghcr.io/rust-cross/cargo-zigbuild cargo zigbuild --release --target aarch64-apple-darwin
+     
+      # Build all other targets using Cross
+      - name: build
+        if: matrix.target != 'aarch64-apple-darwin'
         run: cross build --target ${{ matrix.target }} --release
 
       # Compress the output
@@ -126,8 +136,8 @@ jobs:
           docker build --platform linux/arm/v6,linux/arm64,linux/amd64 \
           -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:latest \
           -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:${{env.CURRENT_SEMVER}} \
-          -t ghcr.io/${{ github.repository_owner }}/oxker:latest \
-          -t ghcr.io/${{ github.repository_owner }}/oxker:${{env.CURRENT_SEMVER}} \
+          -t ghcr.io/${{ github.repository_owner }}/${{ github.ref_name }}:latest \
+          -t ghcr.io/${{ github.repository_owner }}/${{ github.ref_name }}:${{env.CURRENT_SEMVER}} \
           --provenance=false --sbom=false \
           --push \
           -f containerised/Dockerfile .
