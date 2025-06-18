@@ -18,6 +18,9 @@
 + reduce log entry clones, can expect 40-50% reduction in CPU and memory usage in certain common situations, [ecefa302b9ef5320ad4cce0b606aca70a7b459e2]
 + dead code removed, [b40b6b197e4e5fbdab083bc918d1a5d2750597f3]
 
+### Tests
++ add more whole layout tests, [4b81c6caaf12028d7527c3f23cd2de6d1503e223]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.10.3'>v0.10.3</a>
 ### 2025-04-22
 
