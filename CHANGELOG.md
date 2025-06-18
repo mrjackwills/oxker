@@ -15,7 +15,7 @@
 + merge args color/raw fix, [d198398795698a21d81d3fd20231c482cc346ab5]
 
 ### Refactors
-+ reduce log entry clones, can expect 40-50% reduction in CPU and memory usage in certain common situations, [ecefa302b9ef5320ad4cce0b606aca70a7b459e2]
++ reduce cloning of the logs text items, can expect 40-50% reduction in CPU and memory usage in certain common situations, [ecefa302b9ef5320ad4cce0b606aca70a7b459e2]
 + dead code removed, [b40b6b197e4e5fbdab083bc918d1a5d2750597f3]
 
 ### Tests
