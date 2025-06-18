@@ -9,7 +9,7 @@
 
 ### Features
 + change log panel size, closes #50, use the `-` or `=` keys to change the height of the logs panel, or `\` to toggle visibility. Automatically hide the logs panel using a new config item `show_logs`, see `example_config/*` files for more details, [6edf99e0846bb4134d8ee5b646065b8cda8074d7]
-+ build for aarch64-apple-darwin, closes #62, personally untested on MacOS - but others suggest it works as expected, [e7114d2f5e0ed8935943be64726fc2d90464a777], [2e8500902a515a246f9d9a503b4350849d634978]
++ build release binaries for aarch64-apple-darwin, closes #62, personally untested on MacOS - but others suggest it works as expected, [e7114d2f5e0ed8935943be64726fc2d90464a777], [2e8500902a515a246f9d9a503b4350849d634978]
 
 ### Fixes
 + merge args color/raw fix, [d198398795698a21d81d3fd20231c482cc346ab5]
