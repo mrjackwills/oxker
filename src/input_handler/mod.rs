@@ -5,7 +5,7 @@ use std::{
     time::SystemTime,
 };
 
-use bollard::query_parameters::LogsOptions;
+use bollard::container::LogsOptions;
 // use bollard::container::LogsOptions;
 use cansi::v3::categorise_text;
 use crossterm::{
@@ -188,7 +188,7 @@ impl InputHandler {
 
                 let path = log_path.join(format!("{name}_{now}.log"));
 
-                let options = Some(LogsOptions {
+                let options = Some(LogsOptions::<String> {
                     stderr: true,
                     stdout: true,
                     timestamps: args.show_timestamp,

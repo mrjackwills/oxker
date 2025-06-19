@@ -881,13 +881,7 @@ impl AppData {
                         .as_ref()
                         .map_or(String::new(), std::clone::Clone::clone),
                 );
-
-                let state = State::from((
-                    i.state
-                        .as_ref()
-                        .map_or(&bollard::secret::ContainerSummaryStateEnum::DEAD, |z| z),
-                    &status,
-                ));
+                let state = State::from((i.state.as_ref().map_or("dead", |z| z), &status));
                 let image = i
                     .image
                     .as_ref()

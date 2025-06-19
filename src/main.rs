@@ -149,7 +149,7 @@ async fn main() {
 #[allow(clippy::unwrap_used)]
 mod tests {
 
-    use std::{str::FromStr, sync::Arc};
+    use std::sync::Arc;
 
     use bollard::service::{ContainerSummary, Port};
 
@@ -228,7 +228,6 @@ mod tests {
 
     pub fn gen_container_summary(index: usize, state: &str) -> ContainerSummary {
         ContainerSummary {
-            image_manifest_descriptor: None,
             id: Some(format!("{index}")),
             names: Some(vec![format!("container_{}", index)]),
             image: Some(format!("image_{index}")),
@@ -244,7 +243,7 @@ mod tests {
             size_rw: None,
             size_root_fs: None,
             labels: None,
-            state: Some(bollard::secret::ContainerSummaryStateEnum::from_str(state).unwrap()),
+            state: Some(state.to_owned()),
             status: Some(format!("Up {index} hour")),
             host_config: None,
             network_settings: None,
