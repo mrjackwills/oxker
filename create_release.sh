@@ -104,7 +104,6 @@ ask_changelog_update() {
 	else
 		exit
 	fi
-
 }
 
 # Edit the release-body to include new lines from changelog
@@ -289,12 +288,14 @@ build_container_amd64() {
 	docker build --platform linux/amd64 --no-cache -t oxker_amd64 -f containerised/Dockerfile .
 	docker save -o /tmp/oxker_amd64.tar oxker_amd64
 }
+
 # build container for aarm64 platform
 build_container_arm64() {
 	echo -e "${YELLOW}docker build  --platform linux/arm64 --no-cache -t oxker_arm64 --no-cache -f containerised/Dockerfile .; docker save -o /tmp/oxker_arm64.tar oxker_arm64${RESET}"
 	docker build --platform linux/arm64 --no-cache -t oxker_arm64 -f containerised/Dockerfile .
 	docker save -o /tmp/oxker_arm64.tar oxker_arm64
 }
+
 # build container for armv6 platform
 build_container_armv6() {
 	echo -e "${YELLOW}docker build  --platform linux/arm/v6 --no-cache -t oxker_armv6 --no-cache -f containerised/Dockerfile .; docker save -o /tmp/oxker_armv6.tar oxker_armv6${RESET}"
