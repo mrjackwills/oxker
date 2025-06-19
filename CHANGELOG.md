@@ -1,4 +1,10 @@
-# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.10.4'>v0.10.4</a>
+# <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.10.5'>v0.10.5</a>
+### 2025-06-19
+
+### Reverts
++ Bollard update rolled back, closes [#66](https://github.com/mrjackwills/oxker/issues/66), [aac9c6b5](https://github.com/mrjackwills/oxker/commit/aac9c6b598ce6c23b14f5a8b0116e662b18074d2)
+
+ # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.10.4'>v0.10.4</a>
 ### 2025-06-18
 
 ### Chores
