@@ -55,3 +55,12 @@ debug = false
 
 [dev-dependencies]
 insta = "1.42.2"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }_{ target-family }_{ target-arch }{ archive-suffix }"
+
+[package.metadata.binstall.overrides.aarch64-apple-darwin]
+pkg-url = "{ repo }/releases/download/v{ version }/oxker_{ target-vendor }_{ target-family }_{ target-arch }.{ archive-format }"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
