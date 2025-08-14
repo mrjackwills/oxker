@@ -40,7 +40,7 @@ pub fn draw(
         f.render_widget(paragraph, area);
     } else {
         let padding = usize::from(area.height / 5);
-        let logs = app_data.lock().get_logs(area.height, padding);
+        let logs = app_data.lock().get_logs(area.as_size(), padding);
         if logs.is_empty() {
             let mut paragraph = Paragraph::new("no logs found")
                 .block(block)

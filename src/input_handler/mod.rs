@@ -286,6 +286,23 @@ impl InputHandler {
         }
     }
 
+    /// Advance the "cursor" along the logs
+    fn logs_forward(&self) {
+        let panel = self.gui_state.lock().get_selected_panel();
+        if panel == SelectablePanel::Logs {
+            let width = self.gui_state.lock().get_screen_width();
+            self.app_data.lock().log_forward(width);
+        }
+    }
+
+    /// Retreat the "cursor" along the logs
+    fn logs_back(&self) {
+        let panel = self.gui_state.lock().get_selected_panel();
+        if panel == SelectablePanel::Logs {
+            self.app_data.lock().log_back();
+        }
+    }
+
     /// Change the the "next" selectable panel
     /// If no containers, and on Commands panel, skip to next panel, as Commands panel isn't visible in this state
     fn next_panel_key(&self) {
@@ -467,6 +484,7 @@ impl InputHandler {
     }
 
     /// Handle button presses in all other scenarios
+    #[allow(clippy::cognitive_complexity)]
     async fn handle_others(&mut self, key_code: KeyCode) {
         self.handle_sort(key_code);
         // shift key plus arrows
@@ -537,28 +555,28 @@ impl InputHandler {
             _ if self.keymap.scroll_up_one.0 == key_code
                 || self.keymap.scroll_up_one.1 == Some(key_code) =>
             {
-                self.previous();
+                self.scroll_up();
             }
 
             _ if self.keymap.scroll_up_many.0 == key_code
                 || self.keymap.scroll_up_many.1 == Some(key_code) =>
             {
                 for _ in 0..=6 {
-                    self.previous();
+                    self.scroll_up();
                 }
             }
 
             _ if self.keymap.scroll_down_one.0 == key_code
                 || self.keymap.scroll_down_one.1 == Some(key_code) =>
             {
-                self.next();
+                self.scroll_down();
             }
 
             _ if self.keymap.scroll_down_many.0 == key_code
                 || self.keymap.scroll_down_many.1 == Some(key_code) =>
             {
                 for _ in 0..=6 {
-                    self.next();
+                    self.scroll_down();
                 }
             }
 
@@ -567,6 +585,18 @@ impl InputHandler {
             {
                 self.gui_state.lock().status_push(Status::Filter);
                 self.docker_tx.send(DockerMessage::Update).await.ok();
+            }
+
+            _ if self.keymap.log_scroll_back.0 == key_code
+                || self.keymap.log_scroll_back.1 == Some(key_code) =>
+            {
+                self.logs_back();
+            }
+
+            _ if self.keymap.log_scroll_forward.0 == key_code
+                || self.keymap.log_scroll_forward.1 == Some(key_code) =>
+            {
+                self.logs_forward();
             }
 
             KeyCode::Enter => self.enter_key().await,
@@ -638,8 +668,8 @@ impl InputHandler {
             }
         } else {
             match mouse_event.kind {
-                MouseEventKind::ScrollUp => self.previous(),
-                MouseEventKind::ScrollDown => self.next(),
+                MouseEventKind::ScrollUp => self.scroll_up(),
+                MouseEventKind::ScrollDown => self.scroll_down(),
                 MouseEventKind::Down(MouseButton::Left) => {
                     let mouse_point = Rect::new(mouse_event.column, mouse_event.row, 1, 1);
                     let header = self.gui_state.lock().get_intersect_header(mouse_point);
@@ -659,7 +689,7 @@ impl InputHandler {
     }
 
     /// Change state to next, depending which panel is currently in focus
-    fn next(&self) {
+    fn scroll_down(&self) {
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
             SelectablePanel::Containers => self.app_data.lock().containers_next(),
@@ -669,7 +699,7 @@ impl InputHandler {
     }
 
     /// Change state to previous, depending which panel is currently in focus
-    fn previous(&self) {
+    fn scroll_up(&self) {
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
             SelectablePanel::Containers => self.app_data.lock().containers_previous(),

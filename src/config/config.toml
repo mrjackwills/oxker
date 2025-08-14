@@ -77,6 +77,7 @@ save_logs = ["s"]
 scroll_down_many = ["pagedown"]
 # scroll down a list by one item
 scroll_down_one = ["down", "j"]
+
 # scroll down to the end of a list
 scroll_end = ["end"]
 # scroll up to the start of a list
@@ -85,6 +86,9 @@ scroll_start = ["home"]
 scroll_up_many = ["pageup"]
 # scroll up a list by one item
 scroll_up_one = ["up", "k"]
+# Horizontal scroll of the logs
+log_scroll_forward = ["right"]
+log_scroll_back = ["left"]
 # Select next panel
 select_next_panel = ["tab"]
 # Select previous panel

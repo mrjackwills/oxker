@@ -1,6 +1,5 @@
 ---
 source: src/ui/draw_blocks/help.rs
-assertion_line: 456
 expression: setup.terminal.backend()
 ---
 "                                                                                       "
@@ -19,6 +18,7 @@ expression: setup.terminal.backend()
 " │                                                                                   │ "
 " │ ( tab ) or ( shift+tab ) change panels                                            │ "
 " │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) change selected line        │ "
+" │ ( ← → ) horizontal scroll across logs                                             │ "
 " │ ( enter ) send docker container command                                           │ "
 " │ ( e ) exec into a container                                                       │ "
 " │ ( h ) toggle this help information - or click heading                             │ "
@@ -34,7 +34,6 @@ expression: setup.terminal.backend()
 " │                                                                                   │ "
 " │        currently an early work in progress, all and any input appreciated         │ "
 " │                       https://github.com/mrjackwills/oxker                        │ "
-" │                                                                                   │ "
 " │                                                                                   │ "
 " ╰───────────────────────────────────────────────────────────────────────────────────╯ "
 "                                                                                       "

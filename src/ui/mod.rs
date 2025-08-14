@@ -205,6 +205,10 @@ impl Ui {
         let docker_interval_ms = u128::from(self.app_data.lock().config.docker_interval_ms);
         let mut drawn_at = std::time::Instant::now();
 
+        if let Ok(size) = self.terminal.size() {
+            self.gui_state.lock().set_screen_width(size.width);
+        }
+
         while self.is_running.load(Ordering::SeqCst) {
             if self.should_redraw(&mut drawn_at, docker_interval_ms) {
                 let fd = FrameData::from(&*self);
@@ -243,11 +247,14 @@ impl Ui {
                             }
                             _ => (),
                         }
-                    } else if let Event::Resize(_, _) = event {
+                    } else if let Event::Resize(width, _) = event {
                         self.gui_state.lock().clear_area_map();
+
                         // self.gui_state.lock().set_window_height(row);
 
                         self.terminal.autoresize().ok();
+                        // todo set screen width
+                        self.gui_state.lock().set_screen_width(width);
                     }
                 }
             }
@@ -279,7 +286,6 @@ pub struct FrameData {
     filter_by: FilterBy,
     filter_term: Option<String>,
     has_containers: bool,
-    // container_section_height: u16,
     log_height: u16,
     show_logs: bool,
     has_error: Option<AppError>,
@@ -290,6 +296,7 @@ pub struct FrameData {
     port_max_lens: (usize, usize, usize),
     ports: Option<(Vec<ContainerPorts>, State)>,
     selected_panel: SelectablePanel,
+    scroll_title: Option<String>,
     sorted_by: Option<(Header, SortedOrder)>,
     status: HashSet<Status>,
 }
@@ -317,6 +324,7 @@ impl From<&Ui> for FrameData {
             log_title: app_data.get_log_title(),
             port_max_lens: app_data.get_longest_port(),
             ports: app_data.get_selected_ports(),
+            scroll_title: app_data.get_scroll_title(),
             selected_panel: gui_data.get_selected_panel(),
             sorted_by: app_data.get_sorted(),
             status: gui_data.get_status(),

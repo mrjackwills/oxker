@@ -7,10 +7,7 @@ use std::{
 
 use bollard::service::Port;
 use jiff::{Timestamp, tz::TimeZone};
-use ratatui::{
-    style::Color,
-    widgets::{ListItem, ListState},
-};
+use ratatui::{layout::Size, style::Color, text::Text, widgets::ListState};
 
 use crate::config::AppColors;
 
@@ -563,81 +560,166 @@ impl LogsTz {
 /// stateful list dependent on whether the timestamp is in the HashSet or not
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Logs {
-    logs: StatefulList<ListItem<'static>>,
+    // should just be list of spans?
+    lines: StatefulList<Text<'static>>,
     tz: HashSet<LogsTz>,
+    // could probably be a u16
+    offset: u16,
+    max_log_len: usize,
+    adjusted_max_width: usize,
 }
 
 impl Default for Logs {
     fn default() -> Self {
-        let mut logs = StatefulList::new(vec![]);
-        logs.end();
+        let mut lines = StatefulList::new(vec![]);
+        lines.end();
         Self {
-            logs,
+            lines,
             tz: HashSet::new(),
+            offset: 0,
+            adjusted_max_width: 0,
+            max_log_len: 0,
         }
     }
 }
 
 impl Logs {
     /// Only allow a new log line to be inserted if the log timestamp isn't in the tz HashSet
-    pub fn insert(&mut self, line: ListItem<'static>, tz: LogsTz) {
+    pub fn insert(&mut self, line: Text<'static>, tz: LogsTz) {
         if self.tz.insert(tz) {
-            self.logs.items.push(line);
+            self.max_log_len = self.max_log_len.max(line.width());
+            self.lines.items.push(line);
         }
     }
 
-    /// Get the logs vec, but instead of cloning to whole vec, only clone items with x of the currently selected index
+    /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
+    pub fn get_scroll_title(&self) -> Option<String> {
+        if self.offset > 0 {
+            Some(format!(" {}/{} ", self.offset, self.adjusted_max_width))
+        } else {
+            None
+        }
+    }
+
+    /// Format a log lone. Only return screen width amount of chars
+    /// If offset set, remove `char_offset` number of chars from a Text
+    /// `text` *should* only be a single line, so just use the .first() method rather than trying to iterate
+    fn format_log_line(text: &Text<'static>, char_offset: usize, width: u16) -> Text<'static> {
+        let mut skipped = 0;
+        Text::from(
+            text.lines
+                .first()
+                .map(|line| {
+                    ratatui::text::Line::from(
+                        line.spans
+                            .iter()
+                            .filter_map(|span| {
+                                if skipped >= char_offset {
+                                    return Some(ratatui::text::Span::styled(
+                                        span.content.chars().take(width.into()).collect::<String>(),
+                                        span.style,
+                                    ));
+                                }
+                                let span_len = span.content.chars().count();
+                                if skipped + span_len <= char_offset {
+                                    skipped += span_len;
+                                    None
+                                } else {
+                                    let start_index = char_offset - skipped;
+                                    skipped = char_offset;
+                                    let new_content = span
+                                        .content
+                                        .chars()
+                                        .skip(start_index)
+                                        .take(width.into())
+                                        .collect::<String>();
+                                    Some(ratatui::text::Span::styled(new_content, span.style))
+                                }
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                })
+                .into_iter()
+                .collect::<Vec<_>>(),
+        )
+    }
+
+    /// Get the logs vec, but instead of cloning to whole vec, only clone items within x of the currently selected index, as ell as only the current screen widths number of chars
     /// Where x is the abs different of the index plus the panel height & a padding
+    /// Take into account the char offset, so that can scroll a line
     /// The rest can be just empty list items
-    pub fn to_vec(&self, height: usize, padding: usize) -> Vec<ListItem<'static>> {
-        let current_index = self.logs.state.selected().unwrap_or_default();
-        self.logs
+    pub fn get_visible_logs(&self, size: Size, padding: usize) -> Vec<Text<'static>> {
+        let current_index = self.lines.state.selected().unwrap_or_default();
+        let height_padding = usize::from(size.height) + padding;
+        let char_offset = if usize::from(self.offset) > self.max_log_len {
+            self.max_log_len
+        } else {
+            self.offset.into()
+        };
+
+        self.lines
             .items
             .iter()
             .enumerate()
             .map(|(index, item)| {
-                if current_index.abs_diff(index) <= height + padding {
-                    item.clone()
+                if current_index.abs_diff(index) <= height_padding {
+                    Self::format_log_line(item, char_offset, size.width)
                 } else {
-                    ListItem::from("")
+                    Text::from("")
                 }
             })
             .collect()
     }
+
     /// The rest of the methods are basically forwarding from the underlying StatefulList
     pub fn get_state_title(&self) -> String {
-        self.logs.get_state_title()
+        self.lines.get_state_title()
+    }
+
+    /// Add a padding so one char will always be visilbe?
+    /// +6 is to account for borders & the selection triangle and a little bit of padding
+    pub fn forward(&mut self, width: u16) {
+        let offset = usize::from(self.offset);
+        self.adjusted_max_width = self.max_log_len.saturating_sub(width.into()) + 6;
+        if self.adjusted_max_width > 0 && offset < self.adjusted_max_width {
+            self.offset = self.offset.saturating_add(1);
+        }
+    }
+
+    /// Reduce the char offset
+    pub const fn back(&mut self) {
+        self.offset = self.offset.saturating_sub(1);
     }
 
     pub fn next(&mut self) {
-        self.logs.next();
+        self.lines.next();
     }
 
     pub fn previous(&mut self) {
-        self.logs.previous();
+        self.lines.previous();
     }
 
     pub fn end(&mut self) {
-        self.logs.end();
+        self.lines.end();
     }
     pub fn start(&mut self) {
-        self.logs.start();
+        self.lines.start();
     }
 
-    // TODO remove this once zigbuild uses Rust v1.87.0
-    #[cfg(target_os = "macos")]
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn len(&self) -> usize {
-        self.logs.items.len()
-    }
+    // // TODO remove this once zigbuild uses Rust v1.87.0
+    // #[cfg(target_os = "macos")]
+    // #[allow(clippy::missing_const_for_fn)]
+    // pub fn len(&self) -> usize {
+    //     self.logs.items.len()
+    // }
 
-    #[cfg(not(target_os = "macos"))]
+    // #[cfg(not(target_os = "macos"))]
     pub const fn len(&self) -> usize {
-        self.logs.items.len()
+        self.lines.items.len()
     }
 
     pub const fn state(&mut self) -> &mut ListState {
-        &mut self.logs.state
+        &mut self.lines.state
     }
 }
 
@@ -801,7 +883,10 @@ impl Columns {
 mod tests {
 
     use jiff::tz::TimeZone;
-    use ratatui::widgets::ListItem;
+    use ratatui::{
+        layout::Size,
+        text::{Line, Text},
+    };
 
     use crate::{
         app_data::{ContainerImage, Logs, LogsTz, RunningState},
@@ -941,21 +1026,21 @@ mod tests {
         let mut logs = Logs::default();
         let line = log_sanitizer::remove_ansi(input);
 
-        logs.insert(ListItem::new(line.clone()), tz.clone());
-        logs.insert(ListItem::new(line.clone()), tz.clone());
-        logs.insert(ListItem::new(line), tz);
+        logs.insert(Text::from(line.clone()), tz.clone());
+        logs.insert(Text::from(line.clone()), tz.clone());
+        logs.insert(Text::from(line), tz);
 
-        assert_eq!(logs.logs.items.len(), 1);
+        assert_eq!(logs.lines.items.len(), 1);
 
         let input = "2023-01-15T19:13:30.783138328Z Lorem ipsum dolor sit amet";
         let (tz, _) = LogsTz::splitter(input);
         let line = log_sanitizer::remove_ansi(input);
 
-        logs.insert(ListItem::new(line.clone()), tz.clone());
-        logs.insert(ListItem::new(line.clone()), tz.clone());
-        logs.insert(ListItem::new(line), tz);
+        logs.insert(Text::from(line.clone()), tz.clone());
+        logs.insert(Text::from(line.clone()), tz.clone());
+        logs.insert(Text::from(line), tz);
 
-        assert_eq!(logs.logs.items.len(), 2);
+        assert_eq!(logs.lines.items.len(), 2);
     }
 
     #[test]
@@ -1007,5 +1092,40 @@ mod tests {
         // Unknown
         let input = State::from(("oxker", &healthy));
         assert_eq!(input, State::Unknown);
+    }
+
+    #[test]
+    /// Test the format_log_line methods, should ideally check colours are being correct kept as well
+    fn test_to_vec() {
+        let mut logs = Logs::default();
+
+        let input = "2023-01-14T19:13:30.783138328Z Hello world some long line".to_owned();
+        let (tz, _) = LogsTz::splitter(&input);
+        logs.insert(Text::from(input), tz);
+
+        let input = "2023-01-14T19:13:31.783138328Z Hello world some line".to_owned();
+        let (tz, _) = LogsTz::splitter(&input);
+        logs.insert(Text::from(input), tz);
+
+        let input = "2023-01-14T19:13:32.783138328Z Hello world".to_owned();
+        let (tz, _) = LogsTz::splitter(&input);
+        logs.insert(Text::from(input), tz);
+
+        logs.offset = 43;
+        let result = logs.get_visible_logs(
+            Size {
+                width: 14,
+                height: 10,
+            },
+            10,
+        );
+        assert_eq!(
+            vec![
+                Text::from(Line::from("some long line")),
+                Text::from(Line::from("some line")),
+                Text::from(Line::default())
+            ],
+            result
+        );
     }
 }

@@ -187,6 +187,7 @@ pub struct GuiState {
     log_height: u16,
     rerender: Arc<Rerender>,
     selected_panel: SelectablePanel,
+    screen_width: u16,
     show_logs: bool,
     status: HashSet<Status>,
     pub info_box_text: Option<(String, Instant)>,
@@ -205,6 +206,7 @@ impl GuiState {
             loading_index: 0,
             loading_set: HashSet::new(),
             log_height: 75,
+            screen_width: 0,
             rerender: Arc::clone(redraw),
             selected_panel: SelectablePanel::default(),
             show_logs,
@@ -230,6 +232,16 @@ impl GuiState {
             }
             self.rerender.update();
         }
+    }
+
+    /// Set the screen width, used for offset char calculations
+    pub const fn set_screen_width(&mut self, width: u16) {
+        self.screen_width = width;
+    }
+
+    /// Get the screen width, used for offset char calculations
+    pub const fn get_screen_width(&self) -> u16 {
+        self.screen_width
     }
 
     pub const fn get_show_logs(&self) -> bool {

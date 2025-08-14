@@ -1,4 +1,5 @@
 /target
 /releases
+/binaries
 # Used in the zigbuild for aarch64-apple-darwin
 .intentionally-empty-file.o

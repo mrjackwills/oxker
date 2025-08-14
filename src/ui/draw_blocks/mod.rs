@@ -72,7 +72,6 @@ pub fn max_line_width(text: &str) -> usize {
         .max()
         .unwrap_or_default()
 }
-
 /// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
 fn generate_block<'a>(
@@ -101,7 +100,15 @@ fn generate_block<'a>(
     let mut block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .title(title);
+        .title(ratatui::text::Line::from(title).left_aligned());
+
+    if panel == SelectablePanel::Logs {
+        if let Some(x) = fd.scroll_title.as_ref() {
+            block = block
+                .title_bottom(x.to_owned())
+                .title_alignment(ratatui::layout::Alignment::Right);
+        }
+    }
     if !fd.status.contains(&Status::Filter) {
         if fd.selected_panel == panel {
             block = block.border_style(Style::default().fg(colors.borders.selected));
@@ -178,6 +185,7 @@ pub mod tests {
                 loading_icon: gui_data.get_loading().to_string(),
                 log_height: gui_data.get_log_height(),
                 log_title: app_data.get_log_title(),
+                scroll_title: app_data.get_scroll_title(),
                 port_max_lens: app_data.get_longest_port(),
                 ports: app_data.get_selected_ports(),
                 selected_panel: gui_data.get_selected_panel(),

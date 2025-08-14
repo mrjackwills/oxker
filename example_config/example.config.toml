@@ -86,6 +86,9 @@ scroll_start = ["home"]
 scroll_up_many = ["pageup"]
 # scroll up a list by one item
 scroll_up_one = ["up", "k"]
+# Horizontal scroll of the logs
+log_scroll_forward = ["right"]
+log_scroll_back = ["left"]
 # Select next panel
 select_next_panel = ["tab"]
 # Select previous panel

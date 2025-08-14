@@ -1,7 +1,7 @@
 use bollard::models::ContainerSummary;
 use core::fmt;
 use parking_lot::Mutex;
-use ratatui::widgets::{ListItem, ListState};
+use ratatui::{layout::Size, text::Text, widgets::ListState};
 use std::{
     hash::Hash,
     sync::Arc,
@@ -644,6 +644,28 @@ impl AppData {
             })
     }
 
+    /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
+    pub fn get_scroll_title(&self) -> Option<String> {
+        self.get_selected_container()
+            .and_then(|i| i.logs.get_scroll_title())
+    }
+
+    /// Increase the logs offset, basically moving an invisible cursor back
+    pub fn log_back(&mut self) {
+        if let Some(i) = self.get_mut_selected_container() {
+            i.logs.back();
+            self.redraw.update();
+        }
+    }
+
+    /// Increase the logs offset, basically moving an invisible cursor forward
+    pub fn log_forward(&mut self, width: u16) {
+        if let Some(i) = self.get_mut_selected_container() {
+            i.logs.forward(width);
+            self.redraw.update();
+        }
+    }
+
     /// select next selected log line
     pub fn log_next(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
@@ -677,12 +699,12 @@ impl AppData {
     }
 
     /// Get mutable Vec of current containers logs
-    pub fn get_logs(&self, height: u16, padding: usize) -> Vec<ListItem<'static>> {
+    pub fn get_logs(&self, size: Size, padding: usize) -> Vec<Text<'static>> {
         self.containers
             .state
             .selected()
             .and_then(|i| self.containers.items.get(i))
-            .map_or(vec![], |i| i.logs.to_vec(height.into(), padding))
+            .map_or(vec![], |i| i.logs.get_visible_logs(size, padding))
     }
 
     /// Get mutable Option of the currently selected container Logs state
@@ -965,7 +987,7 @@ impl AppData {
                     } else {
                         log_sanitizer::remove_ansi(&i)
                     };
-                    container.logs.insert(ListItem::new(lines), log_tz);
+                    container.logs.insert(Text::from(lines), log_tz);
                 }
 
                 // Set the logs selected row for each container
@@ -1945,14 +1967,19 @@ mod tests {
         let logs = (1..=3).map(|i| format!("{i} {i}")).collect::<Vec<_>>();
 
         app_data.update_log_by_id(logs, &ids[0]);
-        // app_data.log_start();
 
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(2));
         assert_eq!(result.unwrap().offset(), 0);
 
-        let result = app_data.get_logs(4, 1);
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 4,
+            },
+            1,
+        );
         assert_eq!(result.len(), 3);
 
         let result = app_data.get_log_title();
@@ -2340,44 +2367,68 @@ mod tests {
 
         app_data.update_log_by_id(logs, &ids[0]);
 
-        let result = app_data.get_logs(10, 10);
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 10,
+            },
+            10,
+        );
         for (index, item) in result.iter().enumerate() {
             if index < 979 {
-                assert_eq!(item, &ListItem::new(""));
+                assert_eq!(item, &Text::from(""));
             } else {
-                assert_eq!(item, &ListItem::new(format!("{index}")));
+                assert_eq!(item, &Text::from(format!("{index}")));
             }
         }
 
-        let result = app_data.get_logs(100, 20);
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 100,
+            },
+            20,
+        );
         for (index, item) in result.iter().enumerate() {
             if index < 879 {
-                assert_eq!(item, &ListItem::new(""));
+                assert_eq!(item, &Text::from(""));
             } else {
-                assert_eq!(item, &ListItem::new(format!("{index}")));
+                assert_eq!(item, &Text::from(format!("{index}")));
             }
         }
 
         app_data.log_start();
-        let result = app_data.get_logs(10, 10);
+
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 10,
+            },
+            10,
+        );
         for (index, item) in result.iter().enumerate() {
             if index > 20 {
-                assert_eq!(item, &ListItem::new(""));
+                assert_eq!(item, &Text::from(""));
             } else {
-                assert_eq!(item, &ListItem::new(format!("{index}")));
+                assert_eq!(item, &Text::from(format!("{index}")));
             }
         }
 
         for _ in 0..=500 {
             app_data.log_next();
         }
-
-        let result = app_data.get_logs(10, 10);
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 10,
+            },
+            10,
+        );
         for (index, item) in result.iter().enumerate() {
             if (481..=521).contains(&index) {
-                assert_eq!(item, &ListItem::new(format!("{index}")));
+                assert_eq!(item, &Text::from(format!("{index}")));
             } else {
-                assert_eq!(item, &ListItem::new(""));
+                assert_eq!(item, &Text::from(""));
             }
         }
     }

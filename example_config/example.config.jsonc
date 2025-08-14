@@ -100,6 +100,13 @@
 			"up",
 			"k"
 		],
+		// Horizontal scroll of the logs
+		"log_scroll_forward": [
+			"right"
+		],
+		"log_scroll_back": [
+			"left"
+		],
 		// Select next panel
 		"select_next_panel": [
 			"tab"
