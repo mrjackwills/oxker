@@ -407,13 +407,6 @@ impl AppData {
 
     /// Container state methods
     /// Get the total number of none "hidden" containers
-    // TODO remove this once zigbuild uses Rust v1.87.0
-    #[cfg(target_os = "macos")]
-    pub fn get_container_len(&self) -> usize {
-        self.containers.items.len()
-    }
-
-    #[cfg(not(target_os = "macos"))]
     pub const fn get_container_len(&self) -> usize {
         self.containers.items.len()
     }
