@@ -182,7 +182,7 @@ mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });

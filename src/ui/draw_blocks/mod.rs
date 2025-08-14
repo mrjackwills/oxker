@@ -228,9 +228,9 @@ pub mod tests {
 
     /// Just a shorthand for when enumerating over result cells
     pub fn get_result(
-        setup: &TuiTestSetup,
+        setup: &'_ TuiTestSetup,
         // w: u16,
-    ) -> std::iter::Enumerate<std::slice::Chunks<ratatui::buffer::Cell>> {
+    ) -> std::iter::Enumerate<std::slice::Chunks<'_, ratatui::buffer::Cell>> {
         setup
             .terminal
             .backend()
@@ -284,7 +284,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -313,7 +313,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[1]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -348,7 +348,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -381,7 +381,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -410,7 +410,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -442,7 +442,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -472,7 +472,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -506,7 +506,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -538,7 +538,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });

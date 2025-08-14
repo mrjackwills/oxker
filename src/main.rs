@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_if)]
+
 use app_data::AppData;
 use app_error::AppError;
 use bollard::{API_DEFAULT_VERSION, Docker};
