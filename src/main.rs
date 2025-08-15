@@ -1,4 +1,5 @@
 #![allow(clippy::collapsible_if)]
+// Zigbuild is stuck on 1.87.0, which means Mac builds won't work when using collapsible ifs
 
 use app_data::AppData;
 use app_error::AppError;
@@ -151,7 +152,7 @@ async fn main() {
 #[allow(clippy::unwrap_used)]
 mod tests {
 
-    use std::sync::Arc;
+    use std::{str::FromStr, sync::Arc};
 
     use bollard::service::{ContainerSummary, Port};
 
@@ -230,6 +231,7 @@ mod tests {
 
     pub fn gen_container_summary(index: usize, state: &str) -> ContainerSummary {
         ContainerSummary {
+            image_manifest_descriptor: None,
             id: Some(format!("{index}")),
             names: Some(vec![format!("container_{}", index)]),
             image: Some(format!("image_{index}")),
@@ -245,7 +247,7 @@ mod tests {
             size_rw: None,
             size_root_fs: None,
             labels: None,
-            state: Some(state.to_owned()),
+            state: Some(bollard::secret::ContainerSummaryStateEnum::from_str(state).unwrap()),
             status: Some(format!("Up {index} hour")),
             host_config: None,
             network_settings: None,

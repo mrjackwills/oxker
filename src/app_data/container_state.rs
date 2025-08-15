@@ -7,7 +7,12 @@ use std::{
 
 use bollard::service::Port;
 use jiff::{Timestamp, tz::TimeZone};
-use ratatui::{layout::Size, style::Color, text::Text, widgets::ListState};
+use ratatui::{
+    layout::Size,
+    style::Color,
+    text::{Line, Text},
+    widgets::ListState,
+};
 
 use crate::config::AppColors;
 
@@ -323,6 +328,54 @@ impl From<(&str, &ContainerStatus)> for State {
     }
 }
 
+/// Need status, to check if container is unhealthy or not
+impl
+    From<(
+        &bollard::secret::ContainerSummaryStateEnum,
+        &ContainerStatus,
+    )> for State
+{
+    fn from(
+        (input, status): (
+            &bollard::secret::ContainerSummaryStateEnum,
+            &ContainerStatus,
+        ),
+    ) -> Self {
+        match input {
+            bollard::secret::ContainerSummaryStateEnum::DEAD => Self::Dead,
+            bollard::secret::ContainerSummaryStateEnum::EXITED => Self::Exited,
+            bollard::secret::ContainerSummaryStateEnum::PAUSED => Self::Paused,
+            bollard::secret::ContainerSummaryStateEnum::REMOVING => Self::Removing,
+            bollard::secret::ContainerSummaryStateEnum::RESTARTING => Self::Restarting,
+            bollard::secret::ContainerSummaryStateEnum::RUNNING => {
+                if status.unhealthy() {
+                    Self::Running(RunningState::Unhealthy)
+                } else {
+                    Self::Running(RunningState::Healthy)
+                }
+            }
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// Again, need status, to check if container is unhealthy or not
+impl
+    From<(
+        Option<&bollard::secret::ContainerSummaryStateEnum>,
+        &ContainerStatus,
+    )> for State
+{
+    fn from(
+        (input, status): (
+            Option<&bollard::secret::ContainerSummaryStateEnum>,
+            &ContainerStatus,
+        ),
+    ) -> Self {
+        input.map_or(Self::Unknown, |input| Self::from((input, status)))
+    }
+}
+
 /// Again, need status, to check if container is unhealthy or not
 impl From<(Option<String>, &ContainerStatus)> for State {
     fn from((input, status): (Option<String>, &ContainerStatus)) -> Self {
@@ -590,45 +643,41 @@ impl Logs {
     /// `text` *should* only be a single line, so just use the .first() method rather than trying to iterate
     fn format_log_line(text: &Text<'static>, char_offset: usize, width: u16) -> Text<'static> {
         let mut skipped = 0;
-        Text::from(
-            text.lines
-                .first()
-                .map(|line| {
-                    ratatui::text::Line::from(
-                        line.spans
-                            .iter()
-                            .filter_map(|span| {
-                                if skipped >= char_offset {
-                                    return Some(ratatui::text::Span::styled(
-                                        span.content.chars().take(width.into()).collect::<String>(),
-                                        span.style,
-                                    ));
-                                }
-                                let span_len = span.content.chars().count();
-                                if skipped + span_len <= char_offset {
-                                    skipped += span_len;
-                                    None
-                                } else {
-                                    let start_index = char_offset - skipped;
-                                    skipped = char_offset;
-                                    let new_content = span
-                                        .content
+        text.lines.first().map_or_else(Text::default, |line| {
+            Text::from(Line::from(
+                line.spans
+                    .iter()
+                    .filter_map(|span| {
+                        if skipped >= char_offset {
+                            Some(ratatui::text::Span::styled(
+                                span.content.chars().take(width.into()).collect::<String>(),
+                                span.style,
+                            ))
+                        } else {
+                            let span_len = span.content.chars().count();
+                            if skipped + span_len <= char_offset {
+                                skipped += span_len;
+                                None
+                            } else {
+                                let start_index = char_offset - skipped;
+                                skipped = char_offset;
+                                Some(ratatui::text::Span::styled(
+                                    span.content
                                         .chars()
                                         .skip(start_index)
                                         .take(width.into())
-                                        .collect::<String>();
-                                    Some(ratatui::text::Span::styled(new_content, span.style))
-                                }
-                            })
-                            .collect::<Vec<_>>(),
-                    )
-                })
-                .into_iter()
-                .collect::<Vec<_>>(),
-        )
+                                        .collect::<String>(),
+                                    span.style,
+                                ))
+                            }
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+            ))
+        })
     }
 
-    /// Get the logs vec, but instead of cloning to whole vec, only clone items within x of the currently selected index, as ell as only the current screen widths number of chars
+    /// Get the logs vec, but instead of cloning to whole vec, only clone items within x of the currently selected index, as well as only the current screen widths number of chars
     /// Where x is the abs different of the index plus the panel height & a padding
     /// Take into account the char offset, so that can scroll a line
     /// The rest can be just empty list items
