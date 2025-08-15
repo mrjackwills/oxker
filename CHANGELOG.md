@@ -3,7 +3,7 @@
 + Rust 1.89 linting, [79d19ceeb81ae60bc5562683e405d6e74e6f2578]
 
 ### Features
-+ horizontally scroll across logs. By default use `←` & `→` keys to traverse horizontally across the logs when logs panel selected. Updated `config.toml` with `log_scroll_forward` and `log_scroll_back`  [c190f0206cc55b8e45b8373f9be954e828c18b3b]
++ horizontally scroll across logs. By default use `←` & `→` keys to traverse horizontally across the lines when logs panel selected. Updated `config.toml` with `log_scroll_forward` and `log_scroll_back`  [c190f0206cc55b8e45b8373f9be954e828c18b3b]
 + Force clear screen & redraw of UI. By default uses `f` key, `config.toml` updated with `force_redraw`  [50edbc0cc09db864835fe81a03cba8eadafe548b]
 
 ### Refactors
