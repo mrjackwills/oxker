@@ -50,7 +50,7 @@ pub struct Ui {
     input_tx: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
     now: Instant,
-    redraw: Arc<Rerender>,
+    rerender: Arc<Rerender>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
@@ -73,7 +73,7 @@ impl Ui {
         gui_state: Arc<Mutex<GuiState>>,
         input_tx: Sender<InputMessages>,
         is_running: Arc<AtomicBool>,
-        redraw: Arc<Rerender>,
+        rerender: Arc<Rerender>,
     ) {
         match Self::setup_terminal() {
             Ok(mut terminal) => {
@@ -85,7 +85,7 @@ impl Ui {
                     input_tx,
                     is_running,
                     now: Instant::now(),
-                    redraw,
+                    rerender,
                     terminal,
                 };
                 if let Err(e) = ui.draw_ui().await {
@@ -169,6 +169,13 @@ impl Ui {
         Ok(())
     }
 
+    /// Check if the user has attempt to clear the screen, and if so clear and redraw
+    fn check_clear(&mut self) {
+        if self.rerender.get_clear() {
+            self.terminal.clear().ok();
+            self.rerender.update_draw();
+        }
+    }
     /// Use external docker cli to exec into a container
     async fn exec(&mut self) {
         let exec_mode = self.gui_state.lock().get_exec_mode();
@@ -191,7 +198,8 @@ impl Ui {
     /// Use the previously redrawn time, the current time, the docker_interval, and the redraw struct, to calculate
     /// if the screen should be redrawn or not
     fn should_redraw(&self, previous: &mut Instant, docker_interval_ms: u128) -> bool {
-        let result = self.redraw.swap() || previous.elapsed().as_millis() >= docker_interval_ms;
+        let result =
+            self.rerender.swap_draw() || previous.elapsed().as_millis() >= docker_interval_ms;
         if result {
             *previous = std::time::Instant::now();
         }
@@ -210,6 +218,10 @@ impl Ui {
         }
 
         while self.is_running.load(Ordering::SeqCst) {
+            // if self.redraw.get_clear() {
+            //     self.terminal.clear().ok();
+            //     continue;
+            // }
             if self.should_redraw(&mut drawn_at, docker_interval_ms) {
                 let fd = FrameData::from(&*self);
 
@@ -249,15 +261,12 @@ impl Ui {
                         }
                     } else if let Event::Resize(width, _) = event {
                         self.gui_state.lock().clear_area_map();
-
-                        // self.gui_state.lock().set_window_height(row);
-
                         self.terminal.autoresize().ok();
-                        // todo set screen width
                         self.gui_state.lock().set_screen_width(width);
                     }
                 }
             }
+            self.check_clear();
         }
         Ok(())
     }

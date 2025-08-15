@@ -114,6 +114,7 @@ In application controls, these, amongst many other settings, can be customized w
 | ```( - ) ``` or ```(=)``` | Reduce or increase the height of the logs panel.|
 | ```( \ )``` | Toggle the visibility of the logs panel.|
 | ```( e )``` | Exec into the selected container - not available on Windows.|
+| ```( f )``` | Force clear the screen & redraw the gui.|
 | ```( h )``` | Toggle help menu.|
 | ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
 | ```( q )``` | Quit.|

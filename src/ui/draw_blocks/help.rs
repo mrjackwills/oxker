@@ -84,7 +84,6 @@ impl HelpInfo {
         }
     }
 
-    // todo ← → for log moving
     /// Generate the button information span + metadata
     #[allow(clippy::too_many_lines)]
     fn gen_keymap_info(colors: AppColors, zone: Option<&TimeZone>, show_timestamp: bool) -> Self {
@@ -128,6 +127,11 @@ impl HelpInfo {
                 button_desc("exec into a container"),
                 #[cfg(target_os = "windows")]
                 button_desc(" - not available on Windows"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("f"),
+                button_desc("force clear the screen & redraw the gui"),
             ]),
             Line::from(vec![
                 space(),
@@ -285,6 +289,7 @@ impl HelpInfo {
             or_secondary(km.exec, "exec into a container"),
             #[cfg(target_os = "windows")]
             or_secondary(km.exec, "exec into a container - not available on Windows"),
+            or_secondary(km.force_redraw, "force clear the screen & redraw the gui"),
             or_secondary(
                 km.toggle_help,
                 "toggle this help information - or click heading",
@@ -445,9 +450,8 @@ mod tests {
     #[test]
     /// This will cause issues once the version has more than the current 5 chars (0.5.0)
     /// println!("{} {} {} {} {}", row_index, result_cell_index, result_cell.symbol(), result_cell.bg, result_cell.fg);
-    /// TODO broken wihh the horizonal scrolls!
     fn test_draw_blocks_help() {
-        let mut setup = test_setup(87, 35, true, true);
+        let mut setup = test_setup(87, 36, true, true);
         let tz = setup.app_data.lock().config.timezone.clone();
 
         setup
@@ -469,12 +473,12 @@ mod tests {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
-                    (0 | 34, _) | (0..=33, 0 | 86) => {
+                    (0 | 35, _) | (0..=34, 0 | 86) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
                     // border is red on black
-                    (1 | 32, _) | (1..=31, 1 | 85) => {
+                    (1 | 34, _) | (1..=31, 1 | 85) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
@@ -483,15 +487,15 @@ mod tests {
                     | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
                     | (15, 2..=10 | 13..=21 | 24..=40 | 43..=56)
-                    | (16 | 25 | 27, 2..=10)
-                    | (17 | 24, 2..=12)
-                    | (18 | 19 | 20 | 21 | 23 | 26 | 28, 2..=8)
-                    | (22, 2..=9 | 12..=18) => {
+                    | (16 | 26 | 28, 2..=10)
+                    | (17 | 25, 2..=12)
+                    | (18 | 19 | 20 | 21 | 22 | 24 | 27 | 29, 2..=8)
+                    | (23, 2..=9 | 12..=18) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // The URL is yellow and underlined
-                    (31, 25..=60) => {
+                    (32, 25..=60) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::White);
                         assert_eq!(result_cell.modifier, Modifier::UNDERLINED);
@@ -508,10 +512,9 @@ mod tests {
 
     #[test]
     /// Test that the help panel gets drawn with custom colors
-    /// This test is annoying
     /// println!("{} {} {} {} {}", row_index, result_cell_index, result_cell.symbol(), result_cell.bg, result_cell.fg);
     fn test_draw_blocks_help_custom_colors() {
-        let mut setup = test_setup(87, 35, true, true);
+        let mut setup = test_setup(87, 36, true, true);
         let mut colors = AppColors::new();
         let tz = setup.app_data.lock().config.timezone.clone();
 
@@ -533,17 +536,16 @@ mod tests {
             .unwrap();
 
         assert_snapshot!(setup.terminal.backend());
-
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
-                    (0 | 34, _) | (0..=33, 0 | 86) => {
+                    (0 | 35, _) | (0..=34, 0 | 86) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
                     // border is red on black
-                    (1 | 32, _) | (1..=31, 1 | 85) => {
+                    (1 | 34, _) | (1..=31, 1 | 85) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Red);
                     }
@@ -552,15 +554,15 @@ mod tests {
                     | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
                     | (15, 2..=10 | 13..=21 | 24..=40 | 43..=56)
-                    | (16 | 25 | 27, 2..=10)
-                    | (17 | 24, 2..=12)
-                    | (18 | 19 | 20 | 21 | 23 | 26 | 28, 2..=8)
-                    | (22, 2..=9 | 12..=18) => {
+                    | (16 | 26 | 28, 2..=10)
+                    | (17 | 25, 2..=12)
+                    | (18 | 19 | 20 | 21 | 22 | 24 | 27 | 29, 2..=8)
+                    | (23, 2..=9 | 12..=18) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Yellow);
                     }
                     // The URL is yellow and underlined
-                    (31, 25..=60) => {
+                    (32, 25..=60) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Yellow);
                         assert_eq!(result_cell.modifier, Modifier::UNDERLINED);
@@ -578,7 +580,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with one definition for each entry
     fn test_draw_blocks_help_custom_keymap_one_definition() {
-        let mut setup = test_setup(98, 49, true, true);
+        let mut setup = test_setup(98, 50, true, true);
 
         let input = Keymap {
             clear: (KeyCode::Char('a'), None),
@@ -586,33 +588,34 @@ mod tests {
             delete_deny: (KeyCode::Char('c'), None),
             exec: (KeyCode::Char('d'), None),
             filter_mode: (KeyCode::Char('e'), None),
-            log_scroll_back: (KeyCode::Char('f'), None),
-            log_scroll_forward: (KeyCode::Char('g'), None),
-            log_section_height_decrease: (KeyCode::Char('h'), None),
-            log_section_height_increase: (KeyCode::Char('i'), None),
-            log_section_toggle: (KeyCode::Char('j'), None),
-            quit: (KeyCode::Char('k'), None),
-            save_logs: (KeyCode::Char('l'), None),
-            scroll_down_many: (KeyCode::Char('m'), None),
-            scroll_down_one: (KeyCode::Char('n'), None),
-            scroll_end: (KeyCode::Char('o'), None),
-            scroll_start: (KeyCode::Char('p'), None),
-            scroll_up_many: (KeyCode::Char('q'), None),
-            scroll_up_one: (KeyCode::Char('r'), None),
-            select_next_panel: (KeyCode::Char('s'), None),
-            select_previous_panel: (KeyCode::Char('t'), None),
-            sort_by_cpu: (KeyCode::Char('u'), None),
-            sort_by_id: (KeyCode::Char('v'), None),
-            sort_by_image: (KeyCode::Char('w'), None),
-            sort_by_memory: (KeyCode::Char('x'), None),
-            sort_by_name: (KeyCode::Char('y'), None),
-            sort_by_rx: (KeyCode::Char('z'), None),
-            sort_by_state: (KeyCode::Char('0'), None),
-            sort_by_status: (KeyCode::Char('1'), None),
-            sort_by_tx: (KeyCode::Char('2'), None),
-            sort_reset: (KeyCode::Char('3'), None),
-            toggle_help: (KeyCode::Char('4'), None),
-            toggle_mouse_capture: (KeyCode::Char('5'), None),
+            force_redraw: (KeyCode::Char('f'), None),
+            log_scroll_back: (KeyCode::Char('g'), None),
+            log_scroll_forward: (KeyCode::Char('h'), None),
+            log_section_height_decrease: (KeyCode::Char('i'), None),
+            log_section_height_increase: (KeyCode::Char('j'), None),
+            log_section_toggle: (KeyCode::Char('k'), None),
+            quit: (KeyCode::Char('l'), None),
+            save_logs: (KeyCode::Char('m'), None),
+            scroll_down_many: (KeyCode::Char('n'), None),
+            scroll_down_one: (KeyCode::Char('o'), None),
+            scroll_end: (KeyCode::Char('p'), None),
+            scroll_start: (KeyCode::Char('q'), None),
+            scroll_up_many: (KeyCode::Char('r'), None),
+            scroll_up_one: (KeyCode::Char('s'), None),
+            select_next_panel: (KeyCode::Char('t'), None),
+            select_previous_panel: (KeyCode::Char('u'), None),
+            sort_by_cpu: (KeyCode::Char('v'), None),
+            sort_by_id: (KeyCode::Char('w'), None),
+            sort_by_image: (KeyCode::Char('x'), None),
+            sort_by_memory: (KeyCode::Char('y'), None),
+            sort_by_name: (KeyCode::Char('z'), None),
+            sort_by_rx: (KeyCode::Char('0'), None),
+            sort_by_state: (KeyCode::Char('1'), None),
+            sort_by_status: (KeyCode::Char('2'), None),
+            sort_by_tx: (KeyCode::Char('3'), None),
+            sort_reset: (KeyCode::Char('4'), None),
+            toggle_help: (KeyCode::Char('5'), None),
+            toggle_mouse_capture: (KeyCode::Char('6'), None),
         };
 
         setup
@@ -628,7 +631,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with two definition for each entry
     fn test_draw_blocks_help_custom_keymap_two_definitions() {
-        let mut setup = test_setup(110, 49, true, true);
+        let mut setup = test_setup(110, 50, true, true);
 
         let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('A'))),
@@ -636,6 +639,7 @@ mod tests {
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('C'))),
             exec: (KeyCode::Char('d'), Some(KeyCode::Char('D'))),
             filter_mode: (KeyCode::Char('e'), Some(KeyCode::Char('E'))),
+            force_redraw: (KeyCode::Char('f'), Some(KeyCode::Char('F'))),
             log_scroll_back: (KeyCode::Char('f'), Some(KeyCode::Char('F'))),
             log_scroll_forward: (KeyCode::Char('g'), Some(KeyCode::Char('G'))),
             log_section_height_decrease: (KeyCode::Char('h'), Some(KeyCode::Char('H'))),
@@ -678,7 +682,7 @@ mod tests {
     #[test]
     /// Help panel will show custom keymap if in use, with either one or two definition for each entry
     fn test_draw_blocks_help_one_and_two_definitions() {
-        let mut setup = test_setup(110, 49, true, true);
+        let mut setup = test_setup(110, 50, true, true);
 
         let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('A'))),
@@ -686,33 +690,34 @@ mod tests {
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('C'))),
             exec: (KeyCode::Char('d'), None),
             filter_mode: (KeyCode::Char('e'), Some(KeyCode::Char('E'))),
-            log_scroll_back: (KeyCode::Char('f'), None),
-            log_scroll_forward: (KeyCode::Char('g'), Some(KeyCode::Char('G'))),
-            log_section_height_decrease: (KeyCode::Char('h'), None),
-            log_section_height_increase: (KeyCode::Char('i'), Some(KeyCode::Char('I'))),
-            log_section_toggle: (KeyCode::Char('j'), None),
-            quit: (KeyCode::Char('k'), Some(KeyCode::Char('K'))),
-            save_logs: (KeyCode::Char('l'), None),
-            scroll_down_many: (KeyCode::Char('m'), Some(KeyCode::Char('M'))),
-            scroll_down_one: (KeyCode::Char('n'), None),
-            scroll_end: (KeyCode::Char('o'), Some(KeyCode::Char('O'))),
-            scroll_start: (KeyCode::Char('p'), None),
-            scroll_up_many: (KeyCode::Char('q'), Some(KeyCode::Char('Q'))),
-            scroll_up_one: (KeyCode::Char('r'), None),
-            select_next_panel: (KeyCode::Char('s'), Some(KeyCode::Char('S'))),
-            select_previous_panel: (KeyCode::Char('t'), None),
-            sort_by_cpu: (KeyCode::Char('u'), Some(KeyCode::Char('U'))),
-            sort_by_id: (KeyCode::Char('v'), None),
-            sort_by_image: (KeyCode::Char('w'), Some(KeyCode::Char('W'))),
-            sort_by_memory: (KeyCode::Char('x'), None),
-            sort_by_name: (KeyCode::Char('y'), Some(KeyCode::Char('Y'))),
-            sort_by_rx: (KeyCode::Char('z'), None),
-            sort_by_state: (KeyCode::Char('0'), Some(KeyCode::Char('9'))),
-            sort_by_status: (KeyCode::Char('1'), None),
-            sort_by_tx: (KeyCode::Char('2'), Some(KeyCode::Char('7'))),
-            sort_reset: (KeyCode::Char('3'), None),
-            toggle_help: (KeyCode::Char('4'), Some(KeyCode::Char('5'))),
-            toggle_mouse_capture: (KeyCode::Char('5'), None),
+            force_redraw: (KeyCode::Char('f'), None),
+            log_scroll_back: (KeyCode::Char('g'), Some(KeyCode::Char('G'))),
+            log_scroll_forward: (KeyCode::Char('h'), None),
+            log_section_height_decrease: (KeyCode::Char('i'), Some(KeyCode::Char('I'))),
+            log_section_height_increase: (KeyCode::Char('j'), None),
+            log_section_toggle: (KeyCode::Char('k'), Some(KeyCode::Char('K'))),
+            quit: (KeyCode::Char('l'), None),
+            save_logs: (KeyCode::Char('m'), Some(KeyCode::Char('M'))),
+            scroll_down_many: (KeyCode::Char('n'), None),
+            scroll_down_one: (KeyCode::Char('o'), Some(KeyCode::Char('O'))),
+            scroll_end: (KeyCode::Char('p'), None),
+            scroll_start: (KeyCode::Char('q'), Some(KeyCode::Char('Q'))),
+            scroll_up_many: (KeyCode::Char('r'), None),
+            scroll_up_one: (KeyCode::Char('s'), Some(KeyCode::Char('S'))),
+            select_next_panel: (KeyCode::Char('t'), None),
+            select_previous_panel: (KeyCode::Char('u'), Some(KeyCode::Char('U'))),
+            sort_by_cpu: (KeyCode::Char('v'), None),
+            sort_by_id: (KeyCode::Char('w'), Some(KeyCode::Char('W'))),
+            sort_by_image: (KeyCode::Char('x'), None),
+            sort_by_memory: (KeyCode::Char('y'), Some(KeyCode::Char('Y'))),
+            sort_by_name: (KeyCode::Char('z'), None),
+            sort_by_rx: (KeyCode::Char('0'), Some(KeyCode::Char('9'))),
+            sort_by_state: (KeyCode::Char('1'), None),
+            sort_by_status: (KeyCode::Char('2'), Some(KeyCode::Char('7'))),
+            sort_by_tx: (KeyCode::Char('3'), None),
+            sort_reset: (KeyCode::Char('4'), Some(KeyCode::Char('5'))),
+            toggle_help: (KeyCode::Char('5'), None),
+            toggle_mouse_capture: (KeyCode::Char('6'), Some(KeyCode::Char('7'))),
         };
 
         let tz = setup.app_data.lock().config.timezone.clone();
@@ -749,10 +754,10 @@ mod tests {
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
-                    (14, 31..=45) => {
+                    (13, 31..=45) => {
                         assert_eq!(result_cell.fg, AppColors::new().popup_help.text);
                     }
-                    (14, 46..=55) => {
+                    (13, 46..=55) => {
                         assert_eq!(result_cell.fg, AppColors::new().popup_help.text_highlight);
                     }
                     _ => (),

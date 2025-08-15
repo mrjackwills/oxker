@@ -408,6 +408,11 @@ impl InputHandler {
     /// Handle input that refers to the sorting of columns
     fn handle_sort(&self, key_code: KeyCode) {
         match key_code {
+            _ if self.keymap.force_redraw.0 == key_code
+                || self.keymap.force_redraw.1 == Some(key_code) =>
+            {
+                self.gui_state.lock().set_clear();
+            }
             _ if self.keymap.sort_reset.0 == key_code
                 || self.keymap.sort_reset.1 == Some(key_code) =>
             {

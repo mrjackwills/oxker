@@ -27,6 +27,7 @@ expression: setup.terminal.backend()
 "    │ ( f ) or ( F ) horizontal scroll logs left                                                         │    "
 "    │ ( enter ) send docker container command                                                            │    "
 "    │ ( d ) or ( D ) exec into a container                                                               │    "
+"    │ ( f ) or ( F ) force clear the screen & redraw the gui                                             │    "
 "    │ ( 4 ) or ( 5 ) toggle this help information - or click heading                                     │    "
 "    │ ( l ) or ( L ) save logs to file                                                                   │    "
 "    │ ( 5 ) or ( Page Down ) toggle mouse capture - if disabled, text on screen can be selected & copied │    "

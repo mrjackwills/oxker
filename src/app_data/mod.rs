@@ -122,7 +122,7 @@ pub struct AppData {
     error: Option<AppError>,
     filter: Filter,
     hidden_containers: Vec<ContainerItem>,
-    redraw: Arc<Rerender>,
+    rerender: Arc<Rerender>,
     sorted_by: Option<(Header, SortedOrder)>,
     current_sorted_id: Vec<ContainerId>,
     pub config: Config,
@@ -137,7 +137,7 @@ pub struct AppData {
     pub filter: Filter,
     pub hidden_containers: Vec<ContainerItem>,
     pub current_sorted_id: Vec<ContainerId>,
-    pub redraw: Arc<Rerender>,
+    pub rerender: Arc<Rerender>,
     pub sorted_by: Option<(Header, SortedOrder)>,
 }
 
@@ -151,7 +151,7 @@ impl AppData {
             error: None,
             filter: Filter::new(),
             hidden_containers: vec![],
-            redraw: Arc::clone(redraw),
+            rerender: Arc::clone(redraw),
             sorted_by: None,
         }
     }
@@ -192,7 +192,7 @@ impl AppData {
     /// sets the state to start if any filtering has occurred
     /// Also search in the "hidden" vec for items and insert back into the main containers vec
     fn filter_containers(&mut self) {
-        self.redraw.update();
+        self.rerender.update_draw();
         let pre_len = self.get_container_len();
 
         if !self.hidden_containers.is_empty() {
@@ -296,7 +296,7 @@ impl AppData {
     /// Remove the sorted header & order, and sort by default - created datetime
     pub fn reset_sorted(&mut self) {
         self.set_sorted(None);
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Sort containers based on a given header, if headings match, and already ascending, remove sorting
@@ -392,7 +392,7 @@ impl AppData {
 
             self.containers.items.sort_by(sort_closure);
             if pre_order != self.get_current_ids() {
-                self.redraw.update();
+                self.rerender.update_draw();
             }
         } else if self.current_sorted_id != self.get_current_ids() {
             self.containers.items.sort_by(|a, b| {
@@ -400,7 +400,7 @@ impl AppData {
                     .cmp(&b.created)
                     .then_with(|| a.name.get().cmp(b.name.get()))
             });
-            self.redraw.update();
+            self.rerender.update_draw();
             self.current_sorted_id = self.get_current_ids();
         }
     }
@@ -439,25 +439,25 @@ impl AppData {
     /// Select the first container
     pub fn containers_start(&mut self) {
         self.containers.start();
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// select the last container
     pub fn containers_end(&mut self) {
         self.containers.end();
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Select the next container
     pub fn containers_next(&mut self) {
         self.containers.next();
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// select the previous container
     pub fn containers_previous(&mut self) {
         self.containers.previous();
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Get ListState of containers
@@ -579,7 +579,7 @@ impl AppData {
     pub fn docker_controls_next(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.next();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -587,7 +587,7 @@ impl AppData {
     pub fn docker_controls_previous(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.previous();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -595,7 +595,7 @@ impl AppData {
     pub fn docker_controls_start(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.start();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -603,7 +603,7 @@ impl AppData {
     pub fn docker_controls_end(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.end();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -647,7 +647,7 @@ impl AppData {
     pub fn log_back(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.back();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -655,7 +655,7 @@ impl AppData {
     pub fn log_forward(&mut self, width: u16) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.forward(width);
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -663,7 +663,7 @@ impl AppData {
     pub fn log_next(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.next();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -671,7 +671,7 @@ impl AppData {
     pub fn log_previous(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.previous();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -679,7 +679,7 @@ impl AppData {
     pub fn log_end(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.end();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -687,7 +687,7 @@ impl AppData {
     pub fn log_start(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.start();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -728,14 +728,14 @@ impl AppData {
     /// Remove single app_state error
     pub fn remove_error(&mut self) {
         self.error = None;
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Insert single app_state error
     pub fn set_error(&mut self, error: AppError, gui_state: &Arc<Mutex<GuiState>>, status: Status) {
         gui_state.lock().status_push(status);
         self.error = Some(error);
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Check if the selected container is a dockerised version of oxker
@@ -825,7 +825,7 @@ impl AppData {
             container.mem_limit.update(mem_limit);
         }
         if self.is_selected_container(id) {
-            self.redraw.update();
+            self.rerender.update_draw();
         }
         self.sort_containers();
     }
@@ -863,7 +863,7 @@ impl AppData {
                 if self.containers.items.get(index).is_some() {
                     self.containers.items.remove(index);
                     if self.is_selected_container(id) {
-                        self.redraw.update();
+                        self.rerender.update_draw();
                     }
                 }
             }
@@ -992,7 +992,7 @@ impl AppData {
                 }
             }
             if self.is_selected_container(id) {
-                self.redraw.update();
+                self.rerender.update_draw();
             }
         }
     }

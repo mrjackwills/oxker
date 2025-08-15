@@ -217,7 +217,7 @@ impl GuiState {
     pub fn log_height_increase(&mut self) {
         if self.show_logs && self.log_height <= 75 {
             self.log_height = self.log_height.saturating_add(5);
-            self.rerender.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -230,7 +230,7 @@ impl GuiState {
                 self.show_logs = false;
                 self.selected_panel = SelectablePanel::Containers;
             }
-            self.rerender.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -253,7 +253,7 @@ impl GuiState {
         if !self.show_logs && self.selected_panel == SelectablePanel::Logs {
             self.selected_panel = SelectablePanel::Containers;
         }
-        self.rerender.update();
+        self.rerender.update_draw();
     }
 
     /// Set the log_height to zero, for now only used by tests
@@ -272,6 +272,11 @@ impl GuiState {
         self.intersect_panel.clear();
     }
 
+    /// Set the rerender clear to true, to flush the screen and redraw
+    pub fn set_clear(&self) {
+        self.rerender.set_clear();
+    }
+
     /// Get the currently selected panel
     pub const fn get_selected_panel(&self) -> SelectablePanel {
         self.selected_panel
@@ -287,7 +292,7 @@ impl GuiState {
             .first()
         {
             self.selected_panel = *data.0;
-            self.rerender.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -360,7 +365,7 @@ impl GuiState {
             self.status_del(Status::DeleteConfirm);
         }
         self.delete_container_id = id;
-        self.rerender.update();
+        self.rerender.update_draw();
     }
 
     /// Return a copy of the Status HashSet
@@ -381,7 +386,7 @@ impl GuiState {
             }
             _ => (),
         }
-        self.rerender.update();
+        self.rerender.update_draw();
     }
 
     /// Inset the ExecMode into self, and set the Status as exec
@@ -390,7 +395,7 @@ impl GuiState {
     pub fn set_exec_mode(&mut self, mode: ExecMode) {
         self.exec_mode = Some(mode);
         self.status.insert(Status::Exec);
-        self.rerender.update();
+        self.rerender.update_draw();
     }
 
     pub fn get_exec_mode(&self) -> Option<ExecMode> {
@@ -402,7 +407,7 @@ impl GuiState {
     pub fn status_push(&mut self, status: Status) {
         if status != Status::Exec {
             self.status.insert(status);
-            self.rerender.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -415,7 +420,7 @@ impl GuiState {
         {
             self.selected_panel = self.selected_panel.next();
         }
-        self.rerender.update();
+        self.rerender.update_draw();
     }
 
     /// Change to previous selectable panel
@@ -427,7 +432,7 @@ impl GuiState {
         {
             self.selected_panel = self.selected_panel.prev();
         }
-        self.rerender.update();
+        self.rerender.update_draw();
     }
 
     /// Insert a new loading_uuid into HashSet, and advance the loading_index by one frame, or reset to 0 if at end of array
@@ -438,7 +443,7 @@ impl GuiState {
             self.loading_index += 1;
         }
         self.loading_set.insert(uuid);
-        self.rerender.update();
+        self.rerender.update_draw();
     }
 
     pub fn is_loading(&self) -> bool {
@@ -471,7 +476,7 @@ impl GuiState {
     /// Stop the loading_spin function, and reset gui loading status
     pub fn stop_loading_animation(&mut self, loading_uuid: Uuid) {
         self.loading_set.remove(&loading_uuid);
-        self.rerender.update();
+        self.rerender.update_draw();
         if self.loading_set.is_empty() {
             self.loading_index = 0;
             if let Some(h) = &self.loading_handle {
@@ -484,12 +489,12 @@ impl GuiState {
     /// Set info box content
     pub fn set_info_box(&mut self, text: &str) {
         self.info_box_text = Some((text.to_owned(), std::time::Instant::now()));
-        self.rerender.update();
+        self.rerender.update_draw();
     }
 
     /// Remove info box content
     pub fn reset_info_box(&mut self) {
         self.info_box_text = None;
-        self.rerender.update();
+        self.rerender.update_draw();
     }
 }

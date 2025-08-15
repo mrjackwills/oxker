@@ -210,7 +210,7 @@ mod tests {
             current_sorted_id: vec![],
             error: None,
             sorted_by: None,
-            redraw: Arc::new(Rerender::new()),
+            rerender: Arc::new(Rerender::new()),
             filter: Filter::new(),
             config: gen_config(),
         }

@@ -166,6 +166,10 @@
 		// Toggle visibility of the log section
 		"log_section_toggle": [
 			"\\"
+		],
+		// Force a complete clear & redraw of the screen
+		"force_redraw": [
+			"f"
 		]
 	},
 	////////////////////
