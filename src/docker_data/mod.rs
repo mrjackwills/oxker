@@ -145,7 +145,6 @@ impl DockerData {
             )
             .take(1);
 
-        // some err here
         while let Some(Ok(stats)) = stream.next().await {
             // Memory stats are only collected if the container is alive - is this the behaviour we want?
 
@@ -169,7 +168,7 @@ impl DockerData {
                 (None, None)
             };
 
-            // TODO Is hardcoded eth0 a good idea here?
+            // TODO is hardcoded eth0 a good idea here? - Could use first() instead?
             let (rx, tx) = stats.networks.as_ref().map_or((0, 0), |i| {
                 i.get("eth0").map_or((0, 0), |x| {
                     (

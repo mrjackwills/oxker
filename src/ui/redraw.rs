@@ -19,12 +19,7 @@ impl Rerender {
     }
 
     pub fn get_clear(&self) -> bool {
-        if self.clear.load(Ordering::SeqCst) {
-            self.clear.store(false, Ordering::SeqCst);
-            true
-        } else {
-            false
-        }
+        self.clear.swap(false, Ordering::SeqCst)
     }
 
     pub fn set_clear(&self) {
