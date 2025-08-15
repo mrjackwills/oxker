@@ -1,3 +1,14 @@
+### Chores
++ dependencies updated, [ced885e0128b6d5d3a3c7cb97d7e53bc2da64893]
++ Rust 1.89 linting, [79d19ceeb81ae60bc5562683e405d6e74e6f2578]
+
+### Features
++ horizontally scroll across logs. By default use `←` & `→` keys to traverse horizontally across the logs when logs panel selected. Updated `config.toml` with `log_scroll_forward` and `log_scroll_back`  [c190f0206cc55b8e45b8373f9be954e828c18b3b]
++ Force clear screen & redraw of UI. By default uses `f` key, `config.toml` updated with `force_redraw`  [50edbc0cc09db864835fe81a03cba8eadafe548b]
+
+### Refactors
++ remove macos cfg none-const functions, Zigbuild now uses Rust 1.87.0, [eb686e2c952e04da74b3e12c0bfa015ec4615e1d]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.10.5'>v0.10.5</a>
 ### 2025-06-19
 
@@ -11,7 +22,7 @@
 + .devcontainer updated, [324f8268](https://github.com/mrjackwills/oxker/commit/324f8268278081504d5357f2ed89b78ca2c25d04)
 + dependencies updated, [0ace9dd6](https://github.com/mrjackwills/oxker/commit/0ace9dd662144a589341779a64d7fcd8de7d9978), [a6360075](https://github.com/mrjackwills/oxker/commit/a636007547280b3b3db69374601dbece4bc21eef)
 + Rust 1.87.0 linting, [395b1aa7](https://github.com/mrjackwills/oxker/commit/395b1aa7e997a528e4f21e66f5f859001c1c3ec1), [67e5888e](https://github.com/mrjackwills/oxker/commit/67e5888e008cfd504c10e47f678f9351c838be99)
-
+back
 ### Docs
 + example config files updated, [63ab7de7](https://github.com/mrjackwills/oxker/commit/63ab7de72897de460f31181c5a42befbee2f91d3), [8fb5ac4a](https://github.com/mrjackwills/oxker/commit/8fb5ac4a945b75f3fcd118c53be1202ccbc43c59)
 + README.md updated, link to directories crate, closes [#65](https://github.com/mrjackwills/oxker/issues/65), [c2bfe329](https://github.com/mrjackwills/oxker/commit/c2bfe3296563daf4b7f077469f3eeff6895720b0)
