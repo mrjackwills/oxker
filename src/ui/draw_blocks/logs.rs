@@ -356,7 +356,6 @@ mod tests {
         insert_logs(&setup);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
-
         setup
             .terminal
             .draw(|f| {

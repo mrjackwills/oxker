@@ -168,7 +168,7 @@ impl DockerData {
                 (None, None)
             };
 
-            // TODO is hardcoded eth0 a good idea here? - Could use first() instead?
+            // TODO is hardcoded eth0 a good idea here?
             let (rx, tx) = stats.networks.as_ref().map_or((0, 0), |i| {
                 i.get("eth0").map_or((0, 0), |x| {
                     (

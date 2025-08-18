@@ -158,7 +158,7 @@ pub mod tests {
     /// Create a FrameData struct from two Arc<mutex>'s, instead of from UI
     impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
         fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
-            let (app_data, gui_data) = (data.0.lock(), data.1.lock());
+            let (mut app_data, gui_data) = (data.0.lock(), data.1.lock());
 
             // let container_section_height = app_data.get_container_len();
             // let container_section_height = if container_section_height < 12 {
@@ -185,7 +185,7 @@ pub mod tests {
                 loading_icon: gui_data.get_loading().to_string(),
                 log_height: gui_data.get_log_height(),
                 log_title: app_data.get_log_title(),
-                scroll_title: app_data.get_scroll_title(),
+                scroll_title: app_data.get_scroll_title(gui_data.get_screen_width()),
                 port_max_lens: app_data.get_longest_port(),
                 ports: app_data.get_selected_ports(),
                 selected_panel: gui_data.get_selected_panel(),
@@ -216,6 +216,7 @@ pub mod tests {
         let gui_state = Arc::new(Mutex::new(gui_state));
         let fd = FrameData::from((&app_data, &gui_state));
         let area = Rect::new(0, 0, w, h);
+        gui_state.lock().set_screen_width(w);
         TuiTestSetup {
             app_data,
             gui_state,

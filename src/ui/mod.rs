@@ -312,7 +312,7 @@ pub struct FrameData {
 
 impl From<&Ui> for FrameData {
     fn from(ui: &Ui) -> Self {
-        let (app_data, gui_data) = (ui.app_data.lock(), ui.gui_state.lock());
+        let (mut app_data, gui_data) = (ui.app_data.lock(), ui.gui_state.lock());
 
         let (filter_by, filter_term) = app_data.get_filter();
         Self {
@@ -333,7 +333,7 @@ impl From<&Ui> for FrameData {
             log_title: app_data.get_log_title(),
             port_max_lens: app_data.get_longest_port(),
             ports: app_data.get_selected_ports(),
-            scroll_title: app_data.get_scroll_title(),
+            scroll_title: app_data.get_scroll_title(gui_data.get_screen_width()),
             selected_panel: gui_data.get_selected_panel(),
             sorted_by: app_data.get_sorted(),
             status: gui_data.get_status(),

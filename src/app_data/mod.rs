@@ -638,9 +638,9 @@ impl AppData {
     }
 
     /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
-    pub fn get_scroll_title(&self) -> Option<String> {
-        self.get_selected_container()
-            .and_then(|i| i.logs.get_scroll_title())
+    pub fn get_scroll_title(&mut self, width: u16) -> Option<String> {
+        self.get_mut_selected_container()
+            .and_then(|i| i.logs.get_scroll_title(width))
     }
 
     /// Increase the logs offset, basically moving an invisible cursor back

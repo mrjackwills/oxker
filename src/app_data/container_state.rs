@@ -201,6 +201,7 @@ impl<T> StatefulList<T> {
     }
 
     /// Return the current status of the select list, e.g. 2/5,
+    /// MAYBE add up down arrows, check if at start or end etc
     pub fn get_state_title(&self) -> String {
         if self.items.is_empty() {
             String::new()
@@ -597,13 +598,12 @@ impl LogsTz {
 /// stateful list dependent on whether the timestamp is in the HashSet or not
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Logs {
-    // should just be list of spans?
     lines: StatefulList<Text<'static>>,
     tz: HashSet<LogsTz>,
-    // could probably be a u16
     offset: u16,
     max_log_len: usize,
     adjusted_max_width: usize,
+    adjust_max_width_text_len: usize,
 }
 
 impl Default for Logs {
@@ -615,6 +615,7 @@ impl Default for Logs {
             tz: HashSet::new(),
             offset: 0,
             adjusted_max_width: 0,
+            adjust_max_width_text_len: 0,
             max_log_len: 0,
         }
     }
@@ -629,10 +630,24 @@ impl Logs {
         }
     }
 
+    // TODO test me!
     /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
-    pub fn get_scroll_title(&self) -> Option<String> {
-        if self.offset > 0 {
-            Some(format!(" {}/{} ", self.offset, self.adjusted_max_width))
+    pub fn get_scroll_title(&mut self, width: u16) -> Option<String> {
+        if self.horizontal_scroll_able(width) {
+            let text_width = self.adjust_max_width_text_len;
+            let arrow_left = if self.offset > 0 { " ←" } else { "  " };
+            let arrow_right = if usize::from(self.offset) < self.adjusted_max_width {
+                "→ "
+            } else {
+                "  "
+            };
+            Some(format!(
+                "{left} {offset:>text_width$}/{adjusted_max_width} {right}",
+                offset = self.offset,
+                adjusted_max_width = self.adjusted_max_width,
+                left = arrow_left,
+                right = arrow_right,
+            ))
         } else {
             None
         }
@@ -709,13 +724,23 @@ impl Logs {
         self.lines.get_state_title()
     }
 
+    /// Return true it currently selected cotnainer logs are wide enough to horizontally scroll
+    pub fn horizontal_scroll_able(&mut self, width: u16) -> bool {
+        if self.lines.items.is_empty() {
+            return false;
+        }
+        self.adjusted_max_width = self.max_log_len.saturating_sub(width.into()) + 4;
+        self.adjust_max_width_text_len = self.adjusted_max_width.to_string().chars().count();
+        self.max_log_len + 4 > usize::from(width)
+    }
+
     /// Add a padding so one char will always be visilbe?
-    /// +6 is to account for borders & the selection triangle and a little bit of padding
     pub fn forward(&mut self, width: u16) {
         let offset = usize::from(self.offset);
-        self.adjusted_max_width = self.max_log_len.saturating_sub(width.into()) + 6;
-        if self.adjusted_max_width > 0 && offset < self.adjusted_max_width {
-            self.offset = self.offset.saturating_add(1);
+        if self.horizontal_scroll_able(width) {
+            if self.adjusted_max_width > 0 && offset < self.adjusted_max_width {
+                self.offset = self.offset.saturating_add(1);
+            }
         }
     }
 
@@ -913,7 +938,7 @@ mod tests {
         text::{Line, Text},
     };
 
-    use crate::{
+	use crate::{
         app_data::{ContainerImage, Logs, LogsTz, RunningState},
         ui::log_sanitizer,
     };
@@ -1152,5 +1177,39 @@ mod tests {
             ],
             result
         );
+    }
+
+    #[test]
+    /// Test the get_scroll_title methods
+    fn test_scroll_title() {
+        let mut logs = Logs::default();
+
+        let result = logs.get_scroll_title(10);
+        assert!(result.is_none());
+
+        let input = "short".to_owned();
+        let (tz, _) = LogsTz::splitter(&input);
+        logs.insert(Text::from(input), tz);
+
+        let result = logs.get_scroll_title(10);
+        assert!(result.is_none());
+
+        let input = "2023-01-14T19:13:30.783138328Z Hello world some long line".to_owned();
+        let (tz, _) = LogsTz::splitter(&input);
+        logs.insert(Text::from(input), tz);
+
+        let result = logs.get_scroll_title(10);
+        assert_eq!(result, Some("    0/51 → ".to_owned()));
+
+        logs.forward(10);
+
+        let result = logs.get_scroll_title(10);
+        assert_eq!(result, Some(" ←  1/51 → ".to_owned()));
+
+        for _ in 0..=49 {
+            logs.forward(10);
+        }
+        let result = logs.get_scroll_title(10);
+        assert_eq!(result, Some(" ← 51/51   ".to_owned()));
     }
 }
