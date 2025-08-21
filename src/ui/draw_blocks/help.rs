@@ -109,12 +109,17 @@ impl HelpInfo {
                 button_item("PgUp PgDown"),
                 or(),
                 button_item("Home End"),
-                button_desc("change selected line"),
+                button_desc("scroll vertically"),
             ]),
             Line::from(vec![
                 space(),
                 button_item("← →"),
                 button_desc("horizontal scroll across logs"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("ctrl"),
+                button_desc("increase scroll speed, used in conjuction scroll keys"),
             ]),
             Line::from(vec![
                 space(),
@@ -282,6 +287,11 @@ impl HelpInfo {
             or_secondary(km.log_scroll_back, "horizontal scroll logs left"),
             Line::from(vec![
                 space(),
+                button_item(km.scroll_many.to_string().as_str()),
+                button_desc("increase scroll speed, used in conjuction scroll keys"),
+            ]),
+            Line::from(vec![
+                space(),
                 button_item("enter"),
                 button_desc("send docker container command"),
             ]),
@@ -440,7 +450,7 @@ pub fn draw(
 #[allow(clippy::unwrap_used, clippy::too_many_lines)]
 mod tests {
     use crate::config::{AppColors, Keymap};
-    use crossterm::event::KeyCode;
+    use crossterm::event::{KeyCode, KeyModifiers};
     use insta::assert_snapshot;
     use jiff::tz::TimeZone;
     use ratatui::style::{Color, Modifier};
@@ -449,9 +459,10 @@ mod tests {
 
     #[test]
     /// This will cause issues once the version has more than the current 5 chars (0.5.0)
+    /// This test is incredibly annoying
     /// println!("{} {} {} {} {}", row_index, result_cell_index, result_cell.symbol(), result_cell.bg, result_cell.fg);
     fn test_draw_blocks_help() {
-        let mut setup = test_setup(87, 36, true, true);
+        let mut setup = test_setup(87, 37, true, true);
         let tz = setup.app_data.lock().config.timezone.clone();
 
         setup
@@ -471,9 +482,17 @@ mod tests {
 
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                println!(
+                    "{} {} {} {} {}",
+                    row_index,
+                    result_cell_index,
+                    result_cell.symbol(),
+                    result_cell.bg,
+                    result_cell.fg
+                );
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
-                    (0 | 35, _) | (0..=34, 0 | 86) => {
+                    (0 | 36, _) | (0..=35, 0 | 86) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
@@ -487,15 +506,16 @@ mod tests {
                     | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
                     | (15, 2..=10 | 13..=21 | 24..=40 | 43..=56)
-                    | (16 | 26 | 28, 2..=10)
-                    | (17 | 25, 2..=12)
-                    | (18 | 19 | 20 | 21 | 22 | 24 | 27 | 29, 2..=8)
-                    | (23, 2..=9 | 12..=18) => {
+                    | (16 | 27 | 29, 2..=10)
+                    | (17, 2..=11)
+                    | (18 | 26, 2..=12)
+                    | (19 | 20 | 21 | 22 | 24 | 25 | 28 | 23 | 30, 2..=8)
+                    | (24, 2..=9 | 12..=18) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // The URL is yellow and underlined
-                    (32, 25..=60) => {
+                    (33, 25..=60) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::White);
                         assert_eq!(result_cell.modifier, Modifier::UNDERLINED);
@@ -512,9 +532,10 @@ mod tests {
 
     #[test]
     /// Test that the help panel gets drawn with custom colors
+    /// This test is incredibly annoying
     /// println!("{} {} {} {} {}", row_index, result_cell_index, result_cell.symbol(), result_cell.bg, result_cell.fg);
     fn test_draw_blocks_help_custom_colors() {
-        let mut setup = test_setup(87, 36, true, true);
+        let mut setup = test_setup(87, 37, true, true);
         let mut colors = AppColors::new();
         let tz = setup.app_data.lock().config.timezone.clone();
 
@@ -540,7 +561,7 @@ mod tests {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
-                    (0 | 35, _) | (0..=34, 0 | 86) => {
+                    (0 | 36, _) | (0..=35, 0 | 86) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
@@ -554,15 +575,16 @@ mod tests {
                     | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
                     | (15, 2..=10 | 13..=21 | 24..=40 | 43..=56)
-                    | (16 | 26 | 28, 2..=10)
-                    | (17 | 25, 2..=12)
-                    | (18 | 19 | 20 | 21 | 22 | 24 | 27 | 29, 2..=8)
-                    | (23, 2..=9 | 12..=18) => {
+                    | (16 | 27 | 29, 2..=10)
+                    | (17, 2..=11)
+                    | (18 | 26, 2..=12)
+                    | (19 | 20 | 21 | 22 | 24 | 25 | 28 | 23 | 30, 2..=8)
+                    | (24, 2..=9 | 12..=18) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Yellow);
                     }
                     // The URL is yellow and underlined
-                    (32, 25..=60) => {
+                    (33, 25..=60) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Yellow);
                         assert_eq!(result_cell.modifier, Modifier::UNDERLINED);
@@ -599,6 +621,7 @@ mod tests {
             scroll_down_many: (KeyCode::Char('n'), None),
             scroll_down_one: (KeyCode::Char('o'), None),
             scroll_end: (KeyCode::Char('p'), None),
+            scroll_many: KeyModifiers::ALT,
             scroll_start: (KeyCode::Char('q'), None),
             scroll_up_many: (KeyCode::Char('r'), None),
             scroll_up_one: (KeyCode::Char('s'), None),
@@ -650,6 +673,7 @@ mod tests {
             scroll_down_many: (KeyCode::Char('m'), Some(KeyCode::Char('M'))),
             scroll_down_one: (KeyCode::Char('n'), Some(KeyCode::Char('N'))),
             scroll_end: (KeyCode::Char('o'), Some(KeyCode::Char('O'))),
+            scroll_many: KeyModifiers::ALT,
             scroll_start: (KeyCode::Char('p'), Some(KeyCode::Char('P'))),
             scroll_up_many: (KeyCode::Char('q'), Some(KeyCode::Char('Q'))),
             scroll_up_one: (KeyCode::Char('r'), Some(KeyCode::Char('R'))),
@@ -701,6 +725,7 @@ mod tests {
             scroll_down_many: (KeyCode::Char('n'), None),
             scroll_down_one: (KeyCode::Char('o'), Some(KeyCode::Char('O'))),
             scroll_end: (KeyCode::Char('p'), None),
+            scroll_many: KeyModifiers::ALT,
             scroll_start: (KeyCode::Char('q'), Some(KeyCode::Char('Q'))),
             scroll_up_many: (KeyCode::Char('r'), None),
             scroll_up_one: (KeyCode::Char('s'), Some(KeyCode::Char('S'))),

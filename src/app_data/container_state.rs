@@ -630,7 +630,6 @@ impl Logs {
         }
     }
 
-    // TODO test me!
     /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
     pub fn get_scroll_title(&mut self, width: u16) -> Option<String> {
         if self.horizontal_scroll_able(width) {
@@ -938,7 +937,7 @@ mod tests {
         text::{Line, Text},
     };
 
-	use crate::{
+    use crate::{
         app_data::{ContainerImage, Logs, LogsTz, RunningState},
         ui::log_sanitizer,
     };

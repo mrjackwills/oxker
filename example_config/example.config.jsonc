@@ -42,6 +42,7 @@
 	// 3) F1-F12
 	// 4) backspace, tab, backtab, delete, end, esc, home, insert, pagedown, pageup, left, right, up, down
 	// Each definition can have two keys associated with it
+	// WARNING "scroll_many" only accepts control, alt, shift, with no secondary option
 	// If any key clashes are found, oxker will revert to it's default keymap
 	"keymap": {
 		// Clear any popup boxes, filter panel, or help panel
@@ -74,10 +75,12 @@
 		"save_logs": [
 			"s"
 		],
+		// TODO "scroll_down_many" will be removed in the next release
 		// Scroll down a list by many
 		"scroll_down_many": [
 			"pagedown"
 		],
+		// TODO rename in next release
 		// Scroll down a list by one item
 		"scroll_down_one": [
 			"down",
@@ -87,14 +90,18 @@
 		"scroll_end": [
 			"end"
 		],
+		// Modifier to scroll by 10 lines isntead of one, used in conjunction with scroll_up_x/scroll_down_x
+		"scroll_many": ["control"],
 		// Scroll up to the start of a list
 		"scroll_start": [
 			"home"
 		],
+		// TODO "scroll_up_many" will be removed in the next release
 		// Scroll up a list by many
 		"scroll_up_many": [
 			"pageup"
 		],
+		// TODO rename in next release
 		// Scroll up a list by one item
 		"scroll_up_one": [
 			"up",

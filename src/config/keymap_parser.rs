@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyModifiers};
 
 /// The macro accepts a list of struct names with key names
 /// Returns a struct where every key name is an Option<String>, with the correct derived attributes
@@ -12,6 +12,7 @@ macro_rules! optional_config_struct {
                 $(
                     $key_name: Option<Vec<String>>,
                 )*
+                pub scroll_many: Option<Vec<String>>,
             }
         )*
     };
@@ -24,9 +25,10 @@ macro_rules! config_struct {
         $(
             #[derive(Debug, Clone, PartialEq, Eq)]
             pub struct $struct_name {
-                $(
+                 $(
                     pub $key_name: (KeyCode, Option<KeyCode>),
                 )*
+                pub scroll_many: KeyModifiers,
             }
         )*
     };
@@ -47,11 +49,15 @@ optional_config_struct!(
     log_scroll_back,
     quit,
     save_logs,
+    // TODO remove in next release
     scroll_down_many,
+    // TODO rename in next release
     scroll_down_one,
     scroll_end,
     scroll_start,
+    // TODO remove in next release
     scroll_up_many,
+    // TODO rename in next release
     scroll_up_one,
     select_next_panel,
     select_previous_panel,
@@ -84,11 +90,15 @@ config_struct!(
     log_scroll_back,
     quit,
     save_logs,
+    // TODO remove in next release
     scroll_down_many,
+    // TODO rename in next release
     scroll_down_one,
     scroll_end,
     scroll_start,
+    // TODO remove in next release
     scroll_up_many,
+    // TODO rename in next release
     scroll_up_one,
     select_next_panel,
     select_previous_panel,
@@ -122,11 +132,16 @@ impl Keymap {
             log_scroll_forward: (KeyCode::Right, None),
             quit: (KeyCode::Char('q'), None),
             save_logs: (KeyCode::Char('s'), None),
+            // TODO remove in next release
             scroll_down_many: (KeyCode::PageDown, None),
+            // TODO rename in next release
             scroll_down_one: (KeyCode::Down, Some(KeyCode::Char('j'))),
             scroll_end: (KeyCode::End, None),
             scroll_start: (KeyCode::Home, None),
+            scroll_many: KeyModifiers::CONTROL,
+            // TODO remove in next release
             scroll_up_many: (KeyCode::PageUp, None),
+            // TODO rename in next release
             scroll_up_one: (KeyCode::Up, Some(KeyCode::Char('k'))),
             select_next_panel: (KeyCode::Tab, None),
             select_previous_panel: (KeyCode::BackTab, None),
@@ -243,6 +258,10 @@ impl From<Option<ConfigKeymap>> for Keymap {
                 &mut keymap.toggle_mouse_capture,
                 &mut clash,
             );
+            // TODO need to check for clashes when using additional modifiers
+            if let Some(scroll_many) = Self::try_parse_modifier(ck.scroll_many) {
+                keymap.scroll_many = scroll_many;
+            }
         }
         // A very basic clash check, every key has been inserted into a hashset, and a counter has been increased
         // if the counter and hashet length don't match, then there's a clash, and we just return the default keymap
@@ -255,6 +274,20 @@ impl From<Option<ConfigKeymap>> for Keymap {
 }
 
 impl Keymap {
+    // Allowable key modifiers are only `shift`, `control`, `alt`
+    fn try_parse_modifier(input: Option<Vec<String>>) -> Option<KeyModifiers> {
+        input.and_then(|input| {
+            input
+                .first()
+                .and_then(|input| match input.to_lowercase().trim() {
+                    "control" => Some(KeyModifiers::CONTROL),
+                    "alt" => Some(KeyModifiers::ALT),
+                    "shift" => Some(KeyModifiers::SHIFT),
+                    _ => None,
+                })
+        })
+    }
+
     /// Try to parse a &[String] into a Vec of keycodes, at most the output will have 2 entries
     /// This might fail on MacOS due to Backspace and Delete working in a different manner as to how they work on Linux & Windows
     /// I think that on MacOS `Del` becomes `Fwd Del`, and `Backspace` becomes `Delete`
@@ -326,7 +359,7 @@ impl Keymap {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
-    use crossterm::event::KeyCode;
+    use crossterm::event::{KeyCode, KeyModifiers};
 
     use crate::config::keymap_parser::ConfigKeymap;
 
@@ -393,6 +426,7 @@ mod tests {
             scroll_down_one: None,
             scroll_end: None,
             scroll_start: None,
+            scroll_many: None,
             scroll_up_many: None,
             scroll_up_one: None,
             select_next_panel: None,
@@ -423,78 +457,79 @@ mod tests {
 
         let input = ConfigKeymap {
             clear: gen_v(("a", "b")),
-            delete_confirm: gen_v(("e", "f")),
-            delete_deny: gen_v(("c", "d")),
+            delete_confirm: gen_v(("c", "d")),
+            delete_deny: gen_v(("e", "fd")),
             exec: gen_v(("g", "h")),
             filter_mode: gen_v(("i", "j")),
-            force_redraw: gen_v(("F1", "F2")),
-            log_section_height_decrease: gen_v(("-", "Z")),
-            log_section_height_increase: gen_v(("=", "X")),
-            log_scroll_forward: gen_v(("right", "R")),
-            log_scroll_back: gen_v(("left", "L")),
-            log_section_toggle: gen_v(("Y", "W")),
-            quit: gen_v(("k", "l")),
-            save_logs: gen_v(("m", "n")),
-            scroll_down_many: gen_v(("o", "p")),
-            scroll_down_one: gen_v(("q", "r")),
-            scroll_end: gen_v(("s", "t")),
-            scroll_start: gen_v(("u", "v")),
-            scroll_up_many: gen_v(("w", "x")),
-            scroll_up_one: gen_v(("y", "z")),
-            select_next_panel: gen_v(("0", "1")),
-            select_previous_panel: gen_v(("2", "3")),
-            sort_by_cpu: gen_v(("F11", "F12")),
-            sort_by_id: gen_v(("[", "]")),
-            sort_by_image: gen_v(("A", "B")),
-            sort_by_memory: gen_v(("/", "\\")),
-            sort_by_name: gen_v(("4", "5")),
-            sort_by_rx: gen_v(("C", "D")),
-            sort_by_state: gen_v(("6", "7")),
-            sort_by_status: gen_v(("8", "9")),
-            sort_by_tx: gen_v(("insert", "TAB")),
-            sort_reset: gen_v(("up", "down")),
-            toggle_help: gen_v(("home", "end")),
-            toggle_mouse_capture: gen_v(("pagedown", "PAGEUP")),
+            force_redraw: gen_v(("k", "l")),
+            log_section_height_decrease: gen_v(("m", "n")),
+            log_section_height_increase: gen_v(("o", "p")),
+            log_scroll_forward: gen_v(("q", "r")),
+            log_scroll_back: gen_v(("s", "t")),
+            log_section_toggle: gen_v(("u", "v")),
+            quit: gen_v(("w", "x")),
+            save_logs: gen_v(("y", "z")),
+            scroll_down_many: gen_v(("1", "2")),
+            scroll_down_one: gen_v(("3", "4")),
+            scroll_end: gen_v(("5", "6")),
+            scroll_many: Some(vec!["alt".to_owned()]),
+            scroll_start: gen_v(("7", "8")),
+            scroll_up_many: gen_v(("9", "0")),
+            scroll_up_one: gen_v(("F1", "F2")),
+            select_next_panel: gen_v(("F3", "F4")),
+            select_previous_panel: gen_v(("F5", "F6")),
+            sort_by_cpu: gen_v(("F7", "F8")),
+            sort_by_id: gen_v(("F9", "F10")),
+            sort_by_image: gen_v(("F11", "F12")),
+            sort_by_memory: gen_v(("HOME", "END")),
+            sort_by_name: gen_v(("UP", "DOWN")),
+            sort_by_rx: gen_v(("LEFT", "RIGHT")),
+            sort_by_state: gen_v(("[", "]")),
+            sort_by_status: gen_v(("INSERTt", "TAB")),
+            sort_by_tx: gen_v(("PAGEDOWN", "PAGEUP")),
+            sort_reset: gen_v((",", ".")),
+            toggle_help: gen_v(("-", "=")),
+            toggle_mouse_capture: gen_v(("\\", "/")),
         };
 
         let result = Keymap::from(Some(input));
 
         let expected = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('b'))),
-            delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('d'))),
-            delete_confirm: (KeyCode::Char('e'), Some(KeyCode::Char('f'))),
-            force_redraw: (KeyCode::F(1), Some(KeyCode::F(2))),
-            log_section_height_decrease: (KeyCode::Char('-'), Some(KeyCode::Char('Z'))),
-            log_section_height_increase: (KeyCode::Char('='), Some(KeyCode::Char('X'))),
-            log_section_toggle: (KeyCode::Char('Y'), Some(KeyCode::Char('W'))),
-            log_scroll_forward: (KeyCode::Right, Some(KeyCode::Char('R'))),
-            log_scroll_back: (KeyCode::Left, Some(KeyCode::Char('L'))),
+            delete_deny: (KeyCode::Char('e'), None),
+            delete_confirm: (KeyCode::Char('c'), Some(KeyCode::Char('d'))),
             exec: (KeyCode::Char('g'), Some(KeyCode::Char('h'))),
             filter_mode: (KeyCode::Char('i'), Some(KeyCode::Char('j'))),
-            quit: (KeyCode::Char('k'), Some(KeyCode::Char('l'))),
-            save_logs: (KeyCode::Char('m'), Some(KeyCode::Char('n'))),
-            scroll_down_many: (KeyCode::Char('o'), Some(KeyCode::Char('p'))),
-            scroll_down_one: (KeyCode::Char('q'), Some(KeyCode::Char('r'))),
-            scroll_end: (KeyCode::Char('s'), Some(KeyCode::Char('t'))),
-            scroll_start: (KeyCode::Char('u'), Some(KeyCode::Char('v'))),
-            scroll_up_many: (KeyCode::Char('w'), Some(KeyCode::Char('x'))),
-            scroll_up_one: (KeyCode::Char('y'), Some(KeyCode::Char('z'))),
-            select_next_panel: (KeyCode::Char('0'), Some(KeyCode::Char('1'))),
-            select_previous_panel: (KeyCode::Char('2'), Some(KeyCode::Char('3'))),
-            sort_by_name: (KeyCode::Char('4'), Some(KeyCode::Char('5'))),
-            sort_by_state: (KeyCode::Char('6'), Some(KeyCode::Char('7'))),
-            sort_by_status: (KeyCode::Char('8'), Some(KeyCode::Char('9'))),
-            sort_by_cpu: (KeyCode::F(11), Some(KeyCode::F(12))),
-            sort_by_memory: (KeyCode::Char('/'), Some(KeyCode::Char('\\'))),
-            sort_by_id: (KeyCode::Char('['), Some(KeyCode::Char(']'))),
-            sort_by_image: (KeyCode::Char('A'), Some(KeyCode::Char('B'))),
-            sort_by_rx: (KeyCode::Char('C'), Some(KeyCode::Char('D'))),
-            sort_by_tx: (KeyCode::Insert, Some(KeyCode::Tab)),
-            sort_reset: (KeyCode::Up, Some(KeyCode::Down)),
-            toggle_help: (KeyCode::Home, Some(KeyCode::End)),
-            toggle_mouse_capture: (KeyCode::PageDown, Some(KeyCode::PageUp)),
+            force_redraw: (KeyCode::Char('k'), Some(KeyCode::Char('l'))),
+            log_section_height_increase: (KeyCode::Char('o'), Some(KeyCode::Char('p'))),
+            log_section_height_decrease: (KeyCode::Char('m'), Some(KeyCode::Char('n'))),
+            log_section_toggle: (KeyCode::Char('u'), Some(KeyCode::Char('v'))),
+            log_scroll_forward: (KeyCode::Char('q'), Some(KeyCode::Char('r'))),
+            log_scroll_back: (KeyCode::Char('s'), Some(KeyCode::Char('t'))),
+            quit: (KeyCode::Char('w'), Some(KeyCode::Char('x'))),
+            save_logs: (KeyCode::Char('y'), Some(KeyCode::Char('z'))),
+            scroll_down_many: (KeyCode::Char('1'), Some(KeyCode::Char('2'))),
+            scroll_down_one: (KeyCode::Char('3'), Some(KeyCode::Char('4'))),
+            scroll_end: (KeyCode::Char('5'), Some(KeyCode::Char('6'))),
+            scroll_start: (KeyCode::Char('7'), Some(KeyCode::Char('8'))),
+            scroll_up_many: (KeyCode::Char('9'), Some(KeyCode::Char('0'))),
+            scroll_up_one: (KeyCode::F(1), Some(KeyCode::F(2))),
+            select_next_panel: (KeyCode::F(3), Some(KeyCode::F(4))),
+            select_previous_panel: (KeyCode::F(5), Some(KeyCode::F(6))),
+            sort_by_name: (KeyCode::Up, Some(KeyCode::Down)),
+            sort_by_state: (KeyCode::Char('['), Some(KeyCode::Char(']'))),
+            sort_by_status: (KeyCode::Tab, None),
+            sort_by_cpu: (KeyCode::F(7), Some(KeyCode::F(8))),
+            sort_by_memory: (KeyCode::Home, Some(KeyCode::End)),
+            sort_by_id: (KeyCode::F(9), Some(KeyCode::F(10))),
+            sort_by_image: (KeyCode::F(11), Some(KeyCode::F(12))),
+            sort_by_rx: (KeyCode::Left, Some(KeyCode::Right)),
+            sort_by_tx: (KeyCode::PageDown, Some(KeyCode::PageUp)),
+            sort_reset: (KeyCode::Char(','), Some(KeyCode::Char('.'))),
+            toggle_help: (KeyCode::Char('-'), Some(KeyCode::Char('='))),
+            toggle_mouse_capture: (KeyCode::Char('\\'), Some(KeyCode::Char('/'))),
+            scroll_many: KeyModifiers::ALT,
         };
-
         assert_eq!(expected, result);
     }
 }

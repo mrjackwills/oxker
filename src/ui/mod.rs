@@ -255,7 +255,10 @@ impl Ui {
                             event::MouseEventKind::Down(_)
                             | event::MouseEventKind::ScrollDown
                             | event::MouseEventKind::ScrollUp => {
-                                self.input_tx.send(InputMessages::MouseEvent(m)).await.ok();
+                                self.input_tx
+                                    .send(InputMessages::MouseEvent((m, m.modifiers)))
+                                    .await
+                                    .ok();
                             }
                             _ => (),
                         }
