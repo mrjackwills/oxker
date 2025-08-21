@@ -1,6 +1,7 @@
 ### Chores
 + Dependencies updated, [ced885e0128b6d5d3a3c7cb97d7e53bc2da64893], [f9b40ea03d0e70e235c28646ff3f9ebb468a904d]
 + Rust 1.89 linting, [79d19ceeb81ae60bc5562683e405d6e74e6f2578]
++ GitHub workflow updated, [08384200558fa1b9d378ea62ea832708caebaa91], [6573af1ed7d382a81c1305397e904066bb8395a8]
 
 ### Features
 + Horizontally scroll across logs. By default use `←` & `→` keys to traverse horizontally across the lines when logs panel selected. Updated `config.toml` with `log_scroll_forward` and `log_scroll_back`  [c190f0206cc55b8e45b8373f9be954e828c18b3b], [8939ac0345326633e794cc10a981a1f3c5c07549]
