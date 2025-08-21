@@ -121,24 +121,26 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+      - name: Write release version to env
+        run: |
+          CURRENT_SEMVER=${GITHUB_REF_NAME#v}
+          echo "CURRENT_SEMVER=$CURRENT_SEMVER" >> $GITHUB_ENV
+
+      - uses: docker/setup-buildx-action@v3
+        id: buildx
         with:
-          context: .
-          file: ./containerised/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/{{ github.event.repository.name }}:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/{{ github.event.repository.name }}:${{env.CURRENT_SEMVER}}
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ env.CURRENT_SEMVER }}
-          platforms: linux/arm/v6,linux/arm64,linux/amd64
-          provenance: false
-          sbom: false
+          install: true
+      - name: Build for Dockerhub & ghcr.io
+        run: |
+          docker build --platform linux/arm/v6,linux/arm64,linux/amd64 \
+          -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:latest \
+          -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:${{env.CURRENT_SEMVER}} \
+          -t ghcr.io/${{ github.repository_owner }}/${{ github.ref_name }}:latest \
+          -t ghcr.io/${{ github.repository_owner }}/${{ github.ref_name }}:${{env.CURRENT_SEMVER}} \
+          --provenance=false --sbom=false \
+          --push \
+          -f containerised/Dockerfile .
 
   ########################
   # Publish to crates.io #
