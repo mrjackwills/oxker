@@ -1,7 +1,7 @@
 use bollard::models::ContainerSummary;
 use core::fmt;
 use parking_lot::Mutex;
-use ratatui::widgets::{ListItem, ListState};
+use ratatui::{layout::Size, text::Text, widgets::ListState};
 use std::{
     hash::Hash,
     sync::Arc,
@@ -122,7 +122,7 @@ pub struct AppData {
     error: Option<AppError>,
     filter: Filter,
     hidden_containers: Vec<ContainerItem>,
-    redraw: Arc<Rerender>,
+    rerender: Arc<Rerender>,
     sorted_by: Option<(Header, SortedOrder)>,
     current_sorted_id: Vec<ContainerId>,
     pub config: Config,
@@ -137,7 +137,7 @@ pub struct AppData {
     pub filter: Filter,
     pub hidden_containers: Vec<ContainerItem>,
     pub current_sorted_id: Vec<ContainerId>,
-    pub redraw: Arc<Rerender>,
+    pub rerender: Arc<Rerender>,
     pub sorted_by: Option<(Header, SortedOrder)>,
 }
 
@@ -151,7 +151,7 @@ impl AppData {
             error: None,
             filter: Filter::new(),
             hidden_containers: vec![],
-            redraw: Arc::clone(redraw),
+            rerender: Arc::clone(redraw),
             sorted_by: None,
         }
     }
@@ -192,7 +192,7 @@ impl AppData {
     /// sets the state to start if any filtering has occurred
     /// Also search in the "hidden" vec for items and insert back into the main containers vec
     fn filter_containers(&mut self) {
-        self.redraw.update();
+        self.rerender.update_draw();
         let pre_len = self.get_container_len();
 
         if !self.hidden_containers.is_empty() {
@@ -296,7 +296,7 @@ impl AppData {
     /// Remove the sorted header & order, and sort by default - created datetime
     pub fn reset_sorted(&mut self) {
         self.set_sorted(None);
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Sort containers based on a given header, if headings match, and already ascending, remove sorting
@@ -392,7 +392,7 @@ impl AppData {
 
             self.containers.items.sort_by(sort_closure);
             if pre_order != self.get_current_ids() {
-                self.redraw.update();
+                self.rerender.update_draw();
             }
         } else if self.current_sorted_id != self.get_current_ids() {
             self.containers.items.sort_by(|a, b| {
@@ -400,20 +400,13 @@ impl AppData {
                     .cmp(&b.created)
                     .then_with(|| a.name.get().cmp(b.name.get()))
             });
-            self.redraw.update();
+            self.rerender.update_draw();
             self.current_sorted_id = self.get_current_ids();
         }
     }
 
     /// Container state methods
     /// Get the total number of none "hidden" containers
-    // TODO remove this once zigbuild uses Rust v1.87.0
-    #[cfg(target_os = "macos")]
-    pub fn get_container_len(&self) -> usize {
-        self.containers.items.len()
-    }
-
-    #[cfg(not(target_os = "macos"))]
     pub const fn get_container_len(&self) -> usize {
         self.containers.items.len()
     }
@@ -446,25 +439,25 @@ impl AppData {
     /// Select the first container
     pub fn containers_start(&mut self) {
         self.containers.start();
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// select the last container
     pub fn containers_end(&mut self) {
         self.containers.end();
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Select the next container
     pub fn containers_next(&mut self) {
         self.containers.next();
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// select the previous container
     pub fn containers_previous(&mut self) {
         self.containers.previous();
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Get ListState of containers
@@ -586,7 +579,7 @@ impl AppData {
     pub fn docker_controls_next(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.next();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -594,7 +587,7 @@ impl AppData {
     pub fn docker_controls_previous(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.previous();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -602,7 +595,7 @@ impl AppData {
     pub fn docker_controls_start(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.start();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -610,7 +603,7 @@ impl AppData {
     pub fn docker_controls_end(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.docker_controls.end();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -644,11 +637,33 @@ impl AppData {
             })
     }
 
+    /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
+    pub fn get_scroll_title(&mut self, width: u16) -> Option<String> {
+        self.get_mut_selected_container()
+            .and_then(|i| i.logs.get_scroll_title(width))
+    }
+
+    /// Increase the logs offset, basically moving an invisible cursor back
+    pub fn log_back(&mut self) {
+        if let Some(i) = self.get_mut_selected_container() {
+            i.logs.back();
+            self.rerender.update_draw();
+        }
+    }
+
+    /// Increase the logs offset, basically moving an invisible cursor forward
+    pub fn log_forward(&mut self, width: u16) {
+        if let Some(i) = self.get_mut_selected_container() {
+            i.logs.forward(width);
+            self.rerender.update_draw();
+        }
+    }
+
     /// select next selected log line
     pub fn log_next(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.next();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -656,7 +671,7 @@ impl AppData {
     pub fn log_previous(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.previous();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -664,7 +679,7 @@ impl AppData {
     pub fn log_end(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.end();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
@@ -672,17 +687,17 @@ impl AppData {
     pub fn log_start(&mut self) {
         if let Some(i) = self.get_mut_selected_container() {
             i.logs.start();
-            self.redraw.update();
+            self.rerender.update_draw();
         }
     }
 
     /// Get mutable Vec of current containers logs
-    pub fn get_logs(&self, height: u16, padding: usize) -> Vec<ListItem<'static>> {
+    pub fn get_logs(&self, size: Size, padding: usize) -> Vec<Text<'static>> {
         self.containers
             .state
             .selected()
             .and_then(|i| self.containers.items.get(i))
-            .map_or(vec![], |i| i.logs.to_vec(height.into(), padding))
+            .map_or(vec![], |i| i.logs.get_visible_logs(size, padding))
     }
 
     /// Get mutable Option of the currently selected container Logs state
@@ -713,14 +728,14 @@ impl AppData {
     /// Remove single app_state error
     pub fn remove_error(&mut self) {
         self.error = None;
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Insert single app_state error
     pub fn set_error(&mut self, error: AppError, gui_state: &Arc<Mutex<GuiState>>, status: Status) {
         gui_state.lock().status_push(status);
         self.error = Some(error);
-        self.redraw.update();
+        self.rerender.update_draw();
     }
 
     /// Check if the selected container is a dockerised version of oxker
@@ -810,7 +825,7 @@ impl AppData {
             container.mem_limit.update(mem_limit);
         }
         if self.is_selected_container(id) {
-            self.redraw.update();
+            self.rerender.update_draw();
         }
         self.sort_containers();
     }
@@ -848,7 +863,7 @@ impl AppData {
                 if self.containers.items.get(index).is_some() {
                     self.containers.items.remove(index);
                     if self.is_selected_container(id) {
-                        self.redraw.update();
+                        self.rerender.update_draw();
                     }
                 }
             }
@@ -881,7 +896,12 @@ impl AppData {
                         .as_ref()
                         .map_or(String::new(), std::clone::Clone::clone),
                 );
-                let state = State::from((i.state.as_ref().map_or("dead", |z| z), &status));
+                let state = State::from((
+                    i.state
+                        .as_ref()
+                        .map_or(&bollard::secret::ContainerSummaryStateEnum::DEAD, |z| z),
+                    &status,
+                ));
                 let image = i
                     .image
                     .as_ref()
@@ -965,7 +985,7 @@ impl AppData {
                     } else {
                         log_sanitizer::remove_ansi(&i)
                     };
-                    container.logs.insert(ListItem::new(lines), log_tz);
+                    container.logs.insert(Text::from(lines), log_tz);
                 }
 
                 // Set the logs selected row for each container
@@ -977,7 +997,7 @@ impl AppData {
                 }
             }
             if self.is_selected_container(id) {
-                self.redraw.update();
+                self.rerender.update_draw();
             }
         }
     }
@@ -1945,14 +1965,19 @@ mod tests {
         let logs = (1..=3).map(|i| format!("{i} {i}")).collect::<Vec<_>>();
 
         app_data.update_log_by_id(logs, &ids[0]);
-        // app_data.log_start();
 
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(2));
         assert_eq!(result.unwrap().offset(), 0);
 
-        let result = app_data.get_logs(4, 1);
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 4,
+            },
+            1,
+        );
         assert_eq!(result.len(), 3);
 
         let result = app_data.get_log_title();
@@ -2340,44 +2365,68 @@ mod tests {
 
         app_data.update_log_by_id(logs, &ids[0]);
 
-        let result = app_data.get_logs(10, 10);
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 10,
+            },
+            10,
+        );
         for (index, item) in result.iter().enumerate() {
             if index < 979 {
-                assert_eq!(item, &ListItem::new(""));
+                assert_eq!(item, &Text::from(""));
             } else {
-                assert_eq!(item, &ListItem::new(format!("{index}")));
+                assert_eq!(item, &Text::from(format!("{index}")));
             }
         }
 
-        let result = app_data.get_logs(100, 20);
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 100,
+            },
+            20,
+        );
         for (index, item) in result.iter().enumerate() {
             if index < 879 {
-                assert_eq!(item, &ListItem::new(""));
+                assert_eq!(item, &Text::from(""));
             } else {
-                assert_eq!(item, &ListItem::new(format!("{index}")));
+                assert_eq!(item, &Text::from(format!("{index}")));
             }
         }
 
         app_data.log_start();
-        let result = app_data.get_logs(10, 10);
+
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 10,
+            },
+            10,
+        );
         for (index, item) in result.iter().enumerate() {
             if index > 20 {
-                assert_eq!(item, &ListItem::new(""));
+                assert_eq!(item, &Text::from(""));
             } else {
-                assert_eq!(item, &ListItem::new(format!("{index}")));
+                assert_eq!(item, &Text::from(format!("{index}")));
             }
         }
 
         for _ in 0..=500 {
             app_data.log_next();
         }
-
-        let result = app_data.get_logs(10, 10);
+        let result = app_data.get_logs(
+            Size {
+                width: 20,
+                height: 10,
+            },
+            10,
+        );
         for (index, item) in result.iter().enumerate() {
             if (481..=521).contains(&index) {
-                assert_eq!(item, &ListItem::new(format!("{index}")));
+                assert_eq!(item, &Text::from(format!("{index}")));
             } else {
-                assert_eq!(item, &ListItem::new(""));
+                assert_eq!(item, &Text::from(""));
             }
         }
     }

@@ -1,6 +1,5 @@
 ---
 source: src/ui/draw_blocks/help.rs
-assertion_line: 456
 expression: setup.terminal.backend()
 ---
 "                                                                                       "
@@ -18,9 +17,12 @@ expression: setup.terminal.backend()
 " │                 A simple tui to view & control docker containers                  │ "
 " │                                                                                   │ "
 " │ ( tab ) or ( shift+tab ) change panels                                            │ "
-" │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) change selected line        │ "
+" │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) scroll vertically           │ "
+" │ ( ← → ) horizontal scroll across logs                                             │ "
+" │ ( ctrl ) increase scroll speed, used in conjuction scroll keys                    │ "
 " │ ( enter ) send docker container command                                           │ "
 " │ ( e ) exec into a container                                                       │ "
+" │ ( f ) force clear the screen & redraw the gui                                     │ "
 " │ ( h ) toggle this help information - or click heading                             │ "
 " │ ( s ) save logs to file                                                           │ "
 " │ ( m ) toggle mouse capture - if disabled, text on screen can be selected & copied │ "
@@ -34,7 +36,6 @@ expression: setup.terminal.backend()
 " │                                                                                   │ "
 " │        currently an early work in progress, all and any input appreciated         │ "
 " │                       https://github.com/mrjackwills/oxker                        │ "
-" │                                                                                   │ "
 " │                                                                                   │ "
 " ╰───────────────────────────────────────────────────────────────────────────────────╯ "
 "                                                                                       "

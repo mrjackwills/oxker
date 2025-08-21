@@ -50,7 +50,7 @@ pub struct Ui {
     input_tx: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
     now: Instant,
-    redraw: Arc<Rerender>,
+    rerender: Arc<Rerender>,
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
@@ -73,7 +73,7 @@ impl Ui {
         gui_state: Arc<Mutex<GuiState>>,
         input_tx: Sender<InputMessages>,
         is_running: Arc<AtomicBool>,
-        redraw: Arc<Rerender>,
+        rerender: Arc<Rerender>,
     ) {
         match Self::setup_terminal() {
             Ok(mut terminal) => {
@@ -85,7 +85,7 @@ impl Ui {
                     input_tx,
                     is_running,
                     now: Instant::now(),
-                    redraw,
+                    rerender,
                     terminal,
                 };
                 if let Err(e) = ui.draw_ui().await {
@@ -169,6 +169,13 @@ impl Ui {
         Ok(())
     }
 
+    /// Check if the user has attempt to clear the screen, and if so clear and redraw
+    fn check_clear(&mut self) {
+        if self.rerender.get_clear() {
+            self.terminal.clear().ok();
+            self.rerender.update_draw();
+        }
+    }
     /// Use external docker cli to exec into a container
     async fn exec(&mut self) {
         let exec_mode = self.gui_state.lock().get_exec_mode();
@@ -191,7 +198,8 @@ impl Ui {
     /// Use the previously redrawn time, the current time, the docker_interval, and the redraw struct, to calculate
     /// if the screen should be redrawn or not
     fn should_redraw(&self, previous: &mut Instant, docker_interval_ms: u128) -> bool {
-        let result = self.redraw.swap() || previous.elapsed().as_millis() >= docker_interval_ms;
+        let result =
+            self.rerender.swap_draw() || previous.elapsed().as_millis() >= docker_interval_ms;
         if result {
             *previous = std::time::Instant::now();
         }
@@ -205,7 +213,15 @@ impl Ui {
         let docker_interval_ms = u128::from(self.app_data.lock().config.docker_interval_ms);
         let mut drawn_at = std::time::Instant::now();
 
+        if let Ok(size) = self.terminal.size() {
+            self.gui_state.lock().set_screen_width(size.width);
+        }
+
         while self.is_running.load(Ordering::SeqCst) {
+            // if self.redraw.get_clear() {
+            //     self.terminal.clear().ok();
+            //     continue;
+            // }
             if self.should_redraw(&mut drawn_at, docker_interval_ms) {
                 let fd = FrameData::from(&*self);
 
@@ -239,18 +255,21 @@ impl Ui {
                             event::MouseEventKind::Down(_)
                             | event::MouseEventKind::ScrollDown
                             | event::MouseEventKind::ScrollUp => {
-                                self.input_tx.send(InputMessages::MouseEvent(m)).await.ok();
+                                self.input_tx
+                                    .send(InputMessages::MouseEvent((m, m.modifiers)))
+                                    .await
+                                    .ok();
                             }
                             _ => (),
                         }
-                    } else if let Event::Resize(_, _) = event {
+                    } else if let Event::Resize(width, _) = event {
                         self.gui_state.lock().clear_area_map();
-                        // self.gui_state.lock().set_window_height(row);
-
                         self.terminal.autoresize().ok();
+                        self.gui_state.lock().set_screen_width(width);
                     }
                 }
             }
+            self.check_clear();
         }
         Ok(())
     }
@@ -279,7 +298,6 @@ pub struct FrameData {
     filter_by: FilterBy,
     filter_term: Option<String>,
     has_containers: bool,
-    // container_section_height: u16,
     log_height: u16,
     show_logs: bool,
     has_error: Option<AppError>,
@@ -290,13 +308,14 @@ pub struct FrameData {
     port_max_lens: (usize, usize, usize),
     ports: Option<(Vec<ContainerPorts>, State)>,
     selected_panel: SelectablePanel,
+    scroll_title: Option<String>,
     sorted_by: Option<(Header, SortedOrder)>,
     status: HashSet<Status>,
 }
 
 impl From<&Ui> for FrameData {
     fn from(ui: &Ui) -> Self {
-        let (app_data, gui_data) = (ui.app_data.lock(), ui.gui_state.lock());
+        let (mut app_data, gui_data) = (ui.app_data.lock(), ui.gui_state.lock());
 
         let (filter_by, filter_term) = app_data.get_filter();
         Self {
@@ -317,6 +336,7 @@ impl From<&Ui> for FrameData {
             log_title: app_data.get_log_title(),
             port_max_lens: app_data.get_longest_port(),
             ports: app_data.get_selected_ports(),
+            scroll_title: app_data.get_scroll_title(gui_data.get_screen_width()),
             selected_panel: gui_data.get_selected_panel(),
             sorted_by: app_data.get_sorted(),
             status: gui_data.get_status(),

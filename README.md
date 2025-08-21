@@ -105,7 +105,9 @@ In application controls, these, amongst many other settings, can be customized w
 | button| result|
 |--|--|
 | ```( tab )``` or ```( shift+tab )``` | Change panel, clicking on a panel also changes the selected panel.|
-| ```( ↑ ↓ )``` or ```( j k )``` or ```( PgUp PgDown )``` or ```( Home End )```| Change selected line in selected panel, mouse scroll also changes selected line.|
+| ```( ↑ ↓ )``` or ```( j k )``` or ```( PgUp PgDown )``` or ```( Home End )```| Scroll line in selected panel - mouse wheel will also scroll.|
+| ```( ← → )``` | When logs panel selected, scroll horizontally across the text of the logs.|
+| ```( ctrl )``` | Increase scroll speed, used in conjuction scroll keys.|
 | ```( enter )```| Run selected docker command.|
 | ```( 1-9 )``` | Sort containers by heading, clicking on headings also sorts the selected column. |
 | ```( 0 )``` | Stop sorting.|
@@ -113,6 +115,7 @@ In application controls, these, amongst many other settings, can be customized w
 | ```( - ) ``` or ```(=)``` | Reduce or increase the height of the logs panel.|
 | ```( \ )``` | Toggle the visibility of the logs panel.|
 | ```( e )``` | Exec into the selected container - not available on Windows.|
+| ```( f )``` | Force clear the screen & redraw the gui.|
 | ```( h )``` | Toggle help menu.|
 | ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
 | ```( q )``` | Quit.|

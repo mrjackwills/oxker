@@ -5,8 +5,7 @@ use std::{
     time::SystemTime,
 };
 
-use bollard::container::LogsOptions;
-// use bollard::container::LogsOptions;
+use bollard::query_parameters::LogsOptions;
 use cansi::v3::categorise_text;
 use crossterm::{
     event::{DisableMouseCapture, KeyCode, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
@@ -68,7 +67,7 @@ impl InputHandler {
         while let Some(message) = self.rx.recv().await {
             match message {
                 InputMessages::ButtonPress(key) => self.button_press(key.0, key.1).await,
-                InputMessages::MouseEvent(mouse_event) => {
+                InputMessages::MouseEvent((mouse_event, modifider)) => {
                     let status = self.gui_state.lock().get_status();
                     let contains = |s: Status| status.contains(&s);
 
@@ -79,7 +78,7 @@ impl InputHandler {
                         | !contains(Status::DeleteConfirm)
                         | !contains(Status::Filter)
                     {
-                        self.mouse_press(mouse_event);
+                        self.mouse_press(mouse_event, modifider);
                     }
                 }
             }
@@ -188,7 +187,7 @@ impl InputHandler {
 
                 let path = log_path.join(format!("{name}_{now}.log"));
 
-                let options = Some(LogsOptions::<String> {
+                let options = Some(LogsOptions {
                     stderr: true,
                     stdout: true,
                     timestamps: args.show_timestamp,
@@ -282,6 +281,36 @@ impl InputHandler {
                             .ok(),
                     };
                 }
+            }
+        }
+    }
+
+    /// If keymap.scroll_modifier is pressed, return 10, else return 1, to speed up scrolling
+    fn get_modifier_total(&self, modifier: KeyModifiers) -> u8 {
+        if modifier == self.keymap.scroll_many {
+            10
+        } else {
+            1
+        }
+    }
+
+    /// Advance the "cursor" along the logs
+    fn logs_forward(&self, modifier: KeyModifiers) {
+        let panel = self.gui_state.lock().get_selected_panel();
+        if panel == SelectablePanel::Logs {
+            for _ in 0..self.get_modifier_total(modifier) {
+                let width = self.gui_state.lock().get_screen_width();
+                self.app_data.lock().log_forward(width);
+            }
+        }
+    }
+
+    /// Retreat the "cursor" along the logs
+    fn logs_back(&self, modifier: KeyModifiers) {
+        let panel = self.gui_state.lock().get_selected_panel();
+        if panel == SelectablePanel::Logs {
+            for _ in 0..self.get_modifier_total(modifier) {
+                self.app_data.lock().log_back();
             }
         }
     }
@@ -391,6 +420,11 @@ impl InputHandler {
     /// Handle input that refers to the sorting of columns
     fn handle_sort(&self, key_code: KeyCode) {
         match key_code {
+            _ if self.keymap.force_redraw.0 == key_code
+                || self.keymap.force_redraw.1 == Some(key_code) =>
+            {
+                self.gui_state.lock().set_clear();
+            }
             _ if self.keymap.sort_reset.0 == key_code
                 || self.keymap.sort_reset.1 == Some(key_code) =>
             {
@@ -467,7 +501,8 @@ impl InputHandler {
     }
 
     /// Handle button presses in all other scenarios
-    async fn handle_others(&mut self, key_code: KeyCode) {
+    #[allow(clippy::cognitive_complexity)]
+    async fn handle_others(&mut self, key_code: KeyCode, modifier: KeyModifiers) {
         self.handle_sort(key_code);
         // shift key plus arrows
         match key_code {
@@ -537,28 +572,28 @@ impl InputHandler {
             _ if self.keymap.scroll_up_one.0 == key_code
                 || self.keymap.scroll_up_one.1 == Some(key_code) =>
             {
-                self.previous();
+                self.scroll_up(modifier);
             }
 
             _ if self.keymap.scroll_up_many.0 == key_code
                 || self.keymap.scroll_up_many.1 == Some(key_code) =>
             {
                 for _ in 0..=6 {
-                    self.previous();
+                    self.scroll_up(modifier);
                 }
             }
 
             _ if self.keymap.scroll_down_one.0 == key_code
                 || self.keymap.scroll_down_one.1 == Some(key_code) =>
             {
-                self.next();
+                self.scroll_down(modifier);
             }
 
             _ if self.keymap.scroll_down_many.0 == key_code
                 || self.keymap.scroll_down_many.1 == Some(key_code) =>
             {
                 for _ in 0..=6 {
-                    self.next();
+                    self.scroll_down(modifier);
                 }
             }
 
@@ -567,6 +602,18 @@ impl InputHandler {
             {
                 self.gui_state.lock().status_push(Status::Filter);
                 self.docker_tx.send(DockerMessage::Update).await.ok();
+            }
+
+            _ if self.keymap.log_scroll_back.0 == key_code
+                || self.keymap.log_scroll_back.1 == Some(key_code) =>
+            {
+                self.logs_back(modifier);
+            }
+
+            _ if self.keymap.log_scroll_forward.0 == key_code
+                || self.keymap.log_scroll_forward.1 == Some(key_code) =>
+            {
+                self.logs_forward(modifier);
             }
 
             KeyCode::Enter => self.enter_key().await,
@@ -603,7 +650,7 @@ impl InputHandler {
             } else if contains_delete {
                 self.handle_delete(key_code).await;
             } else {
-                self.handle_others(key_code).await;
+                self.handle_others(key_code, key_modifier).await;
             }
         }
     }
@@ -628,7 +675,7 @@ impl InputHandler {
     }
 
     /// Handle mouse button events
-    fn mouse_press(&self, mouse_event: MouseEvent) {
+    fn mouse_press(&self, mouse_event: MouseEvent, modifier: KeyModifiers) {
         let status = self.gui_state.lock().get_status();
         if status.contains(&Status::Help) {
             let mouse_point = Rect::new(mouse_event.column, mouse_event.row, 1, 1);
@@ -638,8 +685,8 @@ impl InputHandler {
             }
         } else {
             match mouse_event.kind {
-                MouseEventKind::ScrollUp => self.previous(),
-                MouseEventKind::ScrollDown => self.next(),
+                MouseEventKind::ScrollUp => self.scroll_up(modifier),
+                MouseEventKind::ScrollDown => self.scroll_down(modifier),
                 MouseEventKind::Down(MouseButton::Left) => {
                     let mouse_point = Rect::new(mouse_event.column, mouse_event.row, 1, 1);
                     let header = self.gui_state.lock().get_intersect_header(mouse_point);
@@ -659,21 +706,37 @@ impl InputHandler {
     }
 
     /// Change state to next, depending which panel is currently in focus
-    fn next(&self) {
+    fn scroll_down(&self, modifier: KeyModifiers) {
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
-            SelectablePanel::Containers => self.app_data.lock().containers_next(),
-            SelectablePanel::Logs => self.app_data.lock().log_next(),
+            SelectablePanel::Containers => {
+                for _ in 0..self.get_modifier_total(modifier) {
+                    self.app_data.lock().containers_next();
+                }
+            }
+            SelectablePanel::Logs => {
+                for _ in 0..self.get_modifier_total(modifier) {
+                    self.app_data.lock().log_next();
+                }
+            }
             SelectablePanel::Commands => self.app_data.lock().docker_controls_next(),
         }
     }
 
     /// Change state to previous, depending which panel is currently in focus
-    fn previous(&self) {
+    fn scroll_up(&self, modifier: KeyModifiers) {
         let selected_panel = self.gui_state.lock().get_selected_panel();
         match selected_panel {
-            SelectablePanel::Containers => self.app_data.lock().containers_previous(),
-            SelectablePanel::Logs => self.app_data.lock().log_previous(),
+            SelectablePanel::Containers => {
+                for _ in 0..self.get_modifier_total(modifier) {
+                    self.app_data.lock().containers_previous();
+                }
+            }
+            SelectablePanel::Logs => {
+                for _ in 0..self.get_modifier_total(modifier) {
+                    self.app_data.lock().log_previous();
+                }
+            }
             SelectablePanel::Commands => self.app_data.lock().docker_controls_previous(),
         }
     }

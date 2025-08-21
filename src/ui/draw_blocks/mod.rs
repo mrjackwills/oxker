@@ -72,7 +72,6 @@ pub fn max_line_width(text: &str) -> usize {
         .max()
         .unwrap_or_default()
 }
-
 /// Generate block, add a border if is the selected panel,
 /// add custom title based on state of each panel
 fn generate_block<'a>(
@@ -101,7 +100,15 @@ fn generate_block<'a>(
     let mut block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .title(title);
+        .title(ratatui::text::Line::from(title).left_aligned());
+
+    if panel == SelectablePanel::Logs {
+        if let Some(x) = fd.scroll_title.as_ref() {
+            block = block
+                .title_bottom(x.to_owned())
+                .title_alignment(ratatui::layout::Alignment::Right);
+        }
+    }
     if !fd.status.contains(&Status::Filter) {
         if fd.selected_panel == panel {
             block = block.border_style(Style::default().fg(colors.borders.selected));
@@ -151,7 +158,7 @@ pub mod tests {
     /// Create a FrameData struct from two Arc<mutex>'s, instead of from UI
     impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
         fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
-            let (app_data, gui_data) = (data.0.lock(), data.1.lock());
+            let (mut app_data, gui_data) = (data.0.lock(), data.1.lock());
 
             // let container_section_height = app_data.get_container_len();
             // let container_section_height = if container_section_height < 12 {
@@ -178,6 +185,7 @@ pub mod tests {
                 loading_icon: gui_data.get_loading().to_string(),
                 log_height: gui_data.get_log_height(),
                 log_title: app_data.get_log_title(),
+                scroll_title: app_data.get_scroll_title(gui_data.get_screen_width()),
                 port_max_lens: app_data.get_longest_port(),
                 ports: app_data.get_selected_ports(),
                 selected_panel: gui_data.get_selected_panel(),
@@ -208,6 +216,7 @@ pub mod tests {
         let gui_state = Arc::new(Mutex::new(gui_state));
         let fd = FrameData::from((&app_data, &gui_state));
         let area = Rect::new(0, 0, w, h);
+        gui_state.lock().set_screen_width(w);
         TuiTestSetup {
             app_data,
             gui_state,
@@ -220,9 +229,9 @@ pub mod tests {
 
     /// Just a shorthand for when enumerating over result cells
     pub fn get_result(
-        setup: &TuiTestSetup,
+        setup: &'_ TuiTestSetup,
         // w: u16,
-    ) -> std::iter::Enumerate<std::slice::Chunks<ratatui::buffer::Cell>> {
+    ) -> std::iter::Enumerate<std::slice::Chunks<'_, ratatui::buffer::Cell>> {
         setup
             .terminal
             .backend()
@@ -276,7 +285,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -305,7 +314,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[1]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -340,7 +349,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -373,7 +382,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -402,7 +411,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -434,7 +443,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -464,7 +473,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -498,7 +507,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });
@@ -530,7 +539,7 @@ pub mod tests {
         setup.app_data.lock().containers.items[0]
             .ports
             .push(ContainerPorts {
-                ip: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 private: 8003,
                 public: Some(8003),
             });

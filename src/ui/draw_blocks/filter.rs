@@ -8,7 +8,7 @@ use ratatui::{
 use crate::{app_data::FilterBy, config::AppColors, ui::FrameData};
 
 /// Create the filter_by by spans, coloured dependant on which one is selected
-fn filter_by_spans(colors: AppColors, fd: &FrameData) -> [Span; 4] {
+fn filter_by_spans(colors: AppColors, fd: &'_ FrameData) -> [Span<'_>; 4] {
     let selected = Style::default()
         .bg(colors.filter.selected_filter_background)
         .fg(colors.filter.selected_filter_text);

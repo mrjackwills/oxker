@@ -55,8 +55,10 @@ show_logs = true
 # 3) F1-F12
 # 4) backspace, tab, backtab, delete, end, esc, home, insert, pagedown, pageup, left, right, up, down
 
-
 # Each definition can have two keys associated with it
+
+# WARNING "scroll_many" only accepts control, alt, shift, with no secondary option
+
 # If any key clashes are found, oxker will revert to it's default keymap
 
 [keymap]
@@ -74,18 +76,28 @@ filter_mode = ["/", "F1"]
 quit = ["q"]
 # Save logs of selected container to file on disk
 save_logs = ["s"]
+# TODO "scroll_down_many" will be removed in the next release
 # scroll down a list by many
 scroll_down_many = ["pagedown"]
+# TODO rename in next release
 # scroll down a list by one item
 scroll_down_one = ["down", "j"]
+
 # scroll down to the end of a list
 scroll_end = ["end"]
+# Modifier to scroll by 10 lines isntead of one, used in conjunction with scroll_up_x/scroll_down_x
+scroll_many = ["control"]
 # scroll up to the start of a list
 scroll_start = ["home"]
+# TODO "scroll_up_many" will be removed in the next release
 # scroll up a list by many
 scroll_up_many = ["pageup"]
+# TODO rename in next release
 # scroll up a list by one item
 scroll_up_one = ["up", "k"]
+# Horizontal scroll of the logs
+log_scroll_forward = ["right"]
+log_scroll_back = ["left"]
 # Select next panel
 select_next_panel = ["tab"]
 # Select previous panel
@@ -108,10 +120,11 @@ toggle_help = ["h"]
 toggle_mouse_capture = ["m"]
 # Reduce the height of the logs list section
 log_section_height_decrease = ["-"]
-# Increase the height of the logs list section
 log_section_height_increase = ["+"]
 # Toggle visibility of the log section
 log_section_toggle = ["\\"]
+# Force a complete clear & redraw of the screen
+force_redraw = ["f"]
 
 #################
 # Custom Colors #
@@ -185,6 +198,7 @@ selected_filter_background = "gray"
 selected_filter_text = "black"
 # Highlighted text color
 highlight = "magenta"
+
 
 # The color the of Docker commands available for each container
 [colors.commands]
