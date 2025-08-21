@@ -1,5 +1,5 @@
 ### Chores
-+ Dependencies updated, [ced885e0128b6d5d3a3c7cb97d7e53bc2da64893]
++ Dependencies updated, [ced885e0128b6d5d3a3c7cb97d7e53bc2da64893], [f9b40ea03d0e70e235c28646ff3f9ebb468a904d]
 + Rust 1.89 linting, [79d19ceeb81ae60bc5562683e405d6e74e6f2578]
 
 ### Features
