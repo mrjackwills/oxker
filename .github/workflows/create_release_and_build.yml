@@ -136,8 +136,8 @@ jobs:
           docker build --platform linux/arm/v6,linux/arm64,linux/amd64 \
           -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:latest \
           -t ${{ secrets.DOCKERHUB_USERNAME }}/oxker:${{env.CURRENT_SEMVER}} \
-          -t ghcr.io/${{ github.repository_owner }}/${{ github.ref_name }}:latest \
-          -t ghcr.io/${{ github.repository_owner }}/${{ github.ref_name }}:${{env.CURRENT_SEMVER}} \
+          -t ghcr.io/${{ github.repository }}:latest \
+          -t ghcr.io/${{ github.repository }}:${{env.CURRENT_SEMVER}} \
           --provenance=false --sbom=false \
           --push \
           -f containerised/Dockerfile .

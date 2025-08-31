@@ -1,18 +1,23 @@
-<p align="center">
+<p align='center'>
 	<img src='./.github/logo.svg' width='100px' />
 	<br>
-	<h1 align="center">oxker</h1>
-	<div align="center">A simple tui to view & control docker containers</div>
+	<h1 align='center'>oxker</h1>
+	<div align='center'>A simple tui to view & control docker containers</div>
 </p>
 
-<p align="center">
+<p align='center'>
 	Built in <a href='https://www.rust-lang.org/' target='_blank' rel='noopener noreferrer'>Rust</a>, making heavy use of <a href='https://github.com/tui-rs-revival/ratatui' target='_blank' rel='noopener noreferrer'>ratatui</a> & <a href='https://github.com/fussybeaver/bollard' target='_blank' rel='noopener noreferrer'>Bollard</a>
 </p>
 
-<p align="center">
-	<a href="https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.png" target='_blank' rel='noopener noreferrer'>
-		<img src='./.github/screenshot_01.png' width='100%'/>
+<p align='center'>
+	<a href='https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/demo_01.webp' target='_blank' rel='noopener noreferrer'>
+		<img src='./.github/demo_01.webp' width='100%' alt='An animated demo of oxker in operation'/>
 	</a>
+	<sub>
+		<a href="https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.png" target='_blank' rel='noopener noreferrer'>
+			link to alternative screenshot
+		</a>
+	</sub>
 </p>
 
 - [Download & install](#download--install)
@@ -77,7 +82,7 @@ brew install oxker
 ```
 
 ### Pre-Built
-See the <a href="https://github.com/mrjackwills/oxker/releases/latest" target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
+See the <a href='https://github.com/mrjackwills/oxker/releases/latest' target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
 
 or, download & install (x86_64 one liner)
 
@@ -190,7 +195,7 @@ If no memory information available, try appending either ```/boot/cmdline.txt```
 
 ```cgroup_enable=cpuset cgroup_enable=memory```
 
-see <a href="https://forums.raspberrypi.com/viewtopic.php?t=203128" target='_blank' rel='noopener noreferrer'>https://forums.raspberrypi.com/viewtopic.php?t=203128</a> and <a href="https://github.com/docker/for-linux/issues/1112" target='_blank' rel='noopener noreferrer'>https://github.com/docker/for-linux/issues/1112</a> 
+see <a href='https://forums.raspberrypi.com/viewtopic.php?t=203128' target='_blank' rel='noopener noreferrer'>https://forums.raspberrypi.com/viewtopic.php?t=203128</a> and <a href='https://github.com/docker/for-linux/issues/1112' target='_blank' rel='noopener noreferrer'>https://github.com/docker/for-linux/issues/1112</a> 
 
 
 ### Untested on other platforms
