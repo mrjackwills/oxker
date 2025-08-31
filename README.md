@@ -13,11 +13,11 @@
 	<a href='https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/demo_01.webp' target='_blank' rel='noopener noreferrer'>
 		<img src='./.github/demo_01.webp' width='100%' alt='An animated demo of oxker in operation'/>
 	</a>
-	<small>
+	<sub>
 		<a href="https://raw.githubusercontent.com/mrjackwills/oxker/main/.github/screenshot_01.png" target='_blank' rel='noopener noreferrer'>
 			link to alternative screenshot
 		</a>
-	</small>
+	</sub>
 </p>
 
 - [Download & install](#download--install)
