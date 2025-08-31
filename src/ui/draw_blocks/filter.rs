@@ -52,7 +52,7 @@ pub fn draw(area: Rect, colors: AppColors, frame: &mut Frame, fd: &FrameData) {
     line.extend_from_slice(&filter_by_spans(colors, fd));
     line.extend_from_slice(&[
         Span::styled(
-            " term: ",
+            " filter term: ",
             Style::default()
                 .fg(colors.filter.highlight)
                 .add_modifier(Modifier::BOLD),
@@ -116,7 +116,7 @@ mod tests {
                         assert_eq!(result_cell.bg, Color::Gray);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    47..=53 => {
+                    47..=60 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Magenta);
                         assert_eq!(result_cell.modifier, Modifier::BOLD);
@@ -166,7 +166,7 @@ mod tests {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    5..=11 | 27..=46 | 54..=55 => {
+                    5..=11 | 27..=46 | 61..=62 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Gray);
                     }
@@ -174,7 +174,7 @@ mod tests {
                         assert_eq!(result_cell.bg, Color::Gray);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    47..=53 => {
+                    47..=60 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Magenta);
                         assert_eq!(result_cell.modifier, Modifier::BOLD);
@@ -222,7 +222,7 @@ mod tests {
                         assert_eq!(result_cell.bg, Color::Gray);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
-                    47..=53 => {
+                    47..=60 => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Magenta);
                         assert_eq!(result_cell.modifier, Modifier::BOLD);
@@ -273,7 +273,7 @@ mod tests {
                         assert_eq!(result_cell.bg, Color::Blue);
                         assert_eq!(result_cell.fg, Color::Yellow);
                     }
-                    5..=11 | 27..=46 | 54..=55 => {
+                    5..=11 | 27..=46 | 61..=62 => {
                         assert_eq!(result_cell.bg, Color::White);
                         assert_eq!(result_cell.fg, Color::Magenta);
                     }
@@ -281,7 +281,7 @@ mod tests {
                         assert_eq!(result_cell.bg, Color::Red);
                         assert_eq!(result_cell.fg, Color::Yellow);
                     }
-                    47..=53 => {
+                    47..=60 => {
                         assert_eq!(result_cell.bg, Color::White);
                         assert_eq!(result_cell.fg, Color::Blue);
                         assert_eq!(result_cell.modifier, Modifier::BOLD);

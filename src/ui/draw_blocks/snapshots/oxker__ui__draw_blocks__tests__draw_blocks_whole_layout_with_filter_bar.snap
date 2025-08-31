@@ -31,4 +31,4 @@ expression: setup.terminal.backend()
 "│      │•        ••                                             ││         │•       ••                                           ││                            │"
 "│      │                                                        ││         │                                                     ││                            │"
 "╰───────────────────────────────────────────────────────────────╯╰───────────────────────────────────────────────────────────────╯╰────────────────────────────╯"
-" Esc  clear  ← by →   Name  Image  Status  All  term: r_1                                                                                                       "
+" Esc  clear  ← by →   Name  Image  Status  All  filter term: r_1                                                                                                "
