@@ -17,7 +17,7 @@ expression: setup.terminal.backend()
 " │                 A simple tui to view & control docker containers                  │ "
 " │                                                                                   │ "
 " │ ( tab ) or ( shift+tab ) change panels                                            │ "
-" │ ( ↑ ↓ ) or ( j k ) or ( PgUp PgDown ) or ( Home End ) scroll vertically           │ "
+" │ ( ↑ ↓ ) or ( j k ) or ( Home End ) scroll vertically                              │ "
 " │ ( ← → ) horizontal scroll across logs                                             │ "
 " │ ( ctrl ) increase scroll speed, used in conjuction scroll keys                    │ "
 " │ ( enter ) send docker container command                                           │ "

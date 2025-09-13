@@ -49,16 +49,10 @@ optional_config_struct!(
     log_scroll_back,
     quit,
     save_logs,
-    // TODO remove in next release
-    scroll_down_many,
-    // TODO rename in next release
-    scroll_down_one,
+    scroll_down,
     scroll_end,
     scroll_start,
-    // TODO remove in next release
-    scroll_up_many,
-    // TODO rename in next release
-    scroll_up_one,
+    scroll_up,
     select_next_panel,
     select_previous_panel,
     sort_by_name,
@@ -90,16 +84,10 @@ config_struct!(
     log_scroll_back,
     quit,
     save_logs,
-    // TODO remove in next release
-    scroll_down_many,
-    // TODO rename in next release
-    scroll_down_one,
+    scroll_down,
     scroll_end,
     scroll_start,
-    // TODO remove in next release
-    scroll_up_many,
-    // TODO rename in next release
-    scroll_up_one,
+    scroll_up,
     select_next_panel,
     select_previous_panel,
     sort_by_name,
@@ -132,17 +120,13 @@ impl Keymap {
             log_scroll_forward: (KeyCode::Right, None),
             quit: (KeyCode::Char('q'), None),
             save_logs: (KeyCode::Char('s'), None),
-            // TODO remove in next release
-            scroll_down_many: (KeyCode::PageDown, None),
             // TODO rename in next release
-            scroll_down_one: (KeyCode::Down, Some(KeyCode::Char('j'))),
+            scroll_down: (KeyCode::Down, Some(KeyCode::Char('j'))),
             scroll_end: (KeyCode::End, None),
             scroll_start: (KeyCode::Home, None),
             scroll_many: KeyModifiers::CONTROL,
-            // TODO remove in next release
-            scroll_up_many: (KeyCode::PageUp, None),
             // TODO rename in next release
-            scroll_up_one: (KeyCode::Up, Some(KeyCode::Char('k'))),
+            scroll_up: (KeyCode::Up, Some(KeyCode::Char('k'))),
             select_next_panel: (KeyCode::Tab, None),
             select_previous_panel: (KeyCode::BackTab, None),
             sort_by_cpu: (KeyCode::Char('4'), None),
@@ -216,16 +200,10 @@ impl From<Option<ConfigKeymap>> for Keymap {
             update_keymap(ck.force_redraw, &mut keymap.force_redraw, &mut clash);
             update_keymap(ck.quit, &mut keymap.quit, &mut clash);
             update_keymap(ck.save_logs, &mut keymap.save_logs, &mut clash);
-            update_keymap(
-                ck.scroll_down_many,
-                &mut keymap.scroll_down_many,
-                &mut clash,
-            );
-            update_keymap(ck.scroll_down_one, &mut keymap.scroll_down_one, &mut clash);
+            update_keymap(ck.scroll_down, &mut keymap.scroll_down, &mut clash);
             update_keymap(ck.scroll_end, &mut keymap.scroll_end, &mut clash);
             update_keymap(ck.scroll_start, &mut keymap.scroll_start, &mut clash);
-            update_keymap(ck.scroll_up_many, &mut keymap.scroll_up_many, &mut clash);
-            update_keymap(ck.scroll_up_one, &mut keymap.scroll_up_one, &mut clash);
+            update_keymap(ck.scroll_up, &mut keymap.scroll_up, &mut clash);
             update_keymap(
                 ck.log_scroll_forward,
                 &mut keymap.log_scroll_forward,
@@ -422,13 +400,11 @@ mod tests {
             log_section_toggle: None,
             quit: None,
             save_logs: None,
-            scroll_down_many: None,
-            scroll_down_one: None,
+            scroll_down: None,
             scroll_end: None,
             scroll_start: None,
             scroll_many: None,
-            scroll_up_many: None,
-            scroll_up_one: None,
+            scroll_up: None,
             select_next_panel: None,
             select_previous_panel: None,
             sort_by_cpu: None,
@@ -469,13 +445,11 @@ mod tests {
             log_section_toggle: gen_v(("u", "v")),
             quit: gen_v(("w", "x")),
             save_logs: gen_v(("y", "z")),
-            scroll_down_many: gen_v(("1", "2")),
-            scroll_down_one: gen_v(("3", "4")),
+            scroll_down: gen_v(("3", "4")),
             scroll_end: gen_v(("5", "6")),
             scroll_many: Some(vec!["alt".to_owned()]),
             scroll_start: gen_v(("7", "8")),
-            scroll_up_many: gen_v(("9", "0")),
-            scroll_up_one: gen_v(("F1", "F2")),
+            scroll_up: gen_v(("F1", "F2")),
             select_next_panel: gen_v(("F3", "F4")),
             select_previous_panel: gen_v(("F5", "F6")),
             sort_by_cpu: gen_v(("F7", "F8")),
@@ -508,12 +482,10 @@ mod tests {
             log_scroll_back: (KeyCode::Char('s'), Some(KeyCode::Char('t'))),
             quit: (KeyCode::Char('w'), Some(KeyCode::Char('x'))),
             save_logs: (KeyCode::Char('y'), Some(KeyCode::Char('z'))),
-            scroll_down_many: (KeyCode::Char('1'), Some(KeyCode::Char('2'))),
-            scroll_down_one: (KeyCode::Char('3'), Some(KeyCode::Char('4'))),
+            scroll_down: (KeyCode::Char('3'), Some(KeyCode::Char('4'))),
             scroll_end: (KeyCode::Char('5'), Some(KeyCode::Char('6'))),
             scroll_start: (KeyCode::Char('7'), Some(KeyCode::Char('8'))),
-            scroll_up_many: (KeyCode::Char('9'), Some(KeyCode::Char('0'))),
-            scroll_up_one: (KeyCode::F(1), Some(KeyCode::F(2))),
+            scroll_up: (KeyCode::F(1), Some(KeyCode::F(2))),
             select_next_panel: (KeyCode::F(3), Some(KeyCode::F(4))),
             select_previous_panel: (KeyCode::F(5), Some(KeyCode::F(6))),
             sort_by_name: (KeyCode::Up, Some(KeyCode::Down)),

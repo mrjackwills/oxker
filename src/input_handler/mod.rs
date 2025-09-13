@@ -569,32 +569,16 @@ impl InputHandler {
                 self.scroll_end_key();
             }
 
-            _ if self.keymap.scroll_up_one.0 == key_code
-                || self.keymap.scroll_up_one.1 == Some(key_code) =>
+            _ if self.keymap.scroll_up.0 == key_code
+                || self.keymap.scroll_up.1 == Some(key_code) =>
             {
                 self.scroll_up(modifier);
             }
 
-            _ if self.keymap.scroll_up_many.0 == key_code
-                || self.keymap.scroll_up_many.1 == Some(key_code) =>
-            {
-                for _ in 0..=6 {
-                    self.scroll_up(modifier);
-                }
-            }
-
-            _ if self.keymap.scroll_down_one.0 == key_code
-                || self.keymap.scroll_down_one.1 == Some(key_code) =>
+            _ if self.keymap.scroll_down.0 == key_code
+                || self.keymap.scroll_down.1 == Some(key_code) =>
             {
                 self.scroll_down(modifier);
-            }
-
-            _ if self.keymap.scroll_down_many.0 == key_code
-                || self.keymap.scroll_down_many.1 == Some(key_code) =>
-            {
-                for _ in 0..=6 {
-                    self.scroll_down(modifier);
-                }
             }
 
             _ if self.keymap.filter_mode.0 == key_code

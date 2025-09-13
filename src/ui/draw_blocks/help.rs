@@ -106,8 +106,6 @@ impl HelpInfo {
                 or(),
                 button_item("j k"),
                 or(),
-                button_item("PgUp PgDown"),
-                or(),
                 button_item("Home End"),
                 button_desc("scroll vertically"),
             ]),
@@ -277,10 +275,8 @@ impl HelpInfo {
         let descriptions = [
             or_secondary(km.select_next_panel, "select next panel"),
             or_secondary(km.select_previous_panel, "select previous panel"),
-            or_secondary(km.scroll_down_one, "scroll list down by one"),
-            or_secondary(km.scroll_up_one, "scroll list up by one"),
-            or_secondary(km.scroll_down_many, "scroll list down by many"),
-            or_secondary(km.scroll_up_many, "scroll list by up many"),
+            or_secondary(km.scroll_down, "scroll list down by one"),
+            or_secondary(km.scroll_up, "scroll list up by one"),
             or_secondary(km.scroll_end, "scroll list to end"),
             or_secondary(km.scroll_start, "scroll list to start"),
             or_secondary(km.log_scroll_forward, "horizontal scroll logs right"),
@@ -482,14 +478,6 @@ mod tests {
 
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                println!(
-                    "{} {} {} {} {}",
-                    row_index,
-                    result_cell_index,
-                    result_cell.symbol(),
-                    result_cell.bg,
-                    result_cell.fg
-                );
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
                     (0 | 36, _) | (0..=35, 0 | 86) => {
@@ -505,7 +493,7 @@ mod tests {
                     (2..=10, 2..=85)
                     | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
-                    | (15, 2..=10 | 13..=21 | 24..=40 | 43..=56)
+                    | (15, 2..=10 | 13..=21 | 24..=37)
                     | (16 | 27 | 29, 2..=10)
                     | (17, 2..=11)
                     | (18 | 26, 2..=12)
@@ -574,12 +562,12 @@ mod tests {
                     (2..=10, 2..=85)
                     | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
-                    | (15, 2..=10 | 13..=21 | 24..=40 | 43..=56)
+                    | (15, 2..=10 | 13..=21 | 24..=37)
                     | (16 | 27 | 29, 2..=10)
                     | (17, 2..=11)
                     | (18 | 26, 2..=12)
                     | (19 | 20 | 21 | 22 | 24 | 25 | 28 | 23 | 30, 2..=8)
-                    | (24, 2..=9 | 12..=18) => {
+                    | (24, 2..=9 | 12..=18)  => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Yellow);
                     }
@@ -618,13 +606,11 @@ mod tests {
             log_section_toggle: (KeyCode::Char('k'), None),
             quit: (KeyCode::Char('l'), None),
             save_logs: (KeyCode::Char('m'), None),
-            scroll_down_many: (KeyCode::Char('n'), None),
-            scroll_down_one: (KeyCode::Char('o'), None),
+            scroll_down: (KeyCode::Char('o'), None),
             scroll_end: (KeyCode::Char('p'), None),
             scroll_many: KeyModifiers::ALT,
             scroll_start: (KeyCode::Char('q'), None),
-            scroll_up_many: (KeyCode::Char('r'), None),
-            scroll_up_one: (KeyCode::Char('s'), None),
+            scroll_up: (KeyCode::Char('s'), None),
             select_next_panel: (KeyCode::Char('t'), None),
             select_previous_panel: (KeyCode::Char('u'), None),
             sort_by_cpu: (KeyCode::Char('v'), None),
@@ -670,13 +656,11 @@ mod tests {
             log_section_toggle: (KeyCode::Char('j'), Some(KeyCode::Char('J'))),
             quit: (KeyCode::Char('k'), Some(KeyCode::Char('K'))),
             save_logs: (KeyCode::Char('l'), Some(KeyCode::Char('L'))),
-            scroll_down_many: (KeyCode::Char('m'), Some(KeyCode::Char('M'))),
-            scroll_down_one: (KeyCode::Char('n'), Some(KeyCode::Char('N'))),
+            scroll_down: (KeyCode::Char('n'), Some(KeyCode::Char('N'))),
             scroll_end: (KeyCode::Char('o'), Some(KeyCode::Char('O'))),
             scroll_many: KeyModifiers::ALT,
             scroll_start: (KeyCode::Char('p'), Some(KeyCode::Char('P'))),
-            scroll_up_many: (KeyCode::Char('q'), Some(KeyCode::Char('Q'))),
-            scroll_up_one: (KeyCode::Char('r'), Some(KeyCode::Char('R'))),
+            scroll_up: (KeyCode::Char('r'), Some(KeyCode::Char('R'))),
             select_next_panel: (KeyCode::Char('s'), Some(KeyCode::Char('S'))),
             select_previous_panel: (KeyCode::Char('t'), Some(KeyCode::Char('T'))),
             sort_by_cpu: (KeyCode::Char('u'), Some(KeyCode::Char('U'))),
@@ -722,13 +706,11 @@ mod tests {
             log_section_toggle: (KeyCode::Char('k'), Some(KeyCode::Char('K'))),
             quit: (KeyCode::Char('l'), None),
             save_logs: (KeyCode::Char('m'), Some(KeyCode::Char('M'))),
-            scroll_down_many: (KeyCode::Char('n'), None),
-            scroll_down_one: (KeyCode::Char('o'), Some(KeyCode::Char('O'))),
+            scroll_down: (KeyCode::Char('o'), Some(KeyCode::Char('O'))),
             scroll_end: (KeyCode::Char('p'), None),
             scroll_many: KeyModifiers::ALT,
             scroll_start: (KeyCode::Char('q'), Some(KeyCode::Char('Q'))),
-            scroll_up_many: (KeyCode::Char('r'), None),
-            scroll_up_one: (KeyCode::Char('s'), Some(KeyCode::Char('S'))),
+            scroll_up: (KeyCode::Char('s'), Some(KeyCode::Char('S'))),
             select_next_panel: (KeyCode::Char('t'), None),
             select_previous_panel: (KeyCode::Char('u'), Some(KeyCode::Char('U'))),
             sort_by_cpu: (KeyCode::Char('v'), None),
