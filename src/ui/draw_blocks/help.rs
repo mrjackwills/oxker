@@ -160,6 +160,11 @@ impl HelpInfo {
                 button_item("/"),
                 button_desc("enter filter mode"),
             ]),
+            Line::from(vec![
+                space(),
+                button_item("#"),
+                button_desc("enter log search mode"),
+            ]),
             Line::from(vec![space(), button_item("0"), button_desc("stop sort")]),
             Line::from(vec![
                 space(),
@@ -306,6 +311,7 @@ impl HelpInfo {
                 "toggle mouse capture - if disabled, text on screen can be selected & copied",
             ),
             or_secondary(km.filter_mode, "enter filter mode"),
+            or_secondary(km.log_search_mode, "enter log search mode"),
             or_secondary(km.sort_reset, "reset container sorting"),
             or_secondary(km.sort_by_name, "sort containers by name"),
             or_secondary(km.sort_by_state, "sort containers by state"),
@@ -458,7 +464,7 @@ mod tests {
     /// This test is incredibly annoying
     /// println!("{} {} {} {} {}", row_index, result_cell_index, result_cell.symbol(), result_cell.bg, result_cell.fg);
     fn test_draw_blocks_help() {
-        let mut setup = test_setup(87, 37, true, true);
+        let mut setup = test_setup(87, 39, true, true);
         let tz = setup.app_data.lock().config.timezone.clone();
 
         setup
@@ -480,35 +486,30 @@ mod tests {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
-                    (0 | 36, _) | (0..=35, 0 | 86) => {
+                    (0 | 38, _) | (0..=37, 0 | 86) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
-                    // border is red on black
-                    (1 | 34, _) | (1..=31, 1 | 85) => {
-                        assert_eq!(result_cell.bg, Color::Magenta);
-                        assert_eq!(result_cell.fg, Color::Black);
-                    }
                     // Buttons
-                    (2..=10, 2..=85)
+                    (2..=10, 2..=84)
                     | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
                     | (15, 2..=10 | 13..=21 | 24..=37)
-                    | (16 | 27 | 29, 2..=10)
+                    | (16 | 28 | 30, 2..=10)
+                    | (19..=26 | 29 | 31, 2..=8)
                     | (17, 2..=11)
-                    | (18 | 26, 2..=12)
-                    | (19 | 20 | 21 | 22 | 24 | 25 | 28 | 23 | 30, 2..=8)
+                    | (18 | 27, 2..=12)
                     | (24, 2..=9 | 12..=18) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::White);
                     }
-                    // The URL is yellow and underlined
-                    (33, 25..=60) => {
+                    // The URL is white on yellow and underlined
+                    (34, 25..=60) => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::White);
                         assert_eq!(result_cell.modifier, Modifier::UNDERLINED);
                     }
-                    // The rest is red on black
+                    // The rest is black on magenta
                     _ => {
                         assert_eq!(result_cell.bg, Color::Magenta);
                         assert_eq!(result_cell.fg, Color::Black);
@@ -523,7 +524,7 @@ mod tests {
     /// This test is incredibly annoying
     /// println!("{} {} {} {} {}", row_index, result_cell_index, result_cell.symbol(), result_cell.bg, result_cell.fg);
     fn test_draw_blocks_help_custom_colors() {
-        let mut setup = test_setup(87, 37, true, true);
+        let mut setup = test_setup(87, 39, true, true);
         let mut colors = AppColors::new();
         let tz = setup.app_data.lock().config.timezone.clone();
 
@@ -549,35 +550,30 @@ mod tests {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
                 match (row_index, result_cell_index) {
                     // first & last row, and first & last char on each row, is reset/reset, making sure that the help info is centered in the given area
-                    (0 | 36, _) | (0..=35, 0 | 86) => {
+                    (0 | 38, _) | (0..=37, 0 | 86) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Reset);
                     }
-                    // border is red on black
-                    (1 | 34, _) | (1..=31, 1 | 85) => {
-                        assert_eq!(result_cell.bg, Color::Black);
-                        assert_eq!(result_cell.fg, Color::Red);
-                    }
                     // Buttons
-                    (2..=10, 2..=85)
+                    (2..=10, 2..=84)
                     | (12, 19..=66)
                     | (14, 2..=10 | 13..=27)
                     | (15, 2..=10 | 13..=21 | 24..=37)
-                    | (16 | 27 | 29, 2..=10)
+                    | (16 | 28 | 30, 2..=10)
+                    | (19..=26 | 29 | 31, 2..=8)
                     | (17, 2..=11)
-                    | (18 | 26, 2..=12)
-                    | (19 | 20 | 21 | 22 | 24 | 25 | 28 | 23 | 30, 2..=8)
-                    | (24, 2..=9 | 12..=18)  => {
+                    | (18 | 27, 2..=12)
+                    | (24, 2..=9 | 12..=18) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Yellow);
                     }
-                    // The URL is yellow and underlined
-                    (33, 25..=60) => {
+                    // The URL is white on yellow and underlined
+                    (34, 25..=60) => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Yellow);
                         assert_eq!(result_cell.modifier, Modifier::UNDERLINED);
                     }
-                    // The rest is red on black
+                    // The rest is black on magenta
                     _ => {
                         assert_eq!(result_cell.bg, Color::Black);
                         assert_eq!(result_cell.fg, Color::Red);
@@ -598,6 +594,7 @@ mod tests {
             delete_deny: (KeyCode::Char('c'), None),
             exec: (KeyCode::Char('d'), None),
             filter_mode: (KeyCode::Char('e'), None),
+            log_search_mode: (KeyCode::Char('7'), None),
             force_redraw: (KeyCode::Char('f'), None),
             log_scroll_back: (KeyCode::Char('g'), None),
             log_scroll_forward: (KeyCode::Char('h'), None),
@@ -648,6 +645,7 @@ mod tests {
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('C'))),
             exec: (KeyCode::Char('d'), Some(KeyCode::Char('D'))),
             filter_mode: (KeyCode::Char('e'), Some(KeyCode::Char('E'))),
+            log_search_mode: (KeyCode::Char('m'), Some(KeyCode::Char('M'))),
             force_redraw: (KeyCode::Char('f'), Some(KeyCode::Char('F'))),
             log_scroll_back: (KeyCode::Char('f'), Some(KeyCode::Char('F'))),
             log_scroll_forward: (KeyCode::Char('g'), Some(KeyCode::Char('G'))),
@@ -689,6 +687,7 @@ mod tests {
 
     #[test]
     /// Help panel will show custom keymap if in use, with either one or two definition for each entry
+    #[allow(clippy::todo)]
     fn test_draw_blocks_help_one_and_two_definitions() {
         let mut setup = test_setup(110, 50, true, true);
 
@@ -698,6 +697,7 @@ mod tests {
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('C'))),
             exec: (KeyCode::Char('d'), None),
             filter_mode: (KeyCode::Char('e'), Some(KeyCode::Char('E'))),
+            log_search_mode: (KeyCode::Char('8'), None),
             force_redraw: (KeyCode::Char('f'), None),
             log_scroll_back: (KeyCode::Char('g'), Some(KeyCode::Char('G'))),
             log_scroll_forward: (KeyCode::Char('h'), None),
@@ -724,7 +724,7 @@ mod tests {
             sort_by_tx: (KeyCode::Char('3'), None),
             sort_reset: (KeyCode::Char('4'), Some(KeyCode::Char('5'))),
             toggle_help: (KeyCode::Char('5'), None),
-            toggle_mouse_capture: (KeyCode::Char('6'), Some(KeyCode::Char('7'))),
+            toggle_mouse_capture: (KeyCode::Char('6'), Some(KeyCode::Char('#'))),
         };
 
         let tz = setup.app_data.lock().config.timezone.clone();
@@ -741,7 +741,7 @@ mod tests {
 
     #[test]
     fn test_draw_blocks_help_show_timezone() {
-        let mut setup = test_setup(87, 37, true, true);
+        let mut setup = test_setup(87, 39, true, true);
 
         setup
             .terminal

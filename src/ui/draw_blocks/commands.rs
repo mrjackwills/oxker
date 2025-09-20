@@ -59,6 +59,7 @@ mod tests {
     use ratatui::style::{Color, Modifier};
 
     use crate::{
+        app_data::ScrollDirection,
         config::AppColors,
         tests::gen_container_summary,
         ui::{
@@ -169,7 +170,10 @@ mod tests {
             .app_data
             .lock()
             .update_containers(vec![gen_container_summary(1, "paused")]);
-        setup.app_data.lock().docker_controls_next();
+        setup
+            .app_data
+            .lock()
+            .docker_controls_scroll(&ScrollDirection::Next);
 
         setup
             .terminal
@@ -363,7 +367,10 @@ mod tests {
             .app_data
             .lock()
             .update_containers(vec![gen_container_summary(1, "paused")]);
-        setup.app_data.lock().docker_controls_next();
+        setup
+            .app_data
+            .lock()
+            .docker_controls_scroll(&ScrollDirection::Next);
 
         setup
             .terminal

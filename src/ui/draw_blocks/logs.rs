@@ -81,7 +81,7 @@ mod tests {
     use uuid::Uuid;
 
     use crate::{
-        app_data::{ContainerImage, ContainerName},
+        app_data::{ContainerImage, ContainerName, ScrollDirection},
         config::AppColors,
         ui::{
             FrameData, Status,
@@ -309,7 +309,7 @@ mod tests {
                 );
             })
             .unwrap();
-        setup.app_data.lock().log_previous();
+        setup.app_data.lock().log_scroll(&ScrollDirection::Previous);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup

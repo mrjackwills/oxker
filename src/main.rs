@@ -1,4 +1,5 @@
 #![allow(clippy::collapsible_if)]
+// #![allow(unused)]
 // Zigbuild is stuck on 1.87.0, which means Mac builds won't work when using collapsible ifs
 
 use app_data::AppData;
@@ -175,6 +176,7 @@ mod tests {
             show_std_err: false,
             in_container: false,
             save_dir: None,
+            log_search_case_sensitive: true,
             raw_logs: false,
             show_self: false,
             app_colors: AppColors::new(),

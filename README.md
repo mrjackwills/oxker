@@ -117,6 +117,7 @@ In application controls, these, amongst many other settings, can be customized w
 | ```( 1-9 )``` | Sort containers by heading, clicking on headings also sorts the selected column. |
 | ```( 0 )``` | Stop sorting.|
 | ```( F1 )``` or ```( / )``` | Enter filter mode. |
+| ```( # )``` | Enter log search mode. |
 | ```( - ) ``` or ```(=)``` | Reduce or increase the height of the logs panel.|
 | ```( \ )``` | Toggle the visibility of the logs panel.|
 | ```( e )``` | Exec into the selected container - not available on Windows.|

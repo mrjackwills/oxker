@@ -170,6 +170,7 @@ pub enum Status {
     Help,
     Init,
     Logs,
+    SearchLogs,
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
@@ -411,6 +412,16 @@ impl GuiState {
         }
     }
 
+    pub fn set_logs_panel_selected(&mut self, app_data: &Arc<Mutex<AppData>>) {
+        self.selected_panel = SelectablePanel::Logs;
+        if (app_data.lock().get_container_len() == 0
+            && self.get_selected_panel() == SelectablePanel::Commands)
+            || (self.log_height == 0 && self.get_selected_panel() == SelectablePanel::Logs)
+        {
+            self.selected_panel = self.selected_panel.next();
+        }
+        self.rerender.update_draw();
+    }
     /// Change to next selectable panel
     pub fn selectable_panel_next(&mut self, app_data: &Arc<Mutex<AppData>>) {
         self.selected_panel = self.selected_panel.next();

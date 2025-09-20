@@ -43,6 +43,9 @@ use_cli = false
 # Show the logs section - this can be changed during operation with the log_section_toggle key
 show_logs = true
 
+# Use case-sensitive matching for logs
+log_search_case_sensitive = true
+
 #################
 # Custom Keymap #
 #################
@@ -72,6 +75,10 @@ delete_confirm = ["y"]
 exec = ["e"]
 # Enter filter mode
 filter_mode = ["/", "F1"]
+
+# Enter log search mode
+log_search_mode = ["#"]
+
 # Quit at anytime
 quit = ["q"]
 # Save logs of selected container to file on disk
@@ -115,6 +122,9 @@ log_section_height_decrease = ["-"]
 log_section_height_increase = ["+"]
 # Toggle visibility of the log section
 log_section_toggle = ["\\"]
+
+
+
 # Force a complete clear & redraw of the screen
 force_redraw = ["f"]
 
@@ -191,6 +201,17 @@ selected_filter_text = "black"
 # Highlighted text color
 highlight = "magenta"
 
+
+# The log search panel
+[colors.log_search]
+# Background color of panel
+background = "reset"
+# color of text
+text = "gray"
+# text color of the buttons text
+button_text = "black"
+# Highlighted text color
+highlight = "magenta"
 
 # The color the of Docker commands available for each container
 [colors.commands]

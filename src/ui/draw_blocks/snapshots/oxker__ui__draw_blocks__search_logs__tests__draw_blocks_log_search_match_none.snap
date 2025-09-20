@@ -1,0 +1,5 @@
+---
+source: src/ui/draw_blocks/search_logs.rs
+expression: setup.terminal.backend()
+---
+" Esc  clear   search term: z                                                                                                                "
