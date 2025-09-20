@@ -741,7 +741,7 @@ impl Logs {
     }
 
     /// Search through the logs for a matching string
-    pub fn search(&mut self, case_sensitive: bool) {
+    pub fn search(&mut self, case_sensitive: bool, scroll: bool) {
         if let Some(search_term) = self.search_term.as_ref() {
             let term = if case_sensitive {
                 search_term.to_owned()
@@ -768,17 +768,9 @@ impl Logs {
                         .then_some(index)
                 })
                 .collect();
-
-            if !self.search_results.is_empty() {
-                if let Some(currently_selected) = self.lines.state.selected()
-                    && !self.search_results.contains(&currently_selected)
-                {
-                    self.lines.state.select(self.search_results.last().copied());
-                    self.offset = 0;
-                } else {
-                    self.lines.state.select(self.search_results.last().copied());
-                    self.offset = 0;
-                }
+            if !self.search_results.is_empty() && scroll {
+                self.lines.state.select(self.search_results.last().copied());
+                self.offset = 0;
             }
         } else {
             self.search_results.clear();
@@ -792,7 +784,7 @@ impl Logs {
         } else {
             self.search_term = Some(format!("{c}"));
         }
-        self.search(case_sensitive);
+        self.search(case_sensitive, true);
     }
 
     /// Delete the final char of the filter term
@@ -803,7 +795,7 @@ impl Logs {
                 self.search_term = None;
             }
         }
-        self.search(case_sensitive);
+        self.search(case_sensitive, true);
     }
 
     /// Remove the filter completely
@@ -819,7 +811,7 @@ impl Logs {
             self.lines.items.push(line);
             // Maybe - Ideally we'd re-render here
             if self.search_term.is_some() {
-                self.search(case_sensitive);
+                self.search(case_sensitive, false);
             }
         }
     }
