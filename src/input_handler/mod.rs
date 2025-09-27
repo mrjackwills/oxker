@@ -77,9 +77,9 @@ impl InputHandler {
                         && !contains(Status::Help)
                         && !contains(Status::DeleteConfirm)
                         && !contains(Status::Filter)
-						// TODO handle state where you want to scroll log search results with the mouse wheel
                         && !contains(Status::SearchLogs)
                     {
+                        // TODO handle state where you want to scroll log search results with the mouse wheel
                         self.mouse_press(mouse_event, modifider);
                     }
                 }
