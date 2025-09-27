@@ -117,7 +117,7 @@ impl HelpInfo {
             Line::from(vec![
                 space(),
                 button_item("ctrl"),
-                button_desc("increase scroll speed, used in conjuction scroll keys"),
+                button_desc("increase scroll speed, used in conjunction scroll keys"),
             ]),
             Line::from(vec![
                 space(),
@@ -289,7 +289,7 @@ impl HelpInfo {
             Line::from(vec![
                 space(),
                 button_item(km.scroll_many.to_string().as_str()),
-                button_desc("increase scroll speed, used in conjuction scroll keys"),
+                button_desc("increase scroll speed, used in conjunction scroll keys"),
             ]),
             Line::from(vec![
                 space(),

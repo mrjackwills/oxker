@@ -19,7 +19,7 @@ expression: setup.terminal.backend()
 " │ ( tab ) or ( shift+tab ) change panels                                            │ "
 " │ ( ↑ ↓ ) or ( j k ) or ( Home End ) scroll vertically                              │ "
 " │ ( ← → ) horizontal scroll across logs                                             │ "
-" │ ( ctrl ) increase scroll speed, used in conjuction scroll keys                    │ "
+" │ ( ctrl ) increase scroll speed, used in conjunction scroll keys                   │ "
 " │ ( enter ) send docker container command                                           │ "
 " │ ( e ) exec into a container                                                       │ "
 " │ ( f ) force clear the screen & redraw the gui                                     │ "

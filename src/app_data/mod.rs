@@ -661,7 +661,7 @@ impl AppData {
             })
     }
 
-    /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
+    /// If scrolling horizontally along the logs, display a counter of the position in the in the scroll, `x/y`
     pub fn get_scroll_title(&mut self, width: u16) -> Option<String> {
         self.get_mut_selected_container()
             .and_then(|i| i.logs.get_scroll_title(width))

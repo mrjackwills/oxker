@@ -816,7 +816,7 @@ impl Logs {
         }
     }
 
-    /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
+    /// If scrolling horizontally along the logs, display a counter of the position in the in the scroll, `x/y`
     pub fn get_scroll_title(&mut self, width: u16) -> Option<String> {
         if self.horizontal_scroll_able(width) {
             let text_width = self.adjust_max_width_text_len;
@@ -909,7 +909,7 @@ impl Logs {
         self.lines.get_state_title()
     }
 
-    /// Return true it currently selected cotnainer logs are wide enough to horizontally scroll
+    /// Return true it currently selected container logs are wide enough to horizontally scroll
     pub fn horizontal_scroll_able(&mut self, width: u16) -> bool {
         if self.lines.items.is_empty() {
             return false;

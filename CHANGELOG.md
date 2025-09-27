@@ -29,7 +29,7 @@ see [v0.11.0 release notes](https://github.com/mrjackwills/oxker/releases/tag/v0
 ### Features
 + Horizontally scroll across logs. By default use `←` & `→` keys to traverse horizontally across the lines when logs panel selected. Updated `config.toml` with `log_scroll_forward` and `log_scroll_back`  [c190f020](https://github.com/mrjackwills/oxker/commit/c190f0206cc55b8e45b8373f9be954e828c18b3b), [8939ac03](https://github.com/mrjackwills/oxker/commit/8939ac0345326633e794cc10a981a1f3c5c07549)
 + Force clear screen & redraw of UI. By default uses `f` key, `config.toml` updated with `force_redraw`  [50edbc0c](https://github.com/mrjackwills/oxker/commit/50edbc0cc09db864835fe81a03cba8eadafe548b)
-+ Increase scroll speed using the `ctrl` key in conjuction with a scroll key, `config.toml` updated with `scroll_modifier`. The next release will remove `scroll_down_many` & `scroll_down_up` keys, [c5bbffdb](https://github.com/mrjackwills/oxker/commit/c5bbffdb5f9e800951e4060aa6aee8e00db589aa)
++ Increase scroll speed using the `ctrl` key in conjunction with a scroll key, `config.toml` updated with `scroll_modifier`. The next release will remove `scroll_down_many` & `scroll_down_up` keys, [c5bbffdb](https://github.com/mrjackwills/oxker/commit/c5bbffdb5f9e800951e4060aa6aee8e00db589aa)
 
 ### Refactors
 + remove macos cfg none-const functions, Zigbuild now uses Rust 1.87.0, [eb686e2c](https://github.com/mrjackwills/oxker/commit/eb686e2c952e04da74b3e12c0bfa015ec4615e1d)

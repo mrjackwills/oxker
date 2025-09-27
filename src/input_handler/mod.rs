@@ -677,12 +677,12 @@ impl InputHandler {
         let contains_exec = contains(Status::Exec);
         let contains_filter = contains(Status::Filter);
         let contains_delete = contains(Status::DeleteConfirm);
-        let containes_search_logs = contains(Status::SearchLogs);
+        let contains_search_logs = contains(Status::SearchLogs);
 
         if !contains_exec {
             let is_q = || key_code == self.keymap.quit.0 || Some(key_code) == self.keymap.quit.1;
             if key_modifier == KeyModifiers::CONTROL && key_code == KeyCode::Char('c')
-                || is_q() && !contains_filter && !containes_search_logs
+                || is_q() && !contains_filter && !contains_search_logs
             {
                 // Always just quit on Ctrl + c/C or q/Q, unless in filter/search_logs mode, i.e. when user inmput can include the q key
                 self.quit();
@@ -694,7 +694,7 @@ impl InputHandler {
                 self.handle_help(key_code);
             } else if contains_filter {
                 self.handle_filter(key_code);
-            } else if containes_search_logs {
+            } else if contains_search_logs {
                 self.handle_search_logs(key_code, key_modifier);
             } else if contains_delete {
                 self.handle_delete(key_code).await;

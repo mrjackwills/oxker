@@ -23,7 +23,7 @@ expression: setup.terminal.backend()
 "    │ ( p ) or ( P ) scroll list to start                                                                │    "
 "    │ ( g ) or ( G ) horizontal scroll logs right                                                        │    "
 "    │ ( f ) or ( F ) horizontal scroll logs left                                                         │    "
-"    │ ( Alt ) increase scroll speed, used in conjuction scroll keys                                      │    "
+"    │ ( Alt ) increase scroll speed, used in conjunction scroll keys                                     │    "
 "    │ ( enter ) send docker container command                                                            │    "
 "    │ ( d ) or ( D ) exec into a container                                                               │    "
 "    │ ( f ) or ( F ) force clear the screen & redraw the gui                                             │    "
