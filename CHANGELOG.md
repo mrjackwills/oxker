@@ -1,6 +1,7 @@
 ### Chores
 + create_release.sh updated, [d4af754ad245540db60177f7b202b3c64519c961]
-+ dependencies updated, [03599b46657d38d0c9f25c2ccfd9510f2b98dd84], [aef0c9503e7045a256856aa887d8c8d7722b9936], [f0771eab5d07d141fe7a8997db650f0f65ffe0a7]
++ dependencies updated, [03599b46657d38d0c9f25c2ccfd9510f2b98dd84], [aef0c9503e7045a256856aa887d8c8d7722b9936], [f0771eab5d07d141fe7a8997db650f0f65ffe0a7], [1596de8681ad6c0a7832eb922dd2dc36ab30eb41]
++ GitHub workflow updated, [66dae5e61ea294ac8ce134a6c32b27c04166b6eb]
 
 ### Features
 + *BREAKING CHANGE* - `scroll_down_many` & `scroll_up_many` removed, `scroll_down_one` `scroll_up_one` renamed `scroll_down`, `scroll_up`, see [example_config](https://github.com/mrjackwills/oxker/tree/main/example_config), [52a04ec1d0b9e4877e304f60a857ebc00f88b4fd]
