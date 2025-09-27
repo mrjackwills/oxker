@@ -8,7 +8,7 @@
 + log search feature, closes #72. Use `#` button, remappable via `log_search_mode`, to enter log search mode. Case-sensitive by default, editable in `config.toml` with `log_search_case_sensitive` entry. Customise colours via `[colors.log_search]` entries, again see see [example_config](https://github.com/mrjackwills/oxker/tree/main/example_config), [96d9469623a7c90b79aa8d82abf587290343ad37], [a2316a9cac270790920a1ebd1be6532d51aba77c]
 + `term` renamed `filter term`, tests updated, [487c3faf96f4c197c8b82644c02466ea40626a5e]
 
-My 32-bit armhf armv6 hardware no longer seems to be able to run Docker. Future `oxker` releases won't be tested on real hardware, but will continue to be built and published for armv6.
+My 32-bit armhf armv6 hardware no longer seems to be able to run Docker. Future `oxker` releases won't be tested on real hardware but will continue to be built and published for armv6.
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.11.1'>v0.11.1</a>
 ### 2025-08-21
