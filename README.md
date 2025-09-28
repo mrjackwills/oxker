@@ -110,13 +110,14 @@ In application controls, these, amongst many other settings, can be customized w
 | button| result|
 |--|--|
 | ```( tab )``` or ```( shift+tab )``` | Change panel, clicking on a panel also changes the selected panel.|
-| ```( ↑ ↓ )``` or ```( j k )``` or ```( PgUp PgDown )``` or ```( Home End )```| Scroll line in selected panel - mouse wheel will also scroll.|
+| ```( ↑ ↓ )``` or ```( j k )``` or ```( Home End )```| Scroll line in selected panel - mouse wheel will also scroll.|
 | ```( ← → )``` | When logs panel selected, scroll horizontally across the text of the logs.|
-| ```( ctrl )``` | Increase scroll speed, used in conjuction with scroll keys.|
+| ```( ctrl )``` | Increase scroll speed, used in conjunction with scroll keys.|
 | ```( enter )```| Run selected docker command.|
 | ```( 1-9 )``` | Sort containers by heading, clicking on headings also sorts the selected column. |
 | ```( 0 )``` | Stop sorting.|
 | ```( F1 )``` or ```( / )``` | Enter filter mode. |
+| ```( # )``` | Enter log search mode. |
 | ```( - ) ``` or ```(=)``` | Reduce or increase the height of the logs panel.|
 | ```( \ )``` | Toggle the visibility of the logs panel.|
 | ```( e )``` | Exec into the selected container - not available on Windows.|

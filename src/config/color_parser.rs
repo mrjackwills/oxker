@@ -89,6 +89,24 @@ impl From<Option<ConfigColors>> for AppColors {
                 Self::map_color(fc.text.as_deref(), &mut app_colors.filter.text);
             }
 
+            // Log search
+            if let Some(ls) = config_colors.log_search {
+                Self::map_color(
+                    ls.background.as_deref(),
+                    &mut app_colors.log_search.background,
+                );
+                Self::map_color(
+                    ls.highlight.as_deref(),
+                    &mut app_colors.log_search.highlight,
+                );
+
+                Self::map_color(
+                    ls.button_text.as_deref(),
+                    &mut app_colors.log_search.button_text,
+                );
+                Self::map_color(ls.text.as_deref(), &mut app_colors.log_search.text);
+            }
+
             // Help Popup
             if let Some(hp) = config_colors.popup_help {
                 Self::map_color(
@@ -238,6 +256,7 @@ optional_config_struct!(
     ConfigContainers, background, icon, text, text_rx, text_tx;
     ConfigContainerState, background, dead, exited, paused, removing, restarting, running_healthy, running_unhealthy, unknown;
     ConfigFilter, background, text, selected_filter_background, selected_filter_text, highlight;
+     ConfigLogSearch, background, text, button_text, highlight;
     ConfigHeadersBar, background, loading_spinner, text, text_selected;
     ConfigLogs, background, text
 );
@@ -251,6 +270,7 @@ config_struct!(
     Containers, background, icon, text, text_rx, text_tx;
     ContainerState, dead, exited, paused, removing, restarting, running_healthy, running_unhealthy, unknown;
     Filter, background, text, selected_filter_background, selected_filter_text, highlight;
+    LogSearch, background, text, button_text, highlight;
     HeadersBar, background, text_selected, loading_spinner, text;
     Logs, background, text;
     PopupDelete, background, text, text_highlight;
@@ -269,6 +289,7 @@ pub struct ConfigColors {
     container_state: Option<ConfigContainerState>,
     containers: Option<ConfigContainers>,
     filter: Option<ConfigFilter>,
+    log_search: Option<ConfigLogSearch>,
     headers_bar: Option<ConfigHeadersBar>,
     logs: Option<ConfigLogs>,
     popup_delete: Option<ConfigBackgroundTextHighlight>,
@@ -397,6 +418,18 @@ impl Filter {
     }
 }
 
+/// Default colours for the log search
+impl LogSearch {
+    const fn new() -> Self {
+        Self {
+            background: Color::Reset,
+            highlight: Color::Magenta,
+            button_text: Color::Black,
+            text: Color::Gray,
+        }
+    }
+}
+
 /// Default colours for the logs panel, only applied if color_logs is false
 impl Logs {
     const fn new() -> Self {
@@ -458,6 +491,7 @@ pub struct AppColors {
     pub commands: Commands,
     pub container_state: ContainerState,
     pub containers: Containers,
+    pub log_search: LogSearch,
     pub filter: Filter,
     pub headers_bar: HeadersBar,
     pub logs: Logs,
@@ -477,6 +511,7 @@ impl AppColors {
             commands: Commands::new(),
             container_state: ContainerState::new(),
             containers: Containers::new(),
+            log_search: LogSearch::new(),
             filter: Filter::new(),
             headers_bar: HeadersBar::new(),
             logs: Logs::new(),

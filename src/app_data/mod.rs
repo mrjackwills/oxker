@@ -171,6 +171,19 @@ impl AppData {
         (self.filter.by, self.filter.term.as_ref())
     }
 
+    pub fn log_search_scroll(&mut self, np: &ScrollDirection) {
+        if let Some(i) = self.get_mut_selected_container() {
+            if i.logs.search_scroll(np).is_some() {
+                self.rerender.update_draw();
+            }
+        }
+    }
+
+    pub fn gen_log_search(&self) -> Option<LogSearch> {
+        self.get_selected_container()
+            .map(|i| i.logs.gen_log_search())
+    }
+
     /// Check if a given container can be inserted into the "visible" list, based on current filter term and filter_by
     fn can_insert(&self, container: &ContainerItem) -> bool {
         self.filter.term.as_ref().is_none_or(|term| {
@@ -221,6 +234,31 @@ impl AppData {
         self.sort_containers();
         if self.get_container_len() != pre_len {
             self.containers.start();
+        }
+    }
+
+    pub fn logs_search_clear(&mut self) {
+        if let Some(selected_container) = self.get_mut_selected_container() {
+            selected_container.logs.search_term_clear();
+            self.rerender.update_draw();
+        }
+    }
+
+    /// Set a single char into the filter term
+    pub fn log_search_push(&mut self, c: char) {
+        let cs = self.config.log_search_case_sensitive;
+        if let Some(selected_container) = self.get_mut_selected_container() {
+            selected_container.logs.search_term_push(c, cs);
+            self.rerender.update_draw();
+        }
+    }
+
+    /// Delete the final char of the filter term
+    pub fn log_search_pop(&mut self) {
+        let cs = self.config.log_search_case_sensitive;
+        if let Some(selected_container) = self.get_mut_selected_container() {
+            selected_container.logs.search_term_pop(cs);
+            self.rerender.update_draw();
         }
     }
 
@@ -448,15 +486,8 @@ impl AppData {
         self.rerender.update_draw();
     }
 
-    /// Select the next container
-    pub fn containers_next(&mut self) {
-        self.containers.next();
-        self.rerender.update_draw();
-    }
-
-    /// select the previous container
-    pub fn containers_previous(&mut self) {
-        self.containers.previous();
+    pub fn containers_scroll(&mut self, scroll: &ScrollDirection) {
+        self.containers.scroll(scroll);
         self.rerender.update_draw();
     }
 
@@ -576,17 +607,10 @@ impl AppData {
     }
 
     /// Change selected choice of docker commands of selected container
-    pub fn docker_controls_next(&mut self) {
+    pub fn docker_controls_scroll(&mut self, scroll: &ScrollDirection) {
         if let Some(i) = self.get_mut_selected_container() {
-            i.docker_controls.next();
-            self.rerender.update_draw();
-        }
-    }
-
-    /// Change selected choice of docker commands of selected container
-    pub fn docker_controls_previous(&mut self) {
-        if let Some(i) = self.get_mut_selected_container() {
-            i.docker_controls.previous();
+            i.docker_controls.scroll(scroll);
+            // i.docker_controls.next();
             self.rerender.update_draw();
         }
     }
@@ -637,40 +661,36 @@ impl AppData {
             })
     }
 
-    /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
+    /// If scrolling horizontally along the logs, display a counter of the position in the in the scroll, `x/y`
     pub fn get_scroll_title(&mut self, width: u16) -> Option<String> {
         self.get_mut_selected_container()
             .and_then(|i| i.logs.get_scroll_title(width))
     }
 
-    /// Increase the logs offset, basically moving an invisible cursor back
-    pub fn log_back(&mut self) {
-        if let Some(i) = self.get_mut_selected_container() {
-            i.logs.back();
-            self.rerender.update_draw();
-        }
-    }
-
-    /// Increase the logs offset, basically moving an invisible cursor forward
-    pub fn log_forward(&mut self, width: u16) {
-        if let Some(i) = self.get_mut_selected_container() {
-            i.logs.forward(width);
-            self.rerender.update_draw();
+    pub fn logs_horizontal_scroll(&mut self, sd: &ScrollDirection, width: u16) {
+        match sd {
+            ScrollDirection::Next => {
+                if let Some(i) = self.get_mut_selected_container() {
+                    i.logs.forward(width);
+                    self.rerender.update_draw();
+                }
+            }
+            ScrollDirection::Previous => {
+                if let Some(i) = self.get_mut_selected_container() {
+                    i.logs.back();
+                    self.rerender.update_draw();
+                }
+            }
         }
     }
 
     /// select next selected log line
-    pub fn log_next(&mut self) {
+    pub fn log_scroll(&mut self, scroll: &ScrollDirection) {
         if let Some(i) = self.get_mut_selected_container() {
-            i.logs.next();
-            self.rerender.update_draw();
-        }
-    }
-
-    /// select previous selected log line
-    pub fn log_previous(&mut self) {
-        if let Some(i) = self.get_mut_selected_container() {
-            i.logs.previous();
+            match scroll {
+                ScrollDirection::Next => i.logs.next(),
+                ScrollDirection::Previous => i.logs.previous(),
+            }
             self.rerender.update_draw();
         }
     }
@@ -857,7 +877,7 @@ impl AppData {
                 // If removed container is currently selected, then change selected to previous
                 // This will default to 0 in any edge cases
                 if self.containers.state.selected().is_some() {
-                    self.containers.previous();
+                    self.containers.scroll(&ScrollDirection::Previous);
                 }
                 // Check is some, else can cause out of bounds error, if containers get removed before a docker update
                 if self.containers.items.get(index).is_some() {
@@ -959,6 +979,8 @@ impl AppData {
         let format = self.config.timestamp_format.clone();
         let config_tz = self.config.timezone.clone();
 
+        let cs = self.config.log_search_case_sensitive;
+
         let show_timestamp = self.config.show_timestamp;
 
         if let Some(container) = self.get_any_container_by_id(id) {
@@ -985,7 +1007,7 @@ impl AppData {
                     } else {
                         log_sanitizer::remove_ansi(&i)
                     };
-                    container.logs.insert(Text::from(lines), log_tz);
+                    container.logs.insert(Text::from(lines), log_tz, cs);
                 }
 
                 // Set the logs selected row for each container
@@ -1422,7 +1444,7 @@ mod tests {
         );
 
         // Calling previous when at start has no effect
-        app_data.containers_previous();
+        app_data.containers_scroll(&ScrollDirection::Previous);
         let result = app_data.get_selected_container_id();
         assert_eq!(result, Some(ContainerId::from("1")));
         let result = app_data.get_selected_container_id_state_name();
@@ -1445,7 +1467,7 @@ mod tests {
 
         // Advance list state by 1
         app_data.containers_start();
-        app_data.containers_next();
+        app_data.containers.scroll(&ScrollDirection::Next);
 
         let result = app_data.get_container_state();
         assert_eq!(result.selected(), Some(1));
@@ -1489,7 +1511,7 @@ mod tests {
         );
 
         // Calling previous when at end has no effect
-        app_data.containers_next();
+        app_data.containers.scroll(&ScrollDirection::Next);
         let result = app_data.get_selected_container_id();
         assert_eq!(result, Some(ContainerId::from("3")));
         let result = app_data.get_selected_container_id_state_name();
@@ -1510,7 +1532,7 @@ mod tests {
         let mut app_data = gen_appdata(&containers);
 
         app_data.containers_end();
-        app_data.containers_previous();
+        app_data.containers.scroll(&ScrollDirection::Previous);
         let result = app_data.get_container_state();
         assert_eq!(result.selected(), Some(1));
         assert_eq!(result.offset(), 0);
@@ -1526,7 +1548,7 @@ mod tests {
         assert_eq!(result, None);
 
         app_data.containers.start();
-        app_data.containers.next();
+        app_data.containers.scroll(&ScrollDirection::Next);
 
         let result = app_data.get_selected_container();
         assert_eq!(result, Some(&containers[1]));
@@ -1613,7 +1635,7 @@ mod tests {
         let mut app_data = gen_appdata(&containers);
         app_data.containers_start();
         app_data.docker_controls_start();
-        app_data.docker_controls_next();
+        app_data.docker_controls_scroll(&ScrollDirection::Next);
 
         let result = app_data.selected_docker_controls();
         assert_eq!(result, Some(DockerCommand::Restart));
@@ -1631,7 +1653,7 @@ mod tests {
         assert_eq!(result, Some(DockerCommand::Delete));
 
         // Next has no effect when at end
-        app_data.docker_controls_next();
+        app_data.docker_controls_scroll(&ScrollDirection::Next);
         let result = app_data.selected_docker_controls();
         assert_eq!(result, Some(DockerCommand::Delete));
     }
@@ -1643,14 +1665,14 @@ mod tests {
         let mut app_data = gen_appdata(&containers);
         app_data.containers_start();
         app_data.docker_controls_end();
-        app_data.docker_controls_previous();
+        app_data.docker_controls_scroll(&ScrollDirection::Previous);
 
         let result = app_data.selected_docker_controls();
         assert_eq!(result, Some(DockerCommand::Stop));
 
         // previous has no effect when at start
         app_data.docker_controls_start();
-        app_data.docker_controls_previous();
+        app_data.docker_controls_scroll(&ScrollDirection::Previous);
         let result = app_data.selected_docker_controls();
         assert_eq!(result, Some(DockerCommand::Pause));
     }
@@ -1914,7 +1936,7 @@ mod tests {
         assert_eq!(result, " 3/3 - container_1 - image_1");
 
         // Change log state to no longer be at the end
-        app_data.log_previous();
+        app_data.log_scroll(&ScrollDirection::Previous);
         let result = app_data.get_log_title();
         assert_eq!(result, " 2/3 - container_1 - image_1");
     }
@@ -1935,7 +1957,7 @@ mod tests {
         assert_eq!(result, " - container_1 - image_1");
 
         // change container
-        app_data.containers_next();
+        app_data.containers_scroll(&ScrollDirection::Next);
         let result = app_data.get_log_title();
         assert_eq!(result, " - container_2 - image_2");
 
@@ -1946,7 +1968,7 @@ mod tests {
         assert_eq!(result, " 3/3 - container_2 - image_2");
 
         // Change log state to no longer be at the end
-        app_data.log_previous();
+        app_data.log_scroll(&ScrollDirection::Previous);
         let result = app_data.get_log_title();
         assert_eq!(result, " 2/3 - container_2 - image_2");
     }
@@ -2053,8 +2075,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 1/3 - container_1 - image_1");
 
-        app_data.log_next();
-
+        app_data.log_scroll(&ScrollDirection::Next);
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(1));
@@ -2063,7 +2084,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 2/3 - container_1 - image_1");
 
-        app_data.log_next();
+        app_data.log_scroll(&ScrollDirection::Next);
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(2));
@@ -2071,7 +2092,7 @@ mod tests {
 
         let result = app_data.get_log_title();
         assert_eq!(result, " 3/3 - container_1 - image_1");
-        app_data.log_next();
+        app_data.log_scroll(&ScrollDirection::Next);
 
         let result = app_data.get_log_state();
         assert!(result.is_some());
@@ -2102,7 +2123,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 3/3 - container_1 - image_1");
 
-        app_data.log_previous();
+        app_data.log_scroll(&ScrollDirection::Previous);
 
         let result = app_data.get_log_state();
         assert!(result.is_some());
@@ -2111,7 +2132,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 2/3 - container_1 - image_1");
 
-        app_data.log_previous();
+        app_data.log_scroll(&ScrollDirection::Previous);
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
@@ -2119,7 +2140,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 1/3 - container_1 - image_1");
 
-        app_data.log_previous();
+        app_data.log_scroll(&ScrollDirection::Previous);
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
@@ -2413,7 +2434,7 @@ mod tests {
         }
 
         for _ in 0..=500 {
-            app_data.log_next();
+            app_data.log_scroll(&ScrollDirection::Next);
         }
         let result = app_data.get_logs(
             Size {

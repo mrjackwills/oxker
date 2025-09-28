@@ -67,15 +67,16 @@ pub struct ConfigFile {
     pub gui: Option<bool>,
     pub host: Option<String>,
     pub keymap: Option<ConfigKeymap>,
+    pub log_search_case_sensitive: Option<bool>,
     pub raw_logs: Option<bool>,
     pub save_dir: Option<String>,
+    pub show_logs: Option<bool>,
     pub show_self: Option<bool>,
     pub show_std_err: Option<bool>,
     pub show_timestamp: Option<bool>,
     pub timestamp_format: Option<String>,
     pub timezone: Option<String>,
     pub use_cli: Option<bool>,
-    pub show_logs: Option<bool>,
 }
 
 impl ConfigFile {

@@ -23,6 +23,7 @@ pub mod info;
 pub mod logs;
 pub mod popup;
 pub mod ports;
+pub mod search_logs;
 
 pub const NAME_TEXT: &str = r#"
                           88                               
@@ -160,19 +161,11 @@ pub mod tests {
         fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
             let (mut app_data, gui_data) = (data.0.lock(), data.1.lock());
 
-            // let container_section_height = app_data.get_container_len();
-            // let container_section_height = if container_section_height < 12 {
-            //     u16::try_from(container_section_height + 5).unwrap_or_default()
-            // } else {
-            //     12
-            // };
-
             let (filter_by, filter_term) = app_data.get_filter();
             Self {
                 chart_data: app_data.get_chart_data(),
                 color_logs: app_data.config.color_logs,
                 columns: app_data.get_width(),
-                // container_section_height,
                 container_title: app_data.get_container_title(),
                 delete_confirm: gui_data.get_delete_container(),
                 filter_by,
@@ -182,6 +175,7 @@ pub mod tests {
                 show_logs: gui_data.get_show_logs(),
                 info_text: gui_data.info_box_text.clone(),
                 is_loading: gui_data.is_loading(),
+                log_search: app_data.gen_log_search(),
                 loading_icon: gui_data.get_loading().to_string(),
                 log_height: gui_data.get_log_height(),
                 log_title: app_data.get_log_title(),
@@ -230,7 +224,6 @@ pub mod tests {
     /// Just a shorthand for when enumerating over result cells
     pub fn get_result(
         setup: &'_ TuiTestSetup,
-        // w: u16,
     ) -> std::iter::Enumerate<std::slice::Chunks<'_, ratatui::buffer::Cell>> {
         setup
             .terminal

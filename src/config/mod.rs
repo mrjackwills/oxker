@@ -13,6 +13,9 @@ pub use {color_parser::AppColors, keymap_parser::Keymap};
 mod parse_args;
 mod parse_config_file;
 
+// TODO use a global pub static oncelock for the config
+// static CELL: OnceLock<usize> = OnceLock::new();
+
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Config {
@@ -23,14 +26,15 @@ pub struct Config {
     pub host: Option<String>,
     pub in_container: bool,
     pub keymap: Keymap,
+    pub log_search_case_sensitive: bool,
     pub raw_logs: bool,
     pub save_dir: Option<PathBuf>,
+    pub show_logs: bool,
     pub show_self: bool,
     pub show_std_err: bool,
     pub show_timestamp: bool,
-    pub timezone: Option<TimeZone>,
     pub timestamp_format: String,
-    pub show_logs: bool,
+    pub timezone: Option<TimeZone>,
     pub use_cli: bool,
 }
 
@@ -44,15 +48,16 @@ impl From<&Args> for Config {
             host: args.host.clone(),
             in_container: Self::check_if_in_container(),
             keymap: Keymap::new(),
+            log_search_case_sensitive: true,
             raw_logs: args.raw,
             save_dir: Self::try_get_logs_dir(args.save_dir.as_ref()),
+            show_logs: true,
             show_self: !args.show_self,
             show_std_err: !args.no_std_err,
             show_timestamp: !args.timestamp,
-            timezone: Self::parse_timezone(args.timezone.clone()),
             timestamp_format: Self::parse_timestamp_format(None),
+            timezone: Self::parse_timezone(args.timezone.clone()),
             use_cli: args.use_cli,
-            show_logs: true,
         }
     }
 }
@@ -67,15 +72,16 @@ impl From<ConfigFile> for Config {
             host: config_file.host,
             in_container: Self::check_if_in_container(),
             keymap: Keymap::from(config_file.keymap),
+            log_search_case_sensitive: config_file.log_search_case_sensitive.unwrap_or(true),
             raw_logs: config_file.raw_logs.unwrap_or(false),
             save_dir: Self::try_get_logs_dir(config_file.save_dir.as_ref()),
+            show_logs: config_file.show_logs.unwrap_or(true),
             show_self: config_file.show_self.unwrap_or(false),
             show_std_err: config_file.show_std_err.unwrap_or(true),
             show_timestamp: config_file.show_timestamp.unwrap_or(true),
-            timezone: Self::parse_timezone(config_file.timezone),
             timestamp_format: Self::parse_timestamp_format(config_file.timestamp_format),
+            timezone: Self::parse_timezone(config_file.timezone),
             use_cli: config_file.use_cli.unwrap_or(false),
-            show_logs: config_file.show_logs.unwrap_or(true),
         }
     }
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# rust create_release v0.6.2
-# 2025-02-22
+# rust create_release v0.6.3
+# 2025-09-20
 
 STAR_LINE='****************************************'
 CWD=$(pwd)
@@ -240,20 +240,29 @@ zig_build_aarch64_apple() {
 	fi
 }
 
+cargo_clean() {
+	echo -e "${YELLOW}cargo clean${RESET}"
+	cargo clean
+}
+
 # Build all releases that GitHub workflow would
 # This will download GB's of docker images
+# $1 is 0 or 1, if 1 won't run ask_continue
 cross_build_all() {
-	cargo clean
+	if ask_yn "cargo clean"; then
+		cargo_clean
+	fi
+	skip_confirm=$1
 	cross_build_armv6_linux
-	ask_continue
+	 [ "$skip_confirm" -ne 1 ] && ask_continue
 	cross_build_aarch64_linux
-	ask_continue
+	 [ "$skip_confirm" -ne 1 ] && ask_continue
 	cross_build_x86_linux
-	ask_continue
+	 [ "$skip_confirm" -ne 1 ] && ask_continue
 	cross_build_x86_windows
-	ask_continue
+	 [ "$skip_confirm" -ne 1 ] && ask_continue
 	zig_build_aarch64_apple
-	ask_continue
+	 [ "$skip_confirm" -ne 1 ] && ask_continue
 }
 
 # $1 text to colourise
@@ -304,13 +313,15 @@ build_container_armv6() {
 }
 
 # Build all the containers, this get executed in the github action
+# $1 is 0 or 1, if 1 won't run ask_continue
 build_container_all() {
+	skip_confirm=$1
 	build_container_amd64
-	ask_continue
+	[ "$skip_confirm" -ne 1 ] && ask_continue
 	build_container_arm64
-	ask_continue
+	[ "$skip_confirm" -ne 1 ] && ask_continue
 	build_container_armv6
-	ask_continue
+	[ "$skip_confirm" -ne 1 ] && ask_continue
 }
 
 # Full flow to create a new release
@@ -322,8 +333,8 @@ release_flow() {
 	get_git_remote_url
 
 	cargo_test
-	cross_build_all
-	build_container_all
+	cross_build_all 0
+	build_container_all 0
 	cargo_publish_dry_run
 
 	cd "${CWD}" || error_close "Can't find ${CWD}"
@@ -394,6 +405,7 @@ build_choice() {
 		4 "aarch64 apple" off
 		5 "x86 windows" off
 		6 "all" off
+		7 "all automatic" off
 	)
 	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 	exitStatus=$?
@@ -426,7 +438,11 @@ build_choice() {
 			exit
 			;;
 		6)
-			cross_build_all
+			cross_build_all 0
+			exit
+			;;
+		7)
+			cross_build_all 1
 			exit
 			;;
 		esac
@@ -440,6 +456,7 @@ build_container_choice() {
 		2 "aarch64" off
 		3 "armv6" off
 		4 "all" off
+		5 "all automatic" off
 	)
 	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 	exitStatus=$?
@@ -464,7 +481,11 @@ build_container_choice() {
 			exit
 			;;
 		4)
-			build_container_all
+			build_container_all 0
+			exit
+			;;
+		5)
+			build_container_all 1
 			exit
 			;;
 		esac

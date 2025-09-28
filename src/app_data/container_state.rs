@@ -23,6 +23,12 @@ const ONE_MB: f64 = ONE_KB * 1000.0;
 const ONE_GB: f64 = ONE_MB * 1000.0;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub enum ScrollDirection {
+    Next,
+    Previous,
+}
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct ContainerId(String);
 
 impl From<&str> for ContainerId {
@@ -177,7 +183,14 @@ impl<T> StatefulList<T> {
         self.state.select(Some(0));
     }
 
-    pub fn next(&mut self) {
+    pub fn scroll(&mut self, scroll: &ScrollDirection) {
+        match scroll {
+            ScrollDirection::Next => self.next(),
+            ScrollDirection::Previous => self.previous(),
+        }
+    }
+
+    fn next(&mut self) {
         if !self.items.is_empty() {
             self.state.select(Some(
                 self.state.selected().map_or(
@@ -190,7 +203,7 @@ impl<T> StatefulList<T> {
         }
     }
 
-    pub fn previous(&mut self) {
+    fn previous(&mut self) {
         if !self.items.is_empty() {
             self.state.select(Some(
                 self.state
@@ -600,6 +613,8 @@ impl LogsTz {
 pub struct Logs {
     lines: StatefulList<Text<'static>>,
     tz: HashSet<LogsTz>,
+    search_results: Vec<usize>,
+    search_term: Option<String>,
     offset: u16,
     max_log_len: usize,
     adjusted_max_width: usize,
@@ -614,6 +629,8 @@ impl Default for Logs {
             lines,
             tz: HashSet::new(),
             offset: 0,
+            search_term: None,
+            search_results: vec![],
             adjusted_max_width: 0,
             adjust_max_width_text_len: 0,
             max_log_len: 0,
@@ -621,16 +638,185 @@ impl Default for Logs {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
+pub enum LogsButton {
+    Both,
+    Next,
+    Previous,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
+pub struct LogSearch {
+    pub term: Option<String>,
+    pub result: Option<String>,
+    pub buttons: Option<LogsButton>,
+}
+
+/// LogSearch is used in FrameData
+impl From<&Logs> for LogSearch {
+    fn from(l: &Logs) -> Self {
+        let buttons = l.lines.state.selected().as_ref().and_then(|x| {
+            let show_next = l.search_results.iter().any(|n| n > x);
+            let show_previous = l.search_results.iter().any(|n| n < x);
+            match (show_next, show_previous) {
+                (true, true) => Some(LogsButton::Both),
+                (true, false) => Some(LogsButton::Next),
+                (false, true) => Some(LogsButton::Previous),
+                (false, false) => None,
+            }
+        });
+        Self {
+            term: l.search_term.clone(),
+            result: l.get_search_result(),
+            buttons,
+        }
+    }
+}
+
 impl Logs {
-    /// Only allow a new log line to be inserted if the log timestamp isn't in the tz HashSet
-    pub fn insert(&mut self, line: Text<'static>, tz: LogsTz) {
-        if self.tz.insert(tz) {
-            self.max_log_len = self.max_log_len.max(line.width());
-            self.lines.items.push(line);
+    pub fn gen_log_search(&self) -> LogSearch {
+        LogSearch::from(self)
+    }
+
+    /// Scroll to the next or previous search result, accounts for when currently selected line isn't in the results vec
+    pub fn search_scroll(&mut self, sd: &ScrollDirection) -> Option<()> {
+        if let Some(current_selected) = self.lines.state.selected() {
+            if let Some(current_position) = self
+                .search_results
+                .iter()
+                .position(|i| i == &current_selected)
+            {
+                if let Some(new_index) = match sd {
+                    ScrollDirection::Next => current_position.checked_add(1),
+                    ScrollDirection::Previous => current_position.checked_sub(1),
+                } {
+                    if let Some(f) = self.search_results.get(new_index) {
+                        self.lines.state.select(Some(*f));
+                        return Some(());
+                    }
+                }
+            } else {
+                let range = match sd {
+                    ScrollDirection::Previous => (0..=current_selected).rev().collect::<Vec<_>>(),
+                    ScrollDirection::Next => (current_selected
+                        ..=self
+                            .search_results
+                            .last()
+                            .map_or_else(|| current_selected, |i| *i))
+                        .collect::<Vec<_>>(),
+                };
+                for i in range {
+                    if self.search_results.contains(&i) {
+                        self.lines.state.select(Some(i));
+                        return Some(());
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Get a string x/y, where y is total matches found, and x is current ordered selected line
+    /// WIll be padded by max chars of total matches
+    fn get_search_result(&self) -> Option<String> {
+        if self.search_results.is_empty() {
+            return None;
+        }
+        Some(self.lines.state.selected().map_or_else(
+            || format!("{}", self.search_results.len()),
+            |current_index| {
+                self.search_results
+                    .iter()
+                    .position(|i| i == &current_index)
+                    .map_or_else(
+                        || format!("{}", self.search_results.len()),
+                        |index| {
+                            let len = format!("{}", self.search_results.len());
+                            let len_width = len.chars().count();
+                            format!("{:>len_width$}/{len:>len_width$}", index + 1)
+                        },
+                    )
+            },
+        ))
+    }
+
+    /// Search through the logs for a matching string
+    pub fn search(&mut self, case_sensitive: bool, scroll: bool) {
+        if let Some(search_term) = self.search_term.as_ref() {
+            let term = if case_sensitive {
+                search_term.to_owned()
+            } else {
+                search_term.to_lowercase()
+            };
+            self.search_results = self
+                .lines
+                .items
+                .iter()
+                .enumerate()
+                .filter_map(|(index, a)| {
+                    a.lines
+                        .iter()
+                        .any(|b| {
+                            b.spans.iter().any(|c| {
+                                if case_sensitive {
+                                    c.content.contains(&term)
+                                } else {
+                                    c.content.to_lowercase().contains(&term)
+                                }
+                            })
+                        })
+                        .then_some(index)
+                })
+                .collect();
+            if !self.search_results.is_empty() && scroll {
+                self.lines.state.select(self.search_results.last().copied());
+                self.offset = 0;
+            }
+        } else {
+            self.search_results.clear();
         }
     }
 
-    /// If scrolling horiztonally along the logs, display a counter of the position in the in the scroll, `x/y`
+    /// Set a single char into the filter term
+    pub fn search_term_push(&mut self, c: char, case_sensitive: bool) {
+        if let Some(term) = self.search_term.as_mut() {
+            term.push(c);
+        } else {
+            self.search_term = Some(format!("{c}"));
+        }
+        self.search(case_sensitive, true);
+    }
+
+    /// Delete the final char of the filter term
+    pub fn search_term_pop(&mut self, case_sensitive: bool) {
+        if let Some(term) = self.search_term.as_mut() {
+            term.pop();
+            if term.is_empty() {
+                self.search_term = None;
+            }
+        }
+        self.search(case_sensitive, true);
+    }
+
+    /// Remove the filter completely
+    pub fn search_term_clear(&mut self) {
+        self.search_term = None;
+        self.search_results.clear();
+    }
+
+    /// Only allow a new log line to be inserted if the log timestamp isn't in the tz HashSet
+    pub fn insert(&mut self, line: Text<'static>, tz: LogsTz, case_sensitive: bool) {
+        if self.tz.insert(tz) {
+            self.max_log_len = self.max_log_len.max(line.width());
+            self.lines.items.push(line);
+            // Maybe - Ideally we'd re-render here
+            if self.search_term.is_some() {
+                self.search(case_sensitive, false);
+            }
+        }
+    }
+
+    /// If scrolling horizontally along the logs, display a counter of the position in the in the scroll, `x/y`
     pub fn get_scroll_title(&mut self, width: u16) -> Option<String> {
         if self.horizontal_scroll_able(width) {
             let text_width = self.adjust_max_width_text_len;
@@ -723,7 +909,7 @@ impl Logs {
         self.lines.get_state_title()
     }
 
-    /// Return true it currently selected cotnainer logs are wide enough to horizontally scroll
+    /// Return true it currently selected container logs are wide enough to horizontally scroll
     pub fn horizontal_scroll_able(&mut self, width: u16) -> bool {
         if self.lines.items.is_empty() {
             return false;
@@ -748,21 +934,27 @@ impl Logs {
         self.offset = self.offset.saturating_sub(1);
     }
 
+    /// Scroll lines down by one
     pub fn next(&mut self) {
         self.lines.next();
     }
 
+    /// Scroll lines up by one
     pub fn previous(&mut self) {
         self.lines.previous();
     }
 
+    /// Go to the end of the lines
     pub fn end(&mut self) {
         self.lines.end();
     }
+
+    /// Go to the start of the lines
     pub fn start(&mut self) {
         self.lines.start();
     }
 
+    /// Get total number of log lines
     pub const fn len(&self) -> usize {
         self.lines.items.len()
     }
@@ -938,7 +1130,7 @@ mod tests {
     };
 
     use crate::{
-        app_data::{ContainerImage, Logs, LogsTz, RunningState},
+        app_data::{ContainerImage, LogSearch, Logs, LogsTz, RunningState},
         ui::log_sanitizer,
     };
 
@@ -1075,9 +1267,9 @@ mod tests {
         let mut logs = Logs::default();
         let line = log_sanitizer::remove_ansi(input);
 
-        logs.insert(Text::from(line.clone()), tz.clone());
-        logs.insert(Text::from(line.clone()), tz.clone());
-        logs.insert(Text::from(line), tz);
+        logs.insert(Text::from(line.clone()), tz.clone(), true);
+        logs.insert(Text::from(line.clone()), tz.clone(), true);
+        logs.insert(Text::from(line), tz, true);
 
         assert_eq!(logs.lines.items.len(), 1);
 
@@ -1085,9 +1277,9 @@ mod tests {
         let (tz, _) = LogsTz::splitter(input);
         let line = log_sanitizer::remove_ansi(input);
 
-        logs.insert(Text::from(line.clone()), tz.clone());
-        logs.insert(Text::from(line.clone()), tz.clone());
-        logs.insert(Text::from(line), tz);
+        logs.insert(Text::from(line.clone()), tz.clone(), true);
+        logs.insert(Text::from(line.clone()), tz.clone(), true);
+        logs.insert(Text::from(line), tz, true);
 
         assert_eq!(logs.lines.items.len(), 2);
     }
@@ -1150,15 +1342,15 @@ mod tests {
 
         let input = "2023-01-14T19:13:30.783138328Z Hello world some long line".to_owned();
         let (tz, _) = LogsTz::splitter(&input);
-        logs.insert(Text::from(input), tz);
+        logs.insert(Text::from(input), tz, true);
 
         let input = "2023-01-14T19:13:31.783138328Z Hello world some line".to_owned();
         let (tz, _) = LogsTz::splitter(&input);
-        logs.insert(Text::from(input), tz);
+        logs.insert(Text::from(input), tz, true);
 
         let input = "2023-01-14T19:13:32.783138328Z Hello world".to_owned();
         let (tz, _) = LogsTz::splitter(&input);
-        logs.insert(Text::from(input), tz);
+        logs.insert(Text::from(input), tz, true);
 
         logs.offset = 43;
         let result = logs.get_visible_logs(
@@ -1188,14 +1380,14 @@ mod tests {
 
         let input = "short".to_owned();
         let (tz, _) = LogsTz::splitter(&input);
-        logs.insert(Text::from(input), tz);
+        logs.insert(Text::from(input), tz, true);
 
         let result = logs.get_scroll_title(10);
         assert!(result.is_none());
 
         let input = "2023-01-14T19:13:30.783138328Z Hello world some long line".to_owned();
         let (tz, _) = LogsTz::splitter(&input);
-        logs.insert(Text::from(input), tz);
+        logs.insert(Text::from(input), tz, true);
 
         let result = logs.get_scroll_title(10);
         assert_eq!(result, Some("    0/51 → ".to_owned()));
@@ -1210,5 +1402,120 @@ mod tests {
         }
         let result = logs.get_scroll_title(10);
         assert_eq!(result, Some(" ← 51/51   ".to_owned()));
+    }
+
+    #[test]
+    /// Test the log search
+    fn test_logsearch() {
+        let mut logs = Logs::default();
+
+        for i in 1..=10 {
+            let input = if i % 2 == 0 {
+                format!("{i}, hello world some long line {i}")
+            } else {
+                format!("{i}, Hello world some long line {i}")
+            };
+            let (tz, _) = LogsTz::splitter(&input);
+            logs.insert(Text::from(input), tz, true);
+        }
+
+        logs.search_term_push('H', true);
+        assert_eq!(logs.search_results, [0, 2, 4, 6, 8]);
+        logs.search_term_clear();
+        logs.search_term_push('H', false);
+        assert_eq!(logs.search_results, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    }
+
+    #[test]
+    /// Test the LogSearch::From() methods
+    fn test_logsearch_from() {
+        let mut logs = Logs::default();
+
+        for i in 1..=10 {
+            let input = format!("{i}, Hello world some long line {i}");
+            let (tz, _) = LogsTz::splitter(&input);
+            logs.insert(Text::from(input), tz, true);
+        }
+
+        let log_search = LogSearch::from(&logs);
+        assert_eq!(
+            log_search,
+            LogSearch {
+                term: None,
+                result: None,
+                buttons: None
+            }
+        );
+
+        logs.search_term_push('H', true);
+        let log_search = LogSearch::from(&logs);
+        assert_eq!(
+            log_search,
+            LogSearch {
+                term: Some("H".to_owned()),
+                result: Some("10/10".to_owned()),
+                buttons: Some(crate::app_data::LogsButton::Previous)
+            }
+        );
+
+        logs.previous();
+
+        let log_search = LogSearch::from(&logs);
+        assert_eq!(
+            log_search,
+            LogSearch {
+                term: Some("H".to_owned()),
+                result: Some(" 9/10".to_owned()),
+                buttons: Some(crate::app_data::LogsButton::Both)
+            }
+        );
+
+        logs.start();
+
+        let log_search = LogSearch::from(&logs);
+        assert_eq!(
+            log_search,
+            LogSearch {
+                term: Some("H".to_owned()),
+                result: Some(" 1/10".to_owned()),
+                buttons: Some(crate::app_data::LogsButton::Next)
+            }
+        );
+
+        logs.search_term_push('H', true);
+        let log_search = LogSearch::from(&logs);
+        assert_eq!(
+            log_search,
+            LogSearch {
+                term: Some("HH".to_owned()),
+                result: None,
+                buttons: None
+            }
+        );
+
+        logs.search_term_clear();
+        logs.search_term_push('2', true);
+        let log_search = LogSearch::from(&logs);
+        assert_eq!(logs.lines.state.selected(), Some(1));
+        assert_eq!(
+            log_search,
+            LogSearch {
+                term: Some("2".to_owned()),
+                result: Some("1/1".to_owned()),
+                buttons: None
+            }
+        );
+
+        logs.next();
+
+        let log_search = LogSearch::from(&logs);
+        assert_eq!(
+            log_search,
+            LogSearch {
+                term: Some("2".to_owned()),
+                result: Some("1".to_owned()),
+                buttons: Some(crate::app_data::LogsButton::Previous)
+            }
+        );
     }
 }

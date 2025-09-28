@@ -30,8 +30,8 @@ pub use self::color_match::*;
 pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
 use crate::{
     app_data::{
-        AppData, Columns, ContainerId, ContainerPorts, CpuTuple, FilterBy, Header, MemTuple,
-        SortedOrder, State,
+        AppData, Columns, ContainerId, ContainerPorts, CpuTuple, FilterBy, Header, LogSearch,
+        MemTuple, SortedOrder, State,
     },
     app_error::AppError,
     config::{AppColors, Keymap},
@@ -218,10 +218,6 @@ impl Ui {
         }
 
         while self.is_running.load(Ordering::SeqCst) {
-            // if self.redraw.get_clear() {
-            //     self.terminal.clear().ok();
-            //     continue;
-            // }
             if self.should_redraw(&mut drawn_at, docker_interval_ms) {
                 let fd = FrameData::from(&*self);
 
@@ -287,6 +283,7 @@ impl Ui {
 }
 
 /// Frequent data required by multiple frame drawing functions, can reduce mutex reads by placing it all in here
+/// TODO refactor this
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct FrameData {
@@ -294,6 +291,7 @@ pub struct FrameData {
     color_logs: bool,
     columns: Columns,
     container_title: String,
+    log_search: Option<LogSearch>,
     delete_confirm: Option<ContainerId>,
     filter_by: FilterBy,
     filter_term: Option<String>,
@@ -327,6 +325,7 @@ impl From<&Ui> for FrameData {
             filter_by,
             filter_term: filter_term.cloned(),
             has_containers: app_data.get_container_len() > 0,
+            log_search: app_data.gen_log_search(),
             has_error: app_data.get_error(),
             info_text: gui_data.info_box_text.clone(),
             is_loading: gui_data.is_loading(),
@@ -353,9 +352,12 @@ fn draw_frame(
     fd: &FrameData,
     gui_state: &Arc<Mutex<GuiState>>,
 ) {
+    let contains_filter = fd.status.contains(&Status::Filter);
+    let contains_search_logs = fd.status.contains(&Status::SearchLogs);
+
     let whole_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(if fd.status.contains(&Status::Filter) {
+        .constraints(if contains_filter || contains_search_logs {
             vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
         } else {
             vec![Constraint::Max(1), Constraint::Min(1)]
@@ -364,9 +366,12 @@ fn draw_frame(
 
     draw_blocks::headers::draw(whole_layout[0], colors, f, fd, gui_state, keymap);
 
-    // If required, draw filter bar
     if let Some(rect) = whole_layout.get(2) {
-        draw_blocks::filter::draw(*rect, colors, f, fd);
+        if contains_filter {
+            draw_blocks::filter::draw(*rect, colors, f, fd);
+        } else {
+            draw_blocks::search_logs::draw(*rect, colors, f, fd, keymap);
+        }
     }
 
     let upper_main = Layout::default()

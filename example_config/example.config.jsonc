@@ -31,6 +31,8 @@
 	"use_cli": false,
 	// Show the logs section - this can be changed during operation with the log_section_toggle key
 	"show_logs": true,
+	// Use case-sensitive matching for logs
+	"log_search_case_sensitive": true,
 	//////////////////
 	// Custom Keymap //
 	//////////////////
@@ -67,6 +69,10 @@
 			"/",
 			"F1"
 		],
+		// Enter log search mode
+		"log_search_mode": [
+			"#"
+		],
 		// Quit at anytime
 		"quit": [
 			"q"
@@ -75,14 +81,8 @@
 		"save_logs": [
 			"s"
 		],
-		// TODO "scroll_down_many" will be removed in the next release
-		// Scroll down a list by many
-		"scroll_down_many": [
-			"pagedown"
-		],
-		// TODO rename in next release
 		// Scroll down a list by one item
-		"scroll_down_one": [
+		"scroll_down": [
 			"down",
 			"j"
 		],
@@ -90,20 +90,16 @@
 		"scroll_end": [
 			"end"
 		],
-		// Modifier to scroll by 10 lines isntead of one, used in conjunction with scroll_up_x/scroll_down_x
-		"scroll_many": ["control"],
+		// Modifier to scroll by 10 lines instead of one, used in conjunction with scroll_up/scroll_down
+		"scroll_many": [
+			"control"
+		],
 		// Scroll up to the start of a list
 		"scroll_start": [
 			"home"
 		],
-		// TODO "scroll_up_many" will be removed in the next release
-		// Scroll up a list by many
-		"scroll_up_many": [
-			"pageup"
-		],
-		// TODO rename in next release
 		// Scroll up a list by one item
-		"scroll_up_one": [
+		"scroll_up": [
 			"up",
 			"k"
 		],
@@ -294,6 +290,17 @@
 			"selected_filter_background": "gray",
 			// text color of the selected filter by item (Name/Image/Status/All)
 			"selected_filter_text": "black",
+			// Highlighted text color
+			"highlight": "magenta"
+		},
+		// The log search panel
+		"log_search": {
+			// Background color of panel
+			"background": "reset",
+			// color of text
+			"text": "gray",
+			// text color of the buttons text
+			"button_text": "black",
 			// Highlighted text color
 			"highlight": "magenta"
 		},
