@@ -24,7 +24,7 @@ use crate::{
     config,
     docker_data::DockerMessage,
     exec::{ExecMode, tty_readable},
-    ui::{DeleteButton, GuiState, SelectablePanel, Status, Ui},
+    ui::{DeleteButton, GuiState, SelectablePanel, Status, StopButton, Ui},
 };
 pub use message::InputMessages;
 
@@ -71,11 +71,12 @@ impl InputHandler {
                     let status = self.gui_state.lock().get_status();
                     let contains = |s: Status| status.contains(&s);
 
-                    if contains(Status::DeleteConfirm) {
+                    if contains(Status::DeleteConfirm) || contains(Status::StopConfirm) {
                         self.button_intersect(mouse_event).await;
                     } else if !contains(Status::Error)
                         && !contains(Status::Help)
                         && !contains(Status::DeleteConfirm)
+                        && !contains(Status::StopConfirm)
                         && !contains(Status::Filter)
                         && !contains(Status::SearchLogs)
                     {
@@ -117,6 +118,22 @@ impl InputHandler {
     /// This is executed from the Delete Confirm dialog, and will clear the delete_container information (removes id and closes panel)
     fn clear_delete(&self) {
         self.gui_state.lock().set_delete_container(None);
+    }
+
+    /// This is executed from the Stop Confirm dialog, and will send an internal message to actually stop the given container
+    async fn confirm_stop(&self) {
+        let id = self.gui_state.lock().get_stop_container();
+        if let Some(id) = id {
+            self.docker_tx
+                .send(DockerMessage::Control((DockerCommand::Stop, id)))
+                .await
+                .ok();
+        }
+    }
+
+    /// This is executed from the Stop Confirm dialog, and will clear the stop_container information (removes id and closes panel)
+    fn clear_stop(&self) {
+        self.gui_state.lock().set_stop_container(None);
     }
 
     /// Validate that one can exec into a Docker container
@@ -255,6 +272,75 @@ impl InputHandler {
         }
     }
 
+    /// Pause the currently selected container
+    async fn pause_container(&self) {
+        let is_oxker = self.app_data.lock().is_oxker_in_container();
+        if is_oxker {
+            return;
+        }
+        let option_id = self.app_data.lock().get_selected_container_id();
+        if let Some(id) = option_id {
+            self.docker_tx
+                .send(DockerMessage::Control((DockerCommand::Pause, id)))
+                .await
+                .ok();
+        }
+    }
+
+    /// Resume the currently selected container
+    async fn resume_container(&self) {
+        let is_oxker = self.app_data.lock().is_oxker_in_container();
+        if is_oxker {
+            return;
+        }
+        let option_id = self.app_data.lock().get_selected_container_id();
+        if let Some(id) = option_id {
+            self.docker_tx
+                .send(DockerMessage::Control((DockerCommand::Resume, id)))
+                .await
+                .ok();
+        }
+    }
+
+    /// Toggle container - stops if running/paused, starts if stopped/exited
+    async fn stop_container_key(&self) {
+        let is_oxker = self.app_data.lock().is_oxker_in_container();
+        if is_oxker {
+            return;
+        }
+        let container_info = self.app_data.lock().get_selected_container_id_state_name();
+        if let Some((id, state, _name)) = container_info {
+            match state {
+                crate::app_data::State::Running(_) | crate::app_data::State::Paused => {
+                    // Show confirmation dialog for stop
+                    self.gui_state.lock().set_stop_container(Some(id));
+                }
+                crate::app_data::State::Dead | crate::app_data::State::Exited => {
+                    // Start the container directly
+                    self.docker_tx
+                        .send(DockerMessage::Control((DockerCommand::Start, id)))
+                        .await
+                        .ok();
+                }
+                _ => {
+                    // For other states (Removing, Restarting, Unknown), do nothing
+                }
+            }
+        }
+    }
+
+    /// Delete container key - shows confirmation dialog
+    fn delete_container_key(&self) {
+        let is_oxker = self.app_data.lock().is_oxker_in_container();
+        if is_oxker {
+            return;
+        }
+        let option_id = self.app_data.lock().get_selected_container_id();
+        if let Some(id) = option_id {
+            self.gui_state.lock().set_delete_container(Some(id));
+        }
+    }
+
     /// Send docker command, if the Commands panel is selected
     async fn enter_key(&self) {
         // This isn't great, just means you can't send docker commands before full initialization of the program
@@ -376,6 +462,21 @@ impl InputHandler {
             || self.keymap.clear.1 == Some(key_code)
         {
             self.clear_delete();
+        }
+    }
+
+    /// Actions to take when Stop status active
+    async fn handle_stop(&self, key_code: KeyCode) {
+        if self.keymap.delete_confirm.0 == key_code
+            || self.keymap.delete_confirm.1 == Some(key_code)
+        {
+            self.confirm_stop().await;
+        } else if self.keymap.delete_deny.0 == key_code
+            || self.keymap.delete_deny.1 == Some(key_code)
+            || self.keymap.clear.0 == key_code
+            || self.keymap.clear.1 == Some(key_code)
+        {
+            self.clear_stop();
         }
     }
 
@@ -557,6 +658,34 @@ impl InputHandler {
         self.handle_sort(key_code);
         // shift key plus arrows
         match key_code {
+            _ if modifier == KeyModifiers::CONTROL
+                && (self.keymap.pause_container.0 == key_code
+                    || self.keymap.pause_container.1 == Some(key_code)) =>
+            {
+                self.pause_container().await;
+            }
+
+            _ if modifier == KeyModifiers::CONTROL
+                && (self.keymap.resume_container.0 == key_code
+                    || self.keymap.resume_container.1 == Some(key_code)) =>
+            {
+                self.resume_container().await;
+            }
+
+            _ if modifier == KeyModifiers::CONTROL
+                && (self.keymap.stop_container.0 == key_code
+                    || self.keymap.stop_container.1 == Some(key_code)) =>
+            {
+                self.stop_container_key().await;
+            }
+
+            _ if modifier == KeyModifiers::CONTROL
+                && (self.keymap.delete_container.0 == key_code
+                    || self.keymap.delete_container.1 == Some(key_code)) =>
+            {
+                self.delete_container_key();
+            }
+
             _ if self.keymap.exec.0 == key_code || self.keymap.exec.1 == Some(key_code) => {
                 self.exec_key().await;
             }
@@ -677,6 +806,7 @@ impl InputHandler {
         let contains_exec = contains(Status::Exec);
         let contains_filter = contains(Status::Filter);
         let contains_delete = contains(Status::DeleteConfirm);
+        let contains_stop = contains(Status::StopConfirm);
         let contains_search_logs = contains(Status::SearchLogs);
 
         if !contains_exec {
@@ -698,6 +828,8 @@ impl InputHandler {
                 self.handle_search_logs(key_code, key_modifier);
             } else if contains_delete {
                 self.handle_delete(key_code).await;
+            } else if contains_stop {
+                self.handle_stop(key_code).await;
             } else {
                 self.handle_others(key_code, key_modifier).await;
             }
@@ -707,17 +839,22 @@ impl InputHandler {
     /// Check if a button press interacts with either the yes or no buttons in the delete container confirm window
     async fn button_intersect(&self, mouse_event: MouseEvent) {
         if mouse_event.kind == MouseEventKind::Down(MouseButton::Left) {
-            let intersect = self.gui_state.lock().get_intersect_button(Rect::new(
-                mouse_event.column,
-                mouse_event.row,
-                1,
-                1,
-            ));
+            let rect = Rect::new(mouse_event.column, mouse_event.row, 1, 1);
 
-            if let Some(button) = intersect {
+            let intersect_delete = self.gui_state.lock().get_intersect_button(rect);
+            if let Some(button) = intersect_delete {
                 match button {
                     DeleteButton::Confirm => self.confirm_delete().await,
                     DeleteButton::Cancel => self.clear_delete(),
+                }
+                return;
+            }
+
+            let intersect_stop = self.gui_state.lock().get_intersect_stop_button(rect);
+            if let Some(button) = intersect_stop {
+                match button {
+                    StopButton::Confirm => self.confirm_stop().await,
+                    StopButton::Cancel => self.clear_stop(),
                 }
             }
         }

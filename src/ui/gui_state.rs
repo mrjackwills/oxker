@@ -53,10 +53,17 @@ pub enum Region {
     Header(Header),
     HelpPanel,
     Delete(DeleteButton),
+    Stop(StopButton),
 }
 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum DeleteButton {
+    Confirm,
+    Cancel,
+}
+
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+pub enum StopButton {
     Confirm,
     Cancel,
 }
@@ -171,6 +178,7 @@ pub enum Status {
     Init,
     Logs,
     SearchLogs,
+    StopConfirm,
 }
 
 /// Global gui_state, stored in an Arc<Mutex>
@@ -182,6 +190,7 @@ pub struct GuiState {
     intersect_heading: HashMap<Header, Rect>,
     intersect_help: Option<Rect>,
     intersect_panel: HashMap<SelectablePanel, Rect>,
+    intersect_stop: HashMap<StopButton, Rect>,
     loading_handle: Option<JoinHandle<()>>,
     loading_index: u8,
     loading_set: HashSet<Uuid>,
@@ -191,6 +200,7 @@ pub struct GuiState {
     screen_width: u16,
     show_logs: bool,
     status: HashSet<Status>,
+    stop_container_id: Option<ContainerId>,
     pub info_box_text: Option<(String, Instant)>,
 }
 impl GuiState {
@@ -203,6 +213,7 @@ impl GuiState {
             intersect_heading: HashMap::new(),
             intersect_help: None,
             intersect_panel: HashMap::new(),
+            intersect_stop: HashMap::new(),
             loading_handle: None,
             loading_index: 0,
             loading_set: HashSet::new(),
@@ -212,6 +223,7 @@ impl GuiState {
             selected_panel: SelectablePanel::default(),
             show_logs,
             status: HashSet::new(),
+            stop_container_id: None,
         }
     }
     /// Increase the height of the log panel, then rerender
@@ -307,6 +319,16 @@ impl GuiState {
             .map(|data| *data.0)
     }
 
+    /// Check if a given Rect (a clicked area of 1x1), interacts with any known stop button
+    pub fn get_intersect_stop_button(&self, rect: Rect) -> Option<StopButton> {
+        self.intersect_stop
+            .iter()
+            .filter(|i| i.1.intersects(rect))
+            .collect::<Vec<_>>()
+            .first()
+            .map(|data| *data.0)
+    }
+
     /// Check if a given Rect (a clicked area of 1x1), interacts with any known panels
     pub fn get_intersect_header(&self, rect: Rect) -> Option<Header> {
         self.intersect_heading
@@ -345,6 +367,12 @@ impl GuiState {
                     .and_modify(|w| *w = area)
                     .or_insert(area);
             }
+            Region::Stop(button) => {
+                self.intersect_stop
+                    .entry(button)
+                    .and_modify(|w| *w = area)
+                    .or_insert(area);
+            }
             Region::HelpPanel => {
                 self.intersect_help = Some(area);
             }
@@ -369,6 +397,24 @@ impl GuiState {
         self.rerender.update_draw();
     }
 
+    /// Check if an ContainerId is set in the stop_container field
+    pub fn get_stop_container(&self) -> Option<ContainerId> {
+        self.stop_container_id.clone()
+    }
+
+    /// Set either a ContainerId, or None, to the stop_container field
+    /// If Some, will also insert the StopConfirm status into self.status
+    pub fn set_stop_container(&mut self, id: Option<ContainerId>) {
+        if id.is_some() {
+            self.status.insert(Status::StopConfirm);
+        } else {
+            self.intersect_stop.clear();
+            self.status_del(Status::StopConfirm);
+        }
+        self.stop_container_id = id;
+        self.rerender.update_draw();
+    }
+
     /// Return a copy of the Status HashSet
     pub fn get_status(&self) -> HashSet<Status> {
         self.status.clone()
@@ -381,6 +427,9 @@ impl GuiState {
         match status {
             Status::DeleteConfirm => {
                 self.status.remove(&Status::DeleteConfirm);
+            }
+            Status::StopConfirm => {
+                self.status.remove(&Status::StopConfirm);
             }
             Status::Exec => {
                 self.exec_mode = None;

@@ -27,7 +27,7 @@ mod redraw;
 pub use redraw::Rerender;
 
 pub use self::color_match::*;
-pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status};
+pub use self::gui_state::{DeleteButton, GuiState, SelectablePanel, Status, StopButton};
 use crate::{
     app_data::{
         AppData, Columns, ContainerId, ContainerPorts, CpuTuple, FilterBy, Header, LogSearch,
@@ -309,6 +309,7 @@ pub struct FrameData {
     scroll_title: Option<String>,
     sorted_by: Option<(Header, SortedOrder)>,
     status: HashSet<Status>,
+    stop_confirm: Option<ContainerId>,
 }
 
 impl From<&Ui> for FrameData {
@@ -339,6 +340,7 @@ impl From<&Ui> for FrameData {
             selected_panel: gui_data.get_selected_panel(),
             sorted_by: app_data.get_sorted(),
             status: gui_data.get_status(),
+            stop_confirm: gui_data.get_stop_container(),
         }
     }
 }
@@ -392,17 +394,8 @@ fn draw_frame(
         })
         .split(upper_main[0]);
 
-    // Containers + docker commands
-    let containers_commands = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(if fd.has_containers {
-            vec![Constraint::Percentage(90), Constraint::Percentage(10)]
-        } else {
-            vec![Constraint::Percentage(100)]
-        })
-        .split(containers_logs_section[0]);
-
-    draw_blocks::containers::draw(app_data, containers_commands[0], colors, f, fd, gui_state);
+    // Containers only (commands pane removed)
+    draw_blocks::containers::draw(app_data, containers_logs_section[0], colors, f, fd, gui_state);
 
     if fd.show_logs {
         draw_blocks::logs::draw(
@@ -428,10 +421,21 @@ fn draw_frame(
         );
     }
 
-    // only draw commands + charts if there are containers
-    if let Some(rect) = containers_commands.get(1) {
-        draw_blocks::commands::draw(app_data, *rect, colors, f, fd, gui_state);
+    if let Some(id) = fd.stop_confirm.as_ref() {
+        app_data.lock().get_container_name_by_id(id).map_or_else(
+            || {
+                // If a container is deleted outside of oxker but whilst the Stop Confirm dialog is open, it can get caught in kind of a dead lock situation
+                // so if in that unique situation, just clear the stop_container id
+                gui_state.lock().set_stop_container(None);
+            },
+            |name| {
+                draw_blocks::stop_confirm::draw(colors, f, gui_state, keymap, name);
+            },
+        );
+    }
 
+    // only draw charts if there are containers
+    if fd.has_containers {
         // Can calculate the max string length here, and then use that to keep the ports section as small as possible (+4 for some padding + border)
         let ports_len =
             u16::try_from(fd.port_max_lens.0 + fd.port_max_lens.1 + fd.port_max_lens.2 + 2)

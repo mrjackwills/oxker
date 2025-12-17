@@ -425,17 +425,6 @@ pub enum DockerCommand {
 }
 
 impl DockerCommand {
-    pub const fn get_color(self, colors: AppColors) -> Color {
-        match self {
-            Self::Pause => colors.commands.pause,
-            Self::Restart => colors.commands.restart,
-            Self::Start => colors.commands.start,
-            Self::Stop => colors.commands.stop,
-            Self::Delete => colors.commands.delete,
-            Self::Resume => colors.commands.resume,
-        }
-    }
-
     /// Docker commands available depending on the containers state
     pub fn gen_vec(state: State) -> Vec<Self> {
         match state {
