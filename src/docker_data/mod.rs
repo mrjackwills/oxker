@@ -392,6 +392,7 @@ impl DockerData {
                         .await
                 }
                 DockerCommand::Stop => {
+                    gui_state.lock().set_stop_container(None);
                     docker
                         .stop_container(id.get(), None::<StopContainerOptions>)
                         .await

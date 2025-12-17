@@ -631,18 +631,6 @@ impl AppData {
         }
     }
 
-    /// Get mutable Option of the currently selected container DockerCommand state
-    pub fn get_control_state(&mut self) -> Option<&mut ListState> {
-        self.get_mut_selected_container()
-            .map(|i| &mut i.docker_controls.state)
-    }
-
-    /// Get mutable Option of the currently selected container DockerConmand items
-    pub fn get_control_items(&mut self) -> Option<&mut Vec<DockerCommand>> {
-        self.get_mut_selected_container()
-            .map(|i| &mut i.docker_controls.items)
-    }
-
     /// Logs related methods
     /// Get the title for log panel for selected container, will be either
     /// 1) "logs x/x - container_name - container_image"

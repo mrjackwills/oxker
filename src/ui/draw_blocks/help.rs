@@ -126,6 +126,26 @@ impl HelpInfo {
             ]),
             Line::from(vec![
                 space(),
+                button_item("ctrl+p"),
+                button_desc("pause container"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("ctrl+r"),
+                button_desc("resume container"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("ctrl+s"),
+                button_desc("toggle start/stop container"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("ctrl+d"),
+                button_desc("delete container (with confirmation)"),
+            ]),
+            Line::from(vec![
+                space(),
                 button_item("e"),
                 button_desc("exec into a container"),
                 #[cfg(target_os = "windows")]
@@ -295,6 +315,34 @@ impl HelpInfo {
                 space(),
                 button_item("enter"),
                 button_desc("send docker container command"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("ctrl"),
+                button_desc("+"),
+                button_item(&km.pause_container.0.to_string()),
+                button_desc("pause container"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("ctrl"),
+                button_desc("+"),
+                button_item(&km.resume_container.0.to_string()),
+                button_desc("resume container"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("ctrl"),
+                button_desc("+"),
+                button_item(&km.stop_container.0.to_string()),
+                button_desc("toggle start/stop container"),
+            ]),
+            Line::from(vec![
+                space(),
+                button_item("ctrl"),
+                button_desc("+"),
+                button_item(&km.delete_container.0.to_string()),
+                button_desc("delete container (with confirmation)"),
             ]),
             #[cfg(not(target_os = "windows"))]
             or_secondary(km.exec, "exec into a container"),
@@ -591,6 +639,7 @@ mod tests {
         let input = Keymap {
             clear: (KeyCode::Char('a'), None),
             delete_confirm: (KeyCode::Char('b'), None),
+            delete_container: (KeyCode::Char('d'), None),
             delete_deny: (KeyCode::Char('c'), None),
             exec: (KeyCode::Char('d'), None),
             filter_mode: (KeyCode::Char('e'), None),
@@ -601,7 +650,9 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('i'), None),
             log_section_height_increase: (KeyCode::Char('j'), None),
             log_section_toggle: (KeyCode::Char('k'), None),
+            pause_container: (KeyCode::Char('p'), None),
             quit: (KeyCode::Char('l'), None),
+            resume_container: (KeyCode::Char('r'), None),
             save_logs: (KeyCode::Char('m'), None),
             scroll_down: (KeyCode::Char('o'), None),
             scroll_end: (KeyCode::Char('p'), None),
@@ -620,6 +671,7 @@ mod tests {
             sort_by_status: (KeyCode::Char('2'), None),
             sort_by_tx: (KeyCode::Char('3'), None),
             sort_reset: (KeyCode::Char('4'), None),
+            stop_container: (KeyCode::Char('s'), None),
             toggle_help: (KeyCode::Char('5'), None),
             toggle_mouse_capture: (KeyCode::Char('6'), None),
         };
@@ -642,6 +694,7 @@ mod tests {
         let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('A'))),
             delete_confirm: (KeyCode::Char('b'), Some(KeyCode::Char('B'))),
+            delete_container: (KeyCode::Char('d'), Some(KeyCode::Char('D'))),
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('C'))),
             exec: (KeyCode::Char('d'), Some(KeyCode::Char('D'))),
             filter_mode: (KeyCode::Char('e'), Some(KeyCode::Char('E'))),
@@ -652,7 +705,9 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('h'), Some(KeyCode::Char('H'))),
             log_section_height_increase: (KeyCode::Char('i'), Some(KeyCode::Char('I'))),
             log_section_toggle: (KeyCode::Char('j'), Some(KeyCode::Char('J'))),
+            pause_container: (KeyCode::Char('p'), Some(KeyCode::Char('P'))),
             quit: (KeyCode::Char('k'), Some(KeyCode::Char('K'))),
+            resume_container: (KeyCode::Char('r'), Some(KeyCode::Char('R'))),
             save_logs: (KeyCode::Char('l'), Some(KeyCode::Char('L'))),
             scroll_down: (KeyCode::Char('n'), Some(KeyCode::Char('N'))),
             scroll_end: (KeyCode::Char('o'), Some(KeyCode::Char('O'))),
@@ -671,6 +726,7 @@ mod tests {
             sort_by_status: (KeyCode::Char('1'), Some(KeyCode::Char('8'))),
             sort_by_tx: (KeyCode::Char('2'), Some(KeyCode::Char('7'))),
             sort_reset: (KeyCode::Char('3'), Some(KeyCode::Char('6'))),
+            stop_container: (KeyCode::Char('s'), Some(KeyCode::Char('S'))),
             toggle_help: (KeyCode::Char('4'), Some(KeyCode::Char('5'))),
             toggle_mouse_capture: (KeyCode::Char('5'), Some(KeyCode::PageDown)),
         };
@@ -694,6 +750,7 @@ mod tests {
         let keymap = Keymap {
             clear: (KeyCode::Char('a'), Some(KeyCode::Char('A'))),
             delete_confirm: (KeyCode::Char('b'), None),
+            delete_container: (KeyCode::Char('d'), None),
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('C'))),
             exec: (KeyCode::Char('d'), None),
             filter_mode: (KeyCode::Char('e'), Some(KeyCode::Char('E'))),
@@ -704,7 +761,9 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('i'), Some(KeyCode::Char('I'))),
             log_section_height_increase: (KeyCode::Char('j'), None),
             log_section_toggle: (KeyCode::Char('k'), Some(KeyCode::Char('K'))),
+            pause_container: (KeyCode::Char('p'), None),
             quit: (KeyCode::Char('l'), None),
+            resume_container: (KeyCode::Char('r'), None),
             save_logs: (KeyCode::Char('m'), Some(KeyCode::Char('M'))),
             scroll_down: (KeyCode::Char('o'), Some(KeyCode::Char('O'))),
             scroll_end: (KeyCode::Char('p'), None),
@@ -723,6 +782,7 @@ mod tests {
             sort_by_status: (KeyCode::Char('2'), Some(KeyCode::Char('7'))),
             sort_by_tx: (KeyCode::Char('3'), None),
             sort_reset: (KeyCode::Char('4'), Some(KeyCode::Char('5'))),
+            stop_container: (KeyCode::Char('s'), None),
             toggle_help: (KeyCode::Char('5'), None),
             toggle_mouse_capture: (KeyCode::Char('6'), Some(KeyCode::Char('#'))),
         };

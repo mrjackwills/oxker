@@ -12,7 +12,6 @@ use crate::config::AppColors;
 use super::{FrameData, GuiState, SelectablePanel, Status, gui_state::Region};
 
 pub mod charts;
-pub mod commands;
 pub mod containers;
 pub mod delete_confirm;
 pub mod error;
@@ -24,6 +23,7 @@ pub mod logs;
 pub mod popup;
 pub mod ports;
 pub mod search_logs;
+pub mod stop_confirm;
 
 pub const NAME_TEXT: &str = r#"
                           88                               
@@ -185,6 +185,7 @@ pub mod tests {
                 selected_panel: gui_data.get_selected_panel(),
                 sorted_by: app_data.get_sorted(),
                 status: gui_data.get_status(),
+                stop_confirm: gui_data.get_stop_container(),
             }
         }
     }

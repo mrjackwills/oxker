@@ -38,6 +38,7 @@ optional_config_struct!(
     ConfigKeymap,
     clear,
     delete_confirm,
+    delete_container,
     delete_deny,
     exec,
     filter_mode,
@@ -48,7 +49,9 @@ optional_config_struct!(
     log_section_height_decrease,
     log_section_height_increase,
     log_section_toggle,
+    pause_container,
     quit,
+    resume_container,
     save_logs,
     scroll_down,
     scroll_end,
@@ -66,6 +69,7 @@ optional_config_struct!(
     sort_by_status,
     sort_by_tx,
     sort_reset,
+    stop_container,
     toggle_help,
     toggle_mouse_capture
 );
@@ -74,6 +78,7 @@ config_struct!(
     Keymap,
     clear,
     delete_confirm,
+    delete_container,
     delete_deny,
     exec,
     filter_mode,
@@ -84,7 +89,9 @@ config_struct!(
     log_section_height_decrease,
     log_section_height_increase,
     log_section_toggle,
+    pause_container,
     quit,
+    resume_container,
     save_logs,
     scroll_down,
     scroll_end,
@@ -102,6 +109,7 @@ config_struct!(
     sort_by_status,
     sort_by_tx,
     sort_reset,
+    stop_container,
     toggle_help,
     toggle_mouse_capture
 );
@@ -111,6 +119,7 @@ impl Keymap {
         Self {
             clear: (KeyCode::Char('c'), Some(KeyCode::Esc)),
             delete_confirm: (KeyCode::Char('y'), None),
+            delete_container: (KeyCode::Char('d'), None),
             delete_deny: (KeyCode::Char('n'), None),
             exec: (KeyCode::Char('e'), None),
             filter_mode: (KeyCode::Char('/'), Some(KeyCode::F(1))),
@@ -121,8 +130,11 @@ impl Keymap {
             log_section_height_decrease: (KeyCode::Char('-'), None),
             log_section_height_increase: (KeyCode::Char('='), None),
             log_section_toggle: (KeyCode::Char('\\'), None),
+            pause_container: (KeyCode::Char('p'), None),
             quit: (KeyCode::Char('q'), None),
+            resume_container: (KeyCode::Char('r'), None),
             save_logs: (KeyCode::Char('s'), None),
+            stop_container: (KeyCode::Char('s'), None),
             scroll_down: (KeyCode::Down, Some(KeyCode::Char('j'))),
             scroll_end: (KeyCode::End, None),
             scroll_many: KeyModifiers::CONTROL,
@@ -180,6 +192,7 @@ impl From<Option<ConfigKeymap>> for Keymap {
             update_keymap(ck.clear, &mut keymap.clear, &mut clash);
             update_keymap(ck.delete_deny, &mut keymap.delete_deny, &mut clash);
             update_keymap(ck.delete_confirm, &mut keymap.delete_confirm, &mut clash);
+            update_keymap(ck.delete_container, &mut keymap.delete_container, &mut clash);
             update_keymap(
                 ck.log_section_height_decrease,
                 &mut keymap.log_section_height_decrease,
@@ -199,8 +212,11 @@ impl From<Option<ConfigKeymap>> for Keymap {
             update_keymap(ck.exec, &mut keymap.exec, &mut clash);
             update_keymap(ck.filter_mode, &mut keymap.filter_mode, &mut clash);
             update_keymap(ck.force_redraw, &mut keymap.force_redraw, &mut clash);
+            update_keymap(ck.pause_container, &mut keymap.pause_container, &mut clash);
             update_keymap(ck.quit, &mut keymap.quit, &mut clash);
+            update_keymap(ck.resume_container, &mut keymap.resume_container, &mut clash);
             update_keymap(ck.save_logs, &mut keymap.save_logs, &mut clash);
+            update_keymap(ck.stop_container, &mut keymap.stop_container, &mut clash);
             update_keymap(ck.scroll_down, &mut keymap.scroll_down, &mut clash);
             update_keymap(ck.scroll_end, &mut keymap.scroll_end, &mut clash);
             update_keymap(ck.scroll_start, &mut keymap.scroll_start, &mut clash);
