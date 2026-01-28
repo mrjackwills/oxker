@@ -1,8 +1,8 @@
 use bollard::{
     Docker,
     query_parameters::{
-        ListContainersOptions, LogsOptions, RemoveContainerOptions, RestartContainerOptions,
-        StartContainerOptions, StatsOptions, StopContainerOptions,
+        InspectContainerOptions, ListContainersOptions, LogsOptions, RemoveContainerOptions,
+        RestartContainerOptions, StartContainerOptions, StatsOptions, StopContainerOptions,
     },
     secret::ContainerStatsResponse,
     service::ContainerSummary,
@@ -413,6 +413,18 @@ impl DockerData {
                     docker_tx.send(Arc::clone(&self.docker)).ok();
                 }
                 DockerMessage::Update => self.update_everything().await,
+                DockerMessage::Inspect(id) => {
+                    let t = self
+                        .docker
+                        .inspect_container(id.get(), Some(InspectContainerOptions { size: true }))
+                        .await;
+                    if let Ok(t) = t {
+                        self.app_data.lock().set_inspect_data(t);
+                        self.gui_state.lock().status_push(Status::Inspect);
+                    } else {
+                        // Set error here, can't inspect container
+                    }
+                }
             }
         }
     }

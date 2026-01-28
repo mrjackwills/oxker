@@ -169,6 +169,7 @@ pub enum Status {
     Filter,
     Help,
     Init,
+    Inspect,
     Logs,
     SearchLogs,
 }

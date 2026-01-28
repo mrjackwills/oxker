@@ -9,5 +9,6 @@ pub enum DockerMessage {
     ConfirmDelete(ContainerId),
     Control((DockerCommand, ContainerId)),
     Exec(Sender<Arc<Docker>>),
+    Inspect(ContainerId),
     Update,
 }

@@ -20,6 +20,7 @@ pub mod filter;
 pub mod headers;
 pub mod help;
 pub mod info;
+pub mod inspect;
 pub mod logs;
 pub mod popup;
 pub mod ports;

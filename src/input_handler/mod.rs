@@ -77,6 +77,7 @@ impl InputHandler {
                         && !contains(Status::Help)
                         && !contains(Status::DeleteConfirm)
                         && !contains(Status::Filter)
+                        && !contains(Status::Inspect)
                         && !contains(Status::SearchLogs)
                     {
                         // TODO handle state where you want to scroll log search results with the mouse wheel
@@ -117,6 +118,16 @@ impl InputHandler {
     /// This is executed from the Delete Confirm dialog, and will clear the delete_container information (removes id and closes panel)
     fn clear_delete(&self) {
         self.gui_state.lock().set_delete_container(None);
+    }
+
+    async fn inspect_key(&self) {
+        // TODO handle when already in inspect state, basically toggle on and off
+        // TODO handle up and down keys when in inspect mode
+        self.app_data.lock().clear_inspect_data();
+        let g = self.app_data.lock().get_selected_container().cloned();
+        if let Some(g) = g {
+            self.docker_tx.send(DockerMessage::Inspect(g.id)).await.ok();
+        }
     }
 
     /// Validate that one can exec into a Docker container
@@ -440,6 +451,41 @@ impl InputHandler {
     }
 
     /// Actions to take when Filter status active
+    fn handle_inspect(&self, key_code: KeyCode) {
+        match key_code {
+            _ if self.keymap.inspect.0 == key_code || self.keymap.inspect.1 == Some(key_code) => {
+                self.app_data.lock().clear_inspect_data();
+                self.gui_state.lock().status_del(Status::Inspect);
+                // self.sort(Header::State);
+            }
+            // KeyCode::Esc => {
+            //     self.app_data.lock().filter_term_clear();
+            //     self.gui_state.lock().status_del(Status::Filter);
+            // }
+            // _ if KeyCode::Enter == key_code
+            //     || self.keymap.filter_mode.0 == key_code
+            //     || self.keymap.filter_mode.1 == Some(key_code) =>
+            // {
+            //     self.gui_state.lock().status_del(Status::Filter);
+            // }
+            // KeyCode::Backspace => {
+            //     self.app_data.lock().filter_term_pop();
+            // }
+            // KeyCode::Char(x) => {
+            //     self.app_data.lock().filter_term_push(x);
+            // }
+            // KeyCode::Right => {
+            //     self.app_data.lock().filter_by_next();
+            // }
+            // KeyCode::Left => {
+            //     self.app_data.lock().filter_by_prev();
+            // }
+            // TODO
+            _ => (),
+        }
+    }
+
+    /// Actions to take when Filter status active
     fn handle_filter(&self, key_code: KeyCode) {
         match key_code {
             KeyCode::Esc => {
@@ -596,6 +642,10 @@ impl InputHandler {
                 self.save_key().await;
             }
 
+            _ if self.keymap.inspect.0 == key_code || self.keymap.inspect.1 == Some(key_code) => {
+                self.inspect_key().await;
+            }
+
             _ if self.keymap.select_next_panel.0 == key_code
                 || self.keymap.select_next_panel.1 == Some(key_code) =>
             {
@@ -671,6 +721,7 @@ impl InputHandler {
     async fn button_press(&mut self, key_code: KeyCode, key_modifier: KeyModifiers) {
         let status = self.gui_state.lock().get_status();
         let contains = |s: Status| status.contains(&s);
+        // todo handle inspect state
 
         let contains_error = contains(Status::Error);
         let contains_help = contains(Status::Help);
@@ -678,6 +729,7 @@ impl InputHandler {
         let contains_filter = contains(Status::Filter);
         let contains_delete = contains(Status::DeleteConfirm);
         let contains_search_logs = contains(Status::SearchLogs);
+        let contains_inspect = contains(Status::Inspect);
 
         if !contains_exec {
             let is_q = || key_code == self.keymap.quit.0 || Some(key_code) == self.keymap.quit.1;
@@ -698,6 +750,8 @@ impl InputHandler {
                 self.handle_search_logs(key_code, key_modifier);
             } else if contains_delete {
                 self.handle_delete(key_code).await;
+            } else if contains_inspect {
+                self.handle_inspect(key_code);
             } else {
                 self.handle_others(key_code, key_modifier).await;
             }

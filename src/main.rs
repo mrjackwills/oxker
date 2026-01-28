@@ -215,6 +215,7 @@ mod tests {
         AppData {
             containers: StatefulList::new(containers.to_vec()),
             hidden_containers: vec![],
+            inspect_data: None,
             current_sorted_id: vec![],
             error: None,
             sorted_by: None,

@@ -1,4 +1,4 @@
-use bollard::models::ContainerSummary;
+use bollard::{models::ContainerSummary, secret::ContainerInspectResponse};
 use core::fmt;
 use parking_lot::Mutex;
 use ratatui::{layout::Size, text::Text, widgets::ListState};
@@ -122,6 +122,7 @@ pub struct AppData {
     error: Option<AppError>,
     filter: Filter,
     hidden_containers: Vec<ContainerItem>,
+    inspect_data: Option<ContainerInspectResponse>,
     rerender: Arc<Rerender>,
     sorted_by: Option<(Header, SortedOrder)>,
     current_sorted_id: Vec<ContainerId>,
@@ -136,6 +137,7 @@ pub struct AppData {
     pub error: Option<AppError>,
     pub filter: Filter,
     pub hidden_containers: Vec<ContainerItem>,
+    pub inspect_data: Option<ContainerInspectResponse>,
     pub current_sorted_id: Vec<ContainerId>,
     pub rerender: Arc<Rerender>,
     pub sorted_by: Option<(Header, SortedOrder)>,
@@ -151,6 +153,7 @@ impl AppData {
             error: None,
             filter: Filter::new(),
             hidden_containers: vec![],
+            inspect_data: None,
             rerender: Arc::clone(redraw),
             sorted_by: None,
         }
@@ -165,6 +168,17 @@ impl AppData {
             .as_secs()
     }
 
+    pub fn clear_inspect_data(&mut self) {
+        self.inspect_data = None;
+    }
+
+    pub fn set_inspect_data(&mut self, data: ContainerInspectResponse) {
+        self.inspect_data = Some(data)
+    }
+
+    pub fn get_inspect_data(&self) -> Option<ContainerInspectResponse> {
+        self.inspect_data.clone()
+    }
     /// Filter related methods
     /// Get the filterby and filter_term
     pub const fn get_filter(&self) -> (FilterBy, Option<&String>) {

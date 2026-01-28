@@ -359,114 +359,123 @@ fn draw_frame(
     let contains_filter = fd.status.contains(&Status::Filter);
     let contains_search_logs = fd.status.contains(&Status::SearchLogs);
 
-    let whole_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(if contains_filter || contains_search_logs {
-            vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
-        } else {
-            vec![Constraint::Max(1), Constraint::Min(1)]
-        })
-        .split(f.area());
+    let contains_inspect = fd.status.contains(&Status::Inspect);
 
-    draw_blocks::headers::draw(whole_layout[0], colors, f, fd, gui_state, keymap);
+    let t = app_data.lock().get_inspect_data();
+    if let Some(t) = t
+        && contains_inspect
+    {
+        draw_blocks::inspect::draw(f, t, (0, 0));
+    } else {
+        let whole_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(if contains_filter || contains_search_logs {
+                vec![Constraint::Max(1), Constraint::Min(1), Constraint::Max(1)]
+            } else {
+                vec![Constraint::Max(1), Constraint::Min(1)]
+            })
+            .split(f.area());
 
-    if let Some(rect) = whole_layout.get(2) {
-        if contains_filter {
-            draw_blocks::filter::draw(*rect, colors, f, fd);
-        } else {
-            draw_blocks::search_logs::draw(*rect, colors, f, fd, keymap);
+        draw_blocks::headers::draw(whole_layout[0], colors, f, fd, gui_state, keymap);
+
+        if let Some(rect) = whole_layout.get(2) {
+            if contains_filter {
+                draw_blocks::filter::draw(*rect, colors, f, fd);
+            } else {
+                draw_blocks::search_logs::draw(*rect, colors, f, fd, keymap);
+            }
         }
-    }
 
-    let upper_main = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(if fd.has_containers {
-            vec![Constraint::Percentage(75), Constraint::Percentage(25)]
-        } else {
-            vec![Constraint::Percentage(100), Constraint::Percentage(0)]
-        })
-        .split(whole_layout[1]);
+        let upper_main = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(if fd.has_containers {
+                vec![Constraint::Percentage(75), Constraint::Percentage(25)]
+            } else {
+                vec![Constraint::Percentage(100), Constraint::Percentage(0)]
+            })
+            .split(whole_layout[1]);
 
-    let containers_logs_section = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(if fd.show_logs {
-            vec![Constraint::Min(6), Constraint::Percentage(fd.log_height)]
-        } else {
-            vec![Constraint::Percentage(100)]
-        })
-        .split(upper_main[0]);
+        let containers_logs_section = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(if fd.show_logs {
+                vec![Constraint::Min(6), Constraint::Percentage(fd.log_height)]
+            } else {
+                vec![Constraint::Percentage(100)]
+            })
+            .split(upper_main[0]);
 
-    // Containers + docker commands
-    let containers_commands = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(if fd.has_containers {
-            vec![Constraint::Percentage(90), Constraint::Percentage(10)]
-        } else {
-            vec![Constraint::Percentage(100)]
-        })
-        .split(containers_logs_section[0]);
-
-    draw_blocks::containers::draw(app_data, containers_commands[0], colors, f, fd, gui_state);
-
-    if fd.show_logs {
-        draw_blocks::logs::draw(
-            app_data,
-            containers_logs_section[1],
-            colors,
-            f,
-            fd,
-            gui_state,
-        );
-    }
-
-    if let Some(id) = fd.delete_confirm.as_ref() {
-        app_data.lock().get_container_name_by_id(id).map_or_else(
-            || {
-                // If a container is deleted outside of oxker but whilst the Delete Confirm dialog is open, it can get caught in kind of a dead lock situation
-                // so if in that unique situation, just clear the delete_container id
-                gui_state.lock().set_delete_container(None);
-            },
-            |name| {
-                draw_blocks::delete_confirm::draw(colors, f, gui_state, keymap, name);
-            },
-        );
-    }
-
-    // only draw commands + charts if there are containers
-    if let Some(rect) = containers_commands.get(1) {
-        draw_blocks::commands::draw(app_data, *rect, colors, f, fd, gui_state);
-
-        // Can calculate the max string length here, and then use that to keep the ports section as small as possible (+4 for some padding + border)
-        let ports_len =
-            u16::try_from(fd.port_max_lens.0 + fd.port_max_lens.1 + fd.port_max_lens.2 + 2)
-                .unwrap_or(26);
-
-        let lower = Layout::default()
+        // Containers + docker commands
+        let containers_commands = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Min(1), Constraint::Max(ports_len)])
-            .split(upper_main[1]);
+            .constraints(if fd.has_containers {
+                vec![Constraint::Percentage(90), Constraint::Percentage(10)]
+            } else {
+                vec![Constraint::Percentage(100)]
+            })
+            .split(containers_logs_section[0]);
 
-        draw_blocks::charts::draw(lower[0], colors, f, fd);
-        draw_blocks::ports::draw(lower[1], colors, f, fd);
-    }
+        draw_blocks::containers::draw(app_data, containers_commands[0], colors, f, fd, gui_state);
 
-    if let Some((text, instant)) = fd.info_text.as_ref() {
-        draw_blocks::info::draw(colors, f, gui_state, instant, text.to_owned());
-    }
+        if fd.show_logs {
+            draw_blocks::logs::draw(
+                app_data,
+                containers_logs_section[1],
+                colors,
+                f,
+                fd,
+                gui_state,
+            );
+        }
 
-    // Check if error, and show popup if so
-    if fd.status.contains(&Status::Help) {
-        let tz = app_data.lock().config.timezone.clone();
-        draw_blocks::help::draw(
-            colors,
-            f,
-            keymap,
-            app_data.lock().config.show_timestamp,
-            tz.as_ref(),
-        );
-    }
+        if let Some(id) = fd.delete_confirm.as_ref() {
+            app_data.lock().get_container_name_by_id(id).map_or_else(
+                || {
+                    // If a container is deleted outside of oxker but whilst the Delete Confirm dialog is open, it can get caught in kind of a dead lock situation
+                    // so if in that unique situation, just clear the delete_container id
+                    gui_state.lock().set_delete_container(None);
+                },
+                |name| {
+                    draw_blocks::delete_confirm::draw(colors, f, gui_state, keymap, name);
+                },
+            );
+        }
 
-    if let Some(error) = fd.has_error.as_ref() {
-        draw_blocks::error::draw(colors, error, f, None, keymap, None);
+        // only draw commands + charts if there are containers
+        if let Some(rect) = containers_commands.get(1) {
+            draw_blocks::commands::draw(app_data, *rect, colors, f, fd, gui_state);
+
+            // Can calculate the max string length here, and then use that to keep the ports section as small as possible (+4 for some padding + border)
+            let ports_len =
+                u16::try_from(fd.port_max_lens.0 + fd.port_max_lens.1 + fd.port_max_lens.2 + 2)
+                    .unwrap_or(26);
+
+            let lower = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Min(1), Constraint::Max(ports_len)])
+                .split(upper_main[1]);
+
+            draw_blocks::charts::draw(lower[0], colors, f, fd);
+            draw_blocks::ports::draw(lower[1], colors, f, fd);
+        }
+
+        if let Some((text, instant)) = fd.info_text.as_ref() {
+            draw_blocks::info::draw(colors, f, gui_state, instant, text.to_owned());
+        }
+
+        // Check if error, and show popup if so
+        if fd.status.contains(&Status::Help) {
+            let tz = app_data.lock().config.timezone.clone();
+            draw_blocks::help::draw(
+                colors,
+                f,
+                keymap,
+                app_data.lock().config.show_timestamp,
+                tz.as_ref(),
+            );
+        }
+
+        if let Some(error) = fd.has_error.as_ref() {
+            draw_blocks::error::draw(colors, error, f, None, keymap, None);
+        }
     }
 }

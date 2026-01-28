@@ -593,6 +593,8 @@ mod tests {
             delete_confirm: (KeyCode::Char('b'), None),
             delete_deny: (KeyCode::Char('c'), None),
             exec: (KeyCode::Char('d'), None),
+            // TODO test me
+            inspect: (KeyCode::Char('i'), None),
             filter_mode: (KeyCode::Char('e'), None),
             log_search_mode: (KeyCode::Char('7'), None),
             force_redraw: (KeyCode::Char('f'), None),
@@ -644,6 +646,8 @@ mod tests {
             delete_confirm: (KeyCode::Char('b'), Some(KeyCode::Char('B'))),
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('C'))),
             exec: (KeyCode::Char('d'), Some(KeyCode::Char('D'))),
+            // TODO test me
+            inspect: (KeyCode::Char('i'), None),
             filter_mode: (KeyCode::Char('e'), Some(KeyCode::Char('E'))),
             log_search_mode: (KeyCode::Char('m'), Some(KeyCode::Char('M'))),
             force_redraw: (KeyCode::Char('f'), Some(KeyCode::Char('F'))),
@@ -697,6 +701,8 @@ mod tests {
             delete_deny: (KeyCode::Char('c'), Some(KeyCode::Char('C'))),
             exec: (KeyCode::Char('d'), None),
             filter_mode: (KeyCode::Char('e'), Some(KeyCode::Char('E'))),
+            // TODO test me
+            inspect: (KeyCode::Char('i'), None),
             log_search_mode: (KeyCode::Char('8'), None),
             force_redraw: (KeyCode::Char('f'), None),
             log_scroll_back: (KeyCode::Char('g'), Some(KeyCode::Char('G'))),
