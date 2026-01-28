@@ -361,11 +361,10 @@ fn draw_frame(
 
     let contains_inspect = fd.status.contains(&Status::Inspect);
 
-    let t = app_data.lock().get_inspect_data();
-    if let Some(t) = t
-        && contains_inspect
-    {
-        draw_blocks::inspect::draw(f, t, (0, 0));
+    let inspect_data = app_data.lock().get_inspect_data();
+    if contains_inspect && let Some(inspect_data) = inspect_data {
+        let offset = gui_state.lock().get_inspect_offset();
+        draw_blocks::inspect::draw(f, colors, inspect_data, offset);
     } else {
         let whole_layout = Layout::default()
             .direction(Direction::Vertical)

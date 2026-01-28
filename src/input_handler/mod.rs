@@ -453,11 +453,48 @@ impl InputHandler {
     /// Actions to take when Filter status active
     fn handle_inspect(&self, key_code: KeyCode) {
         match key_code {
-            _ if self.keymap.inspect.0 == key_code || self.keymap.inspect.1 == Some(key_code) => {
+            _ if self.keymap.inspect.0 == key_code
+                || self.keymap.inspect.1 == Some(key_code)
+                || self.keymap.clear.0 == key_code
+                || self.keymap.clear.1 == Some(key_code) =>
+            {
                 self.app_data.lock().clear_inspect_data();
                 self.gui_state.lock().status_del(Status::Inspect);
                 // self.sort(Header::State);
             }
+
+            _ if self.keymap.scroll_down.0 == key_code
+                || self.keymap.scroll_down.1 == Some(key_code) =>
+            {
+                self.gui_state
+                    .lock()
+                    .set_inspect_offset_y(ScrollDirection::Next);
+            }
+
+            _ if self.keymap.scroll_up.0 == key_code
+                || self.keymap.scroll_up.1 == Some(key_code) =>
+            {
+                self.gui_state
+                    .lock()
+                    .set_inspect_offset_y(ScrollDirection::Previous);
+            }
+
+            _ if self.keymap.log_scroll_forward.0 == key_code
+                || self.keymap.log_scroll_forward.1 == Some(key_code) =>
+            {
+                self.gui_state
+                    .lock()
+                    .set_inspect_offset_x(ScrollDirection::Next);
+            }
+
+            _ if self.keymap.log_scroll_back.0 == key_code
+                || self.keymap.log_scroll_back.1 == Some(key_code) =>
+            {
+                self.gui_state
+                    .lock()
+                    .set_inspect_offset_x(ScrollDirection::Previous);
+            }
+
             // KeyCode::Esc => {
             //     self.app_data.lock().filter_term_clear();
             //     self.gui_state.lock().status_del(Status::Filter);

@@ -40,7 +40,12 @@ pub const NAME: &str = env!("CARGO_PKG_NAME");
 pub const REPO: &str = env!("CARGO_PKG_REPOSITORY");
 pub const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 pub const MARGIN: &str = "   ";
-pub const RIGHT_ARROW: &str = "▶ ";
+pub const SELECT_ARROW: &str = "▶ ";
+// TODO use me all over the place
+pub const LEFT_ARROW: &str = "←";
+pub const RIGHT_ARROW: &str = "→";
+pub const DOWN_ARROW: &str = "↓";
+pub const UP_ARROW: &str = "↑";
 pub const CIRCLE: &str = "⚪ ";
 
 #[cfg(not(test))]

@@ -9,7 +9,7 @@ use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use crate::{
-    app_data::{AppData, ContainerId, Header},
+    app_data::{AppData, ContainerId, Header, ScrollDirection},
     exec::ExecMode,
 };
 
@@ -191,6 +191,7 @@ pub struct GuiState {
     selected_panel: SelectablePanel,
     screen_width: u16,
     show_logs: bool,
+    inspect_offset: (u16, u16),
     status: HashSet<Status>,
     pub info_box_text: Option<(String, Instant)>,
 }
@@ -204,6 +205,7 @@ impl GuiState {
             intersect_heading: HashMap::new(),
             intersect_help: None,
             intersect_panel: HashMap::new(),
+            inspect_offset: (0, 0),
             loading_handle: None,
             loading_index: 0,
             loading_set: HashSet::new(),
@@ -234,6 +236,32 @@ impl GuiState {
             }
             self.rerender.update_draw();
         }
+    }
+
+    pub fn set_inspect_offset_x(&mut self, x: ScrollDirection) {
+        match x {
+            ScrollDirection::Previous => self.inspect_offset.0.saturating_sub(1),
+            ScrollDirection::Next => self.inspect_offset.0.saturating_add(1),
+        };
+        self.rerender.update_draw();
+    }
+
+    pub fn set_inspect_offset_y(&mut self, y: ScrollDirection) {
+        match y {
+            ScrollDirection::Previous => self.inspect_offset.1 = self.inspect_offset.1.saturating_sub(1),
+            ScrollDirection::Next => self.inspect_offset.1 = self.inspect_offset.1.saturating_add(1),
+        };
+        self.rerender.update_draw();
+
+        // self.inspect_offset.1 += y
+    }
+
+    pub fn get_inspect_offset(&self) -> (u16, u16) {
+        self.inspect_offset
+    }
+
+    pub fn clear_inspect_offset(&mut self) {
+        self.inspect_offset = (0, 0)
     }
 
     /// Set the screen width, used for offset char calculations

@@ -81,6 +81,7 @@ config_struct!(
     inspect,
     force_redraw,
     log_scroll_back,
+    // TODO rename me
     log_scroll_forward,
     log_search_mode,
     log_section_height_decrease,

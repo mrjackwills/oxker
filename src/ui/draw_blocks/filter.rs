@@ -5,7 +5,14 @@ use ratatui::{
     text::{Line, Span},
 };
 
-use crate::{app_data::FilterBy, config::AppColors, ui::FrameData};
+use crate::{
+    app_data::FilterBy,
+    config::AppColors,
+    ui::{
+        FrameData,
+        draw_blocks::{LEFT_ARROW, RIGHT_ARROW},
+    },
+};
 
 /// Create the filter_by by spans, coloured dependant on which one is selected
 fn filter_by_spans(colors: AppColors, fd: &'_ FrameData) -> [Span<'_>; 4] {
@@ -46,7 +53,7 @@ pub fn draw(area: Rect, colors: AppColors, frame: &mut Frame, fd: &FrameData) {
     let mut line = vec![
         Span::styled(" Esc ", style_but),
         Span::styled(" clear ", style_desc),
-        Span::styled(" ← by → ", style_but),
+        Span::styled(format!(" {LEFT_ARROW} by {RIGHT_ARROW} "), style_but),
         Span::from(" "),
     ];
     line.extend_from_slice(&filter_by_spans(colors, fd));

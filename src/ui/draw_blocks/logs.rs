@@ -14,7 +14,7 @@ use crate::{
     ui::{FrameData, GuiState, SelectablePanel, Status},
 };
 
-use super::{RIGHT_ARROW, generate_block};
+use super::{SELECT_ARROW, generate_block};
 
 /// Draw the logs panel
 pub fn draw(
@@ -52,7 +52,7 @@ pub fn draw(
         } else if fd.color_logs {
             let items = List::new(logs)
                 .block(block)
-                .highlight_symbol(RIGHT_ARROW)
+                .highlight_symbol(SELECT_ARROW)
                 .scroll_padding(padding)
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
             // This should always return Some, as logs is not empty
@@ -63,7 +63,7 @@ pub fn draw(
             let items = List::new(logs)
                 .fg(colors.logs.text)
                 .block(block)
-                .highlight_symbol(RIGHT_ARROW)
+                .highlight_symbol(SELECT_ARROW)
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
             // This should always return Some, as logs is not empty
             if let Some(log_state) = app_data.lock().get_log_state() {
