@@ -363,8 +363,7 @@ fn draw_frame(
 
     let inspect_data = app_data.lock().get_inspect_data();
     if contains_inspect && let Some(inspect_data) = inspect_data {
-        let offset = gui_state.lock().get_inspect_offset();
-        draw_blocks::inspect::draw(f, colors, inspect_data, offset);
+        draw_blocks::inspect::draw(f, colors, inspect_data, gui_state, keymap);
     } else {
         let whole_layout = Layout::default()
             .direction(Direction::Vertical)
@@ -457,10 +456,6 @@ fn draw_frame(
             draw_blocks::ports::draw(lower[1], colors, f, fd);
         }
 
-        if let Some((text, instant)) = fd.info_text.as_ref() {
-            draw_blocks::info::draw(colors, f, gui_state, instant, text.to_owned());
-        }
-
         // Check if error, and show popup if so
         if fd.status.contains(&Status::Help) {
             let tz = app_data.lock().config.timezone.clone();
@@ -472,9 +467,13 @@ fn draw_frame(
                 tz.as_ref(),
             );
         }
+    }
 
-        if let Some(error) = fd.has_error.as_ref() {
-            draw_blocks::error::draw(colors, error, f, None, keymap, None);
-        }
+    if let Some((text, instant)) = fd.info_text.as_ref() {
+        draw_blocks::info::draw(colors, f, gui_state, instant, text.to_owned());
+    }
+
+    if let Some(error) = fd.has_error.as_ref() {
+        draw_blocks::error::draw(colors, error, f, None, keymap, None);
     }
 }

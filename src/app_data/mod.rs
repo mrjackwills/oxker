@@ -114,41 +114,41 @@ impl Filter {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct InspectData {
-    pub width: usize,
-    pub length: usize,
-    pub offset: (u16, u16),
-    pub as_string: String,
-}
+// #[derive(Debug, Clone)]
+// pub struct InspectData {
+//     pub width: usize,
+//     pub length: usize,
+//     pub offset: Offset,
+//     pub as_string: String,
+// }
 
-impl From<ContainerInspectResponse> for InspectData {
-    fn from(value: ContainerInspectResponse) -> Self {
-        let data_as_string = serde_json::to_string_pretty(&value).unwrap_or_default();
+// impl From<ContainerInspectResponse> for InspectData {
+//     fn from(value: ContainerInspectResponse) -> Self {
+//         let data_as_string = serde_json::to_string_pretty(&value).unwrap_or_default();
 
-        let as_string = data_as_string
-            .lines()
-            .skip(1)
-            .collect::<Vec<_>>()
-            .split_last()
-            .map(|(_, rest)| rest)
-            .unwrap_or_default()
-            .join("\n");
+//         let as_string = data_as_string
+//             .lines()
+//             .skip(1)
+//             .collect::<Vec<_>>()
+//             .split_last()
+//             .map(|(_, rest)| rest)
+//             .unwrap_or_default()
+//             .join("\n");
 
-        let mut width = 0;
-        for i in as_string.lines() {
-            let count = i.chars().count();
-            width = width.max(count);
-        }
+//         let mut width = 0;
+//         for i in as_string.lines() {
+//             let count = i.chars().count();
+//             width = width.max(count);
+//         }
 
-        Self {
-            width: 0,
-            length: as_string.lines().count(),
-            offset: (0, 0),
-            as_string,
-        }
-    }
-}
+//         Self {
+//             width: 0,
+//             length: as_string.lines().count(),
+//             offset: Offset::new(0,0),
+//             as_string,
+//         }
+//     }
+// }
 
 /// Global app_state, stored in an Arc<Mutex>
 #[derive(Debug, Clone)]
@@ -210,7 +210,7 @@ impl AppData {
 
     pub fn set_inspect_data(&mut self, data: ContainerInspectResponse) {
         // self.inspect_data = Some(InspectData::from(data))
-		self.inspect_data = Some(data)
+        self.inspect_data = Some(data)
     }
 
     pub fn get_inspect_data(&self) -> Option<ContainerInspectResponse> {

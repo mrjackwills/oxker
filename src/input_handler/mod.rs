@@ -77,7 +77,6 @@ impl InputHandler {
                         && !contains(Status::Help)
                         && !contains(Status::DeleteConfirm)
                         && !contains(Status::Filter)
-                        && !contains(Status::Inspect)
                         && !contains(Status::SearchLogs)
                     {
                         // TODO handle state where you want to scroll log search results with the mouse wheel
@@ -121,11 +120,9 @@ impl InputHandler {
     }
 
     async fn inspect_key(&self) {
-        // TODO handle when already in inspect state, basically toggle on and off
-        // TODO handle up and down keys when in inspect mode
         self.app_data.lock().clear_inspect_data();
-        let g = self.app_data.lock().get_selected_container().cloned();
-        if let Some(g) = g {
+        let selected = self.app_data.lock().get_selected_container().cloned();
+        if let Some(g) = selected {
             self.docker_tx.send(DockerMessage::Inspect(g.id)).await.ok();
         }
     }
@@ -307,6 +304,18 @@ impl InputHandler {
         }
     }
 
+    fn inspect_horizontal_scroll(&self, modifier: KeyModifiers, sd: &ScrollDirection) {
+        for _ in 0..self.get_modifier_total(modifier) {
+            self.gui_state.lock().set_inspect_offset_x(sd);
+        }
+    }
+
+    fn inspect_vertical_scroll(&self, modifier: KeyModifiers, sd: &ScrollDirection) {
+        for _ in 0..self.get_modifier_total(modifier) {
+            self.gui_state.lock().set_inspect_offset_y(sd);
+        }
+    }
+
     fn logs_horizontal_scroll(&self, modifier: KeyModifiers, sd: &ScrollDirection) {
         let panel = self.gui_state.lock().get_selected_panel();
         if panel == SelectablePanel::Logs {
@@ -451,7 +460,7 @@ impl InputHandler {
     }
 
     /// Actions to take when Filter status active
-    fn handle_inspect(&self, key_code: KeyCode) {
+    fn handle_inspect(&mut self, key_code: KeyCode, modifier: KeyModifiers) {
         match key_code {
             _ if self.keymap.inspect.0 == key_code
                 || self.keymap.inspect.1 == Some(key_code)
@@ -459,65 +468,50 @@ impl InputHandler {
                 || self.keymap.clear.1 == Some(key_code) =>
             {
                 self.app_data.lock().clear_inspect_data();
+                self.gui_state.lock().clear_inspect_offset();
                 self.gui_state.lock().status_del(Status::Inspect);
-                // self.sort(Header::State);
             }
 
             _ if self.keymap.scroll_down.0 == key_code
                 || self.keymap.scroll_down.1 == Some(key_code) =>
             {
-                self.gui_state
-                    .lock()
-                    .set_inspect_offset_y(ScrollDirection::Next);
+                self.inspect_vertical_scroll(modifier, &ScrollDirection::Next);
             }
 
             _ if self.keymap.scroll_up.0 == key_code
                 || self.keymap.scroll_up.1 == Some(key_code) =>
             {
-                self.gui_state
-                    .lock()
-                    .set_inspect_offset_y(ScrollDirection::Previous);
+                self.inspect_vertical_scroll(modifier, &ScrollDirection::Previous);
             }
 
             _ if self.keymap.log_scroll_forward.0 == key_code
                 || self.keymap.log_scroll_forward.1 == Some(key_code) =>
             {
-                self.gui_state
-                    .lock()
-                    .set_inspect_offset_x(ScrollDirection::Next);
+                self.inspect_horizontal_scroll(modifier, &ScrollDirection::Next);
             }
 
             _ if self.keymap.log_scroll_back.0 == key_code
                 || self.keymap.log_scroll_back.1 == Some(key_code) =>
             {
-                self.gui_state
-                    .lock()
-                    .set_inspect_offset_x(ScrollDirection::Previous);
+                self.inspect_horizontal_scroll(modifier, &ScrollDirection::Previous);
             }
 
-            // KeyCode::Esc => {
-            //     self.app_data.lock().filter_term_clear();
-            //     self.gui_state.lock().status_del(Status::Filter);
-            // }
-            // _ if KeyCode::Enter == key_code
-            //     || self.keymap.filter_mode.0 == key_code
-            //     || self.keymap.filter_mode.1 == Some(key_code) =>
-            // {
-            //     self.gui_state.lock().status_del(Status::Filter);
-            // }
-            // KeyCode::Backspace => {
-            //     self.app_data.lock().filter_term_pop();
-            // }
-            // KeyCode::Char(x) => {
-            //     self.app_data.lock().filter_term_push(x);
-            // }
-            // KeyCode::Right => {
-            //     self.app_data.lock().filter_by_next();
-            // }
-            // KeyCode::Left => {
-            //     self.app_data.lock().filter_by_prev();
-            // }
-            // TODO
+            _ if self.keymap.toggle_mouse_capture.0 == key_code
+                || self.keymap.toggle_mouse_capture.1 == Some(key_code) =>
+            {
+                self.mouse_capture_key();
+            }
+            _ if self.keymap.scroll_start.0 == key_code
+                || self.keymap.scroll_start.1 == Some(key_code) =>
+            {
+                self.gui_state.lock().clear_inspect_offset();
+            }
+            _ if self.keymap.scroll_end.0 == key_code
+                || self.keymap.scroll_end.1 == Some(key_code) =>
+            {
+                self.gui_state.lock().set_inspect_offset_y_to_max();
+            }
+            // TODO start end
             _ => (),
         }
     }
@@ -746,7 +740,6 @@ impl InputHandler {
                 || self.keymap.log_scroll_forward.1 == Some(key_code) =>
             {
                 self.logs_horizontal_scroll(modifier, &ScrollDirection::Next);
-                // self.logs_forward(modifier);
             }
 
             KeyCode::Enter => self.enter_key().await,
@@ -788,7 +781,7 @@ impl InputHandler {
             } else if contains_delete {
                 self.handle_delete(key_code).await;
             } else if contains_inspect {
-                self.handle_inspect(key_code);
+                self.handle_inspect(key_code, key_modifier);
             } else {
                 self.handle_others(key_code, key_modifier).await;
             }
@@ -817,7 +810,24 @@ impl InputHandler {
     /// Handle mouse button events
     fn mouse_press(&self, mouse_event: MouseEvent, modifier: KeyModifiers) {
         let status = self.gui_state.lock().get_status();
-        if status.contains(&Status::Help) {
+
+        if status.contains(&Status::Inspect) {
+            match mouse_event.kind {
+                MouseEventKind::ScrollDown => {
+                    self.inspect_vertical_scroll(modifier, &ScrollDirection::Next);
+                }
+                MouseEventKind::ScrollUp => {
+                    self.inspect_vertical_scroll(modifier, &ScrollDirection::Previous)
+                }
+                MouseEventKind::ScrollRight => {
+                    self.inspect_horizontal_scroll(modifier, &ScrollDirection::Next)
+                }
+                MouseEventKind::ScrollLeft => {
+                    self.inspect_horizontal_scroll(modifier, &ScrollDirection::Previous)
+                }
+                _ => (),
+            }
+        } else if status.contains(&Status::Help) {
             let mouse_point = Rect::new(mouse_event.column, mouse_event.row, 1, 1);
             let help_intersect = self.gui_state.lock().get_intersect_help(mouse_point);
             if help_intersect {
@@ -827,6 +837,7 @@ impl InputHandler {
             match mouse_event.kind {
                 MouseEventKind::ScrollUp => self.scroll(modifier, &ScrollDirection::Previous),
                 MouseEventKind::ScrollDown => self.scroll(modifier, &ScrollDirection::Next),
+                // TODO left and right for log offsets
                 MouseEventKind::Down(MouseButton::Left) => {
                     let mouse_point = Rect::new(mouse_event.column, mouse_event.row, 1, 1);
                     let header = self.gui_state.lock().get_intersect_header(mouse_point);

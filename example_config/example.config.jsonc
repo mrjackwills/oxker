@@ -170,6 +170,10 @@
 		"log_section_toggle": [
 			"\\"
 		],
+		// Toggle to inspect container screen
+		"inspect":  [
+			"i"
+		],
 		// Force a complete clear & redraw of the screen
 		"force_redraw": [
 			"f"
