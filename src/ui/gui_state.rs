@@ -1,5 +1,5 @@
 use parking_lot::Mutex;
-use ratatui::layout::{Constraint, Offset, Rect};
+use ratatui::layout::{Constraint, Rect};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -174,6 +174,12 @@ pub enum Status {
     SearchLogs,
 }
 
+#[derive(Debug, Default, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct ScrollOffset {
+    pub x: usize,
+    pub y: usize,
+}
+
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug)]
 pub struct GuiState {
@@ -191,8 +197,8 @@ pub struct GuiState {
     selected_panel: SelectablePanel,
     screen_width: u16,
     show_logs: bool,
-    inspect_offset: Offset,
-    inspect_offset_max: Offset,
+    inspect_offset: ScrollOffset,
+    inspect_offset_max: ScrollOffset,
     status: HashSet<Status>,
     pub info_box_text: Option<(String, Instant)>,
 }
@@ -206,8 +212,8 @@ impl GuiState {
             intersect_heading: HashMap::new(),
             intersect_help: None,
             intersect_panel: HashMap::new(),
-            inspect_offset: Offset::default(),
-            inspect_offset_max: Offset::default(),
+            inspect_offset: ScrollOffset::default(),
+            inspect_offset_max: ScrollOffset::default(),
             loading_handle: None,
             loading_index: 0,
             loading_set: HashSet::new(),
@@ -240,44 +246,69 @@ impl GuiState {
         }
     }
 
-    // TODO need to stop when it reaches the limit
-    pub fn set_inspect_offset_x(&mut self, x: &ScrollDirection) {
-        match x {
-            ScrollDirection::Previous => {
-                if self.inspect_offset.x > 0 {
-                    self.inspect_offset.x = self.inspect_offset.x.saturating_sub(1)
-                }
+    pub fn set_inspect_offset(&mut self, sd: &ScrollDirection) {
+        match sd {
+            ScrollDirection::Up => self.inspect_offset.y = self.inspect_offset.y.saturating_sub(1),
+            ScrollDirection::Down => {
+                self.inspect_offset.y = self
+                    .inspect_offset
+                    .y
+                    .saturating_add(1)
+                    .min(self.inspect_offset_max.y)
             }
-            ScrollDirection::Next => {
-                if self.inspect_offset.x < self.inspect_offset_max.x {
-                    self.inspect_offset.x = self.inspect_offset.x.saturating_add(1)
-                }
+            ScrollDirection::Left => {
+                self.inspect_offset.x = self.inspect_offset.x.saturating_sub(1)
             }
+            ScrollDirection::Right => {
+                self.inspect_offset.x = self
+                    .inspect_offset
+                    .x
+                    .saturating_add(1)
+                    .min(self.inspect_offset_max.x)
+            } // ScrollDirection::Up => {
+              //     if self.inspect_offset.y > 0 {
+              //         self.inspect_offset.y = self.inspect_offset.x.saturating_sub(1)
+              //     }
+              // }
+              // ScrollDirection::Down => {
+              //     if self.inspect_offset.y < self.inspect_offset_max.x {
+              //         self.inspect_offset.y = self.inspect_offset.x.saturating_add(1)
+              //     }
+              // }
+              //     ScrollDirection::Left => {
+              //     if self.inspect_offset.x > 0 {
+              //         self.inspect_offset.x = self.inspect_offset.y.saturating_sub(1)
+              //     }
+              // }
+              // ScrollDirection::Right => {
+              //     if self.inspect_offset.x < self.inspect_offset_max.y {
+              //         self.inspect_offset.x = self.inspect_offset.y.saturating_add(1)
+              //     }
+              // }
         };
         self.rerender.update_draw();
     }
-    // TODO need to stop when it reaches the limit
-    pub fn set_inspect_offset_y(&mut self, y: &ScrollDirection) {
-        match y {
-            ScrollDirection::Previous => {
-                if self.inspect_offset.y > 0 {
-                    self.inspect_offset.y = self.inspect_offset.y.saturating_sub(1)
-                }
-            }
-            ScrollDirection::Next => {
-                if self.inspect_offset.y < self.inspect_offset_max.y {
-                    self.inspect_offset.y = self.inspect_offset.y.saturating_add(1)
-                }
-            }
-        };
-        self.rerender.update_draw();
-    }
+    // pub fn set_inspect_offset_y(&mut self, y: &ScrollDirection) {
+    //     match y {
+    //         ScrollDirection::Up => {
+    //             if self.inspect_offset.y > 0 {
+    //                 self.inspect_offset.y = self.inspect_offset.y.saturating_sub(1)
+    //             }
+    //         }
+    //         ScrollDirection::Down => {
+    //             if self.inspect_offset.y < self.inspect_offset_max.y {
+    //                 self.inspect_offset.y = self.inspect_offset.y.saturating_add(1)
+    //             }
+    //         }
+    //     };
+    //     self.rerender.update_draw();
+    // }
 
-    pub fn get_inspect_offset(&self) -> Offset {
+    pub fn get_inspect_offset(&self) -> ScrollOffset {
         self.inspect_offset
     }
 
-    pub fn set_inspect_offset_max(&mut self, offset: Offset) {
+    pub fn set_inspect_offset_max(&mut self, offset: ScrollOffset) {
         self.inspect_offset_max = offset
     }
 
@@ -289,7 +320,7 @@ impl GuiState {
     pub fn clear_inspect_offset(&mut self) {
         self.inspect_offset.x = 0;
         self.inspect_offset.y = 0;
-        self.inspect_offset_max = Offset::default();
+        self.inspect_offset_max = ScrollOffset::default();
         self.rerender.update_draw();
     }
 

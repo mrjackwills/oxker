@@ -309,7 +309,7 @@ mod tests {
                 );
             })
             .unwrap();
-        setup.app_data.lock().log_scroll(&ScrollDirection::Previous);
+        setup.app_data.lock().log_scroll(&ScrollDirection::Up);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup

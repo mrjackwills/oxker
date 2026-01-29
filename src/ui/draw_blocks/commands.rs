@@ -173,7 +173,7 @@ mod tests {
         setup
             .app_data
             .lock()
-            .docker_controls_scroll(&ScrollDirection::Next);
+            .docker_controls_scroll(&ScrollDirection::Down);
 
         setup
             .terminal
@@ -370,7 +370,7 @@ mod tests {
         setup
             .app_data
             .lock()
-            .docker_controls_scroll(&ScrollDirection::Next);
+            .docker_controls_scroll(&ScrollDirection::Down);
 
         setup
             .terminal

@@ -24,8 +24,12 @@ const ONE_GB: f64 = ONE_MB * 1000.0;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum ScrollDirection {
-    Next,
-    Previous,
+    // Next,
+    // Previous,
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -185,8 +189,10 @@ impl<T> StatefulList<T> {
 
     pub fn scroll(&mut self, scroll: &ScrollDirection) {
         match scroll {
-            ScrollDirection::Next => self.next(),
-            ScrollDirection::Previous => self.previous(),
+            ScrollDirection::Down => self.next(),
+            ScrollDirection::Up => self.previous(),
+            // TODO set offset
+            _ => (),
         }
     }
 
@@ -615,7 +621,8 @@ pub struct Logs {
     tz: HashSet<LogsTz>,
     search_results: Vec<usize>,
     search_term: Option<String>,
-    offset: u16,
+    offset: usize,
+	max_offset: usize,
     max_log_len: usize,
     adjusted_max_width: usize,
     adjust_max_width_text_len: usize,
@@ -629,6 +636,7 @@ impl Default for Logs {
             lines,
             tz: HashSet::new(),
             offset: 0,
+			max_offset: 0,
             search_term: None,
             search_results: vec![],
             adjusted_max_width: 0,
@@ -687,8 +695,10 @@ impl Logs {
                 .position(|i| i == &current_selected)
             {
                 if let Some(new_index) = match sd {
-                    ScrollDirection::Next => current_position.checked_add(1),
-                    ScrollDirection::Previous => current_position.checked_sub(1),
+                    ScrollDirection::Down => current_position.checked_add(1),
+                    ScrollDirection::Up => current_position.checked_sub(1),
+                    // TODO set offset
+                    _ => None,
                 } && let Some(f) = self.search_results.get(new_index)
                 {
                     self.lines.state.select(Some(*f));
@@ -696,13 +706,15 @@ impl Logs {
                 }
             } else {
                 let range = match sd {
-                    ScrollDirection::Previous => (0..=current_selected).rev().collect::<Vec<_>>(),
-                    ScrollDirection::Next => (current_selected
+                    ScrollDirection::Up => (0..=current_selected).rev().collect::<Vec<_>>(),
+                    ScrollDirection::Down => (current_selected
                         ..=self
                             .search_results
                             .last()
                             .map_or_else(|| current_selected, |i| *i))
                         .collect::<Vec<_>>(),
+                    // TODO set offset
+                    _ => vec![],
                 };
                 for i in range {
                     if self.search_results.contains(&i) {
@@ -820,7 +832,7 @@ impl Logs {
         if self.horizontal_scroll_able(width) {
             let text_width = self.adjust_max_width_text_len;
             let arrow_left = if self.offset > 0 { " ←" } else { "  " };
-            let arrow_right = if usize::from(self.offset) < self.adjusted_max_width {
+            let arrow_right = if self.offset < self.adjusted_max_width {
                 "→ "
             } else {
                 "  "
@@ -883,10 +895,10 @@ impl Logs {
     pub fn get_visible_logs(&self, size: Size, padding: usize) -> Vec<Text<'static>> {
         let current_index = self.lines.state.selected().unwrap_or_default();
         let height_padding = usize::from(size.height) + padding;
-        let char_offset = if usize::from(self.offset) > self.max_log_len {
+        let char_offset = if self.offset > self.max_log_len {
             self.max_log_len
         } else {
-            self.offset.into()
+            self.offset
         };
 
         self.lines
@@ -920,10 +932,10 @@ impl Logs {
 
     /// Add a padding so one char will always be visilbe?
     pub fn forward(&mut self, width: u16) {
-        let offset = usize::from(self.offset);
+		// Need to set a max_offset, instead of using a width each time
         if self.horizontal_scroll_able(width)
             && self.adjusted_max_width > 0
-            && offset < self.adjusted_max_width
+            && self.offset < self.adjusted_max_width
         {
             self.offset = self.offset.saturating_add(1);
         }
