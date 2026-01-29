@@ -265,44 +265,10 @@ impl GuiState {
                     .x
                     .saturating_add(1)
                     .min(self.inspect_offset_max.x)
-            } // ScrollDirection::Up => {
-              //     if self.inspect_offset.y > 0 {
-              //         self.inspect_offset.y = self.inspect_offset.x.saturating_sub(1)
-              //     }
-              // }
-              // ScrollDirection::Down => {
-              //     if self.inspect_offset.y < self.inspect_offset_max.x {
-              //         self.inspect_offset.y = self.inspect_offset.x.saturating_add(1)
-              //     }
-              // }
-              //     ScrollDirection::Left => {
-              //     if self.inspect_offset.x > 0 {
-              //         self.inspect_offset.x = self.inspect_offset.y.saturating_sub(1)
-              //     }
-              // }
-              // ScrollDirection::Right => {
-              //     if self.inspect_offset.x < self.inspect_offset_max.y {
-              //         self.inspect_offset.x = self.inspect_offset.y.saturating_add(1)
-              //     }
-              // }
-        };
+            }
+        }
         self.rerender.update_draw();
     }
-    // pub fn set_inspect_offset_y(&mut self, y: &ScrollDirection) {
-    //     match y {
-    //         ScrollDirection::Up => {
-    //             if self.inspect_offset.y > 0 {
-    //                 self.inspect_offset.y = self.inspect_offset.y.saturating_sub(1)
-    //             }
-    //         }
-    //         ScrollDirection::Down => {
-    //             if self.inspect_offset.y < self.inspect_offset_max.y {
-    //                 self.inspect_offset.y = self.inspect_offset.y.saturating_add(1)
-    //             }
-    //         }
-    //     };
-    //     self.rerender.update_draw();
-    // }
 
     pub fn get_inspect_offset(&self) -> ScrollOffset {
         self.inspect_offset

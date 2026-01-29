@@ -722,7 +722,7 @@ impl AppData {
     }
 
     pub fn logs_horizontal_scroll(&mut self, sd: &ScrollDirection, width: u16) {
-		// Change this to set a max_offset, instead of taking in width each time, then can be combined with the log_scroll beneath
+        // Change this to set a max_offset, instead of taking in width each time, then can be combined with the log_scroll beneath
         match sd {
             ScrollDirection::Down => {
                 if let Some(i) = self.get_mut_selected_container() {
@@ -736,8 +736,8 @@ impl AppData {
                     self.rerender.update_draw();
                 }
             }
-			// TODO set offset
-			_ => (),
+            // TODO set offset
+            _ => (),
         }
     }
 
@@ -747,8 +747,8 @@ impl AppData {
             match scroll {
                 ScrollDirection::Down => i.logs.next(),
                 ScrollDirection::Up => i.logs.previous(),
-				// TODO set offset
-			_ => (),
+                // TODO set offset
+                _ => (),
             }
             self.rerender.update_draw();
         }

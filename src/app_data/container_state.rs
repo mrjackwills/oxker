@@ -622,7 +622,7 @@ pub struct Logs {
     search_results: Vec<usize>,
     search_term: Option<String>,
     offset: usize,
-	max_offset: usize,
+    max_offset: usize,
     max_log_len: usize,
     adjusted_max_width: usize,
     adjust_max_width_text_len: usize,
@@ -636,7 +636,7 @@ impl Default for Logs {
             lines,
             tz: HashSet::new(),
             offset: 0,
-			max_offset: 0,
+            max_offset: 0,
             search_term: None,
             search_results: vec![],
             adjusted_max_width: 0,
@@ -932,7 +932,7 @@ impl Logs {
 
     /// Add a padding so one char will always be visilbe?
     pub fn forward(&mut self, width: u16) {
-		// Need to set a max_offset, instead of using a width each time
+        // Need to set a max_offset, instead of using a width each time
         if self.horizontal_scroll_able(width)
             && self.adjusted_max_width > 0
             && self.offset < self.adjusted_max_width

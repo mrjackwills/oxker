@@ -140,3 +140,417 @@ pub fn draw(
 // Test keymap
 // Test colors
 // Test offset y & x
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use std::sync::LazyLock;
+
+    use crate::{
+        app_data::InspectData,
+        config::{AppColors, Keymap},
+        ui::draw_blocks::tests::{get_result, test_setup},
+    };
+    use bollard::secret::ContainerInspectResponse;
+    use crossterm::event::KeyCode;
+    use insta::assert_snapshot;
+    use ratatui::style::Color;
+
+    static INSPECT_DATA: LazyLock<InspectData> = LazyLock::new(|| {
+        InspectData::from(
+            serde_json::from_str::<ContainerInspectResponse>(include_str!("./inspect.json"))
+                .unwrap(),
+        )
+    });
+
+    #[test]
+    /// Test a inspect container with default settings, keymap, and position
+    fn test_draw_blocks_inspect_default_valid() {
+        let mut setup = test_setup(100, 50, true, true);
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &Keymap::new(),
+                );
+            })
+            .unwrap();
+        assert_snapshot!(setup.terminal.backend());
+
+        // Assert border colors
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (0 | 49, _) | (_, 0 | 99) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Test a inspect container with custom colors
+    fn test_draw_blocks_inspect_custom_color() {
+        let mut setup = test_setup(100, 50, true, true);
+
+        let mut colors = AppColors::new();
+        colors.borders.selected = Color::Red;
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    colors,
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &Keymap::new(),
+                );
+            })
+            .unwrap();
+        assert_snapshot!(setup.terminal.backend());
+
+        // Assert custom border colors
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (0 | 49, _) | (_, 0 | 99) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Red);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Test a inspect container with custom keymap for one clear key
+    fn test_draw_blocks_inspect_custom_keymap_clear_one() {
+        let mut setup = test_setup(100, 50, true, true);
+
+        let mut keymap = Keymap::new();
+
+        keymap.clear.0 = KeyCode::Char('F');
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &keymap,
+                );
+            })
+            .unwrap();
+        assert_snapshot!(setup.terminal.backend());
+
+        // Assert border colors
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (0 | 49, _) | (_, 0 | 99) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Test a inspect container with custom keymap for both clear keys
+    fn test_draw_blocks_inspect_custom_keymap_clear_two() {
+        let mut setup = test_setup(100, 50, true, true);
+
+        let mut keymap = Keymap::new();
+
+        keymap.clear.0 = KeyCode::Char('F');
+        keymap.clear.1 = Some(KeyCode::Char('Z'));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &keymap,
+                );
+            })
+            .unwrap();
+        assert_snapshot!(setup.terminal.backend());
+
+        // Assert border colors
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (0 | 49, _) | (_, 0 | 99) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Test a inspect container with custom keymap for one inspect key
+    fn test_draw_blocks_inspect_custom_keymap_inspect_one() {
+        let mut setup = test_setup(100, 50, true, true);
+
+        let mut keymap = Keymap::new();
+
+        keymap.inspect.0 = KeyCode::Char('4');
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &keymap,
+                );
+            })
+            .unwrap();
+        assert_snapshot!(setup.terminal.backend());
+
+        // Assert border colors
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (0 | 49, _) | (_, 0 | 99) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Test a inspect container with custom keymap for both inspect keys
+    fn test_draw_blocks_inspect_custom_keymap_inspect_two() {
+        let mut setup = test_setup(100, 50, true, true);
+
+        let mut keymap = Keymap::new();
+
+        keymap.inspect.0 = KeyCode::Char('4');
+        keymap.inspect.1 = Some(KeyCode::Char('5'));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &keymap,
+                );
+            })
+            .unwrap();
+        assert_snapshot!(setup.terminal.backend());
+
+        // Assert border colors
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (0 | 49, _) | (_, 0 | 99) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Test a inspect container with all custom keymaps
+    fn test_draw_blocks_inspect_custom_keymap_all() {
+        let mut setup = test_setup(100, 50, true, true);
+
+        let mut keymap = Keymap::new();
+
+        keymap.clear.0 = KeyCode::Char('F');
+        keymap.clear.1 = Some(KeyCode::Char('Z'));
+        keymap.inspect.0 = KeyCode::Char('4');
+        keymap.inspect.1 = Some(KeyCode::Char('5'));
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &keymap,
+                );
+            })
+            .unwrap();
+        assert_snapshot!(setup.terminal.backend());
+
+        // Assert border colors
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (0 | 49, _) | (_, 0 | 99) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Inspect details are offset 10 in x and y axis
+    fn test_draw_blocks_inspect_offset() {
+        let mut setup = test_setup(100, 50, true, true);
+
+        // Why does one need to draw first, although it *should* be impossible to scroll before an inital drawing
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &Keymap::new(),
+                );
+            })
+            .unwrap();
+
+        {
+            let mut gui_state = setup.gui_state.lock();
+            for _ in 0..=9 {
+                gui_state.set_inspect_offset(&crate::app_data::ScrollDirection::Down);
+                gui_state.set_inspect_offset(&crate::app_data::ScrollDirection::Right);
+            }
+        }
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &Keymap::new(),
+                );
+            })
+            .unwrap();
+        assert_snapshot!(setup.terminal.backend());
+
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (0 | 49, _) | (_, 0 | 99) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    /// Inspect details are offset to the maximum allowed
+    fn test_draw_blocks_inspect_offset_max() {
+        let mut setup = test_setup(100, 50, true, true);
+
+        // Why does one need to draw first, although it *should* be impossible to scroll before an inital drawing
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &Keymap::new(),
+                );
+            })
+            .unwrap();
+
+        // Lazy way of getting the max offset
+        {
+            let mut gui_state = setup.gui_state.lock();
+            for _ in 0..=1000 {
+                gui_state.set_inspect_offset(&crate::app_data::ScrollDirection::Down);
+                gui_state.set_inspect_offset(&crate::app_data::ScrollDirection::Right);
+            }
+        }
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &Keymap::new(),
+                );
+            })
+            .unwrap();
+        assert_snapshot!(setup.terminal.backend());
+
+        for (row_index, result_row) in get_result(&setup) {
+            for (result_cell_index, result_cell) in result_row.iter().enumerate() {
+                match (row_index, result_cell_index) {
+                    (0 | 49, _) | (_, 0 | 99) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::LightCyan);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Gray);
+                    }
+                }
+            }
+        }
+    }
+}

@@ -22,6 +22,12 @@ struct HelpInfo {
     height: usize,
 }
 
+// TODO need to include the Inspect key!
+// TODO need to include the Inspect key!
+// TODO need to include the Inspect key!
+// TODO need to include the Inspect key!
+// TODO need to include the Inspect key!
+
 impl HelpInfo {
     /// Find the max width of a Span in &[Line]
     fn calc_width(lines: &[Line]) -> usize {
