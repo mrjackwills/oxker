@@ -124,8 +124,8 @@ pub struct InspectData {
 }
 
 impl From<ContainerInspectResponse> for InspectData {
-    fn from(value: ContainerInspectResponse) -> Self {
-        let as_string = serde_json::to_string_pretty(&value)
+    fn from(input: ContainerInspectResponse) -> Self {
+        let as_string = serde_json::to_string_pretty(&input)
             .unwrap_or_default()
             .lines()
             .skip(1)
@@ -139,14 +139,13 @@ impl From<ContainerInspectResponse> for InspectData {
 
         let mut width = 0;
         for i in as_string.lines() {
-            let count = i.chars().count();
-            width = width.max(count);
+            width = width.max(i.chars().count());
         }
 
         Self {
-            name: value.name.unwrap_or_default(),
+            name: input.name.unwrap_or_default(),
             // TODO maybe make this an Option<Id>?
-            id: ContainerId::from(value.id.unwrap_or_default().as_str()),
+            id: ContainerId::from(input.id.unwrap_or_default().as_str()),
             width,
             height,
             as_string,
