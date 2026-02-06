@@ -42,15 +42,17 @@ fn setup_tracing() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 }
 
-/// Read the optional docker_host path,  the DOCKER_HOST env take priority over cli or config
+/// Read the optional docker_host path
 /// Bollard will use DOCKER_HOST env, so might be pointless here, although it will fix it's priority over any config setting
 fn read_docker_host(config: &Config) -> Option<String> {
-    if let Ok(env) = std::env::var(DOCKER_HOST)
+    if let Some(x) = &config.host {
+        Some(x.to_string())
+    } else if let Ok(env) = std::env::var(DOCKER_HOST)
         && !env.trim().is_empty()
     {
         Some(env)
     } else {
-        config.host.as_ref().cloned()
+        None
     }
 }
 
