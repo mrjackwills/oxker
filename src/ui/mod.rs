@@ -131,12 +131,12 @@ impl Ui {
     }
 
     /// Draw the the error message ui, for 5 seconds, with a countdown
-    fn err_loop(&mut self, host: Option<String>) -> Result<(), AppError> {
+    async fn err_loop(&mut self, host: Option<String>) -> Result<(), AppError> {
         let mut seconds = 5;
         let colors = self.app_data.lock().config.app_colors;
         let keymap = self.app_data.lock().config.keymap.clone();
         let mut redraw = true;
-        loop {
+        while self.is_running.load(Ordering::SeqCst) {
             if self.now.elapsed() >= std::time::Duration::from_secs(1) {
                 seconds -= 1;
                 self.now = Instant::now();
@@ -163,8 +163,18 @@ impl Ui {
             {
                 return Err(AppError::Terminal);
             }
+            if crossterm::event::poll(POLL_RATE).unwrap_or(false)
+                && let Ok(event) = event::read()
+                && let Event::Key(key) = event
+                && key.kind == event::KeyEventKind::Press
+            {
+                self.input_tx
+                    .send(InputMessages::ButtonPress((key.code, key.modifiers)))
+                    .await
+                    .ok();
+            }
             redraw = false;
-            std::thread::sleep(POLL_RATE);
+            // std::thread::sleep(POLL_RATE);
         }
         Ok(())
     }
@@ -278,7 +288,7 @@ impl Ui {
             .iter()
             .find(|s| matches!(s, Status::DockerConnect(_)))
         {
-            self.err_loop(msg.clone())?;
+            self.err_loop(msg.clone()).await?;
         } else {
             self.gui_loop().await?;
         }

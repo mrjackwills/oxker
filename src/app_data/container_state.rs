@@ -420,7 +420,7 @@ impl fmt::Display for State {
 }
 
 /// Items for the container control list
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DockerCommand {
     Pause,
     Restart,

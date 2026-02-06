@@ -32,19 +32,21 @@ pub fn draw(
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL);
 
-    let to_push = if matches!(error, AppError::DockerConnect) {
+    let mut text = format!("\n{error}");
+
+    if error == &AppError::DockerConnect {
         let s = if let Some(host) = host {
             format!(" @ \"{host}\"")
         } else {
             String::new()
         };
-        format!(
+        text.push_str(&format!(
             "{}\n\n {}::v{} closing in {:02} seconds",
             s,
             NAME,
             VERSION,
             seconds.unwrap_or(5),
-        )
+        ))
     } else {
         let clear_text = if keymap.clear == Keymap::new().clear {
             format!("( {} ) {SUFFIX_CLEAR}", keymap.clear.0)
@@ -53,20 +55,17 @@ pub fn draw(
         } else {
             format!(" ( {} ) {SUFFIX_CLEAR}", keymap.clear.0)
         };
+        text.push_str(&format!("\n\n{clear_text}"));
+    }
 
-        let quit_text = if keymap.quit == Keymap::new().quit {
-            format!("( {} ) {SUFFIX_QUIT}", keymap.quit.0)
-        } else if let Some(secondary) = keymap.quit.1 {
-            format!(" ( {} | {secondary} ) {SUFFIX_QUIT}", keymap.quit.0)
-        } else {
-            format!(" ( {} ) {SUFFIX_QUIT}", keymap.quit.0)
-        };
-        format!("\n\n{clear_text}\n\n{quit_text}")
+    let quit_text = if keymap.quit == Keymap::new().quit {
+        format!("( {} ) {SUFFIX_QUIT}", keymap.quit.0)
+    } else if let Some(secondary) = keymap.quit.1 {
+        format!(" ( {} | {secondary} ) {SUFFIX_QUIT}", keymap.quit.0)
+    } else {
+        format!(" ( {} ) {SUFFIX_QUIT}", keymap.quit.0)
     };
-
-    let mut text = format!("\n{error}");
-
-    text.push_str(to_push.as_str());
+    text.push_str(&format!("\n\n{quit_text}"));
 
     // Find the maximum line width & height
     let padded_width = max_line_width(&text) + 8;
@@ -113,7 +112,7 @@ mod tests {
     #[test]
     /// Test that the error popup is centered, red background, white border, white text, and displays the correct text
     fn test_draw_blocks_error_docker_connect_error() {
-        let mut setup = test_setup(46, 9, true, true);
+        let mut setup = test_setup(50, 11, true, true);
         setup
             .terminal
             .draw(|f| {
@@ -130,12 +129,15 @@ mod tests {
         assert_snapshot!(setup.terminal.backend());
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                if let (0 | 8, _) = (row_index, result_cell_index) {
-                    assert_eq!(result_cell.bg, Color::Reset);
-                    assert_eq!(result_cell.fg, Color::Reset);
-                } else {
-                    assert_eq!(result_cell.bg, Color::Red);
-                    assert_eq!(result_cell.fg, Color::White);
+                match (row_index, result_cell_index) {
+                    (0 | 10, _) | (_, 0 | 49) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Reset);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Red);
+                        assert_eq!(result_cell.fg, Color::White);
+                    }
                 }
             }
         }
@@ -144,7 +146,7 @@ mod tests {
     #[test]
     /// Test that the error popup is centered, red background, white border, white text, and displays the correct text with the custom docker host address
     fn test_draw_blocks_error_docker_connect_error_custom_host() {
-        let mut setup = test_setup(46, 9, true, true);
+        let mut setup = test_setup(60, 11, true, true);
 
         setup
             .terminal
@@ -162,12 +164,15 @@ mod tests {
         assert_snapshot!(setup.terminal.backend());
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
-                if let (0 | 8, _) = (row_index, result_cell_index) {
-                    assert_eq!(result_cell.bg, Color::Reset);
-                    assert_eq!(result_cell.fg, Color::Reset);
-                } else {
-                    assert_eq!(result_cell.bg, Color::Red);
-                    assert_eq!(result_cell.fg, Color::White);
+                match (row_index, result_cell_index) {
+                    (0 | 10, _) | (_, 0 | 59) => {
+                        assert_eq!(result_cell.bg, Color::Reset);
+                        assert_eq!(result_cell.fg, Color::Reset);
+                    }
+                    _ => {
+                        assert_eq!(result_cell.bg, Color::Red);
+                        assert_eq!(result_cell.fg, Color::White);
+                    }
                 }
             }
         }

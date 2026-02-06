@@ -174,23 +174,24 @@ mod tests {
     /// Default test config, has timestamps turned off
     pub fn gen_config() -> Config {
         Config {
+            app_colors: AppColors::new(),
             color_logs: false,
+            dir_save: None,
+            dir_config: None,
             docker_interval_ms: 1000,
             gui: true,
             host: None,
-            show_std_err: false,
             in_container: false,
-            save_dir: None,
+            keymap: Keymap::new(),
             log_search_case_sensitive: true,
             raw_logs: false,
-            show_self: false,
-            app_colors: AppColors::new(),
-            keymap: Keymap::new(),
-            timestamp_format: "HH:MM:SS.NNNNN dd-mm-yyyy".to_owned(),
-            show_timestamp: false,
-            use_cli: false,
             show_logs: true,
+            show_self: false,
+            show_std_err: false,
+            show_timestamp: false,
+            timestamp_format: "HH:MM:SS.NNNNN dd-mm-yyyy".to_owned(),
             timezone: None,
+            use_cli: false,
         }
     }
 
@@ -216,6 +217,7 @@ mod tests {
             containers: StatefulList::new(containers.to_vec()),
             hidden_containers: vec![],
             current_sorted_id: vec![],
+            inspect_data: None,
             error: None,
             sorted_by: None,
             rerender: Arc::new(Rerender::new()),
