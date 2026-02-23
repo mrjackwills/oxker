@@ -1,18 +1,25 @@
-### 2025-09-28
+### 2026-02-23
+
+*BREAKING CHANGES*
++ `log_scroll_forward`, `log_scroll_back` renamed to `scroll_forward`, `scroll_back`
++ Additional KeyMap entry, `inspect` defaults to `i`, enables Inspect mode
++ Docker Host priorities reordered, *should* now be, from high to low order,  `--host` cli argument, `config.toml` `host` value, `DOCKER_HOST` env, [Docker library](https://github.com/fussybeaver/bollard) default setting.
++ `config.toml` `host` value is now  commented out by default - this should help with invalid Docker connection errors and enable easy Podman support
 
 ### Chores
-+ create_release.sh updated, [d4af754ad245540db60177f7b202b3c64519c961]
-+ dependencies updated, [03599b46657d38d0c9f25c2ccfd9510f2b98dd84], [aef0c9503e7045a256856aa887d8c8d7722b9936], [f0771eab5d07d141fe7a8997db650f0f65ffe0a7], [1596de8681ad6c0a7832eb922dd2dc36ab30eb41]
-+ GitHub workflow updated, [66dae5e61ea294ac8ce134a6c32b27c04166b6eb]
-
-### Docs
-+ fix numerous typos, [618a43b501914fdf2659e171172ad180364cf87a]
++ dependencies updated, [4658a8de264698b0c8092e1227f0683527219a0b], [8b5899ca238bcbff32519b376b920cd7b7509809], [bebb687c59f3b408e69b23d2e68fa69f006a3231]
++ GitHub workflow updated, [a0aa7918241ee8f702d6472c620287aa4be7d56c]
 
 ### Features
-+ *BREAKING CHANGE* - `scroll_down_many` & `scroll_up_many` removed, `scroll_down_one` `scroll_up_one` renamed `scroll_down`, `scroll_up`, see [example_config](https://github.com/mrjackwills/oxker/tree/main/example_config), [52a04ec1d0b9e4877e304f60a857ebc00f88b4fd]
-+ log search feature, closes #72. Use `#` button, remappable via `log_search_mode`, to enter log search mode. Case-sensitive by default, editable in `config.toml` with `log_search_case_sensitive` entry. Customise colours via `[colors.log_search]` entries, again see see [example_config](https://github.com/mrjackwills/oxker/tree/main/example_config), [96d9469623a7c90b79aa8d82abf587290343ad37], [a2316a9cac270790920a1ebd1be6532d51aba77c]
-+ `term` renamed `filter term`, tests updated, [487c3faf96f4c197c8b82644c02466ea40626a5e]
++ Network chart, closes #79, [99fcb8fedf01599ec346b65d435d4c301a7a8851]
++ Inspect mode & help panel redesign, [ae7f3f4a9472b451c37c0ab97b1756b41a3529f5]
++ set rust-version in Cargo.toml, closes #77, [0763a1024f44d98b8d9d65f57995da538e40963c]
 
-My 32-bit armhf armv6 hardware no longer seems to be able to run Docker. Future `oxker` releases won't be tested on real hardware but will continue to be built and published for armv6.
+### Fixes
++ Enable quit on Docker connect error screen, [5f942eb2e963660bd7fe9d80fa7ba8a83754803a]
+
+### Refactors
++ dead code removed, [3e31a2a6bc02d6ef75bd6cbc18568e82e60e1ee3]
++ docker data spawns, [cd943f67e465fff9726b40570a089301a4a8f534]
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details
