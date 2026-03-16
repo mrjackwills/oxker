@@ -4,8 +4,8 @@ use bollard::{
         InspectContainerOptions, ListContainersOptions, LogsOptions, RemoveContainerOptions,
         RestartContainerOptions, StartContainerOptions, StatsOptions, StopContainerOptions,
     },
-    secret::ContainerStatsResponse,
-    service::ContainerSummary,
+    models::ContainerStatsResponse,
+    models::ContainerSummary,
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;
@@ -476,7 +476,7 @@ impl DockerData {
 #[allow(clippy::float_cmp)]
 mod tests {
 
-    use bollard::secret::{ContainerCpuStats, ContainerCpuUsage};
+    use bollard::models::{ContainerCpuStats, ContainerCpuUsage};
 
     use super::*;
 

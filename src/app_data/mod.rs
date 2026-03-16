@@ -1,4 +1,4 @@
-use bollard::{models::ContainerSummary, secret::ContainerInspectResponse};
+use bollard::models::{ContainerSummary, ContainerInspectResponse};
 use core::fmt;
 use parking_lot::Mutex;
 use ratatui::{layout::Size, text::Text, widgets::ListState};
@@ -997,7 +997,7 @@ impl AppData {
                 let state = State::from((
                     i.state
                         .as_ref()
-                        .map_or(&bollard::secret::ContainerSummaryStateEnum::DEAD, |z| z),
+                        .map_or(&bollard::models::ContainerSummaryStateEnum::DEAD, |z| z),
                     &status,
                 ));
                 let image = i
