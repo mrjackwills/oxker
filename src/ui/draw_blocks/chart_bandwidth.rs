@@ -327,7 +327,7 @@ mod tests {
                         assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // TX dots
-                    x if TX_DOTS.contains(&(row_index, result_cell_index)) => {
+                    _x if TX_DOTS.contains(&(row_index, result_cell_index)) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
@@ -406,7 +406,7 @@ mod tests {
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     // RX dots
-                    x if RX_DOTS.contains(&(row_index, result_cell_index)) => {
+                    _x if RX_DOTS.contains(&(row_index, result_cell_index)) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_RX);
                     }
@@ -487,12 +487,12 @@ mod tests {
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     // TX dots
-                    x if COMBINED_DOTS_TX.contains(&(row_index, result_cell_index)) => {
+                    _x if COMBINED_DOTS_TX.contains(&(row_index, result_cell_index)) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     // RX dots
-                    x if COMBINED_DOTS_RX.contains(&(row_index, result_cell_index)) => {
+                    _x if COMBINED_DOTS_RX.contains(&(row_index, result_cell_index)) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_RX);
                     }
@@ -680,12 +680,12 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::Magenta);
                     }
                     // TX dots
-                    x if COMBINED_DOTS_TX.contains(&(row_index, result_cell_index)) => {
+                    _x if COMBINED_DOTS_TX.contains(&(row_index, result_cell_index)) => {
                         assert_eq!(result_cell.bg, Color::White);
                         assert_eq!(result_cell.fg, Color::Blue);
                     }
                     // RX dots
-                    x if COMBINED_DOTS_RX.contains(&(row_index, result_cell_index)) => {
+                    _x if COMBINED_DOTS_RX.contains(&(row_index, result_cell_index)) => {
                         assert_eq!(result_cell.bg, Color::White);
                         assert_eq!(result_cell.fg, Color::Black);
                     }
