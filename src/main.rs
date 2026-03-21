@@ -259,7 +259,7 @@ mod tests {
             size_rw: None,
             size_root_fs: None,
             labels: None,
-            state: Some(bollard::secret::ContainerSummaryStateEnum::from_str(state).unwrap()),
+            state: Some(bollard::models::ContainerSummaryStateEnum::from_str(state).unwrap()),
             status: Some(format!("Up {index} hour")),
             host_config: None,
             network_settings: None,
