@@ -618,6 +618,7 @@ impl fmt::Display for BandwidthStat {
         let p = match as_f64 {
             x if x >= ONE_GB => format!("{y:.2} GB/s", y = as_f64 / ONE_GB),
             x if x >= ONE_MB => format!("{y:.2} Mb/s", y = as_f64 / ONE_MB),
+            0.0 => "0 kb/s".to_owned(),
             _ => format!("{y:.2} kb/s", y = as_f64 / ONE_KB),
         };
         write!(f, "{p:>x$}", x = f.width().unwrap_or(1))
