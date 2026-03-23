@@ -6,7 +6,7 @@
 
 ### Fixes
 + network graph 0 kb/s if no traffic, [a4c0efe94e9e920174af24722ee3f6aa8af1c028]
-+ replace bollard::secret with bollard::models, thanks [sabrehagen](https://github.com/sabrehagen), [324f09d6d039911d0ad83c64e02d9b2826e40db2]
++ replace bollard::secret with bollard::models, thanks [sabrehagen](https://github.com/sabrehagen), [a80524bb4ec4dec20256164b33311a46a9000c7e]
 
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.13.0'>v0.13.0</a>
 ### 2026-02-23
