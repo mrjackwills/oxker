@@ -1,4 +1,4 @@
-use bollard::models::{ContainerSummary, ContainerInspectResponse};
+use bollard::models::{ContainerInspectResponse, ContainerSummary};
 use core::fmt;
 use parking_lot::Mutex;
 use ratatui::{layout::Size, text::Text, widgets::ListState};

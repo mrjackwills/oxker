@@ -1,11 +1,11 @@
 use bollard::{
     Docker,
+    models::ContainerStatsResponse,
+    models::ContainerSummary,
     query_parameters::{
         InspectContainerOptions, ListContainersOptions, LogsOptions, RemoveContainerOptions,
         RestartContainerOptions, StartContainerOptions, StatsOptions, StopContainerOptions,
     },
-    models::ContainerStatsResponse,
-    models::ContainerSummary,
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;

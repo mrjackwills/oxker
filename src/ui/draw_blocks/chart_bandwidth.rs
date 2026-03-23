@@ -223,32 +223,32 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Border first row only
-                    (0, 0..=4 | 34..=39) => {
+                    (0, 0..=7 | 31..=39) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Title RX
-                    (0, 5..=18) => {
+                    (0, 8..=18) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // Title TX
-                    (0, 19..=33) => {
+                    (0, 19..=30) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     // Y axis
-                    (1..=8, 10) => {
+                    (1..=8, 7) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // TX max
-                    (4, 1..=9) => {
+                    (4, 1..=6) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     // RX max
-                    (6, 1..=9) => {
+                    (6, 1..=6) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_RX);
                     }
@@ -297,17 +297,17 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Border first row only
-                    (0, 0..=3 | 35..=39) => {
+                    (0, 0..=5 | 34..=39) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Title RX
-                    (0, 4..=17) => {
+                    (0, 6..=16) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // Title TX
-                    (0, 18..=34) => {
+                    (0, 17..=33) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
@@ -317,12 +317,12 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // TX max
-                    (4, 1..=9) => {
+                    (4, 1..=11) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
                     // RX max
-                    (6, 1..=9) => {
+                    (6, 1..=6) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_RX);
                     }
@@ -376,17 +376,17 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Border first row only
-                    (0, 0..=3 | 35..=39) => {
+                    (0, 0..=5 | 34..=39) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Title RX
-                    (0, 4..=19) => {
+                    (0, 6..=21) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // Title TX
-                    (0, 20..=34) => {
+                    (0, 22..=33) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
@@ -396,12 +396,12 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // RX max
-                    (4, 1..=9) => {
+                    (4, 1..=11) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_RX);
                     }
                     // TX max
-                    (6, 1..=9) => {
+                    (6, 1..=6) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, COLOR_TX);
                     }
@@ -528,17 +528,17 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Border first row only
-                    (0, 0..=4 | 34..=39) => {
+                    (0, 0..=7 | 31..=39) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Title & y-axis max
-                    (0, 5..=33) | (4 | 6, 1..=9) => {
+                    (0, 8..=30) | (4 | 6, 1..=6) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Yellow);
                     }
-                    // Y axis
-                    (1..=8, 10) => {
+                    // Y axis divider
+                    (1..=8, 7) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::White);
                     }
@@ -574,17 +574,17 @@ mod tests {
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Border first row only
-                    (0, 0..=4 | 34..=39) => {
+                    (0, 0..=7 | 31..=39) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::White);
                     }
                     // Title & y-axis max
-                    (0, 5..=33) | (4 | 6, 1..=9) => {
+                    (0, 8..=30) | (4 | 6, 1..=6) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::Red);
                     }
-                    // Y axis
-                    (1..=8, 10) => {
+                    // Y axis divider
+                    (1..=8, 7) => {
                         assert_eq!(result_cell.bg, Color::Reset);
                         assert_eq!(result_cell.fg, Color::White);
                     }

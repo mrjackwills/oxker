@@ -2,13 +2,13 @@
 source: src/ui/draw_blocks/chart_bandwidth.rs
 expression: setup.terminal.backend()
 ---
-"╭─── rx: 566.00 kb/s tx: 0.00 kb/s ────╮"
+"╭───── rx: 566.00 kb/s tx: 0 kb/s ─────╮"
 "│           │        •                 │"
 "│           │      ••                  │"
 "│           │     ••                   │"
 "│566.00 kb/s│    ••                    │"
 "│           │   •                      │"
-"│0.00 kb/s  │  ••                      │"
+"│0 kb/s     │  ••                      │"
 "│           │••                        │"
 "│           │•                         │"
 "╰──────────────────────────────────────╯"
