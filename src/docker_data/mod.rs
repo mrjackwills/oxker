@@ -98,14 +98,9 @@ impl DockerData {
             let online_cpus = f64::from(stats.cpu_stats.as_ref().map_or(0, |i| {
                 i.online_cpus.unwrap_or_else(|| {
                     u32::try_from(
-                        stats
-                            .cpu_stats
-                            .clone()
-                            .unwrap_or_default()
-                            .cpu_usage
-                            .unwrap_or_default()
-                            .percpu_usage
+                        i.cpu_usage
                             .as_ref()
+                            .and_then(|usage| usage.percpu_usage.as_ref())
                             .map_or(0, std::vec::Vec::len),
                     )
                     .unwrap_or_default()
