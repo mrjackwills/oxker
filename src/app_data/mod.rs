@@ -213,7 +213,6 @@ impl AppData {
 
     pub fn set_inspect_data(&mut self, data: ContainerInspectResponse) {
         self.inspect_data = Some(InspectData::from(data))
-        // self.inspect_data = Some(data)
     }
 
     pub fn get_inspect_data(&self) -> Option<InspectData> {
