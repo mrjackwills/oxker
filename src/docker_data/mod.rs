@@ -1,11 +1,11 @@
 use bollard::{
     Docker,
+    models::ContainerStatsResponse,
+    models::ContainerSummary,
     query_parameters::{
         InspectContainerOptions, ListContainersOptions, LogsOptions, RemoveContainerOptions,
         RestartContainerOptions, StartContainerOptions, StatsOptions, StopContainerOptions,
     },
-    secret::ContainerStatsResponse,
-    service::ContainerSummary,
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;
@@ -98,14 +98,9 @@ impl DockerData {
             let online_cpus = f64::from(stats.cpu_stats.as_ref().map_or(0, |i| {
                 i.online_cpus.unwrap_or_else(|| {
                     u32::try_from(
-                        stats
-                            .cpu_stats
-                            .clone()
-                            .unwrap_or_default()
-                            .cpu_usage
-                            .unwrap_or_default()
-                            .percpu_usage
+                        i.cpu_usage
                             .as_ref()
+                            .and_then(|usage| usage.percpu_usage.as_ref())
                             .map_or(0, std::vec::Vec::len),
                     )
                     .unwrap_or_default()
@@ -476,7 +471,7 @@ impl DockerData {
 #[allow(clippy::float_cmp)]
 mod tests {
 
-    use bollard::secret::{ContainerCpuStats, ContainerCpuUsage};
+    use bollard::models::{ContainerCpuStats, ContainerCpuUsage};
 
     use super::*;
 

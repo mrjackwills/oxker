@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       # Install stable rust, and associated tools
       - name: install rust
@@ -80,7 +80,7 @@ jobs:
 
       # Upload output for release page
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           if-no-files-found: error
           name: ${{ matrix.target }}
@@ -96,10 +96,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup | Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
 
       - name: Update Release
         uses: ncipollo/release-action@v1
@@ -122,17 +122,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -168,7 +168,7 @@ jobs:
     steps:
       - name: update rust stable
         run: rustup update stable
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Publish Dry Run
         run: cargo publish --dry-run
 
@@ -181,6 +181,6 @@ jobs:
     steps:
       - name: update rust stable
         run: rustup update stable
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Publish
         run: cargo publish

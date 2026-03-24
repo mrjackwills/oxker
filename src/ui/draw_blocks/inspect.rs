@@ -144,7 +144,7 @@ mod tests {
         config::{AppColors, Keymap},
         ui::draw_blocks::tests::{get_result, test_setup},
     };
-    use bollard::secret::{
+    use bollard::models::{
         ContainerConfig, ContainerInspectResponse, ContainerState, ContainerStateStatusEnum,
         DriverData, EndpointSettings, HostConfig, HostConfigLogConfig, MountPoint,
         MountPointTypeEnum, NetworkSettings, RestartPolicy, RestartPolicyNameEnum,
@@ -632,7 +632,7 @@ mod tests {
         annotations: None,
         cap_add: None,
         cap_drop: None,
-        cgroupns_mode: Some(bollard::secret::HostConfigCgroupnsModeEnum::HOST),
+        cgroupns_mode: Some(bollard::models::HostConfigCgroupnsModeEnum::HOST),
         dns: Some(vec![]),
         dns_options: Some(vec![]),
         dns_search: Some(vec![]),
@@ -654,7 +654,7 @@ mod tests {
         shm_size: Some(268435456),
         sysctls: None,
         runtime: Some("runc".to_owned()),
-        isolation: Some(bollard::secret::HostConfigIsolationEnum::EMPTY),
+        isolation: Some(bollard::models::HostConfigIsolationEnum::EMPTY),
         masked_paths: Some(vec![
             "/proc/acpi".to_owned(),
             "/proc/asound".to_owned(),

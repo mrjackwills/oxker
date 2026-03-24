@@ -5,7 +5,7 @@ use std::{
     net::IpAddr,
 };
 
-use bollard::secret::{ContainerSummaryHealthStatusEnum, PortSummary};
+use bollard::models::{ContainerSummaryHealthStatusEnum, PortSummary};
 use jiff::{Timestamp, tz::TimeZone};
 use ratatui::{
     layout::Size,
@@ -351,23 +351,23 @@ impl From<(&str, &ContainerStatus)> for State {
 /// Need status, to check if container is unhealthy or not
 impl
     From<(
-        &bollard::secret::ContainerSummaryStateEnum,
+        &bollard::models::ContainerSummaryStateEnum,
         &ContainerStatus,
     )> for State
 {
     fn from(
         (input, status): (
-            &bollard::secret::ContainerSummaryStateEnum,
+            &bollard::models::ContainerSummaryStateEnum,
             &ContainerStatus,
         ),
     ) -> Self {
         match input {
-            bollard::secret::ContainerSummaryStateEnum::DEAD => Self::Dead,
-            bollard::secret::ContainerSummaryStateEnum::EXITED => Self::Exited,
-            bollard::secret::ContainerSummaryStateEnum::PAUSED => Self::Paused,
-            bollard::secret::ContainerSummaryStateEnum::REMOVING => Self::Removing,
-            bollard::secret::ContainerSummaryStateEnum::RESTARTING => Self::Restarting,
-            bollard::secret::ContainerSummaryStateEnum::RUNNING => {
+            bollard::models::ContainerSummaryStateEnum::DEAD => Self::Dead,
+            bollard::models::ContainerSummaryStateEnum::EXITED => Self::Exited,
+            bollard::models::ContainerSummaryStateEnum::PAUSED => Self::Paused,
+            bollard::models::ContainerSummaryStateEnum::REMOVING => Self::Removing,
+            bollard::models::ContainerSummaryStateEnum::RESTARTING => Self::Restarting,
+            bollard::models::ContainerSummaryStateEnum::RUNNING => {
                 if status.unhealthy() {
                     Self::Running(RunningState::Unhealthy)
                 } else {
@@ -382,13 +382,13 @@ impl
 /// Again, need status, to check if container is unhealthy or not
 impl
     From<(
-        Option<&bollard::secret::ContainerSummaryStateEnum>,
+        Option<&bollard::models::ContainerSummaryStateEnum>,
         &ContainerStatus,
     )> for State
 {
     fn from(
         (input, status): (
-            Option<&bollard::secret::ContainerSummaryStateEnum>,
+            Option<&bollard::models::ContainerSummaryStateEnum>,
             &ContainerStatus,
         ),
     ) -> Self {
@@ -618,6 +618,7 @@ impl fmt::Display for BandwidthStat {
         let p = match as_f64 {
             x if x >= ONE_GB => format!("{y:.2} GB/s", y = as_f64 / ONE_GB),
             x if x >= ONE_MB => format!("{y:.2} Mb/s", y = as_f64 / ONE_MB),
+            0.0 => "0 kb/s".to_owned(),
             _ => format!("{y:.2} kb/s", y = as_f64 / ONE_KB),
         };
         write!(f, "{p:>x$}", x = f.width().unwrap_or(1))

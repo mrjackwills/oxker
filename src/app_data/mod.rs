@@ -1,4 +1,4 @@
-use bollard::{models::ContainerSummary, secret::ContainerInspectResponse};
+use bollard::models::{ContainerInspectResponse, ContainerSummary};
 use core::fmt;
 use parking_lot::Mutex;
 use ratatui::{layout::Size, text::Text, widgets::ListState};
@@ -213,7 +213,6 @@ impl AppData {
 
     pub fn set_inspect_data(&mut self, data: ContainerInspectResponse) {
         self.inspect_data = Some(InspectData::from(data))
-        // self.inspect_data = Some(data)
     }
 
     pub fn get_inspect_data(&self) -> Option<InspectData> {
@@ -997,7 +996,7 @@ impl AppData {
                 let state = State::from((
                     i.state
                         .as_ref()
-                        .map_or(&bollard::secret::ContainerSummaryStateEnum::DEAD, |z| z),
+                        .map_or(&bollard::models::ContainerSummaryStateEnum::DEAD, |z| z),
                     &status,
                 ));
                 let image = i
