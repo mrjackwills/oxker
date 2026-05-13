@@ -148,8 +148,8 @@ mod tests {
     };
     use bollard::models::{
         ContainerConfig, ContainerInspectResponse, ContainerState, ContainerStateStatusEnum,
-        DriverData, EndpointSettings, HostConfig, HostConfigLogConfig, MountPoint,
-        NetworkSettings, RestartPolicy, RestartPolicyNameEnum,
+        DriverData, EndpointSettings, HostConfig, HostConfigLogConfig, MountPoint, NetworkSettings,
+        RestartPolicy, RestartPolicyNameEnum,
     };
     use crossterm::event::KeyCode;
     use insta::assert_snapshot;
