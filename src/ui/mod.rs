@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Position},
+    layout::{Constraint, Direction, Layout},
 };
 use std::{
     collections::HashSet,
@@ -44,7 +44,6 @@ const POLL_RATE: Duration = std::time::Duration::from_millis(50);
 
 pub struct Ui {
     app_data: Arc<Mutex<AppData>>,
-    cursor_position: Position,
     gui_state: Arc<Mutex<GuiState>>,
     input_tx: Sender<InputMessages>,
     is_running: Arc<AtomicBool>,
@@ -75,11 +74,9 @@ impl Ui {
         rerender: Arc<Rerender>,
     ) {
         match Self::setup_terminal() {
-            Ok(mut terminal) => {
-                let cursor_position = terminal.get_cursor_position().unwrap_or_default();
+            Ok(terminal) => {
                 let mut ui = Self {
                     app_data,
-                    cursor_position,
                     gui_state,
                     input_tx,
                     is_running,
@@ -117,16 +114,12 @@ impl Ui {
 
     /// reset the terminal back to default settings
     pub fn reset_terminal(&mut self) -> Result<()> {
-        self.terminal.clear()?;
-
         execute!(
             self.terminal.backend_mut(),
             LeaveAlternateScreen,
             DisableMouseCapture
         )?;
         disable_raw_mode()?;
-        self.terminal.clear().ok();
-        self.terminal.set_cursor_position(self.cursor_position)?;
         Ok(self.terminal.show_cursor()?)
     }
 
