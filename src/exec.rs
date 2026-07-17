@@ -56,7 +56,7 @@ enum ByteOutput {
 }
 
 impl ByteOutput {
-    const fn _len(&self) -> usize {
+    const fn len(&self) -> usize {
         match self {
             Self::Arm => 26,
             Self::X86_1 => 6,
@@ -76,7 +76,7 @@ impl ByteOutput {
 fn byte_sequence_valid(bytes: &[u8]) -> bool {
     [ByteOutput::Arm, ByteOutput::X86_1, ByteOutput::X86_2]
         .iter()
-        .any(|i| bytes.len() == i._len() && bytes.ends_with(i.last()))
+        .any(|i| bytes.len() == i.len() && bytes.ends_with(i.last()))
 }
 
 /// Check if tty is able to be written to, aka not windows
