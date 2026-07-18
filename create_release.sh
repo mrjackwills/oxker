@@ -47,6 +47,13 @@ ask_continue() {
 	fi
 }
 
+# ask continue, or quit
+ask_build_deb() {
+	if ! ask_yn "build deb"; then
+		exit
+	fi
+}
+
 # semver major update
 update_major() {
 	local bumped_major
@@ -203,23 +210,32 @@ check_cross() {
 
 # Build, using cross-rs, for linux x86 musl
 cross_build_x86_linux() {
+	skip_confirm=$1
 	check_cross
 	echo -e "${YELLOW}cross build --target x86_64-unknown-linux-musl --release${RESET}"
 	cross build --target x86_64-unknown-linux-musl --release
+	[ "$skip_confirm" -ne 1 ] && ask_build_deb
+	cargo deb --target=x86_64-unknown-linux-musl --no-build
 }
 
 # Build, using cross-rs, for linux arm64 musl
 cross_build_aarch64_linux() {
+	skip_confirm=$1
 	check_cross
 	echo -e "${YELLOW}cross build --target aarch64-unknown-linux-musl --release${RESET}"
 	cross build --target aarch64-unknown-linux-musl --release
+	[ "$skip_confirm" -ne 1 ] && ask_build_deb
+	cargo deb --target=aarch64-unknown-linux-musl --no-build
 }
 
 # Build, using cross-rs, for linux armv6 musl
 cross_build_armv6_linux() {
+	skip_confirm=$1
 	check_cross
 	echo -e "${YELLOW}cross build --target arm-unknown-linux-musleabihf --release${RESET}"
 	cross build --target arm-unknown-linux-musleabihf --release
+	[ "$skip_confirm" -ne 1 ] && ask_build_deb
+	cargo deb --target arm-unknown-linux-musleabihf --no-build
 }
 
 # Build, using cross-rs, for windows x86
@@ -257,11 +273,11 @@ cross_build_all() {
 		cargo_clean
 	fi
 	skip_confirm=$1
-	cross_build_armv6_linux
+	cross_build_armv6_linux "${skip_confirm}"
 	 [ "$skip_confirm" -ne 1 ] && ask_continue
-	cross_build_aarch64_linux
+	cross_build_aarch64_linux "${skip_confirm}"
 	 [ "$skip_confirm" -ne 1 ] && ask_continue
-	cross_build_x86_linux
+	cross_build_x86_linux "${skip_confirm}"
 	 [ "$skip_confirm" -ne 1 ] && ask_continue
 	cross_build_x86_windows
 	 [ "$skip_confirm" -ne 1 ] && ask_continue
@@ -320,11 +336,11 @@ build_container_armv6() {
 # $1 is 0 or 1, if 1 won't run ask_continue
 build_container_all() {
 	skip_confirm=$1
-	build_container_amd64
+	build_container_amd64 
 	[ "$skip_confirm" -ne 1 ] && ask_continue
-	build_container_arm64
+	build_container_arm64 
 	[ "$skip_confirm" -ne 1 ] && ask_continue
-	build_container_armv6
+	build_container_armv6 
 	[ "$skip_confirm" -ne 1 ] && ask_continue
 }
 
@@ -422,15 +438,15 @@ build_choice() {
 			exit
 			;;
 		1)
-			cross_build_x86_linux
+			cross_build_x86_linux 0
 			exit
 			;;
 		2)
-			cross_build_aarch64_linux
+			cross_build_aarch64_linux 0
 			exit
 			;;
 		3)
-			cross_build_armv6_linux
+			cross_build_armv6_linux 0
 			exit
 			;;
 		4)
@@ -473,15 +489,15 @@ build_container_choice() {
 			exit
 			;;
 		1)
-			build_container_amd64
+			build_container_amd64 0
 			exit
 			;;
 		2)
-			build_container_arm64
+			build_container_arm64 0
 			exit
 			;;
 		3)
-			build_container_armv6
+			build_container_armv6 0
 			exit
 			;;
 		4)

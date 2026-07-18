@@ -36,18 +36,21 @@ jiff = { version = "0.2", features = ["tzdb-bundle-always"] }
 parking_lot = { version = "0.12" }
 ratatui = "0.30"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0"}
+serde_json = { version = "1.0" }
 serde_jsonc = "1.0"
 tokio = { version = "1.53", features = ["full"] }
 tokio-util = "0.7"
-toml = { version = "1.1", default-features = false, features = ["parse", "serde"] }
+toml = { version = "1.1", default-features = false, features = [
+	"parse",
+	"serde",
+] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 uuid = { version = "1.24", features = ["fast-rng", "v4"] }
 
 [dev-dependencies]
 insta = "1.48"
-serde_json = { version = "1.0", features = ["preserve_order"]}
+serde_json = { version = "1.0", features = ["preserve_order"] }
 
 [profile.release]
 lto = true
@@ -57,3 +60,22 @@ strip = true
 debug = false
 
 
+[package.metadata.deb]
+maintainer = "Jack Wills <email@mrjackwills.com>"
+copyright = "2022, Jack Wills <email@mrjackwills.com>"
+license-file = ["LICENSE", "4"]
+extended-description = """\
+A simple tui to view & control docker containers."""
+depends = ""
+section = "utility"
+priority = "optional"
+assets = [
+	# target/release path is special, and gets replaced by cargo-deb with the actual target dir path.
+	[
+		"target/release/oxker",
+		"usr/bin/",
+		"755",
+	],
+	{ source = "README.md", dest = "usr/share/doc/oxker/README.md", mode = "644" },
+	{ source = "CONTRIBUTING.md", dest = "usr/share/doc/oxker/CONTRIBUTING.md", mode = "644" },
+]

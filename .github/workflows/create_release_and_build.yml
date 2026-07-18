@@ -39,15 +39,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      # Install stable rust, and associated tools
-      - name: install rust
-        uses: dtolnay/rust-toolchain@stable
-
-      # Install cross-rs
-      - name: install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
-
-      - name: build
+      - name: MacOS build
         if: matrix.target == 'aarch64-apple-darwin'
         run: |
           docker run --rm \
@@ -60,20 +52,35 @@ jobs:
             rustup target add aarch64-apple-darwin
             cargo zigbuild --release --target aarch64-apple-darwin
           '
+
+      # Install stable rust, and associated tools
+      - name: Install rust
+        if: matrix.target != 'aarch64-apple-darwin'
+        uses: dtolnay/rust-toolchain@stable
      
       # Build all other targets using Cross
-      - name: build
+      - name: Cross build
         if: matrix.target != 'aarch64-apple-darwin'
-        run: cross build --target ${{ matrix.target }} --release
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross
+          cross build --target ${{ matrix.target }} --release
+
+      # Create & move deb files
+      - name: .deb creation & move
+        if: matrix.target != 'x86_64-pc-windows-gnu' && matrix.target != 'aarch64-apple-darwin'
+        run: |
+          cargo install cargo-deb
+          cargo deb --target=${{ matrix.target }} --no-build
+          mv target/debian/*.deb ./
 
       # Compress the output
-      - name: compress windows
+      - name: compress to .zip
         if: matrix.target == 'x86_64-pc-windows-gnu'
         run: |
           zip -j "./oxker_${{ matrix.output_name }}" target/${{ matrix.target }}/release/oxker.exe
 
       # Compress the output
-      - name: compress linux
+      - name: compress to tar.gz
         if: matrix.target != 'x86_64-pc-windows-gnu'
         run: |
           tar -C "target/${{ matrix.target }}/release" -czf "./oxker_${{ matrix.output_name }}" oxker
@@ -84,7 +91,9 @@ jobs:
         with:
           if-no-files-found: error
           name: ${{ matrix.target }}
-          path: oxker_${{ matrix.output_name }}
+          path: |
+            oxker_${{ matrix.output_name }}
+            oxker_*.deb
           retention-days: 1
 
   ###################
@@ -110,8 +119,9 @@ jobs:
           bodyFile: ".github/release-body.md"
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: |
-            **/oxker_*.zip
             **/oxker_*.tar.gz
+            **/oxker_*.zip
+            **/oxker_*.deb
 
   #########################################
   ## Build images for Dockerhub & ghcr.io #
