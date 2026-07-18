@@ -1,3 +1,15 @@
+### Chores
++ .devcontainer updated, [1eb23fc917498aaf98b4c14e7c15b7cf80cc0925]
++ dependencies updated, [93c9b060d17cf53a61265b70d11655b329030f79], [6956391dd8c82ffd4d372c380d9b016a0aad5c39]
++ Rust 1.97 linting, [f19e344e1527657201f6edd880109af9aea09f02]
++ Rust version updated, [9ad2039b96c12010b873ffb58d72655e08817368]
+
+### Features
++ .deb builds in GitHub workflow, [7dfe4867c2235ba84b88ba6bd611128ff3f8fd8a]
+
+### Fixes
++ exec len() typo, [90c66580737a0f772cfbe8daa64d3371010eb734]
+
 # <a href='https://github.com/mrjackwills/oxker/releases/tag/v0.13.2'>v0.13.2</a>
 ### 2026-05-13
 
