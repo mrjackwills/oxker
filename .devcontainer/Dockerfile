@@ -1,5 +1,4 @@
-ARG VARIANT="bullseye"
-FROM mcr.microsoft.com/vscode/devcontainers/base:0-${VARIANT}
+FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 RUN printf "alias cls='clear'\nalias ll='ls -l --human-readable --color=auto --group-directories-first --classify --time-style=long-iso -all'" >> /etc/bash.bashrc
 

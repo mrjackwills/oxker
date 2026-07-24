@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
     time::Instant,
 };
-use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::{
@@ -189,7 +189,7 @@ pub struct GuiState {
     intersect_heading: HashMap<Header, Rect>,
     intersect_help: Option<Rect>,
     intersect_panel: HashMap<SelectablePanel, Rect>,
-    loading_handle: Option<JoinHandle<()>>,
+    loading_handle: Option<CancellationToken>,
     loading_index: u8,
     loading_set: HashSet<Uuid>,
     log_height: u16,
@@ -529,12 +529,20 @@ impl GuiState {
     pub fn start_loading_animation(gui_state: &Arc<Mutex<Self>>, loading_uuid: Uuid) {
         if !gui_state.lock().is_loading() {
             let inner_state = Arc::clone(gui_state);
-            gui_state.lock().loading_handle = Some(tokio::spawn(async move {
-                loop {
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                    inner_state.lock().next_loading(loading_uuid);
+            let token = CancellationToken::new();
+
+            gui_state.lock().loading_handle = Some(token.clone());
+            tokio::spawn(async move {
+                tokio::select! {
+                    _ = token.cancelled() => (),
+                    _ = async {
+                        loop {
+                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            inner_state.lock().next_loading(loading_uuid);
+                        }
+                    } => (),
                 }
-            }));
+            });
         }
         gui_state.lock().next_loading(loading_uuid);
     }
@@ -546,7 +554,7 @@ impl GuiState {
         if self.loading_set.is_empty() {
             self.loading_index = 0;
             if let Some(h) = &self.loading_handle {
-                h.abort();
+                h.cancel();
             }
             self.loading_handle = None;
         }

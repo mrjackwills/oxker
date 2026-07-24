@@ -43,7 +43,7 @@ fn format_containers<'a>(colors: AppColors, i: &ContainerItem, widths: &Columns)
             format!(
                 "{:<width$}{MARGIN}",
                 i.status.get(),
-                width = &widths.status.1.into()
+                width = widths.status.1.into()
             ),
             state_style,
         ),
@@ -51,7 +51,7 @@ fn format_containers<'a>(colors: AppColors, i: &ContainerItem, widths: &Columns)
             format!(
                 "{:>width$}{MARGIN}",
                 i.cpu_stats.back().map_or_else(CpuStats::default, |f| *f),
-                width = &widths.cpu.1.into()
+                width = widths.cpu.1.into()
             ),
             state_style,
         ),
@@ -60,8 +60,8 @@ fn format_containers<'a>(colors: AppColors, i: &ContainerItem, widths: &Columns)
                 "{:>width_current$} / {:>width_limit$}{MARGIN}",
                 i.mem_stats.back().map_or_else(ByteStats::default, |f| *f),
                 i.mem_limit,
-                width_current = &widths.mem.1.into(),
-                width_limit = &widths.mem.2.into()
+                width_current = widths.mem.1.into(),
+                width_limit = widths.mem.2.into()
             ),
             state_style,
         ),
@@ -69,7 +69,7 @@ fn format_containers<'a>(colors: AppColors, i: &ContainerItem, widths: &Columns)
             format!(
                 "{:>width$}{MARGIN}",
                 i.id.get_short(),
-                width = &widths.id.1.into()
+                width = widths.id.1.into()
             ),
             colors.containers.text,
         ),

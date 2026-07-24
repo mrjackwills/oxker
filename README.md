@@ -84,7 +84,7 @@ brew install oxker
 ```
 
 ### Pre-Built
-See the <a href='https://github.com/mrjackwills/oxker/releases/latest' target='_blank' rel='noopener noreferrer'>pre-built binaries</a>
+See the <a href='https://github.com/mrjackwills/oxker/releases/latest' target='_blank' rel='noopener noreferrer'>latest release page</a> for pre-built binaries & .deb files.
 
 or, download & install (x86_64 one liner)
 

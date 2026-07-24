@@ -375,13 +375,13 @@ impl AppData {
     /// Change the sorted order, also set the selected container state to match new order
     fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
+        let selected_container = self.get_selected_container_id();
         self.sort_containers();
-        self.containers.state.select(
+        if let Some(x) = selected_container {
             self.containers
-                .items
-                .iter()
-                .position(|i| self.get_selected_container_id().as_ref() == Some(&i.id)),
-        );
+                .state
+                .select(self.containers.items.iter().position(|i| x == i.id));
+        }
         self.rerender.update_draw();
     }
 
