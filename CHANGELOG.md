@@ -3,6 +3,7 @@
 + dependencies updated, [93c9b060d17cf53a61265b70d11655b329030f79], [6956391dd8c82ffd4d372c380d9b016a0aad5c39], [9977a7e2132a1f3a5025b54f959c5d0e9f2e72cf]
 + Rust 1.97 linting, [f19e344e1527657201f6edd880109af9aea09f02]
 + Rust version updated, [9ad2039b96c12010b873ffb58d72655e08817368]
++ GitHub workflow dependency updated, [e53e2653533f75844c3db30f61ae3dbe4cc98750]
 
 ### Features
 + .deb builds in GitHub workflow, [7dfe4867c2235ba84b88ba6bd611128ff3f8fd8a]
