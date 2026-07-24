@@ -4,6 +4,7 @@
 + Rust 1.97 linting, [f19e344e1527657201f6edd880109af9aea09f02]
 + Rust version updated, [9ad2039b96c12010b873ffb58d72655e08817368]
 + GitHub workflow dependency updated, [e53e2653533f75844c3db30f61ae3dbe4cc98750]
++ _typos.toml updated, [1b92954975f273ebb6c1c76f998380ac199d1077]
 
 ### Features
 + .deb builds in GitHub workflow, [7dfe4867c2235ba84b88ba6bd611128ff3f8fd8a]
