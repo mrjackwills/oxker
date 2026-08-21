@@ -372,16 +372,10 @@ impl AppData {
     }
 
     /// Container sort related methods
-    /// Change the sorted order, also set the selected container state to match new order
+    /// Change the sorted order, selection is kept on the same container by `sort_containers`
     fn set_sorted(&mut self, x: Option<(Header, SortedOrder)>) {
         self.sorted_by = x;
-        let selected_container = self.get_selected_container_id();
         self.sort_containers();
-        if let Some(x) = selected_container {
-            self.containers
-                .state
-                .select(self.containers.items.iter().position(|i| x == i.id));
-        }
         self.rerender.update_draw();
     }
 
@@ -420,6 +414,8 @@ impl AppData {
     /// Sort the containers vec, based on a heading (and if clash, then by name), either ascending or descending,
     /// If not sort set, then sort by created time
     pub fn sort_containers(&mut self) {
+        // Keep the same container selected, even if the sort moves it within the list
+        let selected_id = self.get_selected_container_id();
         if let Some((head, ord)) = self.sorted_by {
             let pre_order = self.get_current_ids();
             let sort_closure = |a: &ContainerItem, b: &ContainerItem| -> std::cmp::Ordering {
@@ -496,6 +492,11 @@ impl AppData {
             });
             self.rerender.update_draw();
             self.current_sorted_id = self.get_current_ids();
+        }
+        if let Some(id) = selected_id {
+            self.containers
+                .state
+                .select(self.containers.items.iter().position(|i| id == i.id));
         }
     }
 
@@ -1250,6 +1251,48 @@ mod tests {
         assert_eq!(a.id, ContainerId::from("2"));
         assert_eq!(b.id, ContainerId::from("1"));
         assert_eq!(c.id, ContainerId::from("3"));
+    }
+
+    #[test]
+    /// Sorting keeps the same container selected, even when its position in the list changes
+    fn test_app_data_sort_containers_keeps_selection() {
+        let (_ids, containers) = gen_containers();
+
+        let mut app_data = gen_appdata(&containers);
+
+        if let Some(i) = app_data.get_container_by_id(&ContainerId::from("1")) {
+            i.cpu_stats = VecDeque::from([CpuStats::new(10.1)]);
+        }
+        if let Some(i) = app_data.get_container_by_id(&ContainerId::from("2")) {
+            i.cpu_stats = VecDeque::from([CpuStats::new(8.1)]);
+        }
+        if let Some(i) = app_data.get_container_by_id(&ContainerId::from("3")) {
+            i.cpu_stats = VecDeque::from([CpuStats::new(20.3)]);
+        }
+
+        // Select container 2, sorted ascending by cpu it's first in the list
+        app_data.set_sorted(Some((Header::Cpu, SortedOrder::Asc)));
+        app_data.containers.state.select(Some(0));
+        assert_eq!(
+            app_data.get_selected_container_id(),
+            Some(ContainerId::from("2"))
+        );
+
+        // Container 2 now has the highest cpu, so moves to the end of the list
+        if let Some(i) = app_data.get_container_by_id(&ContainerId::from("2")) {
+            i.cpu_stats = VecDeque::from([CpuStats::new(30.3)]);
+        }
+        app_data.sort_containers();
+
+        let result = app_data.get_container_items();
+        assert_eq!(result[0].id, ContainerId::from("1"));
+        assert_eq!(result[2].id, ContainerId::from("2"));
+        // Selection follows container 2 to its new index
+        assert_eq!(app_data.containers.state.selected(), Some(2));
+        assert_eq!(
+            app_data.get_selected_container_id(),
+            Some(ContainerId::from("2"))
+        );
     }
 
     #[test]
