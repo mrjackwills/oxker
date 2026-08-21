@@ -241,11 +241,11 @@ mod tests {
         setup
             .app_data
             .lock()
-            .log_scroll(&crate::app_data::ScrollDirection::Up);
+            .log_scroll(&crate::app_data::ScrollDirection::Up, 1);
         setup
             .app_data
             .lock()
-            .log_scroll(&crate::app_data::ScrollDirection::Up);
+            .log_scroll(&crate::app_data::ScrollDirection::Up, 1);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
@@ -298,7 +298,7 @@ mod tests {
         setup
             .app_data
             .lock()
-            .log_scroll(&crate::app_data::ScrollDirection::Up);
+            .log_scroll(&crate::app_data::ScrollDirection::Up, 1);
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup
@@ -404,7 +404,7 @@ mod tests {
         setup
             .app_data
             .lock()
-            .log_scroll(&crate::app_data::ScrollDirection::Up);
+            .log_scroll(&crate::app_data::ScrollDirection::Up, 1);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup
@@ -433,7 +433,7 @@ mod tests {
         setup
             .app_data
             .lock()
-            .log_scroll(&crate::app_data::ScrollDirection::Up);
+            .log_scroll(&crate::app_data::ScrollDirection::Up, 1);
 
         let mut colors = AppColors::new();
 

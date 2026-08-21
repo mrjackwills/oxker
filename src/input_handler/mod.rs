@@ -80,7 +80,7 @@ impl InputHandler {
                         && !contains(Status::SearchLogs)
                     {
                         // TODO handle state where you want to scroll log search results with the mouse wheel
-                        self.mouse_press(mouse_event, modifider);
+                        self.mouse_press(mouse_event, modifider).await;
                     }
                 }
             }
@@ -319,10 +319,11 @@ impl InputHandler {
     fn logs_horizontal_scroll(&self, modifier: KeyModifiers, sd: &ScrollDirection) {
         let panel = self.gui_state.lock().get_selected_panel();
         if panel == SelectablePanel::Logs {
-            for _ in 0..self.get_modifier_total(modifier) {
-                let width = self.gui_state.lock().get_screen_width();
-                self.app_data.lock().logs_horizontal_scroll(sd, width);
-            }
+            let count = self.get_modifier_total(modifier);
+            let width = self.gui_state.lock().get_screen_width();
+            self.app_data
+                .lock()
+                .logs_horizontal_scroll(sd, width, count);
         }
     }
 
@@ -701,20 +702,23 @@ impl InputHandler {
             _ if self.keymap.scroll_up.0 == key_code
                 || self.keymap.scroll_up.1 == Some(key_code) =>
             {
-                self.scroll(modifier, &ScrollDirection::Up);
+                self.scroll(modifier, &ScrollDirection::Up).await;
             }
 
             _ if self.keymap.scroll_down.0 == key_code
                 || self.keymap.scroll_down.1 == Some(key_code) =>
             {
-                self.scroll(modifier, &ScrollDirection::Down);
+                self.scroll(modifier, &ScrollDirection::Down).await;
             }
 
             _ if self.keymap.filter_mode.0 == key_code
                 || self.keymap.filter_mode.1 == Some(key_code) =>
             {
                 self.gui_state.lock().status_push(Status::Filter);
-                self.docker_tx.send(DockerMessage::Update).await.ok();
+                self.docker_tx
+                    .send(DockerMessage::UpdateEverything)
+                    .await
+                    .ok();
             }
 
             _ if self.keymap.log_search_mode.0 == key_code
@@ -804,7 +808,7 @@ impl InputHandler {
     }
 
     /// Handle mouse button events
-    fn mouse_press(&self, mouse_event: MouseEvent, modifier: KeyModifiers) {
+    async fn mouse_press(&self, mouse_event: MouseEvent, modifier: KeyModifiers) {
         let status = self.gui_state.lock().get_status();
 
         if status.contains(&Status::Inspect) {
@@ -825,8 +829,8 @@ impl InputHandler {
             }
         } else {
             match mouse_event.kind {
-                MouseEventKind::ScrollUp => self.scroll(modifier, &ScrollDirection::Up),
-                MouseEventKind::ScrollDown => self.scroll(modifier, &ScrollDirection::Down),
+                MouseEventKind::ScrollUp => self.scroll(modifier, &ScrollDirection::Up).await,
+                MouseEventKind::ScrollDown => self.scroll(modifier, &ScrollDirection::Down).await,
                 // TODO left and right for log offsets
                 MouseEventKind::Down(MouseButton::Left) => {
                     let mouse_point = Rect::new(mouse_event.column, mouse_event.row, 1, 1);
@@ -847,25 +851,26 @@ impl InputHandler {
     }
 
     /// Change state to next, depending which panel is currently in focus
-    fn scroll(&self, modifier: KeyModifiers, scroll: &ScrollDirection) {
+    async fn scroll(&self, modifier: KeyModifiers, scroll: &ScrollDirection) {
         let status = self.gui_state.lock().get_status();
         if status.contains(&Status::SearchLogs) {
             self.app_data.lock().log_search_scroll(scroll);
         } else {
             let selected_panel = self.gui_state.lock().get_selected_panel();
+            let multiplier = self.get_modifier_total(modifier);
             match selected_panel {
                 SelectablePanel::Containers => {
-                    for _ in 0..self.get_modifier_total(modifier) {
-                        self.app_data.lock().containers_scroll(scroll);
-                    }
+                    self.app_data.lock().containers_scroll(scroll, multiplier);
                 }
                 SelectablePanel::Logs => {
-                    for _ in 0..self.get_modifier_total(modifier) {
-                        self.app_data.lock().log_scroll(scroll);
-                    }
+                    self.app_data.lock().log_scroll(scroll, multiplier);
                 }
                 SelectablePanel::Commands => self.app_data.lock().docker_controls_scroll(scroll),
             }
+            self.docker_tx
+                .send(DockerMessage::UpdateSelectedLog)
+                .await
+                .ok();
         }
     }
 }

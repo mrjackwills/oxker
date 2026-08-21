@@ -24,8 +24,6 @@ const ONE_GB: f64 = ONE_MB * 1000.0;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum ScrollDirection {
-    // Next,
-    // Previous,
     Up,
     Down,
     Left,

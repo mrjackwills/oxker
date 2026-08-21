@@ -14,6 +14,7 @@ use crate::{
     ENTRY_POINT,
     app_error::AppError,
     config::Config,
+    docker_data::StatsData,
     ui::{GuiState, Rerender, Status, log_sanitizer},
 };
 pub use container_state::*;
@@ -184,7 +185,10 @@ pub struct AppData {
 
 impl AppData {
     /// Generate a default app_state
-    pub fn new(config: Config, redraw: &Arc<Rerender>) -> Self {
+    pub fn new(
+        config: Config,
+        redraw: &Arc<Rerender>,
+    ) -> Self {
         Self {
             config,
             containers: StatefulList::new(vec![]),
@@ -490,8 +494,8 @@ impl AppData {
                     .cmp(&b.created)
                     .then_with(|| a.name.get().cmp(b.name.get()))
             });
-            self.rerender.update_draw();
             self.current_sorted_id = self.get_current_ids();
+            self.rerender.update_draw();
         }
         if let Some(id) = selected_id {
             self.containers
@@ -506,11 +510,11 @@ impl AppData {
         self.containers.items.len()
     }
 
-    pub fn get_all_id_state(&self) -> Vec<(State, ContainerId)> {
+    pub fn get_all_id_state(&self) -> Vec<(State, ContainerId, u64)> {
         self.containers
             .items
             .iter()
-            .map(|i| (i.state, i.id.clone()))
+            .map(|i| (i.state, i.id.clone(), i.last_updated))
             .collect::<Vec<_>>()
     }
 
@@ -542,8 +546,17 @@ impl AppData {
         self.rerender.update_draw();
     }
 
-    pub fn containers_scroll(&mut self, scroll: &ScrollDirection) {
-        self.containers.scroll(scroll);
+    pub fn containers_scroll(&mut self, scroll: &ScrollDirection, count: u8) {
+        for _ in 0..count {
+            self.containers.scroll(scroll);
+        }
+        // TODO fix this
+        // if let Some(selected) = self.get_selected_container_id() {
+        // self.docker_tx
+        // .send(DockerMessage::UpdateLog(selected))
+        // .await
+        // .ok();
+        // }
         self.rerender.update_draw();
     }
 
@@ -644,6 +657,13 @@ impl AppData {
         self.get_selected_container().map(|i| i.id.clone())
     }
 
+    pub fn get_selected_container_id_state_last_updated(
+        &self,
+    ) -> Option<(State, ContainerId, u64)> {
+        self.get_selected_container()
+            .map(|i| (i.state, i.id.clone(), i.last_updated))
+    }
+
     /// Check if a given ID matches the currently selected container
     pub fn is_selected_container(&self, id: &ContainerId) -> bool {
         self.get_selected_container().is_some_and(|i| &i.id == id)
@@ -730,34 +750,38 @@ impl AppData {
             .and_then(|i| i.logs.get_scroll_title(width))
     }
 
-    pub fn logs_horizontal_scroll(&mut self, sd: &ScrollDirection, width: u16) {
+    pub fn logs_horizontal_scroll(&mut self, sd: &ScrollDirection, width: u16, count: u8) {
         // Change this to set a max_offset, instead of taking in width each time, then can be combined with the log_scroll beneath
-        match sd {
-            ScrollDirection::Down => {
-                if let Some(i) = self.get_mut_selected_container() {
-                    i.logs.forward(width);
-                    self.rerender.update_draw();
+        for _ in 0..count {
+            match sd {
+                ScrollDirection::Down => {
+                    if let Some(i) = self.get_mut_selected_container() {
+                        i.logs.forward(width);
+                        self.rerender.update_draw();
+                    }
                 }
-            }
-            ScrollDirection::Up => {
-                if let Some(i) = self.get_mut_selected_container() {
-                    i.logs.back();
-                    self.rerender.update_draw();
+                ScrollDirection::Up => {
+                    if let Some(i) = self.get_mut_selected_container() {
+                        i.logs.back();
+                        self.rerender.update_draw();
+                    }
                 }
+                // TODO set offset
+                _ => (),
             }
-            // TODO set offset
-            _ => (),
         }
     }
 
     /// select next selected log line
-    pub fn log_scroll(&mut self, scroll: &ScrollDirection) {
+    pub fn log_scroll(&mut self, scroll: &ScrollDirection, count: u8) {
         if let Some(i) = self.get_mut_selected_container() {
-            match scroll {
-                ScrollDirection::Down => i.logs.next(),
-                ScrollDirection::Up => i.logs.previous(),
-                // TODO set offset
-                _ => (),
+            for _ in 0..count {
+                match scroll {
+                    ScrollDirection::Down => i.logs.next(),
+                    ScrollDirection::Up => i.logs.previous(),
+                    // TODO set offset
+                    _ => (),
+                }
             }
             self.rerender.update_draw();
         }
@@ -781,6 +805,7 @@ impl AppData {
 
     /// Get mutable Vec of current containers logs
     pub fn get_logs(&self, size: Size, padding: usize) -> Vec<Text<'static>> {
+        // TODO put this in self.tmp_logs, and clear on logs update or container scroll
         self.containers
             .state
             .selected()
@@ -888,18 +913,34 @@ impl AppData {
         }
     }
 
+    /// Update all container stats at once
+    pub fn update_all_stats(&mut self, data: Vec<StatsData>) {
+        for i in data {
+            self.update_stats_by_id(
+                &i.container_id,
+                i.cpu_stats,
+                i.mem_stats,
+                i.mem_limit,
+                i.rx,
+                i.tx,
+            );
+        }
+        self.sort_containers();
+        self.rerender.update_draw();
+    }
+
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
     /// Will also, if a sort is set, sort the containers
-    pub fn update_stats_by_id(
+    fn update_stats_by_id(
         &mut self,
-        id: &ContainerId,
+        container_id: &ContainerId,
         cpu_stat: Option<f64>,
         mem_stat: Option<u64>,
         mem_limit: u64,
         rx: u64,
         tx: u64,
     ) {
-        if let Some(container) = self.get_any_container_by_id(id) {
+        if let Some(container) = self.get_any_container_by_id(container_id) {
             if container.cpu_stats.len() >= 60 {
                 container.cpu_stats.pop_front();
             }
@@ -922,14 +963,10 @@ impl AppData {
 
             container.mem_limit.update(mem_limit);
         }
-        if self.is_selected_container(id) {
-            self.rerender.update_draw();
-        }
-        self.sort_containers();
     }
 
     /// Update, or insert, containers
-    pub fn update_containers(&mut self, mut all_containers: Vec<ContainerSummary>) {
+    pub fn update_summaries(&mut self, mut all_containers: Vec<ContainerSummary>) {
         let all_ids = self
             .containers
             .items
@@ -1051,8 +1088,136 @@ impl AppData {
         }
     }
 
+    /// Update, or insert, containers
+    pub fn _update_summaries(&mut self, mut all_containers: Vec<ContainerSummary>) {
+        let all_ids = self
+            .containers
+            .items
+            .iter()
+            .map(|i| i.id.clone())
+            .collect::<Vec<_>>();
+
+        // Only sort it no containers currently set, as afterwards the order is fixed
+        if self.containers.items.is_empty() {
+            all_containers.sort_by_key(|a| a.created);
+        }
+
+        if !all_containers.is_empty() && self.containers.state.selected().is_none() {
+            self.containers.start();
+        }
+
+        for (index, id) in all_ids.iter().enumerate() {
+            if !all_containers
+                .iter()
+                .filter_map(|i| i.id.as_ref())
+                .any(|x| x == id.get())
+            {
+                // If removed container is currently selected, then change selected to previous
+                // This will default to 0 in any edge cases
+                if self.containers.state.selected().is_some() {
+                    self.containers.scroll(&ScrollDirection::Up);
+                }
+                // Check is some, else can cause out of bounds error, if containers get removed before a docker update
+                if self.containers.items.get(index).is_some() {
+                    self.containers.items.remove(index);
+                    if self.is_selected_container(id) {
+                        self.rerender.update_draw();
+                    }
+                }
+            }
+        }
+
+        for mut i in all_containers {
+            if let Some(id) = i.id.as_ref() {
+                let name = i.names.as_mut().map_or(String::new(), |names| {
+                    names.first_mut().map_or(String::new(), |f| {
+                        if f.starts_with('/') {
+                            f.remove(0);
+                        }
+                        (*f).clone()
+                    })
+                });
+
+                let ports = i.ports.map_or(vec![], |i| {
+                    i.into_iter().map(ContainerPorts::from).collect::<Vec<_>>()
+                });
+
+                let id = ContainerId::from(id.as_str());
+
+                let is_oxker = i
+                    .command
+                    .as_ref()
+                    .is_some_and(|i| i.starts_with(ENTRY_POINT));
+
+                let status = ContainerStatus::from(
+                    i.status
+                        .as_ref()
+                        .map_or(String::new(), std::clone::Clone::clone),
+                );
+                let state = State::from((
+                    i.state
+                        .as_ref()
+                        .map_or(&bollard::models::ContainerSummaryStateEnum::DEAD, |z| z),
+                    &status,
+                ));
+                let image = i
+                    .image
+                    .as_ref()
+                    .map_or(String::new(), std::clone::Clone::clone);
+
+                let created = i
+                    .created
+                    .map_or(0, |i| u64::try_from(i).unwrap_or_default());
+
+                if let Some(item) = self.get_any_container_by_id(&id) {
+                    if item.name.get() != name {
+                        item.name.set(name);
+                    }
+                    if item.status != status {
+                        item.status = status;
+                    }
+                    if item.state != state {
+                        item.docker_controls.items = DockerCommand::gen_vec(state);
+                        // Update the list state, needs to be None if the gen_vec returns an empty vec
+                        match state {
+                            State::Removing | State::Restarting | State::Unknown => {
+                                item.docker_controls.state.select(None);
+                            }
+                            _ => item.docker_controls.start(),
+                        }
+                        item.state = state;
+                    }
+
+                    item.ports = ports;
+
+                    if item.image.get() != image {
+                        item.image.set(image);
+                    }
+                } else {
+                    // container not known, so make new ContainerItem and push into containers Ve
+                    let container = ContainerItem::new(
+                        created, id, image, is_oxker, name, ports, state, status,
+                    );
+                    let can_insert = self.can_insert(&container);
+                    if can_insert {
+                        self.containers.items.push(container);
+                    } else {
+                        self.hidden_containers.push(container);
+                    }
+                }
+            }
+            self.sort_containers();
+        }
+    }
+
+    pub fn update_all_container_logs(&mut self, data: Vec<(Vec<String>, ContainerId)>) {
+        for i in data {
+            self.update_log_by_id(i.0, &i.1);
+        }
+        self.rerender.update_draw();
+    }
     /// Update logs of a given container, based on id
-    pub fn update_log_by_id(&mut self, logs: Vec<String>, id: &ContainerId) {
+    fn update_log_by_id(&mut self, logs: Vec<String>, id: &ContainerId) {
         let color = self.config.color_logs;
         let raw = self.config.raw_logs;
         let format = self.config.timestamp_format.clone();
@@ -1062,45 +1227,45 @@ impl AppData {
 
         let show_timestamp = self.config.show_timestamp;
 
-        if let Some(container) = self.get_any_container_by_id(id) {
-            if !container.is_oxker {
-                container.last_updated = Self::get_systemtime();
-                let current_len = container.logs.len();
-                for mut i in logs {
-                    let (log_tz, log_content) = LogsTz::splitter(i.as_str());
-                    if show_timestamp {
-                        i = format!(
-                            "{} {}",
-                            log_tz
-                                .display_with_formatter(config_tz.as_ref(), &format)
-                                .unwrap_or_else(|| log_tz.to_string()),
-                            log_content
-                        );
-                    } else {
-                        i = log_content;
-                    }
-                    let lines = if color {
-                        log_sanitizer::colorize_logs(&i)
-                    } else if raw {
-                        log_sanitizer::raw(&i)
-                    } else {
-                        log_sanitizer::remove_ansi(&i)
-                    };
-                    container.logs.insert(Text::from(lines), log_tz, cs);
+        if let Some(container) = self.get_any_container_by_id(id)
+            && !container.is_oxker
+        {
+            container.last_updated = Self::get_systemtime();
+            let current_len = container.logs.len();
+            for mut i in logs {
+                let (log_tz, log_content) = LogsTz::splitter(i.as_str());
+                if show_timestamp {
+                    i = format!(
+                        "{} {}",
+                        log_tz
+                            .display_with_formatter(config_tz.as_ref(), &format)
+                            .unwrap_or_else(|| log_tz.to_string()),
+                        log_content
+                    );
+                } else {
+                    i = log_content;
                 }
-
-                // Set the logs selected row for each container
-                // Either when no long currently selected, or currently selected (before updated) is already at end
-                if container.logs.state().selected().is_none()
-                    || container.logs.state().selected().map_or(1, |f| f + 1) == current_len
-                {
-                    container.logs.end();
-                }
+                let lines = if color {
+                    log_sanitizer::colorize_logs(&i)
+                } else if raw {
+                    log_sanitizer::raw(&i)
+                } else {
+                    log_sanitizer::remove_ansi(&i)
+                };
+                container.logs.insert(Text::from(lines), log_tz, cs);
             }
-            if self.is_selected_container(id) {
-                self.rerender.update_draw();
+
+            // Set the logs selected row for each container
+            // Either when no long currently selected, or currently selected (before updated) is already at end
+            if container.logs.state().selected().is_none()
+                || container.logs.state().selected().map_or(1, |f| f + 1) == current_len
+            {
+                container.logs.end();
             }
         }
+        // if self.is_selected_container(id) {
+        // self.rerender.update_draw();
+        // }
     }
 }
 
@@ -1544,9 +1709,9 @@ mod tests {
         assert_eq!(app_data.get_container_len(), 3);
     }
 
-    #[test]
+    #[tokio::test]
     /// Select the first container
-    fn test_app_data_containers_start() {
+    async fn test_app_data_containers_start() {
         let (_ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
@@ -1574,7 +1739,7 @@ mod tests {
         );
 
         // Calling previous when at start has no effect
-        app_data.containers_scroll(&ScrollDirection::Up);
+        app_data.containers_scroll(&ScrollDirection::Up, 1);
         let result = app_data.get_selected_container_id();
         assert_eq!(result, Some(ContainerId::from("1")));
         let result = app_data.get_selected_container_id_state_name();
@@ -2066,14 +2231,14 @@ mod tests {
         assert_eq!(result, " 3/3 - container_1 - image_1");
 
         // Change log state to no longer be at the end
-        app_data.log_scroll(&ScrollDirection::Up);
+        app_data.log_scroll(&ScrollDirection::Up, 1);
         let result = app_data.get_log_title();
         assert_eq!(result, " 2/3 - container_1 - image_1");
     }
 
-    #[test]
+    #[tokio::test]
     /// log title string generated correctly after container change
-    fn test_app_data_get_log_title_after_container_change() {
+    async fn test_app_data_get_log_title_after_container_change() {
         let (ids, containers) = gen_containers();
         let mut app_data = gen_appdata(&containers);
 
@@ -2087,7 +2252,7 @@ mod tests {
         assert_eq!(result, " - container_1 - image_1");
 
         // change container
-        app_data.containers_scroll(&ScrollDirection::Down);
+        app_data.containers_scroll(&ScrollDirection::Down, 1);
         let result = app_data.get_log_title();
         assert_eq!(result, " - container_2 - image_2");
 
@@ -2098,7 +2263,7 @@ mod tests {
         assert_eq!(result, " 3/3 - container_2 - image_2");
 
         // Change log state to no longer be at the end
-        app_data.log_scroll(&ScrollDirection::Up);
+        app_data.log_scroll(&ScrollDirection::Up, 1);
         let result = app_data.get_log_title();
         assert_eq!(result, " 2/3 - container_2 - image_2");
     }
@@ -2205,7 +2370,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 1/3 - container_1 - image_1");
 
-        app_data.log_scroll(&ScrollDirection::Down);
+        app_data.log_scroll(&ScrollDirection::Down, 1);
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(1));
@@ -2214,7 +2379,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 2/3 - container_1 - image_1");
 
-        app_data.log_scroll(&ScrollDirection::Down);
+        app_data.log_scroll(&ScrollDirection::Down, 1);
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(2));
@@ -2222,7 +2387,7 @@ mod tests {
 
         let result = app_data.get_log_title();
         assert_eq!(result, " 3/3 - container_1 - image_1");
-        app_data.log_scroll(&ScrollDirection::Down);
+        app_data.log_scroll(&ScrollDirection::Down, 1);
 
         let result = app_data.get_log_state();
         assert!(result.is_some());
@@ -2253,7 +2418,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 3/3 - container_1 - image_1");
 
-        app_data.log_scroll(&ScrollDirection::Up);
+        app_data.log_scroll(&ScrollDirection::Up, 1);
 
         let result = app_data.get_log_state();
         assert!(result.is_some());
@@ -2262,7 +2427,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 2/3 - container_1 - image_1");
 
-        app_data.log_scroll(&ScrollDirection::Up);
+        app_data.log_scroll(&ScrollDirection::Up, 1);
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
@@ -2270,7 +2435,7 @@ mod tests {
         let result = app_data.get_log_title();
         assert_eq!(result, " 1/3 - container_1 - image_1");
 
-        app_data.log_scroll(&ScrollDirection::Up);
+        app_data.log_scroll(&ScrollDirection::Up, 1);
         let result = app_data.get_log_state();
         assert!(result.is_some());
         assert_eq!(result.as_ref().unwrap().selected(), Some(0));
@@ -2508,7 +2673,7 @@ mod tests {
             gen_container_summary(2, "dead"),
         ];
 
-        app_data.update_containers(input);
+        app_data.update_summaries(input);
         let result_post = app_data.get_container_items().to_owned();
         assert_ne!(result_pre, result_post);
         assert_eq!(result_post[0].state, State::Paused);
@@ -2593,9 +2758,8 @@ mod tests {
             }
         }
 
-        for _ in 0..=500 {
-            app_data.log_scroll(&ScrollDirection::Down);
-        }
+        app_data.log_scroll(&ScrollDirection::Down, 250);
+        app_data.log_scroll(&ScrollDirection::Down, 250);
         let result = app_data.get_logs(
             Size {
                 width: 20,
@@ -2604,7 +2768,7 @@ mod tests {
             10,
         );
         for (index, item) in result.iter().enumerate() {
-            if (481..=521).contains(&index) {
+            if (480..=520).contains(&index) {
                 assert_eq!(item, &Text::from(format!("{index}")));
             } else {
                 assert_eq!(item, &Text::from(""));

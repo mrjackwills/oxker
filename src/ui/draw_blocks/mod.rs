@@ -140,6 +140,7 @@ pub mod tests {
     use crate::{
         app_data::{AppData, ContainerId, ContainerImage, ContainerName, ContainerPorts},
         app_error::AppError,
+        docker_data::StatsData,
         tests::{gen_appdata, gen_containers},
         ui::{GuiState, Rerender, Status, draw_frame},
     };
@@ -241,31 +242,35 @@ pub mod tests {
     /// Insert some logs into the first container
     pub fn insert_logs(setup: &TuiTestSetup) {
         let logs = (1..=3).map(|i| format!("{i} line {i}")).collect::<Vec<_>>();
-        setup.app_data.lock().update_log_by_id(logs, &setup.ids[0]);
+
+        setup
+            .app_data
+            .lock()
+            .update_all_container_logs(vec![(logs, setup.ids[0].clone())]);
     }
 
     #[allow(clippy::cast_precision_loss)]
     // Add fixed data to the cpu & mem vecdeques
     pub fn insert_all_chart_data(setup: &TuiTestSetup) {
         for i in 1..=10 {
-            setup.app_data.lock().update_stats_by_id(
-                &setup.ids[0],
-                Some(i as f64),
-                Some(i * 10000),
-                i * 10000,
-                i,
-                i,
-            );
+            setup.app_data.lock().update_all_stats(vec![StatsData {
+                container_id: setup.ids[0].clone(),
+                cpu_stats: Some(i as f64),
+                mem_stats: Some(i * 10000),
+                mem_limit: i * 10000,
+                rx: i,
+                tx: i,
+            }]);
         }
         for i in 1..=3 {
-            setup.app_data.lock().update_stats_by_id(
-                &setup.ids[0],
-                Some(i as f64),
-                Some(i * 10000),
-                i * 10000,
-                i,
-                i,
-            );
+            setup.app_data.lock().update_all_stats(vec![StatsData {
+                container_id: setup.ids[0].clone(),
+                cpu_stats: Some(i as f64),
+                mem_stats: Some(i * 10000),
+                mem_limit: i * 10000,
+                rx: i,
+                tx: i,
+            }])
         }
     }
 
