@@ -942,9 +942,7 @@ impl AppData {
             all_containers.sort_by_key(|a| a.created);
         }
 
-        if !all_containers.is_empty() && self.containers.state.selected().is_none() {
-            self.containers.start();
-        }
+        let no_selection = self.containers.state.selected().is_none();
 
         for (index, id) in all_ids.iter().enumerate() {
             if !all_containers
@@ -954,7 +952,7 @@ impl AppData {
             {
                 // If removed container is currently selected, then change selected to previous
                 // This will default to 0 in any edge cases
-                if self.containers.state.selected().is_some() {
+                if !no_selection {
                     self.containers.scroll(&ScrollDirection::Up);
                 }
                 // Check is some, else can cause out of bounds error, if containers get removed before a docker update
@@ -1046,7 +1044,10 @@ impl AppData {
                     }
                 }
             }
-            // self.redraw.set_true("update_containers");
+        }
+        if no_selection && !self.containers.items.is_empty() {
+            self.sort_containers();
+            self.containers.start();
         }
     }
 
