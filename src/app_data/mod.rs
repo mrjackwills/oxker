@@ -121,7 +121,7 @@ pub struct InspectData {
     pub height: usize,
     pub as_string: String,
     pub name: String,
-    pub id: ContainerId, // pub as_lines: Vec<Line<'a>>,
+    pub id: ContainerId,
 }
 
 impl From<ContainerInspectResponse> for InspectData {
@@ -964,7 +964,7 @@ impl AppData {
 
         let no_selection = self.containers.state.selected().is_none();
 
-        for (index, id) in all_ids.iter().enumerate() {
+        for id in &all_ids {
             if !all_containers
                 .iter()
                 .filter_map(|i| i.id.as_ref())
@@ -972,11 +972,13 @@ impl AppData {
             {
                 // If removed container is currently selected, then change selected to previous
                 // This will default to 0 in any edge cases
+				// TODO fix me?
                 if !no_selection {
                     self.containers.scroll(&ScrollDirection::Up);
                 }
-                // Check is some, else can cause out of bounds error, if containers get removed before a docker update
-                if self.containers.items.get(index).is_some() {
+                // Remove the specific container by id, not by an index captured before the loop.
+                // Earlier removals shift the list, so a stored index could remove the wrong container.
+                if let Some(index) = self.containers.items.iter().position(|c| &c.id == id) {
                     self.containers.items.remove(index);
                     if self.is_selected_container(id) {
                         self.rerender.update_draw();
@@ -1071,127 +1073,6 @@ impl AppData {
         }
     }
 
-    /// Update, or insert, containers
-    pub fn _update_summaries(&mut self, mut all_containers: Vec<ContainerSummary>) {
-        let all_ids = self
-            .containers
-            .items
-            .iter()
-            .map(|i| i.id.clone())
-            .collect::<Vec<_>>();
-
-        // Only sort it no containers currently set, as afterwards the order is fixed
-        if self.containers.items.is_empty() {
-            all_containers.sort_by_key(|a| a.created);
-        }
-
-        if !all_containers.is_empty() && self.containers.state.selected().is_none() {
-            self.containers.start();
-        }
-
-        for (index, id) in all_ids.iter().enumerate() {
-            if !all_containers
-                .iter()
-                .filter_map(|i| i.id.as_ref())
-                .any(|x| x == id.get())
-            {
-                // If removed container is currently selected, then change selected to previous
-                // This will default to 0 in any edge cases
-                if self.containers.state.selected().is_some() {
-                    self.containers.scroll(&ScrollDirection::Up);
-                }
-                // Check is some, else can cause out of bounds error, if containers get removed before a docker update
-                if self.containers.items.get(index).is_some() {
-                    self.containers.items.remove(index);
-                    if self.is_selected_container(id) {
-                        self.rerender.update_draw();
-                    }
-                }
-            }
-        }
-
-        for mut i in all_containers {
-            if let Some(id) = i.id.as_ref() {
-                let name = i.names.as_mut().map_or(String::new(), |names| {
-                    names.first_mut().map_or(String::new(), |f| {
-                        if f.starts_with('/') {
-                            f.remove(0);
-                        }
-                        (*f).clone()
-                    })
-                });
-
-                let ports = i.ports.map_or(vec![], |i| {
-                    i.into_iter().map(ContainerPorts::from).collect::<Vec<_>>()
-                });
-
-                let id = ContainerId::from(id.as_str());
-
-                let is_oxker = i
-                    .command
-                    .as_ref()
-                    .is_some_and(|i| i.starts_with(ENTRY_POINT));
-
-                let status = ContainerStatus::from(
-                    i.status
-                        .as_ref()
-                        .map_or(String::new(), std::clone::Clone::clone),
-                );
-                let state = State::from((
-                    i.state
-                        .as_ref()
-                        .map_or(&bollard::models::ContainerSummaryStateEnum::DEAD, |z| z),
-                    &status,
-                ));
-                let image = i
-                    .image
-                    .as_ref()
-                    .map_or(String::new(), std::clone::Clone::clone);
-
-                let created = i
-                    .created
-                    .map_or(0, |i| u64::try_from(i).unwrap_or_default());
-
-                if let Some(item) = self.get_any_container_by_id(&id) {
-                    if item.name.get() != name {
-                        item.name.set(name);
-                    }
-                    if item.status != status {
-                        item.status = status;
-                    }
-                    if item.state != state {
-                        item.docker_controls.items = DockerCommand::gen_vec(state);
-                        // Update the list state, needs to be None if the gen_vec returns an empty vec
-                        match state {
-                            State::Removing | State::Restarting | State::Unknown => {
-                                item.docker_controls.state.select(None);
-                            }
-                            _ => item.docker_controls.start(),
-                        }
-                        item.state = state;
-                    }
-
-                    item.ports = ports;
-
-                    if item.image.get() != image {
-                        item.image.set(image);
-                    }
-                } else {
-                    // container not known, so make new ContainerItem and push into containers Ve
-                    let container = ContainerItem::new(
-                        created, id, image, is_oxker, name, ports, state, status,
-                    );
-                    let can_insert = self.can_insert(&container);
-                    if can_insert {
-                        self.containers.items.push(container);
-                    } else {
-                        self.hidden_containers.push(container);
-                    }
-                }
-            }
-            self.sort_containers();
-        }
-    }
 
     pub fn update_all_container_logs(&mut self, data: Vec<(Vec<String>, ContainerId)>) {
         for i in data {
@@ -2668,6 +2549,22 @@ mod tests {
         assert_ne!(result_pre, result_post);
         assert_eq!(result_post[0].state, State::Paused);
         assert_eq!(result_post[1].state, State::Dead);
+    }
+
+    #[test]
+    /// Removing multiple containers in one update should only remove the vanished ones.
+    /// The old index-based removal could shift indices and drop a still-alive container:
+    /// e.g. `[A,B,C]` with A and B removed would remove C instead of B.
+    fn test_app_data_update_summaries_multiple_removed() {
+        let (_ids, containers) = gen_containers();
+        let mut app_data = gen_appdata(&containers);
+
+        // Containers "1" and "2" were removed; only "3" remains
+        app_data.update_summaries(vec![gen_container_summary(3, "running")]);
+
+        let result = app_data.get_container_items();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, ContainerId::from("3"));
     }
 
     #[test]
