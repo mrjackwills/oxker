@@ -47,7 +47,7 @@ toml = { version = "1.1", default-features = false, features = [
 ] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
-uuid = { version = "1.24", features = ["fast-rng", "v4"] }
+uuid = { version = "1.25", features = ["fast-rng", "v4"] }
 
 [dev-dependencies]
 insta = "1.48"
