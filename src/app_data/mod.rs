@@ -971,15 +971,12 @@ impl AppData {
                 .any(|x| x == id.get())
             {
                 // If removed container is currently selected, then change selected to previous
-                // This will default to 0 in any edge cases
-				// TODO fix me?
-                if !no_selection {
-                    self.containers.scroll(&ScrollDirection::Up);
-                }
-                // Remove the specific container by id, not by an index captured before the loop.
-                // Earlier removals shift the list, so a stored index could remove the wrong container.
                 if let Some(index) = self.containers.items.iter().position(|c| &c.id == id) {
+                    let selection_container_id = self.get_selected_container_id();
                     self.containers.items.remove(index);
+                    if index > 0 && selection_container_id.as_ref() == Some(id) {
+                        self.containers.scroll(&ScrollDirection::Up);
+                    }
                     if self.is_selected_container(id) {
                         self.rerender.update_draw();
                     }
@@ -1072,7 +1069,6 @@ impl AppData {
             self.containers.start();
         }
     }
-
 
     pub fn update_all_container_logs(&mut self, data: Vec<(Vec<String>, ContainerId)>) {
         for i in data {
