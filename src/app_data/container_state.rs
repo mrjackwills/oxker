@@ -958,40 +958,44 @@ impl Logs {
 
     /// Format a log lone. Only return screen width amount of chars
     /// If offset set, remove `char_offset` number of chars from a Text
-    /// `text` *should* only be a single line, so just use the .first() method rather than trying to iterate
+	/// Account for Text<'static> which contain multuple plans
     fn format_log_line(text: &Text<'static>, char_offset: usize, width: u16) -> Text<'static> {
         let mut skipped = 0;
+        let mut remaining = usize::from(width);
+
         text.lines.first().map_or_else(Text::default, |line| {
-            Text::from(Line::from(
-                line.spans
-                    .iter()
-                    .filter_map(|span| {
-                        if skipped >= char_offset {
-                            Some(ratatui::text::Span::styled(
-                                span.content.chars().take(width.into()).collect::<String>(),
-                                span.style,
-                            ))
-                        } else {
-                            let span_len = span.content.chars().count();
-                            if skipped + span_len <= char_offset {
-                                skipped += span_len;
-                                None
-                            } else {
-                                let start_index = char_offset - skipped;
-                                skipped = char_offset;
-                                Some(ratatui::text::Span::styled(
-                                    span.content
-                                        .chars()
-                                        .skip(start_index)
-                                        .take(width.into())
-                                        .collect::<String>(),
-                                    span.style,
-                                ))
-                            }
-                        }
-                    })
-                    .collect::<Vec<_>>(),
-            ))
+            let mut out = Vec::new();
+            for span in &line.spans {
+                if remaining == 0 {
+                    break;
+                }
+                let span_chars = span.content.chars().collect::<Vec<_>>();
+                let start_index = if skipped < char_offset {
+                    if skipped + span_chars.len() <= char_offset {
+                        skipped += span_chars.len();
+                        continue;
+                    }
+                    let start = char_offset - skipped;
+                    skipped = char_offset;
+                    start
+                } else {
+                    0
+                };
+                let take = remaining.min(span_chars.len().saturating_sub(start_index));
+                if take > 0 {
+                    out.push(ratatui::text::Span::styled(
+                        span_chars[start_index..start_index + take]
+                            .iter()
+                            .collect::<String>(),
+                        span.style,
+                    ));
+                    remaining -= take;
+                    if remaining == 0 {
+                        break;
+                    }
+                }
+            }
+            Text::from(Line::from(out))
         })
     }
 
