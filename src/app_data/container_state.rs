@@ -959,7 +959,7 @@ impl Logs {
 
     /// Format a log lone. Only return screen width amount of chars
     /// If offset set, remove `char_offset` number of chars from a Text
-	/// Account for Text<'static> which contain multuple plans
+	/// Account for Text<'static> which contain multiple spans
     fn format_log_line(text: &Text<'static>, char_offset: usize, width: u16) -> Text<'static> {
         let mut skipped = 0;
         let mut remaining = usize::from(width);

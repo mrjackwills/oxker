@@ -188,7 +188,7 @@ impl DockerData {
         }
     }
 
-    // Actual method that is spawed into a tokio threa to update all the container stats
+    // Actual method that is spawned into a tokio threa to update all the container stats
     fn update_all_container_stats_spawn(
         all_ids: Vec<(State, ContainerId, u64)>,
         app_data: Arc<Mutex<AppData>>,
