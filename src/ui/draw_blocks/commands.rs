@@ -169,7 +169,7 @@ mod tests {
         setup
             .app_data
             .lock()
-            .update_containers(vec![gen_container_summary(1, "paused")]);
+            .update_summaries(vec![gen_container_summary(1, "paused")]);
         setup
             .app_data
             .lock()
@@ -366,7 +366,7 @@ mod tests {
         setup
             .app_data
             .lock()
-            .update_containers(vec![gen_container_summary(1, "paused")]);
+            .update_summaries(vec![gen_container_summary(1, "paused")]);
         setup
             .app_data
             .lock()

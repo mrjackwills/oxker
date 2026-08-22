@@ -4,10 +4,11 @@ use std::fmt;
 /// app errors to set in global state
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AppError {
+    DockerInspect,
     DockerCommand(DockerCommand),
+    DockerConnect,
     DockerExec,
     DockerLogs,
-    DockerConnect,
     IO(String),
     MouseCapture(bool),
     Parse(String),
@@ -19,9 +20,10 @@ impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::DockerCommand(s) => write!(f, "Unable to {s} container"),
-            Self::DockerExec => write!(f, "Unable to exec into container"),
-            Self::DockerLogs => write!(f, "Unable to save logs"),
             Self::DockerConnect => write!(f, "Unable to access docker daemon"),
+            Self::DockerExec => write!(f, "Unable to exec into container"),
+            Self::DockerInspect => write!(f, "Unable to inspect container"),
+            Self::DockerLogs => write!(f, "Unable to save logs"),
             Self::IO(msg) => write!(f, "IO error with: {msg}"),
             Self::MouseCapture(x) => {
                 let reason = if *x { "en" } else { "dis" };

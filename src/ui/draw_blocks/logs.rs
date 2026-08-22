@@ -31,6 +31,7 @@ pub fn draw(
     }
 
     if fd.status.contains(&Status::Init) {
+        // TODO change me
         let mut paragraph = Paragraph::new(format!("parsing logs {}", fd.loading_icon))
             .block(block)
             .alignment(Alignment::Center);
@@ -309,7 +310,7 @@ mod tests {
                 );
             })
             .unwrap();
-        setup.app_data.lock().log_scroll(&ScrollDirection::Up);
+        setup.app_data.lock().log_scroll(&ScrollDirection::Up, 1);
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
 
         setup

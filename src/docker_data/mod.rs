@@ -9,10 +9,7 @@ use bollard::{
 };
 use futures_util::StreamExt;
 use parking_lot::Mutex;
-use std::{
-    collections::HashSet,
-    sync::{Arc, atomic::AtomicUsize},
-};
+use std::{collections::HashSet, hash::Hash, sync::Arc};
 use tokio::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
@@ -32,14 +29,8 @@ enum SpawnId {
     Log(ContainerId),
 }
 
-impl SpawnId {
-    /// Extract the &ContainerId out of self
-    const fn get_id(&self) -> &ContainerId {
-        match self {
-            Self::Log(id) | Self::Stats((id, _)) => id,
-        }
-    }
-}
+const ETH0: &str = "eth0";
+const CONCURRENT_FUTURES: usize = 64;
 
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
 /// SpawnId::Stats takes container_id and binate value to enable both cycles of the same container_id to be inserted into the hashmap
@@ -58,6 +49,16 @@ impl Binate {
             Self::Two => Self::One,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct StatsData {
+    pub container_id: ContainerId,
+    pub cpu_stats: Option<f64>,
+    pub mem_stats: Option<u64>,
+    pub mem_limit: u64,
+    pub rx: u64,
+    pub tx: u64,
 }
 
 pub struct DockerData {
@@ -114,22 +115,15 @@ impl DockerData {
     }
 
     /// Get a single docker stat in order to update mem and cpu usage
-    /// don't take &self, so that can tokio::spawn into it's own thread
     /// remove if from spawns hashmap when complete
-    /// Get a single docker stat in order to update mem and cpu usage
-    /// don't take &self, so that can tokio::spawn into it's own thread
-    /// remove if from spawns hashmap when complete
-    async fn update_container_stat(
-        app_data: Arc<Mutex<AppData>>,
+    async fn update_container_stats(
         docker: Arc<Docker>,
-        state: State,
-        spawn_id: SpawnId,
-        spawns: Arc<Mutex<HashSet<SpawnId>>>,
-    ) {
-        let id = spawn_id.get_id();
+        container_state: State,
+        container_id: &ContainerId,
+    ) -> Option<StatsData> {
         let mut stream = docker
             .stats(
-                id.get(),
+                container_id.get(),
                 Some(StatsOptions {
                     stream: false,
                     one_shot: false,
@@ -137,77 +131,120 @@ impl DockerData {
             )
             .take(1);
 
-        while let Some(Ok(stats)) = stream.next().await {
-            // Memory stats are only collected if the container is alive - is this the behaviour we want?
+        let Some(Ok(stats)) = stream.next().await else {
+            return None;
+        };
+        // Memory stats are only collected if the container is alive - is this the behaviour we want?
 
-            let (mem_stat, cpu_stats) = if state.is_alive() {
-                let mem_cache = stats.memory_stats.as_ref().map_or(&0, |i| {
-                    i.stats
-                        .as_ref()
-                        .map_or(&0, |i| i.get("inactive_file").unwrap_or(&0))
-                });
-                (
-                    Some(
-                        stats
-                            .memory_stats
-                            .as_ref()
-                            .map_or(0, |i| i.usage.unwrap_or_default())
-                            .saturating_sub(*mem_cache),
-                    ),
-                    Some(Self::calculate_usage(&stats)),
-                )
-            } else {
-                (None, None)
-            };
-
-            // TODO is hardcoded eth0 a good idea here?
-            let (rx, tx) = stats.networks.as_ref().map_or((0, 0), |i| {
-                i.get("eth0").map_or((0, 0), |x| {
-                    (
-                        x.rx_bytes.unwrap_or_default(),
-                        x.tx_bytes.unwrap_or_default(),
-                    )
-                })
+        let (mem_stats, cpu_stats) = if container_state.is_alive() {
+            let mem_cache = stats.memory_stats.as_ref().map_or(&0, |i| {
+                i.stats
+                    .as_ref()
+                    .map_or(&0, |i| i.get("inactive_file").unwrap_or(&0))
             });
+            (
+                Some(
+                    stats
+                        .memory_stats
+                        .as_ref()
+                        .map_or(0, |i| i.usage.unwrap_or_default())
+                        .saturating_sub(*mem_cache),
+                ),
+                Some(Self::calculate_usage(&stats)),
+            )
+        } else {
+            (None, None)
+        };
 
-            app_data.lock().update_stats_by_id(
-                id,
-                cpu_stats,
-                mem_stat,
-                stats
-                    .memory_stats
-                    .unwrap_or_default()
-                    .limit
-                    .unwrap_or_default(),
-                rx,
-                tx,
-            );
-        }
-        spawns.lock().remove(&spawn_id);
+        let (rx, tx) = stats.networks.as_ref().map_or((0, 0), |i| {
+            i.get(ETH0).map_or((0, 0), |x| {
+                (
+                    x.rx_bytes.unwrap_or_default(),
+                    x.tx_bytes.unwrap_or_default(),
+                )
+            })
+        });
+
+        Some(StatsData {
+            container_id: container_id.to_owned(),
+            cpu_stats,
+            mem_stats,
+            mem_limit: stats
+                .memory_stats
+                .unwrap_or_default()
+                .limit
+                .unwrap_or_default(),
+            rx,
+            tx,
+        })
     }
 
-    /// Update all stats, spawn each container into own tokio::spawn thread
-    fn update_all_container_stats(&mut self) {
-        let all_ids = self.app_data.lock().get_all_id_state();
-        for (state, id) in all_ids {
-            let spawn_id = SpawnId::Stats((id, self.binate));
-
-            if !self.spawns.lock().contains(&spawn_id) {
-                let app_data = Arc::clone(&self.app_data);
-                let docker = Arc::clone(&self.docker);
-                let spawns = Arc::clone(&self.spawns);
-                tokio::spawn(Self::update_container_stat(
-                    app_data, docker, state, spawn_id, spawns,
-                ));
-            }
+    fn should_run(spawns: &Arc<Mutex<HashSet<SpawnId>>>, spawn_id: &SpawnId) -> bool {
+        if spawns.lock().contains(spawn_id) {
+            false
+        } else {
+            spawns.lock().insert(spawn_id.clone());
+            true
         }
+    }
+
+    // Actual method that is spawned into a tokio threa to update all the container stats
+    fn update_all_container_stats_spawn(
+        all_ids: Vec<(State, ContainerId, u64)>,
+        app_data: Arc<Mutex<AppData>>,
+        binate: Binate,
+        docker: Arc<Docker>,
+        spawns: Arc<Mutex<HashSet<SpawnId>>>,
+        tx: Option<tokio::sync::mpsc::Sender<()>>,
+    ) {
+        tokio::spawn(async move {
+            let data = futures::stream::iter(all_ids)
+                .map(|(state, id, _since)| {
+                    let spawn_id = SpawnId::Stats((id.clone(), binate));
+
+                    let (docker, spawns) = (Arc::clone(&docker), Arc::clone(&spawns));
+                    let should_run = Self::should_run(&spawns, &spawn_id);
+                    async move {
+                        let response = if should_run {
+                            Self::update_container_stats(docker, state, &id).await
+                        } else {
+                            None
+                        };
+                        spawns.lock().remove(&spawn_id);
+                        response
+                    }
+                })
+                .buffer_unordered(CONCURRENT_FUTURES)
+                .filter_map(|item| async move { item })
+                .collect::<Vec<_>>()
+                .await;
+            app_data.lock().update_all_stats(data);
+            if let Some(tx) = tx {
+                tx.send(()).await.ok();
+            }
+        });
+    }
+
+    /// Spawn a thread to update the stats of all the containers,
+    fn update_all_container_stats(&mut self, tx: Option<tokio::sync::mpsc::Sender<()>>) {
+        let all_ids = self.app_data.lock().get_all_id_state();
+        let binate = self.binate;
+
+        let (app_data, docker, spawns) = (
+            Arc::clone(&self.app_data),
+            Arc::clone(&self.docker),
+            Arc::clone(&self.spawns),
+        );
+
+        Self::update_all_container_stats_spawn(all_ids, app_data, binate, docker, spawns, tx);
+        // TODO is this doing anything?
         self.binate = self.binate.toggle();
     }
 
     /// Get all current containers, handle into ContainerItem in the app_data struct rather than here
     /// Just make sure that items sent are guaranteed to have an id
     /// If in a containerised runtime, will ignore any container that uses the `/app/oxker` as an entry point, unless the `-s` flag is set
-    async fn update_all_containers(&self) {
+    async fn get_container_summaries(&self) {
         let containers = self
             .docker
             .list_containers(Some(ListContainersOptions {
@@ -225,7 +262,7 @@ impl DockerData {
                         && f.command
                             .as_ref()
                             .is_some_and(|c| c.starts_with(ENTRY_POINT))
-                        && self.config.show_self
+                        && !self.config.show_self
                     {
                         None
                     } else {
@@ -235,19 +272,17 @@ impl DockerData {
                 None => None,
             })
             .collect::<Vec<ContainerSummary>>();
-        self.app_data.lock().update_containers(output);
+        self.app_data.lock().update_summaries(output);
     }
 
     /// Update single container logs
     /// remove it from spawns hashmap when complete
     async fn update_log(
-        app_data: Arc<Mutex<AppData>>,
         docker: Arc<Docker>,
         id: ContainerId,
         since: u64,
-        spawns: Arc<Mutex<HashSet<SpawnId>>>,
         stderr: bool,
-    ) {
+    ) -> (Vec<String>, ContainerId) {
         let options = Some(LogsOptions {
             stdout: true,
             stderr,
@@ -265,71 +300,95 @@ impl DockerData {
                 output.push(data);
             }
         }
-        app_data.lock().update_log_by_id(output, &id);
-        spawns.lock().remove(&SpawnId::Log(id));
+        (output, id)
     }
 
-    /// Update all logs, spawn each container into own tokio::spawn thread
-    fn init_all_logs(&self, all_ids: Vec<(State, ContainerId)>) -> Arc<AtomicUsize> {
-        let init = Arc::new(AtomicUsize::new(0));
-        for (_, id) in all_ids {
-            let app_data: Arc<parking_lot::lock_api::Mutex<parking_lot::RawMutex, AppData>> =
-                Arc::clone(&self.app_data);
-            let docker = Arc::clone(&self.docker);
-            let spawns = Arc::clone(&self.spawns);
-            let std_err = self.config.show_std_err;
-            let init = Arc::clone(&init);
-
-            self.spawns.lock().insert(SpawnId::Log(id.clone()));
-
-            tokio::spawn(async move {
-                Self::update_log(app_data, docker, id, 0, spawns, std_err).await;
-                init.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            });
+    /// Update all logs, use a future iter stream
+    async fn update_all_logs(
+        all_ids: Vec<(State, ContainerId, u64)>,
+        app_data: Arc<Mutex<AppData>>,
+        docker: Arc<Docker>,
+        spawns: Arc<Mutex<HashSet<SpawnId>>>,
+        std_err: bool,
+        tx: Option<tokio::sync::mpsc::Sender<()>>,
+    ) {
+        let data = futures::stream::iter(all_ids)
+            .map(|(_state, id, since)| {
+                let (docker, spawns) = (Arc::clone(&docker), Arc::clone(&spawns));
+                let spawn_id = SpawnId::Log(id.clone());
+                let should_run = Self::should_run(&spawns, &spawn_id);
+                async move {
+                    if should_run {
+                        let data = Self::update_log(docker, id, since, std_err).await;
+                        spawns.lock().remove(&spawn_id);
+                        Some(data)
+                    } else {
+                        None
+                    }
+                }
+            })
+            .buffer_unordered(CONCURRENT_FUTURES)
+            .filter_map(|item| async move { item })
+            .collect::<Vec<_>>()
+            .await;
+        app_data.lock().update_all_container_logs(data);
+        if let Some(tx) = tx {
+            tx.send(()).await.ok();
         }
-        init
     }
 
     /// Initialize docker container data, before any messages are received
     async fn initialise_container_data(&mut self) {
-        self.gui_state.lock().status_push(Status::Init);
         let loading_uuid = Uuid::new_v4();
         GuiState::start_loading_animation(&self.gui_state, loading_uuid);
-        self.update_all_containers().await;
-        let all_ids = self.app_data.lock().get_all_id_state();
-        let all_ids_len = all_ids.len();
-        let init = self.init_all_logs(all_ids);
-        self.update_all_container_stats();
+        self.gui_state.lock().status_push(Status::Init);
+        // Want to know when to stop loading, use a rx/tx! and wait for both message!
 
-        while init.load(std::sync::atomic::Ordering::SeqCst) != all_ids_len {
-            self.app_data.lock().sort_containers();
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        }
-        self.gui_state.lock().stop_loading_animation(loading_uuid);
+        self.get_container_summaries().await;
+        let all_ids = self.app_data.lock().get_all_id_state();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(2);
+        self.update_all_container_stats(Some(tx.clone()));
+        tokio::spawn(Self::update_all_logs(
+            all_ids,
+            Arc::clone(&self.app_data),
+            Arc::clone(&self.docker),
+            Arc::clone(&self.spawns),
+            self.config.show_std_err,
+            Some(tx),
+        ));
+        rx.recv_many(&mut vec![], 2).await;
         self.gui_state.lock().status_del(Status::Init);
+        self.gui_state.lock().stop_loading_animation(loading_uuid);
     }
 
     /// Update all cpu_mem, and selected container log (if a log update join_handle isn't currently being executed)
     async fn update_everything(&mut self) {
-        self.update_all_containers().await;
-        if let Some(container) = self.app_data.lock().get_selected_container() {
-            let last_updated = container.last_updated;
-            let spawn_id = SpawnId::Log(container.id.clone());
-            // Only spawn if not already spawned with a given id/binate pair
-            if !self.spawns.lock().contains(&spawn_id) {
-                self.spawns.lock().insert(spawn_id.clone());
-                tokio::spawn(Self::update_log(
-                    Arc::clone(&self.app_data),
-                    Arc::clone(&self.docker),
-                    container.id.clone(),
-                    last_updated,
-                    Arc::clone(&self.spawns),
-                    self.config.show_std_err,
-                ));
-            }
+        self.get_container_summaries().await;
+        self.update_selected_log();
+    }
+
+    /// Update all cpu_mem, and selected container log (if a log update join_handle isn't currently being executed)
+    fn update_selected_log(&mut self) {
+        if let Some(selected_container) = self
+            .app_data
+            .lock()
+            .get_selected_container_id_state_last_updated()
+        {
+            let (app_data, docker, spawns) = (
+                Arc::clone(&self.app_data),
+                Arc::clone(&self.docker),
+                Arc::clone(&self.spawns),
+            );
+            tokio::spawn(Self::update_all_logs(
+                vec![selected_container],
+                app_data,
+                docker,
+                spawns,
+                self.config.show_std_err,
+                None,
+            ));
         }
-        self.update_all_container_stats();
-        self.app_data.lock().sort_containers();
+        self.update_all_container_stats(None);
     }
 
     /// Set the global error as the docker error, and set gui_state to error
@@ -343,6 +402,55 @@ impl DockerData {
             .set_error(AppError::DockerCommand(error), gui_state, Status::Error);
     }
 
+    /// Execute a docker command, is spawned off into it's own tokio thread
+    async fn execute_command_inner(
+        app_data: Arc<Mutex<AppData>>,
+        control: DockerCommand,
+        docker: Arc<Docker>,
+        gui_state: Arc<Mutex<GuiState>>,
+        id: ContainerId,
+    ) {
+        let uuid = Uuid::new_v4();
+        GuiState::start_loading_animation(&gui_state, uuid);
+        if match control {
+            DockerCommand::Delete => {
+                gui_state.lock().set_delete_container(None);
+                docker
+                    .remove_container(
+                        id.get(),
+                        Some(RemoveContainerOptions {
+                            v: false,
+                            force: true,
+                            link: false,
+                        }),
+                    )
+                    .await
+            }
+            DockerCommand::Pause => docker.pause_container(id.get()).await,
+            DockerCommand::Restart => {
+                docker
+                    .restart_container(id.get(), None::<RestartContainerOptions>)
+                    .await
+            }
+            DockerCommand::Resume => docker.unpause_container(id.get()).await,
+            DockerCommand::Start => {
+                docker
+                    .start_container(id.get(), None::<StartContainerOptions>)
+                    .await
+            }
+            DockerCommand::Stop => {
+                docker
+                    .stop_container(id.get(), None::<StopContainerOptions>)
+                    .await
+            }
+        }
+        .is_err()
+        {
+            Self::set_error(&app_data, control, &gui_state);
+        }
+        gui_state.lock().stop_loading_animation(uuid);
+    }
+
     /// Execute docker commands (start, stop etc) on it's own tokio thread
     async fn execute_command(&mut self, control: DockerCommand, id: ContainerId) {
         let (app_data, docker, gui_state) = (
@@ -350,47 +458,9 @@ impl DockerData {
             Arc::clone(&self.docker),
             Arc::clone(&self.gui_state),
         );
-        tokio::spawn(async move {
-            let uuid = Uuid::new_v4();
-            GuiState::start_loading_animation(&gui_state, uuid);
-            if match control {
-                DockerCommand::Delete => {
-                    gui_state.lock().set_delete_container(None);
-                    docker
-                        .remove_container(
-                            id.get(),
-                            Some(RemoveContainerOptions {
-                                v: false,
-                                force: true,
-                                link: false,
-                            }),
-                        )
-                        .await
-                }
-                DockerCommand::Pause => docker.pause_container(id.get()).await,
-                DockerCommand::Restart => {
-                    docker
-                        .restart_container(id.get(), None::<RestartContainerOptions>)
-                        .await
-                }
-                DockerCommand::Resume => docker.unpause_container(id.get()).await,
-                DockerCommand::Start => {
-                    docker
-                        .start_container(id.get(), None::<StartContainerOptions>)
-                        .await
-                }
-                DockerCommand::Stop => {
-                    docker
-                        .stop_container(id.get(), None::<StopContainerOptions>)
-                        .await
-                }
-            }
-            .is_err()
-            {
-                Self::set_error(&app_data, control, &gui_state);
-            }
-            gui_state.lock().stop_loading_animation(uuid);
-        });
+        tokio::spawn(Self::execute_command_inner(
+            app_data, control, docker, gui_state, id,
+        ));
 
         self.update_everything().await;
     }
@@ -407,7 +477,8 @@ impl DockerData {
                 DockerMessage::Exec(docker_tx) => {
                     docker_tx.send(Arc::clone(&self.docker)).ok();
                 }
-                DockerMessage::Update => self.update_everything().await,
+                DockerMessage::UpdateEverything => self.update_everything().await,
+                DockerMessage::UpdateSelectedLog => self.update_everything().await,
                 DockerMessage::Inspect(id) => {
                     let t = self
                         .docker
@@ -417,10 +488,30 @@ impl DockerData {
                         self.app_data.lock().set_inspect_data(t);
                         self.gui_state.lock().status_push(Status::Inspect);
                     } else {
-                        // Set error here, can't inspect container
+                        self.app_data.lock().set_error(
+                            AppError::DockerInspect,
+                            &self.gui_state,
+                            Status::Error,
+                        );
                     }
                 }
             }
+        }
+    }
+
+    /// The spawned heartbeat function
+    async fn heartbeat_inner(
+        docker_tx: Sender<DockerMessage>,
+        update_duration: std::time::Duration,
+    ) {
+        let mut now = std::time::Instant::now();
+
+        loop {
+            docker_tx.send(DockerMessage::UpdateEverything).await.ok();
+            if let Some(to_sleep) = update_duration.checked_sub(now.elapsed()) {
+                tokio::time::sleep(to_sleep).await;
+            }
+            now = std::time::Instant::now();
         }
     }
 
@@ -428,16 +519,7 @@ impl DockerData {
     fn heartbeat(config: &Config, docker_tx: Sender<DockerMessage>) {
         let update_duration =
             std::time::Duration::from_millis(u64::from(config.docker_interval_ms));
-        let mut now = std::time::Instant::now();
-        tokio::spawn(async move {
-            loop {
-                docker_tx.send(DockerMessage::Update).await.ok();
-                if let Some(to_sleep) = update_duration.checked_sub(now.elapsed()) {
-                    tokio::time::sleep(to_sleep).await;
-                }
-                now = std::time::Instant::now();
-            }
-        });
+        tokio::spawn(Self::heartbeat_inner(docker_tx, update_duration));
     }
 
     /// Initialise self, and start the message receiving loop

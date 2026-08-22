@@ -1,21 +1,28 @@
-### 2026-07-24
+### 2026-08-22
 
 ### Chores
-+ .devcontainer updated, [1eb23fc917498aaf98b4c14e7c15b7cf80cc0925]
-+ dependencies updated, [93c9b060d17cf53a61265b70d11655b329030f79], [6956391dd8c82ffd4d372c380d9b016a0aad5c39], [9977a7e2132a1f3a5025b54f959c5d0e9f2e72cf]
-+ Rust 1.97 linting, [f19e344e1527657201f6edd880109af9aea09f02]
-+ Rust version updated, [9ad2039b96c12010b873ffb58d72655e08817368]
-+ GitHub workflow dependency updated, [e53e2653533f75844c3db30f61ae3dbe4cc98750]
-+ _typos.toml updated, [1b92954975f273ebb6c1c76f998380ac199d1077]
++ Rust version bump to 1.95.0, [0a6e30f154970c8d2af19e1f73c72705995146aa]
+* dependencies updated, [dcd2d699ddcae9d905379b808e61888352570d1d], [907774f3ddbd51604875fc5c1873468547dd9f94]
+
+### Docs
++ workflow links added, [baa575fac288176cc693376b1330979bbe26c873]
 
 ### Features
-+ .deb builds in GitHub workflow, [7dfe4867c2235ba84b88ba6bd611128ff3f8fd8a]
++ use future::streams instead of tokio::spawns, [7b55f9b98a45f20cc74bea3478fc746395084495]
 
 ### Fixes
-+ exec len() typo, [90c66580737a0f772cfbe8daa64d3371010eb734]
-+ maintain selected container on sort, closes #89, [ebcceee239f5aeb5df5e0945c5399f2f7de94999]
++ container sort, closes #89, [a386e24633cb47eb9621cba42481c02ff25c0390]
++ colour parser typo, [fe38ad170ec7f54ac8e4ccc4a1c4adec5b152b1a]
++ format_log_line account for multiple spans, [2320cb527cc4992496c582eeab20b4f192624a97]
++ input_handle quit, [31fd3a18e0e0247ce9af6963bbed017470996d7c]
++ update_summaries remove fix, [9d1cbed5e51720c489ecf578760375504f9b05d0], [f99220924e9267b020831623ba3ada122a14ca97]
 
 ### Refactors
-+ use canceltoken for loading animation, [85f1ec734f60c8c12b078dd0608ecda62a5d40ee]
++ appdata fn params, [dcb036580138ac2a0c0bff682e3cc015897dda60]
++ eth0 const, [ce1c568f77b53b62c5bedb25428dda48220e2b51]
++ health removed from container summary, [6b79ce6303476f9ea16ba0907f6a179224bb192b]
++ input_handler quit(), [dc5c14135312f5a4c8d41f79b47009797ca78011]
++ simplify show_self config, [755b9fbcecc3d7190b8f73290865fe6b727cebf7]
++ use a STATS_MAX const, [c260ddd8d9563c9377271bb62ef01f590f06eaf5]
 
 see <a href='https://github.com/mrjackwills/oxker/blob/main/CHANGELOG.md'>CHANGELOG.md</a> for more details

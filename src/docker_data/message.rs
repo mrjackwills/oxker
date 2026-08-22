@@ -10,5 +10,6 @@ pub enum DockerMessage {
     Control((DockerCommand, ContainerId)),
     Exec(Sender<Arc<Docker>>),
     Inspect(ContainerId),
-    Update,
+    UpdateEverything,
+    UpdateSelectedLog,
 }

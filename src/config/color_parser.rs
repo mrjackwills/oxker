@@ -204,7 +204,7 @@ impl From<Option<ConfigColors>> for AppColors {
                 Self::map_color(cc.pause.as_deref(), &mut app_colors.commands.pause);
                 Self::map_color(cc.restart.as_deref(), &mut app_colors.commands.restart);
                 Self::map_color(cc.stop.as_deref(), &mut app_colors.commands.stop);
-                Self::map_color(cc.delete.as_deref(), &mut app_colors.commands.start);
+                Self::map_color(cc.delete.as_deref(), &mut app_colors.commands.delete);
                 Self::map_color(cc.resume.as_deref(), &mut app_colors.commands.resume);
                 Self::map_color(cc.start.as_deref(), &mut app_colors.commands.start);
             }

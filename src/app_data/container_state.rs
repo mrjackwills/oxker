@@ -5,7 +5,7 @@ use std::{
     net::IpAddr,
 };
 
-use bollard::models::{ContainerSummaryHealthStatusEnum, PortSummary};
+use bollard::models::PortSummary;
 use jiff::{Timestamp, tz::TimeZone};
 use ratatui::{
     layout::Size,
@@ -21,11 +21,10 @@ use super::Header;
 const ONE_KB: f64 = 1000.0;
 const ONE_MB: f64 = ONE_KB * 1000.0;
 const ONE_GB: f64 = ONE_MB * 1000.0;
+pub const STATS_MAX: usize = 60;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum ScrollDirection {
-    // Next,
-    // Previous,
     Up,
     Down,
     Left,
@@ -630,7 +629,7 @@ pub struct NetworkBandwidth(VecDeque<BandwidthStat>);
 
 impl NetworkBandwidth {
     pub fn new() -> Self {
-        Self(VecDeque::with_capacity(60))
+        Self(VecDeque::with_capacity(STATS_MAX))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -648,7 +647,7 @@ impl NetworkBandwidth {
     }
 
     pub fn push(&mut self, x: u64) {
-        if self.0.len() >= 60 {
+        if self.0.len() >= STATS_MAX {
             self.0.pop_front();
         }
         self.0.push_back(BandwidthStat(x));
@@ -960,40 +959,44 @@ impl Logs {
 
     /// Format a log lone. Only return screen width amount of chars
     /// If offset set, remove `char_offset` number of chars from a Text
-    /// `text` *should* only be a single line, so just use the .first() method rather than trying to iterate
+    /// Account for Text<'static> which contain multiple spans
     fn format_log_line(text: &Text<'static>, char_offset: usize, width: u16) -> Text<'static> {
         let mut skipped = 0;
+        let mut remaining = usize::from(width);
+
         text.lines.first().map_or_else(Text::default, |line| {
-            Text::from(Line::from(
-                line.spans
-                    .iter()
-                    .filter_map(|span| {
-                        if skipped >= char_offset {
-                            Some(ratatui::text::Span::styled(
-                                span.content.chars().take(width.into()).collect::<String>(),
-                                span.style,
-                            ))
-                        } else {
-                            let span_len = span.content.chars().count();
-                            if skipped + span_len <= char_offset {
-                                skipped += span_len;
-                                None
-                            } else {
-                                let start_index = char_offset - skipped;
-                                skipped = char_offset;
-                                Some(ratatui::text::Span::styled(
-                                    span.content
-                                        .chars()
-                                        .skip(start_index)
-                                        .take(width.into())
-                                        .collect::<String>(),
-                                    span.style,
-                                ))
-                            }
-                        }
-                    })
-                    .collect::<Vec<_>>(),
-            ))
+            let mut out = Vec::new();
+            for span in &line.spans {
+                if remaining == 0 {
+                    break;
+                }
+                let span_chars = span.content.chars().collect::<Vec<_>>();
+                let start_index = if skipped < char_offset {
+                    if skipped + span_chars.len() <= char_offset {
+                        skipped += span_chars.len();
+                        continue;
+                    }
+                    let start = char_offset - skipped;
+                    skipped = char_offset;
+                    start
+                } else {
+                    0
+                };
+                let take = remaining.min(span_chars.len().saturating_sub(start_index));
+                if take > 0 {
+                    out.push(ratatui::text::Span::styled(
+                        span_chars[start_index..start_index + take]
+                            .iter()
+                            .collect::<String>(),
+                        span.style,
+                    ));
+                    remaining -= take;
+                    if remaining == 0 {
+                        break;
+                    }
+                }
+            }
+            Text::from(Line::from(out))
         })
     }
 
@@ -1091,7 +1094,6 @@ pub struct ContainerItem {
     pub cpu_stats: VecDeque<CpuStats>,
     pub created: u64,
     pub docker_controls: StatefulList<DockerCommand>,
-    pub health: Option<ContainerSummaryHealthStatusEnum>,
     pub id: ContainerId,
     pub image: ContainerImage,
     pub is_oxker: bool,
@@ -1138,17 +1140,16 @@ impl ContainerItem {
         docker_controls.start();
 
         Self {
-            cpu_stats: VecDeque::with_capacity(60),
+            cpu_stats: VecDeque::with_capacity(STATS_MAX),
             created,
             docker_controls,
-            health: None,
             id,
             image: image.into(),
             is_oxker,
             last_updated: 0,
             logs: Logs::default(),
             mem_limit: ByteStats::default(),
-            mem_stats: VecDeque::with_capacity(60),
+            mem_stats: VecDeque::with_capacity(STATS_MAX),
             name: name.into(),
             ports,
             rx: NetworkBandwidth::new(),
