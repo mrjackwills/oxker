@@ -262,7 +262,7 @@ impl DockerData {
                         && f.command
                             .as_ref()
                             .is_some_and(|c| c.starts_with(ENTRY_POINT))
-                        && self.config.show_self
+                        && !self.config.show_self
                     {
                         None
                     } else {

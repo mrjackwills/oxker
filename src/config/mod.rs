@@ -51,7 +51,7 @@ impl From<&Args> for Config {
             dir_save: Self::try_get_logs_dir(args.save_dir.as_ref()),
             dir_config: args.config_file.as_ref().map(|i| PathBuf::from(&i)),
             show_logs: true,
-            show_self: !args.show_self,
+            show_self: args.show_self,
             show_std_err: !args.no_std_err,
             show_timestamp: !args.timestamp,
             timestamp_format: Self::parse_timestamp_format(None),
