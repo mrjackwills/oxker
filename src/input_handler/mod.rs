@@ -97,7 +97,7 @@ impl InputHandler {
     fn quit(&self) {
         let status = self.gui_state.lock().get_status();
         let contains = |s: Status| status.contains(&s);
-        if !contains(Status::Error) | !contains(Status::Init) {
+        if !contains(Status::Error) || !contains(Status::Init) {
             self.is_running
                 .store(false, std::sync::atomic::Ordering::SeqCst);
         }
