@@ -5,7 +5,7 @@ use std::{
     net::IpAddr,
 };
 
-use bollard::models::{ContainerSummaryHealthStatusEnum, PortSummary};
+use bollard::models::PortSummary;
 use jiff::{Timestamp, tz::TimeZone};
 use ratatui::{
     layout::Size,
@@ -1089,7 +1089,6 @@ pub struct ContainerItem {
     pub cpu_stats: VecDeque<CpuStats>,
     pub created: u64,
     pub docker_controls: StatefulList<DockerCommand>,
-    pub health: Option<ContainerSummaryHealthStatusEnum>,
     pub id: ContainerId,
     pub image: ContainerImage,
     pub is_oxker: bool,
@@ -1139,7 +1138,6 @@ impl ContainerItem {
             cpu_stats: VecDeque::with_capacity(60),
             created,
             docker_controls,
-            health: None,
             id,
             image: image.into(),
             is_oxker,
