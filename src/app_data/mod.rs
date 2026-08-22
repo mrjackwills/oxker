@@ -924,10 +924,10 @@ impl AppData {
     /// Will also, if a sort is set, sort the containers
     fn update_stats_by_id(&mut self, input: StatsData) {
         if let Some(container) = self.get_any_container_by_id(&input.container_id) {
-            if container.cpu_stats.len() >= 60 {
+            if container.cpu_stats.len() >= STATS_MAX {
                 container.cpu_stats.pop_front();
             }
-            if container.mem_stats.len() >= 60 {
+            if container.mem_stats.len() >= STATS_MAX {
                 container.mem_stats.pop_front();
             }
 

@@ -21,6 +21,7 @@ use super::Header;
 const ONE_KB: f64 = 1000.0;
 const ONE_MB: f64 = ONE_KB * 1000.0;
 const ONE_GB: f64 = ONE_MB * 1000.0;
+pub const STATS_MAX: usize = 60;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum ScrollDirection {
@@ -628,7 +629,7 @@ pub struct NetworkBandwidth(VecDeque<BandwidthStat>);
 
 impl NetworkBandwidth {
     pub fn new() -> Self {
-        Self(VecDeque::with_capacity(60))
+        Self(VecDeque::with_capacity(STATS_MAX))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -646,7 +647,7 @@ impl NetworkBandwidth {
     }
 
     pub fn push(&mut self, x: u64) {
-        if self.0.len() >= 60 {
+        if self.0.len() >= STATS_MAX {
             self.0.pop_front();
         }
         self.0.push_back(BandwidthStat(x));
@@ -1139,7 +1140,7 @@ impl ContainerItem {
         docker_controls.start();
 
         Self {
-            cpu_stats: VecDeque::with_capacity(60),
+            cpu_stats: VecDeque::with_capacity(STATS_MAX),
             created,
             docker_controls,
             id,
@@ -1148,7 +1149,7 @@ impl ContainerItem {
             last_updated: 0,
             logs: Logs::default(),
             mem_limit: ByteStats::default(),
-            mem_stats: VecDeque::with_capacity(60),
+            mem_stats: VecDeque::with_capacity(STATS_MAX),
             name: name.into(),
             ports,
             rx: NetworkBandwidth::new(),
