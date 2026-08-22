@@ -29,6 +29,7 @@ enum SpawnId {
     Log(ContainerId),
 }
 
+const ETH0: &str = "eth0";
 const CONCURRENT_FUTURES: usize = 64;
 
 /// Cpu & Mem stats take twice as long as the update interval to get a value, so will have two being executed at the same time
@@ -155,9 +156,8 @@ impl DockerData {
             (None, None)
         };
 
-        // TODO is hardcoded eth0 a good idea here?
         let (rx, tx) = stats.networks.as_ref().map_or((0, 0), |i| {
-            i.get("eth0").map_or((0, 0), |x| {
+            i.get(ETH0).map_or((0, 0), |x| {
                 (
                     x.rx_bytes.unwrap_or_default(),
                     x.tx_bytes.unwrap_or_default(),
