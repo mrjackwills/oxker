@@ -185,10 +185,7 @@ pub struct AppData {
 
 impl AppData {
     /// Generate a default app_state
-    pub fn new(
-        config: Config,
-        redraw: &Arc<Rerender>,
-    ) -> Self {
+    pub fn new(config: Config, redraw: &Arc<Rerender>) -> Self {
         Self {
             config,
             containers: StatefulList::new(vec![]),
@@ -222,6 +219,7 @@ impl AppData {
     pub fn get_inspect_data(&self) -> Option<InspectData> {
         self.inspect_data.clone()
     }
+
     /// Filter related methods
     /// Get the filterby and filter_term
     pub const fn get_filter(&self) -> (FilterBy, Option<&String>) {
@@ -916,14 +914,7 @@ impl AppData {
     /// Update all container stats at once
     pub fn update_all_stats(&mut self, data: Vec<StatsData>) {
         for i in data {
-            self.update_stats_by_id(
-                &i.container_id,
-                i.cpu_stats,
-                i.mem_stats,
-                i.mem_limit,
-                i.rx,
-                i.tx,
-            );
+            self.update_stats_by_id(i);
         }
         self.sort_containers();
         self.rerender.update_draw();
@@ -931,16 +922,8 @@ impl AppData {
 
     /// Update container mem, cpu, & network stats, in single function so only need to call .lock() once
     /// Will also, if a sort is set, sort the containers
-    fn update_stats_by_id(
-        &mut self,
-        container_id: &ContainerId,
-        cpu_stat: Option<f64>,
-        mem_stat: Option<u64>,
-        mem_limit: u64,
-        rx: u64,
-        tx: u64,
-    ) {
-        if let Some(container) = self.get_any_container_by_id(container_id) {
+    fn update_stats_by_id(&mut self, input: StatsData) {
+        if let Some(container) = self.get_any_container_by_id(&input.container_id) {
             if container.cpu_stats.len() >= 60 {
                 container.cpu_stats.pop_front();
             }
@@ -948,20 +931,20 @@ impl AppData {
                 container.mem_stats.pop_front();
             }
 
-            if let Some(cpu) = cpu_stat {
+            if let Some(cpu) = input.cpu_stats {
                 container.cpu_stats.push_back(CpuStats::new(cpu));
             }
-            if let Some(mem) = mem_stat {
+            if let Some(mem) = input.mem_stats {
                 container.mem_stats.push_back(ByteStats::new(mem));
             }
 
             // Only insert if alive, or if is empty, need two to create an entry in the bandwidth chart, so instead this fills in the RX/TX total columns
             if container.rx.is_empty() || container.state.is_alive() {
-                container.rx.push(rx);
-                container.tx.push(tx);
+                container.rx.push(input.rx);
+                container.tx.push(input.tx);
             }
 
-            container.mem_limit.update(mem_limit);
+            container.mem_limit.update(input.mem_limit);
         }
     }
 
@@ -2644,7 +2627,14 @@ mod tests {
         let result = app_data.get_container_items();
         assert_eq!(result[0], containers[0]);
 
-        app_data.update_stats_by_id(&ids[0], Some(10.0), Some(10), 10, 10, 10);
+        app_data.update_stats_by_id(StatsData {
+            container_id: ids[0].clone(),
+            cpu_stats: Some(10.0),
+            mem_stats: Some(10),
+            mem_limit: 10,
+            rx: 10,
+            tx: 10,
+        });
 
         let result = app_data.get_container_items();
         assert_ne!(result[0], containers[0]);
