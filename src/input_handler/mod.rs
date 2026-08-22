@@ -92,15 +92,10 @@ impl InputHandler {
         self.app_data.lock().set_sort_by_header(selected_header);
     }
 
-    /// Send a quit message to docker, to abort all spawns, if an error is returned, set is_running to false here instead
-    /// If gui_status is Error or Init, then just set the is_running to false immediately, for a quicker exit
+    /// Set global is_running flag to false, *should* quit immediately
     fn quit(&self) {
-        let status = self.gui_state.lock().get_status();
-        let contains = |s: Status| status.contains(&s);
-        if !contains(Status::Error) || !contains(Status::Init) {
-            self.is_running
-                .store(false, std::sync::atomic::Ordering::SeqCst);
-        }
+        self.is_running
+            .store(false, std::sync::atomic::Ordering::SeqCst);
     }
 
     /// This is executed from the Delete Confirm dialog, and will send an internal message to actually remove the given container
