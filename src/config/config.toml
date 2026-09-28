@@ -25,6 +25,7 @@ show_timestamp = true
 gui = true
 
 # Docker host location. Will take priority over a DOCKER_HOST env.
+# Use "ssh://[user@]host[:port][/remote/socket]" to connect to a remote Docker daemon over ssh.
 # host = "/var/run/docker.sock"
 
 # Display the container logs timestamp with a given timezone, if timezone is unknown, defaults to UTC

@@ -167,6 +167,8 @@ pub struct AppData {
     sorted_by: Option<(Header, SortedOrder)>,
     current_sorted_id: Vec<ContainerId>,
     pub config: Config,
+    /// Host passed to the docker cli via `-H`, set when connected through an ssh tunnel
+    pub docker_cli_host: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -179,6 +181,7 @@ pub struct AppData {
     pub hidden_containers: Vec<ContainerItem>,
     pub inspect_data: Option<InspectData>,
     pub current_sorted_id: Vec<ContainerId>,
+    pub docker_cli_host: Option<String>,
     pub rerender: Arc<Rerender>,
     pub sorted_by: Option<(Header, SortedOrder)>,
 }
@@ -190,6 +193,7 @@ impl AppData {
             config,
             containers: StatefulList::new(vec![]),
             current_sorted_id: vec![],
+            docker_cli_host: None,
             error: None,
             filter: Filter::new(),
             hidden_containers: vec![],

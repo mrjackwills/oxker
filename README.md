@@ -142,7 +142,7 @@ Available command line arguments
 |```-s```| If running via Docker, will display the oxker container.|
 |```-g```| No TUI, essentially a debugging mode with limited functionality, for now.|
 |```--config-file [string]```| Location of a `config.toml`/`config.json`/`config.jsonc`. By default will check the users local config directory.|
-|```--host [string]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set.|
+|```--host [string]```| Connect to Docker with a custom hostname. Defaults to `/var/run/docker.sock`. Will use `$DOCKER_HOST` environment variable if set. Remote hosts can be reached over ssh with `ssh://[user@]host[:port][/remote/socket]`, see [SSH](#ssh).|
 |```--no-stderr```| Do not include stderr output in logs.|
 |```--save-dir [string]```| Save exported logs into a custom directory. Defaults to `$HOME`.|
 |```--timezone [string]```| Display the Docker logs timestamps in a given [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). Defaults to `Etc/UTC`.|
@@ -168,6 +168,19 @@ If running an `oxker` container, the default config location will be `/` rather 
 ```shell
 docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock:ro -v /some_location/config.toml:/config.toml:ro ghcr.io/mrjackwills/oxker
 ```
+
+### SSH
+
+`oxker` can manage containers on a remote machine over ssh, using the system `ssh` binary, so any alias, key, agent, or `ProxyJump` from `~/.ssh/config` will be used.
+
+```shell
+oxker --host ssh://my-server
+oxker --host ssh://user@10.0.0.5:2222
+# rootless podman, or a non-default remote socket
+oxker --host ssh://user@my-server/run/user/1000/podman/podman.sock
+```
+
+A single ssh connection forwards the remote Docker socket (default `/var/run/docker.sock`) to a private local socket, so the remote user needs access to that socket, and the ssh server must allow forwarding (`AllowStreamLocalForwarding`, enabled by default in OpenSSH).
 
 ## Build step
 

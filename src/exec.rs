@@ -38,6 +38,7 @@ const KEYBOARD_PROTO: &str = "\x1B[?u\x1B[c";
 mod command {
     pub const PWD: &str = "pwd";
     pub const DOCKER: &str = "docker";
+    pub const HOST: &str = "-H";
     pub const EXEC: &str = "exec";
     pub const SH: &str = "sh";
     pub const IT: &str = "-it";
@@ -131,11 +132,20 @@ impl AsyncTTY {
 pub enum ExecMode {
     // use Bollard Rust library
     Internal((Arc<ContainerId>, Arc<Docker>)),
-    // use the external `docker-cli`
-    External(Arc<ContainerId>),
+    // use the external `docker-cli`, with an optional `-H` host
+    External((Arc<ContainerId>, Option<String>)),
 }
 
 impl ExecMode {
+    /// Create a docker cli command, targeting the given host if set
+    fn docker_cli(host: Option<&str>) -> std::process::Command {
+        let mut cmd = std::process::Command::new(command::DOCKER);
+        if let Some(host) = host {
+            cmd.args([command::HOST, host]);
+        }
+        cmd
+    }
+
     /// Test if we can exec into the selected container, first via the Internal methods, then by the External
     /// If the container is oxker, it will always return None
     pub async fn new(app_data: &Arc<Mutex<AppData>>, docker: &Arc<Docker>) -> Option<Self> {
@@ -175,23 +185,24 @@ impl ExecMode {
                 return Some(Self::Internal((Arc::new(id), Arc::clone(docker))));
             }
 
-            if let Ok(output) = std::process::Command::new(command::DOCKER)
+            let cli_host = app_data.lock().docker_cli_host.clone();
+            if let Ok(output) = Self::docker_cli(cli_host.as_deref())
                 .args([command::EXEC, id.get(), command::PWD])
                 .output()
                 && let Ok(output) = String::from_utf8(output.stdout)
                 && !output.starts_with(OCI_ERROR)
             {
-                return Some(Self::External(Arc::new(id)));
+                return Some(Self::External((Arc::new(id), cli_host)));
             }
         }
         None
     }
 
     /// exec into the container using the external docker cli, the result it just piped into oxker
-    fn exec_external(id: &ContainerId) {
+    fn exec_external(id: &ContainerId, host: Option<&str>) {
         let mut stdout = std::io::stdout();
         stdout.write_all(CURSOR_POS.as_bytes()).ok();
-        if let Ok(mut child) = std::process::Command::new(command::DOCKER)
+        if let Ok(mut child) = Self::docker_cli(host)
             .args([command::EXEC, command::IT, id.get(), command::SH])
             .stdin(std::process::Stdio::inherit())
             .stdout(std::process::Stdio::inherit())
@@ -345,8 +356,8 @@ impl ExecMode {
 
     pub async fn run(&self, tty_size: Option<Size>) -> Result<(), AppError> {
         match self {
-            Self::External(id) => {
-                Self::exec_external(id);
+            Self::External((id, host)) => {
+                Self::exec_external(id, host.as_deref());
                 Ok(())
             }
 
