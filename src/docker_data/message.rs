@@ -6,8 +6,8 @@ use tokio::sync::oneshot::Sender;
 
 #[derive(Debug)]
 pub enum DockerMessage {
-    ConfirmDelete(ContainerId),
-    Control((DockerCommand, ContainerId)),
+    ConfirmDelete(Vec<ContainerId>),
+    Control((DockerCommand, Vec<ContainerId>)),
     Exec(Sender<Arc<Docker>>),
     Inspect(ContainerId),
     UpdateEverything,

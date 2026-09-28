@@ -172,7 +172,7 @@ pub mod tests {
                 color_logs: app_data.config.color_logs,
                 columns: app_data.get_width(),
                 container_title: app_data.get_container_title(),
-                delete_confirm: gui_data.get_delete_container(),
+                delete_confirm: gui_data.get_delete_containers(),
                 filter_by,
                 filter_term: filter_term.cloned(),
                 has_containers: app_data.get_container_len() > 0,
@@ -515,10 +515,14 @@ pub mod tests {
             });
         let colors = setup.app_data.lock().config.app_colors;
         let keymap = setup.app_data.lock().config.keymap.clone();
-        setup
-            .gui_state
-            .lock()
-            .set_delete_container(setup.app_data.lock().get_selected_container_id());
+        setup.gui_state.lock().set_delete_containers(
+            setup
+                .app_data
+                .lock()
+                .get_selected_container_id()
+                .into_iter()
+                .collect(),
+        );
 
         let fd = FrameData::from((&setup.app_data, &setup.gui_state));
         setup

@@ -414,7 +414,6 @@ impl DockerData {
         GuiState::start_loading_animation(&gui_state, uuid);
         if match control {
             DockerCommand::Delete => {
-                gui_state.lock().set_delete_container(None);
                 docker
                     .remove_container(
                         id.get(),
@@ -451,16 +450,20 @@ impl DockerData {
         gui_state.lock().stop_loading_animation(uuid);
     }
 
-    /// Execute docker commands (start, stop etc) on it's own tokio thread
-    async fn execute_command(&mut self, control: DockerCommand, id: ContainerId) {
-        let (app_data, docker, gui_state) = (
-            Arc::clone(&self.app_data),
-            Arc::clone(&self.docker),
-            Arc::clone(&self.gui_state),
-        );
-        tokio::spawn(Self::execute_command_inner(
-            app_data, control, docker, gui_state, id,
-        ));
+    /// Execute docker commands (start, stop etc), each container on it's own tokio thread
+    async fn execute_command(&mut self, control: DockerCommand, ids: Vec<ContainerId>) {
+        if control == DockerCommand::Delete {
+            self.gui_state.lock().set_delete_containers(vec![]);
+        }
+        for id in ids {
+            tokio::spawn(Self::execute_command_inner(
+                Arc::clone(&self.app_data),
+                control,
+                Arc::clone(&self.docker),
+                Arc::clone(&self.gui_state),
+                id,
+            ));
+        }
 
         self.update_everything().await;
     }
@@ -470,10 +473,10 @@ impl DockerData {
     async fn message_handler(&mut self) {
         while let Some(message) = self.receiver.recv().await {
             match message {
-                DockerMessage::ConfirmDelete(id) => {
-                    self.gui_state.lock().set_delete_container(Some(id));
+                DockerMessage::ConfirmDelete(ids) => {
+                    self.gui_state.lock().set_delete_containers(ids);
                 }
-                DockerMessage::Control((command, id)) => self.execute_command(command, id).await,
+                DockerMessage::Control((command, ids)) => self.execute_command(command, ids).await,
                 DockerMessage::Exec(docker_tx) => {
                     docker_tx.send(Arc::clone(&self.docker)).ok();
                 }

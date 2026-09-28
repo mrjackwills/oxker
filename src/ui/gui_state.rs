@@ -183,7 +183,7 @@ pub struct ScrollOffset {
 /// Global gui_state, stored in an Arc<Mutex>
 #[derive(Debug)]
 pub struct GuiState {
-    delete_container_id: Option<ContainerId>,
+    delete_container_ids: Vec<ContainerId>,
     exec_mode: Option<ExecMode>,
     intersect_delete: HashMap<DeleteButton, Rect>,
     intersect_heading: HashMap<Header, Rect>,
@@ -205,7 +205,7 @@ pub struct GuiState {
 impl GuiState {
     pub fn new(redraw: &Arc<Rerender>, show_logs: bool) -> Self {
         Self {
-            delete_container_id: None,
+            delete_container_ids: vec![],
             exec_mode: None,
             info_box_text: None,
             intersect_delete: HashMap::new(),
@@ -406,21 +406,21 @@ impl GuiState {
         }
     }
 
-    /// Check if an ContainerId is set in the delete_container field
-    pub fn get_delete_container(&self) -> Option<ContainerId> {
-        self.delete_container_id.clone()
+    /// Get the ContainerIds awaiting delete confirmation, empty if the Delete Confirm dialog isn't open
+    pub fn get_delete_containers(&self) -> Vec<ContainerId> {
+        self.delete_container_ids.clone()
     }
 
-    /// Set either a ContainerId, or None, to the delete_container field
-    /// If Some, will also insert the DeleteConfirm status into self.status
-    pub fn set_delete_container(&mut self, id: Option<ContainerId>) {
-        if id.is_some() {
-            self.status.insert(Status::DeleteConfirm);
-        } else {
+    /// Set the ContainerIds awaiting delete confirmation
+    /// If not empty, will also insert the DeleteConfirm status into self.status
+    pub fn set_delete_containers(&mut self, ids: Vec<ContainerId>) {
+        if ids.is_empty() {
             self.intersect_delete.clear();
             self.status_del(Status::DeleteConfirm);
+        } else {
+            self.status.insert(Status::DeleteConfirm);
         }
-        self.delete_container_id = id;
+        self.delete_container_ids = ids;
         self.rerender.update_draw();
     }
 

@@ -21,16 +21,24 @@ use super::{CIRCLE, generate_block};
 /// Format the container data to display nicely on the screen
 fn format_containers<'a>(colors: AppColors, i: &ContainerItem, widths: &Columns) -> Line<'a> {
     let state_style = Style::default().fg(i.state.get_color(colors));
+    let name_style = if i.is_marked {
+        Style::default()
+            .fg(colors.containers.text)
+            .add_modifier(Modifier::REVERSED)
+    } else {
+        Style::default().fg(colors.containers.text)
+    };
 
     Line::from(vec![
         Span::styled(
             format!(
-                "{:<width$}{MARGIN}",
+                "{:<width$}",
                 i.name.to_string(),
                 width = widths.name.1.into()
             ),
-            colors.containers.text,
+            name_style,
         ),
+        Span::styled(MARGIN, colors.containers.text),
         Span::styled(
             format!(
                 "{:<width$}{MARGIN}",

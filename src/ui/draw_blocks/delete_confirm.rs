@@ -22,14 +22,18 @@ use crate::{
 use super::popup;
 
 /// Draw the delete confirm box in the centre of the screen
-/// take in container id and container name here?
+/// A single container is referred to by name, multiple containers by their count
 pub fn draw(
     colors: AppColors,
     f: &mut Frame,
     gui_state: &Arc<Mutex<GuiState>>,
     keymap: &Keymap,
-    name: &ContainerName,
+    names: &[ContainerName],
 ) {
+    let (prefix, target) = match names {
+        [name] => ("container: ", name.get().to_owned()),
+        _ => ("", format!("{} containers", names.len())),
+    };
     let block = Block::default()
         .title(" Confirm Delete ")
         .border_type(BorderType::Rounded)
@@ -42,9 +46,9 @@ pub fn draw(
         .borders(Borders::ALL);
 
     let confirm = Line::from(vec![
-        Span::from("Are you sure you want to delete container: "),
+        Span::from(format!("Are you sure you want to delete {prefix}")),
         Span::styled(
-            name.get(),
+            target,
             Style::default()
                 .fg(colors.popup_delete.text_highlight)
                 .bg(colors.popup_delete.background)
@@ -153,7 +157,7 @@ mod tests {
                     f,
                     &setup.gui_state,
                     keymap,
-                    &ContainerName::from("container_1"),
+                    &[ContainerName::from("container_1")],
                 );
             })
             .unwrap();
@@ -193,7 +197,7 @@ mod tests {
         setup
             .terminal
             .draw(|f| {
-                super::draw(colors, f, &setup.gui_state, keymap, &name);
+                super::draw(colors, f, &setup.gui_state, keymap, &[name]);
             })
             .unwrap();
         assert_snapshot!(setup.terminal.backend());
@@ -219,6 +223,31 @@ mod tests {
     }
 
     #[test]
+    /// Multiple containers are referred to by their count, which is highlighted
+    fn test_draw_blocks_delete_multiple() {
+        let mut setup = test_setup(82, 10, true, true);
+
+        let colors = setup.app_data.lock().config.app_colors;
+        let keymap = &setup.app_data.lock().config.keymap;
+        let names = ["container_1", "container_2", "container_3"].map(ContainerName::from);
+
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(colors, f, &setup.gui_state, keymap, &names);
+            })
+            .unwrap();
+
+        assert_snapshot!(setup.terminal.backend());
+        let highlighted = get_result(&setup)
+            .flat_map(|(_, row)| row)
+            .filter(|cell| cell.fg == Color::Red && cell.modifier == Modifier::BOLD)
+            .map(|cell| cell.symbol().to_owned())
+            .collect::<String>();
+        assert_eq!(highlighted, "3 containers");
+    }
+
+    #[test]
     /// Custom colors applied correctly to delete popup
     fn test_draw_blocks_delete_custom_colors() {
         let mut setup = test_setup(82, 10, true, true);
@@ -235,7 +264,7 @@ mod tests {
                     f,
                     &setup.gui_state,
                     &Keymap::new(),
-                    &ContainerName::from("container_1"),
+                    &[ContainerName::from("container_1")],
                 );
             })
             .unwrap();
@@ -278,7 +307,7 @@ mod tests {
                     f,
                     &setup.gui_state,
                     &keymap,
-                    &ContainerName::from("container_1"),
+                    &[ContainerName::from("container_1")],
                 );
             })
             .unwrap();
@@ -299,7 +328,7 @@ mod tests {
                     f,
                     &setup.gui_state,
                     &keymap,
-                    &ContainerName::from("container_1"),
+                    &[ContainerName::from("container_1")],
                 );
             })
             .unwrap();
@@ -320,7 +349,7 @@ mod tests {
                     f,
                     &setup.gui_state,
                     &keymap,
-                    &ContainerName::from("container_1"),
+                    &[ContainerName::from("container_1")],
                 );
             })
             .unwrap();

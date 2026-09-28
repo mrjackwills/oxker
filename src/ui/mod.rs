@@ -306,7 +306,7 @@ pub struct FrameData {
     columns: Columns,
     container_title: String,
     log_search: Option<LogSearch>,
-    delete_confirm: Option<ContainerId>,
+    delete_confirm: Vec<ContainerId>,
     filter_by: FilterBy,
     filter_term: Option<String>,
     has_containers: bool,
@@ -335,7 +335,7 @@ impl From<&Ui> for FrameData {
             color_logs: app_data.config.color_logs,
             columns: app_data.get_width(),
             container_title: app_data.get_container_title(),
-            delete_confirm: gui_data.get_delete_container(),
+            delete_confirm: gui_data.get_delete_containers(),
             filter_by,
             filter_term: filter_term.cloned(),
             has_containers: app_data.get_container_len() > 0,
@@ -435,17 +435,26 @@ fn draw_frame(
             );
         }
 
-        if let Some(id) = fd.delete_confirm.as_ref() {
-            app_data.lock().get_container_name_by_id(id).map_or_else(
-                || {
-                    // If a container is deleted outside of oxker but whilst the Delete Confirm dialog is open, it can get caught in kind of a dead lock situation
-                    // so if in that unique situation, just clear the delete_container id
-                    gui_state.lock().set_delete_container(None);
-                },
-                |name| {
-                    draw_blocks::delete_confirm::draw(colors, f, gui_state, keymap, name);
-                },
-            );
+        if !fd.delete_confirm.is_empty() {
+            let (ids, names): (Vec<_>, Vec<_>) = {
+                let mut app_data = app_data.lock();
+                fd.delete_confirm
+                    .iter()
+                    .filter_map(|id| {
+                        app_data
+                            .get_container_name_by_id(id)
+                            .map(|name| (id.clone(), name.clone()))
+                    })
+                    .unzip()
+            };
+            // If a container is deleted outside of oxker but whilst the Delete Confirm dialog is open, it can get caught in kind of a dead lock situation
+            // so if in that unique situation, just remove the missing ids, closing the dialog if none are left
+            if ids.len() < fd.delete_confirm.len() {
+                gui_state.lock().set_delete_containers(ids);
+            }
+            if !names.is_empty() {
+                draw_blocks::delete_confirm::draw(colors, f, gui_state, keymap, &names);
+            }
         }
 
         // only draw commands + charts if there are containers

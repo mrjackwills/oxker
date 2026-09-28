@@ -167,6 +167,8 @@ pub struct AppData {
     sorted_by: Option<(Header, SortedOrder)>,
     current_sorted_id: Vec<ContainerId>,
     pub config: Config,
+    /// Host passed to the docker cli via `-H`, set when connected through an ssh tunnel
+    pub docker_cli_host: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -179,6 +181,7 @@ pub struct AppData {
     pub hidden_containers: Vec<ContainerItem>,
     pub inspect_data: Option<InspectData>,
     pub current_sorted_id: Vec<ContainerId>,
+    pub docker_cli_host: Option<String>,
     pub rerender: Arc<Rerender>,
     pub sorted_by: Option<(Header, SortedOrder)>,
 }
@@ -190,6 +193,7 @@ impl AppData {
             config,
             containers: StatefulList::new(vec![]),
             current_sorted_id: vec![],
+            docker_cli_host: None,
             error: None,
             filter: Filter::new(),
             hidden_containers: vec![],
@@ -522,14 +526,77 @@ impl AppData {
         &self.containers.items
     }
 
-    /// Get title for containers section, add a suffix indicating if the containers are currently under filter
+    /// Get title for containers section, add a suffix indicating if the containers are currently under filter, and how many are marked
     pub fn get_container_title(&self) -> String {
         let suffix = if !self.hidden_containers.is_empty() && !self.containers.items.is_empty() {
             " - filtered"
         } else {
             ""
         };
-        format!("{}{}", self.containers.get_state_title(), suffix)
+        let marked = match self.marked_count() {
+            0 => String::new(),
+            count => format!(" - {count} marked"),
+        };
+        format!("{}{suffix}{marked}", self.containers.get_state_title())
+    }
+
+    /// Number of visible containers that are marked
+    pub fn marked_count(&self) -> usize {
+        self.containers.items.iter().filter(|i| i.is_marked).count()
+    }
+
+    /// Toggle the mark of the selected container, then select the next container
+    pub fn toggle_mark_selected(&mut self) {
+        if let Some(item) = self.get_mut_selected_container() {
+            item.is_marked = !item.is_marked;
+            self.containers.scroll(&ScrollDirection::Down);
+            self.rerender.update_draw();
+        }
+    }
+
+    /// Mark every visible container, or unmark them all if they are all already marked
+    pub fn toggle_mark_all(&mut self) {
+        let mark = self.containers.items.iter().any(|i| !i.is_marked);
+        for item in &mut self.containers.items {
+            item.is_marked = mark;
+        }
+        self.rerender.update_draw();
+    }
+
+    /// Unmark every container, returns true if any container was marked
+    pub fn clear_marks(&mut self) -> bool {
+        let mut cleared = false;
+        for item in self
+            .containers
+            .items
+            .iter_mut()
+            .chain(self.hidden_containers.iter_mut())
+        {
+            cleared |= std::mem::take(&mut item.is_marked);
+        }
+        if cleared {
+            self.rerender.update_draw();
+        }
+        cleared
+    }
+
+    /// Ids of the visible marked containers which the given command can be applied to, and the total number of marked containers
+    pub fn get_marked_for_command(&self, command: DockerCommand) -> (Vec<ContainerId>, usize) {
+        let marked = self
+            .containers
+            .items
+            .iter()
+            .filter(|i| i.is_marked)
+            .collect::<Vec<_>>();
+        let ids = marked
+            .iter()
+            .filter(|i| {
+                DockerCommand::gen_vec(i.state).contains(&command)
+                    && !(i.is_oxker && self.config.in_container)
+            })
+            .map(|i| i.id.clone())
+            .collect();
+        (ids, marked.len())
     }
 
     /// Select the first container
@@ -2067,6 +2134,74 @@ mod tests {
     // **** //
     // Logs //
     // **** //
+
+    #[test]
+    /// Marking the selected container moves the selection down, and is reflected in the title
+    fn test_app_data_toggle_mark_selected() {
+        let (ids, containers) = gen_containers();
+        let mut app_data = gen_appdata(&containers);
+
+        app_data.toggle_mark_selected();
+        assert_eq!(app_data.marked_count(), 0);
+
+        app_data.containers.start();
+        app_data.toggle_mark_selected();
+        app_data.toggle_mark_selected();
+        assert_eq!(app_data.marked_count(), 2);
+        assert_eq!(app_data.get_selected_container_id(), Some(ids[2].clone()));
+        assert_eq!(app_data.get_container_title(), " 3/3 - 2 marked");
+
+        app_data.containers.start();
+        app_data.toggle_mark_selected();
+        assert_eq!(app_data.marked_count(), 1);
+        assert!(app_data.get_container_by_id(&ids[1]).unwrap().is_marked);
+    }
+
+    #[test]
+    /// Mark all marks every container, unless all are already marked, and clear_marks unmarks everything
+    fn test_app_data_toggle_mark_all_and_clear() {
+        let (_, containers) = gen_containers();
+        let mut app_data = gen_appdata(&containers);
+
+        app_data.containers.items[0].is_marked = true;
+        app_data.toggle_mark_all();
+        assert_eq!(app_data.marked_count(), 3);
+        app_data.toggle_mark_all();
+        assert_eq!(app_data.marked_count(), 0);
+
+        assert!(!app_data.clear_marks());
+        app_data.toggle_mark_all();
+        assert!(app_data.clear_marks());
+        assert_eq!(app_data.marked_count(), 0);
+    }
+
+    #[test]
+    /// Only marked containers whose state allows the command are returned
+    fn test_app_data_get_marked_for_command() {
+        let (ids, containers) = gen_containers();
+        let mut app_data = gen_appdata(&containers);
+
+        assert_eq!(
+            app_data.get_marked_for_command(DockerCommand::Stop),
+            (vec![], 0)
+        );
+
+        app_data.toggle_mark_all();
+        app_data.containers.items[1].state = State::Exited;
+
+        assert_eq!(
+            app_data.get_marked_for_command(DockerCommand::Stop),
+            (vec![ids[0].clone(), ids[2].clone()], 3)
+        );
+        assert_eq!(
+            app_data.get_marked_for_command(DockerCommand::Start),
+            (vec![ids[1].clone()], 3)
+        );
+        assert_eq!(
+            app_data.get_marked_for_command(DockerCommand::Delete),
+            (ids, 3)
+        );
+    }
 
     #[test]
     /// log title string generated correctly

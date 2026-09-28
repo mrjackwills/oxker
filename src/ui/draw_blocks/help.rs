@@ -31,6 +31,7 @@ enum KeyDescriptions {
     InspectMode,
     LogHeight,
     LogVisibility,
+    Mark,
     MouseCapture,
     Panel,
     Quit,
@@ -169,6 +170,15 @@ impl KeymapColumns {
                     KeyDescriptions::ScrollH,
                 ),
                 (vec![Some(String::from("Enter"))], KeyDescriptions::Command),
+                (
+                    vec![
+                        Some(keymap.toggle_mark.0.to_string()),
+                        Some(keymap.mark_all.0.to_string()),
+                        keymap.toggle_mark.1.as_ref().map(|i| i.to_string()),
+                        keymap.mark_all.1.as_ref().map(|i| i.to_string()),
+                    ],
+                    KeyDescriptions::Mark,
+                ),
                 (
                     vec![
                         Some(keymap.inspect.0.to_string()),
@@ -393,6 +403,15 @@ impl KeymapColumns {
                 (vec![Some(String::from("Enter"))], KeyDescriptions::Command),
                 (
                     vec![
+                        Some(config.keymap.toggle_mark.0.to_string()),
+                        Some(config.keymap.mark_all.0.to_string()),
+                        config.keymap.toggle_mark.1.as_ref().map(|i| i.to_string()),
+                        config.keymap.mark_all.1.as_ref().map(|i| i.to_string()),
+                    ],
+                    KeyDescriptions::Mark,
+                ),
+                (
+                    vec![
                         Some(config.keymap.inspect.0.to_string()),
                         config.keymap.inspect.1.as_ref().map(|i| i.to_string()),
                     ],
@@ -539,6 +558,7 @@ impl KeyDescriptions {
             Self::InspectMode => "container inspect mode",
             Self::LogHeight => "change log section height",
             Self::LogVisibility => "toggle of section visibility",
+            Self::Mark => "mark one / all - commands apply to marked",
             Self::MouseCapture => "toggle mouse capture - allows text selection",
             Self::Panel => "change panel",
             Self::Quit => "quit",
@@ -932,7 +952,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
                 };
@@ -974,7 +994,7 @@ mod tests {
                     // Left column
                     (13..=22, 3..=23) |
                     // Right Column
-                    (13..=21,58..=68)
+                    (13..=22,58..=68)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
             };
@@ -1017,7 +1037,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
                 };
@@ -1060,7 +1080,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
                 };
@@ -1113,7 +1133,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Black, Color::Yellow)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Black, Color::Red)),
                 };
@@ -1145,6 +1165,7 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('k'), None),
             log_section_height_increase: (KeyCode::Char('l'), None),
             log_section_toggle: (KeyCode::Char('m'), None),
+            mark_all: (KeyCode::Char('a'), None),
             quit: (KeyCode::Char('n'), None),
             save_logs: (KeyCode::Char('o'), None),
             scroll_down: (KeyCode::Char('p'), None),
@@ -1165,6 +1186,7 @@ mod tests {
             sort_by_tx: (KeyCode::Char('3'), None),
             sort_reset: (KeyCode::Char('4'), None),
             toggle_help: (KeyCode::Char('5'), None),
+            toggle_mark: (KeyCode::Char(' '), None),
             toggle_mouse_capture: (KeyCode::Char('6'), None),
         };
 
@@ -1204,6 +1226,7 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('u'), Some(KeyCode::Char('v'))),
             log_section_height_increase: (KeyCode::Char('w'), Some(KeyCode::Char('x'))),
             log_section_toggle: (KeyCode::Char('y'), Some(KeyCode::Char('z'))),
+            mark_all: (KeyCode::Char('a'), None),
             quit: (KeyCode::Char('0'), Some(KeyCode::Char('1'))),
             save_logs: (KeyCode::Char('2'), Some(KeyCode::Char('3'))),
             scroll_down: (KeyCode::Char('4'), Some(KeyCode::Char('5'))),
@@ -1224,6 +1247,7 @@ mod tests {
             sort_by_tx: (KeyCode::F(1), Some(KeyCode::F(2))),
             sort_reset: (KeyCode::F(3), Some(KeyCode::F(4))),
             toggle_help: (KeyCode::F(5), Some(KeyCode::F(6))),
+            toggle_mark: (KeyCode::Char(' '), None),
             toggle_mouse_capture: (KeyCode::F(7), Some(KeyCode::F(8))),
         };
 
@@ -1263,6 +1287,7 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('u'), Some(KeyCode::Char('v'))),
             log_section_height_increase: (KeyCode::Char('w'), None),
             log_section_toggle: (KeyCode::Char('y'), Some(KeyCode::Char('z'))),
+            mark_all: (KeyCode::Char('a'), None),
             quit: (KeyCode::Char('0'), None),
             save_logs: (KeyCode::Char('2'), Some(KeyCode::Char('3'))),
             scroll_down: (KeyCode::Char('4'), None),
@@ -1283,6 +1308,7 @@ mod tests {
             sort_by_tx: (KeyCode::F(1), Some(KeyCode::F(2))),
             sort_reset: (KeyCode::F(3), None),
             toggle_help: (KeyCode::F(5), Some(KeyCode::F(6))),
+            toggle_mark: (KeyCode::Char(' '), None),
             toggle_mouse_capture: (KeyCode::F(7), None),
         };
 

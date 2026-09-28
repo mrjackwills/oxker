@@ -21,8 +21,10 @@ mod config;
 mod docker_data;
 mod exec;
 mod input_handler;
+mod ssh;
 mod ui;
 
+use ssh::{SshTarget, SshTunnel};
 use ui::{GuiState, Rerender, Status, Ui};
 
 use crate::docker_data::DockerMessage;
@@ -53,20 +55,40 @@ fn read_docker_host(config: &Config) -> Option<String> {
     }
 }
 
+/// If the host is an `ssh://` url, open an ssh tunnel to the remote Docker socket
+async fn ssh_init(
+    app_data: &Arc<Mutex<AppData>>,
+    host: Option<&str>,
+) -> Result<Option<SshTunnel>, ()> {
+    let Some(target) = host.and_then(SshTarget::parse) else {
+        return Ok(None);
+    };
+    let tunnel = SshTunnel::open(&target).await.map_err(|e| error!("{e}"))?;
+    app_data.lock().docker_cli_host = Some(format!("unix://{}", tunnel.socket()));
+    Ok(Some(tunnel))
+}
+
 /// Create docker daemon handler, and only spawn up the docker data handler if a ping returns non-error
+/// The returned ssh tunnel, if any, must be kept alive for as long as the Docker connection is used
 async fn docker_init(
     app_data: &Arc<Mutex<AppData>>,
     docker_rx: Receiver<DockerMessage>,
     docker_tx: Sender<DockerMessage>,
     gui_state: &Arc<Mutex<GuiState>>,
-) {
+) -> Option<SshTunnel> {
     let host = read_docker_host(&app_data.lock().config);
+    let tunnel = ssh_init(app_data, host.as_deref()).await;
+    let socket = match &tunnel {
+        Ok(Some(tunnel)) => Some(tunnel.socket()),
+        _ => host.clone(),
+    };
 
-    if let Ok(docker) = host
-        .as_ref()
-        .map_or_else(Docker::connect_with_defaults, |host| {
-            Docker::connect_with_socket(host, 120, API_DEFAULT_VERSION)
-        })
+    if tunnel.is_ok()
+        && let Ok(docker) = socket
+            .as_ref()
+            .map_or_else(Docker::connect_with_defaults, |socket| {
+                Docker::connect_with_socket(socket, 120, API_DEFAULT_VERSION)
+            })
         && docker.ping().await.is_ok()
     {
         tokio::spawn(DockerData::start(
@@ -83,6 +105,7 @@ async fn docker_init(
             Status::DockerConnect(host),
         );
     }
+    tunnel.ok().flatten()
 }
 
 /// Create data for, and then spawn a tokio thread, for the input handler
@@ -113,7 +136,7 @@ async fn main() {
     let is_running = Arc::new(AtomicBool::new(true));
     let (docker_tx, docker_rx) = tokio::sync::mpsc::channel(32);
 
-    docker_init(&app_data, docker_rx, docker_tx.clone(), &gui_state).await;
+    let ssh_tunnel = docker_init(&app_data, docker_rx, docker_tx.clone(), &gui_state).await;
 
     if config.gui {
         let (input_tx, input_rx) = tokio::sync::mpsc::channel(32);
@@ -127,6 +150,7 @@ async fn main() {
             let err = app_data.lock().get_error();
             if let Some(err) = err {
                 error!("{}", err);
+                drop(ssh_tunnel);
                 process::exit(1);
             }
             if let Some(Ok(to_sleep)) = u128::from(config.docker_interval_ms)
@@ -216,6 +240,7 @@ mod tests {
             containers: StatefulList::new(containers.to_vec()),
             hidden_containers: vec![],
             current_sorted_id: vec![],
+            docker_cli_host: None,
             inspect_data: None,
             error: None,
             sorted_by: None,

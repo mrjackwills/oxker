@@ -49,6 +49,7 @@ optional_config_struct!(
     log_section_height_decrease,
     log_section_height_increase,
     log_section_toggle,
+    mark_all,
     quit,
     save_logs,
     scroll_down,
@@ -68,6 +69,7 @@ optional_config_struct!(
     sort_by_tx,
     sort_reset,
     toggle_help,
+    toggle_mark,
     toggle_mouse_capture
 );
 
@@ -86,6 +88,7 @@ config_struct!(
     log_section_height_decrease,
     log_section_height_increase,
     log_section_toggle,
+    mark_all,
     quit,
     save_logs,
     scroll_down,
@@ -105,6 +108,7 @@ config_struct!(
     sort_by_tx,
     sort_reset,
     toggle_help,
+    toggle_mark,
     toggle_mouse_capture
 );
 
@@ -124,6 +128,7 @@ impl Keymap {
             log_section_height_decrease: (KeyCode::Char('-'), None),
             log_section_height_increase: (KeyCode::Char('='), None),
             log_section_toggle: (KeyCode::Char('\\'), None),
+            mark_all: (KeyCode::Char('a'), None),
             quit: (KeyCode::Char('q'), None),
             save_logs: (KeyCode::Char('s'), None),
             scroll_down: (KeyCode::Down, Some(KeyCode::Char('j'))),
@@ -144,6 +149,7 @@ impl Keymap {
             sort_by_tx: (KeyCode::Char('9'), None),
             sort_reset: (KeyCode::Char('0'), None),
             toggle_help: (KeyCode::Char('h'), None),
+            toggle_mark: (KeyCode::Char(' '), None),
             toggle_mouse_capture: (KeyCode::Char('m'), None),
         }
     }
@@ -232,6 +238,8 @@ impl From<Option<ConfigKeymap>> for Keymap {
             update_keymap(ck.sort_by_tx, &mut keymap.sort_by_tx, &mut clash);
             update_keymap(ck.sort_reset, &mut keymap.sort_reset, &mut clash);
             update_keymap(ck.toggle_help, &mut keymap.toggle_help, &mut clash);
+            update_keymap(ck.toggle_mark, &mut keymap.toggle_mark, &mut clash);
+            update_keymap(ck.mark_all, &mut keymap.mark_all, &mut clash);
             update_keymap(
                 ck.toggle_mouse_capture,
                 &mut keymap.toggle_mouse_capture,
@@ -314,6 +322,7 @@ impl Keymap {
                     "pagedown" => Some(KeyCode::PageDown),
                     "pageup" => Some(KeyCode::PageUp),
                     "right" => Some(KeyCode::Right),
+                    "space" => Some(KeyCode::Char(' ')),
                     "tab" => Some(KeyCode::Tab),
                     "up" => Some(KeyCode::Up),
                     _ => None,
@@ -401,6 +410,7 @@ mod tests {
             log_section_height_decrease: None,
             log_section_height_increase: None,
             log_section_toggle: None,
+            mark_all: None,
             quit: None,
             save_logs: None,
             scroll_down: None,
@@ -421,6 +431,7 @@ mod tests {
             sort_by_tx: None,
             sort_reset: None,
             toggle_help: None,
+            toggle_mark: None,
             toggle_mouse_capture: None,
         };
 
@@ -448,6 +459,7 @@ mod tests {
             log_section_height_decrease: gen_v(("m", "n")),
             log_section_height_increase: gen_v(("o", "p")),
             log_section_toggle: gen_v(("u", "v")),
+            mark_all: gen_v(("backspace", "esc")),
             quit: gen_v(("w", "x")),
             save_logs: gen_v(("y", "z")),
             scroll_down: gen_v(("3", "4")),
@@ -468,6 +480,7 @@ mod tests {
             sort_by_tx: gen_v(("PAGEDOWN", "PAGEUP")),
             sort_reset: gen_v((",", ".")),
             toggle_help: gen_v(("-", "=")),
+            toggle_mark: gen_v(("space", "insert")),
             toggle_mouse_capture: gen_v(("\\", "/")),
         };
 
@@ -487,6 +500,7 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('m'), Some(KeyCode::Char('n'))),
             log_section_height_increase: (KeyCode::Char('o'), Some(KeyCode::Char('p'))),
             log_section_toggle: (KeyCode::Char('u'), Some(KeyCode::Char('v'))),
+            mark_all: (KeyCode::Backspace, Some(KeyCode::Esc)),
             quit: (KeyCode::Char('w'), Some(KeyCode::Char('x'))),
             save_logs: (KeyCode::Char('y'), Some(KeyCode::Char('z'))),
             scroll_down: (KeyCode::Char('3'), Some(KeyCode::Char('4'))),
@@ -507,6 +521,7 @@ mod tests {
             sort_by_tx: (KeyCode::PageDown, Some(KeyCode::PageUp)),
             sort_reset: (KeyCode::Char(','), Some(KeyCode::Char('.'))),
             toggle_help: (KeyCode::Char('-'), Some(KeyCode::Char('='))),
+            toggle_mark: (KeyCode::Char(' '), Some(KeyCode::Insert)),
             toggle_mouse_capture: (KeyCode::Char('\\'), Some(KeyCode::Char('/'))),
         };
         assert_eq!(expected, result);

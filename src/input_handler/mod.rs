@@ -19,7 +19,7 @@ use uuid::Uuid;
 
 mod message;
 use crate::{
-    app_data::{AppData, DockerCommand, Header, ScrollDirection},
+    app_data::{AppData, ContainerId, DockerCommand, Header, ScrollDirection},
     app_error::AppError,
     config,
     docker_data::DockerMessage,
@@ -98,20 +98,20 @@ impl InputHandler {
             .store(false, std::sync::atomic::Ordering::SeqCst);
     }
 
-    /// This is executed from the Delete Confirm dialog, and will send an internal message to actually remove the given container
+    /// This is executed from the Delete Confirm dialog, and will send an internal message to actually remove the given containers
     async fn confirm_delete(&self) {
-        let id = self.gui_state.lock().get_delete_container();
-        if let Some(id) = id {
+        let ids = self.gui_state.lock().get_delete_containers();
+        if !ids.is_empty() {
             self.docker_tx
-                .send(DockerMessage::Control((DockerCommand::Delete, id)))
+                .send(DockerMessage::Control((DockerCommand::Delete, ids)))
                 .await
                 .ok();
         }
     }
 
-    /// This is executed from the Delete Confirm dialog, and will clear the delete_container information (removes id and closes panel)
+    /// This is executed from the Delete Confirm dialog, and will clear the delete_container information (removes ids and closes panel)
     fn clear_delete(&self) {
-        self.gui_state.lock().set_delete_container(None);
+        self.gui_state.lock().set_delete_containers(vec![]);
     }
 
     async fn inspect_key(&self) {
@@ -258,35 +258,50 @@ impl InputHandler {
         }
     }
 
+    /// Containers the given command should be sent to, the marked containers if there are any, else the selected container
+    /// Marked containers which the command can't be applied to are skipped
+    fn command_targets(&self, command: DockerCommand) -> Vec<ContainerId> {
+        let (marked, marked_total) = self.app_data.lock().get_marked_for_command(command);
+        if marked_total == 0 {
+            // Poor way of disallowing commands to be sent to a containerised okxer
+            if self.app_data.lock().is_oxker_in_container() {
+                return vec![];
+            }
+            return self
+                .app_data
+                .lock()
+                .get_selected_container_id()
+                .into_iter()
+                .collect();
+        }
+        if marked.len() < marked_total {
+            self.gui_state.lock().set_info_box(&format!(
+                "{command}: {} of {marked_total} marked containers",
+                marked.len()
+            ));
+        }
+        marked
+    }
+
     /// Send docker command, if the Commands panel is selected
     async fn enter_key(&self) {
         // This isn't great, just means you can't send docker commands before full initialization of the program
         let panel = self.gui_state.lock().get_selected_panel();
-        if panel == SelectablePanel::Commands {
-            let option_command = self.app_data.lock().selected_docker_controls();
-
-            if let Some(command) = option_command {
-                // Poor way of disallowing commands to be sent to a containerised okxer
-                if self.app_data.lock().is_oxker_in_container() {
-                    return;
-                }
-                let option_id = self.app_data.lock().get_selected_container_id();
-                if let Some(id) = option_id {
-                    match command {
-                        DockerCommand::Delete => self
-                            .docker_tx
-                            .send(DockerMessage::ConfirmDelete(id))
-                            .await
-                            .ok(),
-
-                        _ => self
-                            .docker_tx
-                            .send(DockerMessage::Control((command, id)))
-                            .await
-                            .ok(),
-                    };
-                }
+        if panel != SelectablePanel::Commands {
+            return;
+        }
+        let option_command = self.app_data.lock().selected_docker_controls();
+        if let Some(command) = option_command {
+            let ids = self.command_targets(command);
+            if ids.is_empty() {
+                return;
             }
+            let message = if command == DockerCommand::Delete {
+                DockerMessage::ConfirmDelete(ids)
+            } else {
+                DockerMessage::Control((command, ids))
+            };
+            self.docker_tx.send(message).await.ok();
         }
     }
 
@@ -642,6 +657,25 @@ impl InputHandler {
             {
                 self.mouse_capture_key();
             }
+
+            _ if self.keymap.toggle_mark.0 == key_code
+                || self.keymap.toggle_mark.1 == Some(key_code) =>
+            {
+                self.app_data.lock().toggle_mark_selected();
+                self.docker_tx
+                    .send(DockerMessage::UpdateSelectedLog)
+                    .await
+                    .ok();
+            }
+
+            _ if self.keymap.mark_all.0 == key_code || self.keymap.mark_all.1 == Some(key_code) => {
+                self.app_data.lock().toggle_mark_all();
+            }
+
+            _ if self.keymap.clear.0 == key_code || self.keymap.clear.1 == Some(key_code) => {
+                self.app_data.lock().clear_marks();
+            }
+
             _ if self.keymap.log_section_height_decrease.0 == key_code
                 || self.keymap.log_section_height_decrease.1 == Some(key_code) =>
             {

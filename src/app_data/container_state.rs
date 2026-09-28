@@ -1096,6 +1096,8 @@ pub struct ContainerItem {
     pub docker_controls: StatefulList<DockerCommand>,
     pub id: ContainerId,
     pub image: ContainerImage,
+    /// Marked containers are the targets of docker commands, instead of just the selected container
+    pub is_marked: bool,
     pub is_oxker: bool,
     pub last_updated: u64,
     pub logs: Logs,
@@ -1145,6 +1147,7 @@ impl ContainerItem {
             docker_controls,
             id,
             image: image.into(),
+            is_marked: false,
             is_oxker,
             last_updated: 0,
             logs: Logs::default(),

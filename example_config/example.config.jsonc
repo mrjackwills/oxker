@@ -19,6 +19,7 @@
 	// Don't draw gui - for debugging - mostly pointless
 	"gui": true,
 	// Docker host location. Will take priority over a DOCKER_HOST env.
+	// Use "ssh://[user@]host[:port][/remote/socket]" to connect to a remote Docker daemon over ssh.
 	// "host": "/var/run/docker.sock",
 	// Display the timestamp in a custom format, if given option is invalid, it will default to %Y-%m-%dT%H:%M:%S.%8f -> 2025-02-18T12:34:56.01234567
 	// *Should* accept any valid strftime string up to 32 chars, see https://strftime.org/
@@ -42,7 +43,7 @@
 	// WARNING if using the \ key, it needs to be escaped, e.g. "log_section_toggle": ["\\"]
 	// 3) / \ , . # ' [ ] ; = -
 	// 3) F1-F12
-	// 4) backspace, tab, backtab, delete, end, esc, home, insert, pagedown, pageup, left, right, up, down
+	// 4) backspace, tab, backtab, delete, end, esc, home, insert, pagedown, pageup, left, right, up, down, space
 	// Each definition can have two keys associated with it
 	// WARNING "scroll_many" only accepts control, alt, shift, with no secondary option
 	// If any key clashes are found, oxker will revert to it's default keymap
@@ -157,6 +158,14 @@
 		// Toggle mouse capture
 		"toggle_mouse_capture": [
 			"m"
+		],
+		// Mark the selected container, docker commands are then sent to all marked containers
+		"toggle_mark": [
+			"space"
+		],
+		// Mark, or unmark, all containers
+		"mark_all": [
+			"a"
 		],
 		// Reduce the height of the logs list section
 		"log_section_height_decrease": [
