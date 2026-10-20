@@ -199,6 +199,7 @@ pub struct GuiState {
     show_logs: bool,
     inspect_offset: ScrollOffset,
     inspect_offset_max: ScrollOffset,
+    inspect_visible: ScrollOffset,
     status: HashSet<Status>,
     pub info_box_text: Option<(String, Instant)>,
 }
@@ -214,6 +215,7 @@ impl GuiState {
             intersect_panel: HashMap::new(),
             inspect_offset: ScrollOffset::default(),
             inspect_offset_max: ScrollOffset::default(),
+            inspect_visible: ScrollOffset::default(),
             loading_handle: None,
             loading_index: 0,
             loading_set: HashSet::new(),
@@ -247,27 +249,47 @@ impl GuiState {
     }
 
     pub fn set_inspect_offset(&mut self, sd: &ScrollDirection) {
+        self.scroll_inspect_by(sd, 1);
+    }
+
+    /// Scroll the inspect panel by one visible page in the given direction
+    pub fn set_inspect_offset_page(&mut self, sd: &ScrollDirection) {
+        let step = match sd {
+            ScrollDirection::Up | ScrollDirection::Down => self.inspect_visible.y,
+            ScrollDirection::Left | ScrollDirection::Right => self.inspect_visible.x,
+        };
+        self.scroll_inspect_by(sd, step.max(1));
+    }
+
+    fn scroll_inspect_by(&mut self, sd: &ScrollDirection, step: usize) {
         match sd {
-            ScrollDirection::Up => self.inspect_offset.y = self.inspect_offset.y.saturating_sub(1),
+            ScrollDirection::Up => {
+                self.inspect_offset.y = self.inspect_offset.y.saturating_sub(step)
+            }
             ScrollDirection::Down => {
                 self.inspect_offset.y = self
                     .inspect_offset
                     .y
-                    .saturating_add(1)
+                    .saturating_add(step)
                     .min(self.inspect_offset_max.y)
             }
             ScrollDirection::Left => {
-                self.inspect_offset.x = self.inspect_offset.x.saturating_sub(1)
+                self.inspect_offset.x = self.inspect_offset.x.saturating_sub(step)
             }
             ScrollDirection::Right => {
                 self.inspect_offset.x = self
                     .inspect_offset
                     .x
-                    .saturating_add(1)
+                    .saturating_add(step)
                     .min(self.inspect_offset_max.x)
             }
         }
         self.rerender.update_draw();
+    }
+
+    /// Set the number of visible rows/columns of the inspect panel, set during each draw
+    pub fn set_inspect_visible(&mut self, visible: ScrollOffset) {
+        self.inspect_visible = visible;
     }
 
     pub fn get_inspect_offset(&self) -> ScrollOffset {

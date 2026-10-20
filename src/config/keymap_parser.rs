@@ -49,6 +49,8 @@ optional_config_struct!(
     log_section_height_decrease,
     log_section_height_increase,
     log_section_toggle,
+    page_down,
+    page_up,
     quit,
     save_logs,
     scroll_down,
@@ -86,6 +88,8 @@ config_struct!(
     log_section_height_decrease,
     log_section_height_increase,
     log_section_toggle,
+    page_down,
+    page_up,
     quit,
     save_logs,
     scroll_down,
@@ -124,6 +128,8 @@ impl Keymap {
             log_section_height_decrease: (KeyCode::Char('-'), None),
             log_section_height_increase: (KeyCode::Char('='), None),
             log_section_toggle: (KeyCode::Char('\\'), None),
+            page_down: (KeyCode::PageDown, None),
+            page_up: (KeyCode::PageUp, None),
             quit: (KeyCode::Char('q'), None),
             save_logs: (KeyCode::Char('s'), None),
             scroll_down: (KeyCode::Down, Some(KeyCode::Char('j'))),
@@ -202,6 +208,8 @@ impl From<Option<ConfigKeymap>> for Keymap {
             update_keymap(ck.exec, &mut keymap.exec, &mut clash);
             update_keymap(ck.filter_mode, &mut keymap.filter_mode, &mut clash);
             update_keymap(ck.force_redraw, &mut keymap.force_redraw, &mut clash);
+            update_keymap(ck.page_down, &mut keymap.page_down, &mut clash);
+            update_keymap(ck.page_up, &mut keymap.page_up, &mut clash);
             update_keymap(ck.quit, &mut keymap.quit, &mut clash);
             update_keymap(ck.save_logs, &mut keymap.save_logs, &mut clash);
             update_keymap(ck.scroll_down, &mut keymap.scroll_down, &mut clash);
@@ -401,6 +409,8 @@ mod tests {
             log_section_height_decrease: None,
             log_section_height_increase: None,
             log_section_toggle: None,
+            page_down: None,
+            page_up: None,
             quit: None,
             save_logs: None,
             scroll_down: None,
@@ -448,6 +458,8 @@ mod tests {
             log_section_height_decrease: gen_v(("m", "n")),
             log_section_height_increase: gen_v(("o", "p")),
             log_section_toggle: gen_v(("u", "v")),
+            page_down: gen_v(("BACKSPACE", "DELETE")),
+            page_up: gen_v(("ESC", "BACKTAB")),
             quit: gen_v(("w", "x")),
             save_logs: gen_v(("y", "z")),
             scroll_down: gen_v(("3", "4")),
@@ -487,6 +499,8 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('m'), Some(KeyCode::Char('n'))),
             log_section_height_increase: (KeyCode::Char('o'), Some(KeyCode::Char('p'))),
             log_section_toggle: (KeyCode::Char('u'), Some(KeyCode::Char('v'))),
+            page_down: (KeyCode::Backspace, Some(KeyCode::Delete)),
+            page_up: (KeyCode::Esc, Some(KeyCode::BackTab)),
             quit: (KeyCode::Char('w'), Some(KeyCode::Char('x'))),
             save_logs: (KeyCode::Char('y'), Some(KeyCode::Char('z'))),
             scroll_down: (KeyCode::Char('3'), Some(KeyCode::Char('4'))),

@@ -130,6 +130,7 @@ In application controls, these, amongst many other settings, can be customized w
 | ```( q )``` | Quit.|
 | ```( s )``` | Save logs to `$HOME/[container_name]_[timestamp].log`, or the directory set by `--save-dir`.|
 | ```( esc )``` | Close dialog.|
+| ```( PageUp PageDown )``` | Scroll by page in inspect mode.|
 
 Available command line arguments
 

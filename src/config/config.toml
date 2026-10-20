@@ -97,6 +97,9 @@ scroll_up = ["up", "k"]
 # Horizontal scroll of the logs
 scroll_forward = ["right"]
 scroll_back = ["left"]
+# Scroll by a full page in inspect mode
+page_down = ["pagedown"]
+page_up = ["pageup"]
 # Select next panel
 select_next_panel = ["tab"]
 # Select previous panel

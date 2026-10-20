@@ -39,6 +39,7 @@ enum KeyDescriptions {
     ScrollEnd,
     ScrollH,
     ScrollSpeed,
+    ScrollPage,
     ScrollStart,
     ScrollV,
     SearchMode,
@@ -208,6 +209,10 @@ impl KeymapColumns {
                             .map(|i| i.to_string()),
                     ],
                     KeyDescriptions::MouseCapture,
+                ),
+                (
+                    vec![Some("PgDn PgUp".to_owned())],
+                    KeyDescriptions::ScrollPage,
                 ),
             ],
         }
@@ -481,6 +486,15 @@ impl KeymapColumns {
                     ],
                     KeyDescriptions::MouseCapture,
                 ),
+                (
+                    vec![
+                        Some(config.keymap.page_down.0.to_string()),
+                        Some(config.keymap.page_up.0.to_string()),
+                        config.keymap.page_down.1.as_ref().map(|i| i.to_string()),
+                        config.keymap.page_up.1.as_ref().map(|i| i.to_string()),
+                    ],
+                    KeyDescriptions::ScrollPage,
+                ),
             ],
         }
     }
@@ -548,6 +562,7 @@ impl KeyDescriptions {
             Self::ScrollStart => "scroll to start",
             Self::ScrollEnd => "scroll to end",
             Self::ScrollSpeed => "increase scroll speed",
+            Self::ScrollPage => "scroll by page (inspect mode)",
             Self::ScrollV => "scroll vertically",
             Self::SearchMode => "log search mode",
             Self::SortHeader => "sort by header - or click header",
@@ -932,7 +947,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
                 };
@@ -974,7 +989,7 @@ mod tests {
                     // Left column
                     (13..=22, 3..=23) |
                     // Right Column
-                    (13..=21,58..=68)
+                    (13..=22,58..=68)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
             };
@@ -1017,7 +1032,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
                 };
@@ -1060,7 +1075,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
                 };
@@ -1113,7 +1128,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Black, Color::Yellow)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Black, Color::Red)),
                 };
@@ -1145,6 +1160,8 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('k'), None),
             log_section_height_increase: (KeyCode::Char('l'), None),
             log_section_toggle: (KeyCode::Char('m'), None),
+            page_down: (KeyCode::Char('7'), None),
+            page_up: (KeyCode::Char('8'), None),
             quit: (KeyCode::Char('n'), None),
             save_logs: (KeyCode::Char('o'), None),
             scroll_down: (KeyCode::Char('p'), None),
@@ -1204,6 +1221,8 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('u'), Some(KeyCode::Char('v'))),
             log_section_height_increase: (KeyCode::Char('w'), Some(KeyCode::Char('x'))),
             log_section_toggle: (KeyCode::Char('y'), Some(KeyCode::Char('z'))),
+            page_down: (KeyCode::F(9), Some(KeyCode::F(10))),
+            page_up: (KeyCode::F(11), Some(KeyCode::F(12))),
             quit: (KeyCode::Char('0'), Some(KeyCode::Char('1'))),
             save_logs: (KeyCode::Char('2'), Some(KeyCode::Char('3'))),
             scroll_down: (KeyCode::Char('4'), Some(KeyCode::Char('5'))),
@@ -1263,6 +1282,8 @@ mod tests {
             log_section_height_decrease: (KeyCode::Char('u'), Some(KeyCode::Char('v'))),
             log_section_height_increase: (KeyCode::Char('w'), None),
             log_section_toggle: (KeyCode::Char('y'), Some(KeyCode::Char('z'))),
+            page_down: (KeyCode::F(9), None),
+            page_up: (KeyCode::F(11), Some(KeyCode::F(12))),
             quit: (KeyCode::Char('0'), None),
             save_logs: (KeyCode::Char('2'), Some(KeyCode::Char('3'))),
             scroll_down: (KeyCode::Char('4'), None),

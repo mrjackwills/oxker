@@ -24,6 +24,6 @@ expression: setup.terminal.backend()
 " │  - =                  change log section height         \          toggle of section visibility                  │ "
 " │  1 ~ 9                sort by header - or click header  0          stop sort                                     │ "
 " │  Tab Back Tab         change panel                      m          toggle mouse capture - allows text selection  │ "
-" │  s                    save logs to file                                                                          │ "
+" │  s                    save logs to file                 PgDn PgUp  scroll by page (inspect mode)                 │ "
 " ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ "
 "                                                                                                                      "

@@ -123,10 +123,18 @@ pub fn draw(
     let upper_title = generate_upper_title(&data, keymap);
     let lower_title = generate_lower_title(height, width, offset);
 
-    gui_state.lock().set_inspect_offset_max(ScrollOffset {
-        x: width,
-        y: height,
-    });
+    {
+        let mut gs = gui_state.lock();
+        gs.set_inspect_offset_max(ScrollOffset {
+            x: width,
+            y: height,
+        });
+        // -2 to account for the border
+        gs.set_inspect_visible(ScrollOffset {
+            x: usize::from(rect.width.saturating_sub(2)),
+            y: usize::from(rect.height.saturating_sub(2)),
+        });
+    }
 
     let paragraph = Paragraph::new(gen_lines(&data.as_string, &offset, &rect))
         .block(title_block(&upper_title, &lower_title, &colors))
@@ -547,6 +555,39 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    /// Page up/down scroll by the visible height (terminal minus border), clamped to 0 and the max offset
+    fn test_draw_blocks_inspect_page() {
+        let mut setup = test_setup(100, 50, true, true);
+        setup
+            .terminal
+            .draw(|f| {
+                super::draw(
+                    f,
+                    AppColors::new(),
+                    INSPECT_DATA.clone(),
+                    &setup.gui_state,
+                    &Keymap::new(),
+                );
+            })
+            .unwrap();
+
+        let mut gui_state = setup.gui_state.lock();
+        let mut page = |sd, times| {
+            for _ in 0..times {
+                gui_state.set_inspect_offset_page(&sd);
+            }
+            gui_state.get_inspect_offset()
+        };
+
+        assert_eq!(page(crate::app_data::ScrollDirection::Down, 1).y, 48);
+        assert_eq!(page(crate::app_data::ScrollDirection::Down, 10).y, 158);
+        assert_eq!(page(crate::app_data::ScrollDirection::Up, 1).y, 110);
+        let offset = page(crate::app_data::ScrollDirection::Up, 10);
+        assert_eq!(offset.y, 0);
+        assert_eq!(offset.x, 0);
     }
 
     fn gen_container_inspect_response() -> ContainerInspectResponse {

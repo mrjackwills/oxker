@@ -305,6 +305,10 @@ impl InputHandler {
         }
     }
 
+    fn inspect_scroll_full_page(&self, sd: &ScrollDirection) {
+        self.gui_state.lock().set_inspect_offset_page(sd);
+    }
+
     // fn inspect_scroll(&self, modifier: KeyModifiers, sd: &ScrollDirection) {
     //     for _ in 0..self.get_modifier_total(modifier) {
     //         self.gui_state.lock().set_inspect_offset(sd);
@@ -495,16 +499,29 @@ impl InputHandler {
             {
                 self.mouse_capture_key();
             }
+
             _ if self.keymap.scroll_start.0 == key_code
                 || self.keymap.scroll_start.1 == Some(key_code) =>
             {
                 self.gui_state.lock().clear_inspect_offset();
             }
+
             _ if self.keymap.scroll_end.0 == key_code
                 || self.keymap.scroll_end.1 == Some(key_code) =>
             {
                 self.gui_state.lock().set_inspect_offset_y_to_max();
             }
+
+            _ if self.keymap.page_down.0 == key_code
+                || self.keymap.page_down.1 == Some(key_code) =>
+            {
+                self.inspect_scroll_full_page(&ScrollDirection::Down);
+            }
+
+            _ if self.keymap.page_up.0 == key_code || self.keymap.page_up.1 == Some(key_code) => {
+                self.inspect_scroll_full_page(&ScrollDirection::Up);
+            }
+
             _ => (),
         }
     }

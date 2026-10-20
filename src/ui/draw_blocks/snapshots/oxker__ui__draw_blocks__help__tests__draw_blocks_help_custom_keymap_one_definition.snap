@@ -25,5 +25,5 @@ expression: setup.terminal.backend()
 " │                x   sort by Image              0     sort by RX                                                   │ "
 " │                3   sort by TX                 4     stop sort                                                    │ "
 " │                t u change panel               6     toggle mouse capture - allows text selection                 │ "
-" │                o   save logs to file                                                                             │ "
+" │                o   save logs to file          7 8   scroll by page (inspect mode)                                │ "
 " ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ "

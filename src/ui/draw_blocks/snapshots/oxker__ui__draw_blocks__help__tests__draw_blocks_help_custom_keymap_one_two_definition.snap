@@ -29,6 +29,6 @@ expression: setup.terminal.backend()
 "    │  End Esc                 sort by Image              Num Lock      sort by RX                                     │    "
 "    │  F1 F2                   sort by TX                 F3            stop sort                                      │    "
 "    │  Print Screen Left Up    change panel               F7            toggle mouse capture - allows text selection   │    "
-"    │  2 3                     save logs to file                                                                       │    "
+"    │  2 3                     save logs to file          F9 F11 F12    scroll by page (inspect mode)                  │    "
 "    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯    "
 "                                                                                                                            "
