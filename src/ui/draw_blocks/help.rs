@@ -42,6 +42,7 @@ enum KeyDescriptions {
     ScrollStart,
     ScrollV,
     SearchMode,
+    ShowStopped,
     SortCpu,
     SortHeader,
     SortId,
@@ -208,6 +209,13 @@ impl KeymapColumns {
                             .map(|i| i.to_string()),
                     ],
                     KeyDescriptions::MouseCapture,
+                ),
+                (
+                    vec![
+                        Some(keymap.toggle_show_stopped.0.to_string()),
+                        keymap.toggle_show_stopped.1.as_ref().map(|i| i.to_string()),
+                    ],
+                    KeyDescriptions::ShowStopped,
                 ),
             ],
         }
@@ -481,6 +489,18 @@ impl KeymapColumns {
                     ],
                     KeyDescriptions::MouseCapture,
                 ),
+                (
+                    vec![
+                        Some(config.keymap.toggle_show_stopped.0.to_string()),
+                        config
+                            .keymap
+                            .toggle_show_stopped
+                            .1
+                            .as_ref()
+                            .map(|i| i.to_string()),
+                    ],
+                    KeyDescriptions::ShowStopped,
+                ),
             ],
         }
     }
@@ -540,6 +560,7 @@ impl KeyDescriptions {
             Self::LogHeight => "change log section height",
             Self::LogVisibility => "toggle of section visibility",
             Self::MouseCapture => "toggle mouse capture - allows text selection",
+            Self::ShowStopped => "toggle visibility of stopped containers",
             Self::Panel => "change panel",
             Self::Quit => "quit",
             Self::Redraw => "force clear screen and redraw",
@@ -932,7 +953,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
                 };
@@ -974,7 +995,7 @@ mod tests {
                     // Left column
                     (13..=22, 3..=23) |
                     // Right Column
-                    (13..=21,58..=68)
+                    (13..=22,58..=68)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
             };
@@ -1017,7 +1038,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
                 };
@@ -1060,7 +1081,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::White)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Magenta, Color::Black)),
                 };
@@ -1113,7 +1134,7 @@ mod tests {
                     // Left column
                     (13..=22, 4..=24) |
                     // Right Column
-                    (13..=21,59..=69)
+                    (13..=22,59..=69)
                      => assert_eq!((result_cell.bg, result_cell.fg), (Color::Black, Color::Yellow)),
                     _ =>  assert_eq!((result_cell.bg, result_cell.fg), (Color::Black, Color::Red)),
                 };
@@ -1166,6 +1187,7 @@ mod tests {
             sort_reset: (KeyCode::Char('4'), None),
             toggle_help: (KeyCode::Char('5'), None),
             toggle_mouse_capture: (KeyCode::Char('6'), None),
+            toggle_show_stopped: (KeyCode::Char('7'), None),
         };
 
         setup.app_data.lock().config.keymap = keymap;
@@ -1225,6 +1247,7 @@ mod tests {
             sort_reset: (KeyCode::F(3), Some(KeyCode::F(4))),
             toggle_help: (KeyCode::F(5), Some(KeyCode::F(6))),
             toggle_mouse_capture: (KeyCode::F(7), Some(KeyCode::F(8))),
+            toggle_show_stopped: (KeyCode::F(9), Some(KeyCode::F(10))),
         };
 
         setup.app_data.lock().config.keymap = keymap;
@@ -1284,6 +1307,7 @@ mod tests {
             sort_reset: (KeyCode::F(3), None),
             toggle_help: (KeyCode::F(5), Some(KeyCode::F(6))),
             toggle_mouse_capture: (KeyCode::F(7), None),
+            toggle_show_stopped: (KeyCode::F(9), None),
         };
 
         setup.app_data.lock().config.keymap = keymap;

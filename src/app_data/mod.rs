@@ -164,6 +164,7 @@ pub struct AppData {
     hidden_containers: Vec<ContainerItem>,
     inspect_data: Option<InspectData>,
     rerender: Arc<Rerender>,
+    show_stopped: bool,
     sorted_by: Option<(Header, SortedOrder)>,
     current_sorted_id: Vec<ContainerId>,
     pub config: Config,
@@ -180,6 +181,7 @@ pub struct AppData {
     pub inspect_data: Option<InspectData>,
     pub current_sorted_id: Vec<ContainerId>,
     pub rerender: Arc<Rerender>,
+    pub show_stopped: bool,
     pub sorted_by: Option<(Header, SortedOrder)>,
 }
 
@@ -187,6 +189,7 @@ impl AppData {
     /// Generate a default app_state
     pub fn new(config: Config, redraw: &Arc<Rerender>) -> Self {
         Self {
+            show_stopped: config.show_stopped,
             config,
             containers: StatefulList::new(vec![]),
             current_sorted_id: vec![],
@@ -239,8 +242,11 @@ impl AppData {
             .map(|i| i.logs.gen_log_search())
     }
 
-    /// Check if a given container can be inserted into the "visible" list, based on current filter term and filter_by
+    /// Check if a given container can be inserted into the "visible" list, based on current filter term, filter_by, and show_stopped
     fn can_insert(&self, container: &ContainerItem) -> bool {
+        if !self.show_stopped && container.state.is_stopped() {
+            return false;
+        }
         self.filter.term.as_ref().is_none_or(|term| {
             let term = term.to_lowercase();
             match self.filter.by {
@@ -362,15 +368,37 @@ impl AppData {
         }
     }
 
-    /// Remove the filter completely
+    /// Remove the filter term completely, stopped containers stay hidden if show_stopped is false
     pub fn filter_term_clear(&mut self) {
         self.filter.term = None;
-        while let Some(i) = self.hidden_containers.pop() {
-            if self.get_container_by_id(&i.id).is_none() {
-                self.containers.items.push(i);
-            }
-        }
+        self.refilter_keep_selection();
+    }
+
+    /// Re-check every container against the filter, keeping the currently selected container selected if it's still visible, else select the first container
+    fn refilter_keep_selection(&mut self) {
+        let selected_id = self.get_selected_container_id();
+        let mut all = std::mem::take(&mut self.containers.items);
+        all.append(&mut self.hidden_containers);
+        let (visible, hidden) = all.into_iter().partition(|i| self.can_insert(i));
+        self.containers.items = visible;
+        self.hidden_containers = hidden;
         self.sort_containers();
+        let position =
+            selected_id.and_then(|id| self.containers.items.iter().position(|i| i.id == id));
+        if position.is_some() {
+            self.containers.state.select(position);
+        } else if self.containers.items.is_empty() {
+            self.containers.state.select(None);
+        } else {
+            self.containers.start();
+        }
+        self.rerender.update_draw();
+    }
+
+    /// Show or hide stopped containers
+    pub fn toggle_show_stopped(&mut self) {
+        self.show_stopped = !self.show_stopped;
+        self.refilter_keep_selection();
     }
 
     /// Container sort related methods
@@ -524,12 +552,20 @@ impl AppData {
 
     /// Get title for containers section, add a suffix indicating if the containers are currently under filter
     pub fn get_container_title(&self) -> String {
-        let suffix = if !self.hidden_containers.is_empty() && !self.containers.items.is_empty() {
+        let filtered = if self.filter.term.is_some()
+            && !self.hidden_containers.is_empty()
+            && !self.containers.items.is_empty()
+        {
             " - filtered"
         } else {
             ""
         };
-        format!("{}{}", self.containers.get_state_title(), suffix)
+        let stopped = if self.show_stopped {
+            ""
+        } else {
+            " - stopped hidden"
+        };
+        format!("{}{filtered}{stopped}", self.containers.get_state_title())
     }
 
     /// Select the first container
@@ -964,6 +1000,17 @@ impl AppData {
 
         let no_selection = self.containers.state.selected().is_none();
 
+        // Removed containers may also be in the hidden vec
+        self.hidden_containers.retain(|c| {
+            all_containers
+                .iter()
+                .filter_map(|i| i.id.as_ref())
+                .any(|x| x == c.id.get())
+        });
+
+        // A changed state/status may move a container between the visible & hidden vecs
+        let mut needs_refilter = false;
+
         for id in &all_ids {
             if !all_containers
                 .iter()
@@ -1032,8 +1079,10 @@ impl AppData {
                     }
                     if item.status != status {
                         item.status = status;
+                        needs_refilter = true;
                     }
                     if item.state != state {
+                        needs_refilter = true;
                         item.docker_controls.items = DockerCommand::gen_vec(state);
                         // Update the list state, needs to be None if the gen_vec returns an empty vec
                         match state {
@@ -1063,6 +1112,9 @@ impl AppData {
                     }
                 }
             }
+        }
+        if needs_refilter && (!self.show_stopped || self.filter.term.is_some()) {
+            self.refilter_keep_selection();
         }
         if no_selection && !self.containers.items.is_empty() {
             self.sort_containers();
@@ -2545,6 +2597,191 @@ mod tests {
         assert_ne!(result_pre, result_post);
         assert_eq!(result_post[0].state, State::Paused);
         assert_eq!(result_post[1].state, State::Dead);
+    }
+
+    // ************ //
+    // Show stopped //
+    // ************ //
+
+    /// Containers 1 & 3 running, container 2 exited, with container 1 selected
+    fn gen_appdata_one_stopped() -> AppData {
+        let (_, mut containers) = gen_containers();
+        containers[1].state = State::Exited;
+        let mut app_data = gen_appdata(&containers);
+        app_data.containers_start();
+        app_data
+    }
+
+    fn visible_ids(app_data: &AppData) -> Vec<ContainerId> {
+        app_data
+            .get_container_items()
+            .iter()
+            .map(|i| i.id.clone())
+            .collect()
+    }
+
+    #[test]
+    /// is_stopped is true for exited, dead & unknown (created) states only
+    fn test_app_data_state_is_stopped() {
+        for state in [State::Exited, State::Dead, State::Unknown] {
+            assert!(state.is_stopped());
+        }
+        for state in [
+            State::Paused,
+            State::Removing,
+            State::Restarting,
+            State::Running(RunningState::Healthy),
+            State::Running(RunningState::Unhealthy),
+        ] {
+            assert!(!state.is_stopped());
+        }
+    }
+
+    #[test]
+    /// Toggling hides stopped containers, and toggling again shows them in the original order
+    fn test_app_data_toggle_show_stopped() {
+        let mut app_data = gen_appdata_one_stopped();
+
+        app_data.toggle_show_stopped();
+        assert_eq!(
+            visible_ids(&app_data),
+            vec![ContainerId::from("1"), ContainerId::from("3")]
+        );
+        assert_eq!(app_data.hidden_containers.len(), 1);
+        assert_eq!(app_data.get_container_title(), " 1/2 - stopped hidden");
+
+        app_data.toggle_show_stopped();
+        assert_eq!(
+            visible_ids(&app_data),
+            vec![
+                ContainerId::from("1"),
+                ContainerId::from("2"),
+                ContainerId::from("3")
+            ]
+        );
+        assert!(app_data.hidden_containers.is_empty());
+        assert_eq!(app_data.get_container_title(), " 1/3");
+    }
+
+    #[test]
+    /// The selected container stays selected when still visible, else the first container is selected
+    fn test_app_data_toggle_show_stopped_selection() {
+        let mut app_data = gen_appdata_one_stopped();
+        app_data.containers.end();
+        app_data.toggle_show_stopped();
+        assert_eq!(
+            app_data.get_selected_container_id(),
+            Some(ContainerId::from("3"))
+        );
+
+        let mut app_data = gen_appdata_one_stopped();
+        app_data.containers.scroll(&ScrollDirection::Down);
+        app_data.toggle_show_stopped();
+        assert_eq!(
+            app_data.get_selected_container_id(),
+            Some(ContainerId::from("1"))
+        );
+    }
+
+    #[test]
+    /// When every container is stopped, nothing is selected, and the title still shows stopped containers are hidden
+    fn test_app_data_toggle_show_stopped_all_hidden() {
+        let (_, mut containers) = gen_containers();
+        for i in &mut containers {
+            i.state = State::Exited;
+        }
+        let mut app_data = gen_appdata(&containers);
+        app_data.containers_start();
+        app_data.toggle_show_stopped();
+        assert!(app_data.get_container_items().is_empty());
+        assert!(app_data.get_selected_container_id().is_none());
+        assert_eq!(app_data.get_container_title(), " - stopped hidden");
+    }
+
+    #[test]
+    /// A text filter and hidden stopped containers are combined, clearing the filter term keeps stopped containers hidden
+    fn test_app_data_show_stopped_with_filter_term() {
+        let mut app_data = gen_appdata_one_stopped();
+        app_data.toggle_show_stopped();
+        app_data.filter_term_push('3');
+        assert_eq!(visible_ids(&app_data), vec![ContainerId::from("3")]);
+        assert_eq!(
+            app_data.get_container_title(),
+            " 1/1 - filtered - stopped hidden"
+        );
+
+        app_data.filter_term_clear();
+        assert_eq!(
+            visible_ids(&app_data),
+            vec![ContainerId::from("1"), ContainerId::from("3")]
+        );
+    }
+
+    #[test]
+    /// A running container that stops is hidden, and shown again when it restarts, keeping the current selection
+    fn test_app_data_show_stopped_state_change() {
+        let (_, containers) = gen_containers();
+        let mut app_data = gen_appdata(&containers);
+        app_data.containers.end();
+        app_data.toggle_show_stopped();
+
+        app_data.update_summaries(vec![
+            gen_container_summary(1, "running"),
+            gen_container_summary(2, "exited"),
+            gen_container_summary(3, "running"),
+        ]);
+        assert_eq!(
+            visible_ids(&app_data),
+            vec![ContainerId::from("1"), ContainerId::from("3")]
+        );
+        assert_eq!(
+            app_data.get_selected_container_id(),
+            Some(ContainerId::from("3"))
+        );
+
+        app_data.update_summaries(vec![
+            gen_container_summary(1, "running"),
+            gen_container_summary(2, "running"),
+            gen_container_summary(3, "running"),
+        ]);
+        assert_eq!(
+            visible_ids(&app_data),
+            vec![
+                ContainerId::from("1"),
+                ContainerId::from("2"),
+                ContainerId::from("3")
+            ]
+        );
+        assert_eq!(
+            app_data.get_selected_container_id(),
+            Some(ContainerId::from("3"))
+        );
+    }
+
+    #[test]
+    /// A new stopped container is hidden, and a removed hidden container doesn't reappear when stopped containers are shown
+    fn test_app_data_show_stopped_new_and_removed() {
+        let (_, containers) = gen_containers();
+        let mut app_data = gen_appdata(&containers);
+        app_data.toggle_show_stopped();
+
+        app_data.update_summaries(vec![
+            gen_container_summary(1, "running"),
+            gen_container_summary(2, "exited"),
+            gen_container_summary(3, "running"),
+            gen_container_summary(4, "created"),
+        ]);
+        assert_eq!(app_data.hidden_containers.len(), 2);
+
+        app_data.update_summaries(vec![
+            gen_container_summary(1, "running"),
+            gen_container_summary(3, "running"),
+        ]);
+        app_data.toggle_show_stopped();
+        assert_eq!(
+            visible_ids(&app_data),
+            vec![ContainerId::from("1"), ContainerId::from("3")]
+        );
     }
 
     #[test]
