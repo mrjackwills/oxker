@@ -288,6 +288,11 @@ impl State {
         matches!(self, Self::Running(_))
     }
 
+    /// The container is stopped if it has exited, is dead, or is in an unknown state (e.g. created but never started)
+    pub const fn is_stopped(self) -> bool {
+        matches!(self, Self::Exited | Self::Dead | Self::Unknown)
+    }
+
     /// Check if state is running & healthy
     pub const fn is_healthy(self) -> bool {
         match self {

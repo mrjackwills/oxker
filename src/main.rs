@@ -186,6 +186,7 @@ mod tests {
             raw_logs: false,
             show_logs: true,
             show_self: false,
+            show_stopped: true,
             show_std_err: false,
             show_timestamp: false,
             timestamp_format: "HH:MM:SS.NNNNN dd-mm-yyyy".to_owned(),
@@ -220,6 +221,7 @@ mod tests {
             error: None,
             sorted_by: None,
             rerender: Arc::new(Rerender::new()),
+            show_stopped: true,
             filter: Filter::new(),
             config: gen_config(),
         }

@@ -15,6 +15,9 @@ raw_logs = false
 # Show self (the oxker container) when running as a docker container
 show_self = false
 
+# Show stopped containers (exited, dead, created) - this can be changed during operation with the toggle_show_stopped key
+show_stopped = true
+
 # Show std_err in logs
 show_std_err = true
 
@@ -117,6 +120,8 @@ sort_reset = ["0"]
 toggle_help = ["h"]
 # Toggle mouse capture
 toggle_mouse_capture = ["m"]
+# Toggle visibility of stopped containers, only when the containers panel is selected
+toggle_show_stopped = ["r"]
 # Reduce the height of the logs list section
 log_section_height_decrease = ["-"]
 log_section_height_increase = ["+"]

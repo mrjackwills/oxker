@@ -68,7 +68,8 @@ optional_config_struct!(
     sort_by_tx,
     sort_reset,
     toggle_help,
-    toggle_mouse_capture
+    toggle_mouse_capture,
+    toggle_show_stopped
 );
 
 config_struct!(
@@ -105,7 +106,8 @@ config_struct!(
     sort_by_tx,
     sort_reset,
     toggle_help,
-    toggle_mouse_capture
+    toggle_mouse_capture,
+    toggle_show_stopped
 );
 
 impl Keymap {
@@ -145,6 +147,7 @@ impl Keymap {
             sort_reset: (KeyCode::Char('0'), None),
             toggle_help: (KeyCode::Char('h'), None),
             toggle_mouse_capture: (KeyCode::Char('m'), None),
+            toggle_show_stopped: (KeyCode::Char('r'), None),
         }
     }
 }
@@ -235,6 +238,11 @@ impl From<Option<ConfigKeymap>> for Keymap {
             update_keymap(
                 ck.toggle_mouse_capture,
                 &mut keymap.toggle_mouse_capture,
+                &mut clash,
+            );
+            update_keymap(
+                ck.toggle_show_stopped,
+                &mut keymap.toggle_show_stopped,
                 &mut clash,
             );
             // TODO need to check for clashes when using additional modifiers
@@ -422,6 +430,7 @@ mod tests {
             sort_reset: None,
             toggle_help: None,
             toggle_mouse_capture: None,
+            toggle_show_stopped: None,
         };
 
         let result = Keymap::from(Some(input));
@@ -469,6 +478,7 @@ mod tests {
             sort_reset: gen_v((",", ".")),
             toggle_help: gen_v(("-", "=")),
             toggle_mouse_capture: gen_v(("\\", "/")),
+            toggle_show_stopped: gen_v(("BACKSPACE", "DELETE")),
         };
 
         let result = Keymap::from(Some(input));
@@ -508,6 +518,7 @@ mod tests {
             sort_reset: (KeyCode::Char(','), Some(KeyCode::Char('.'))),
             toggle_help: (KeyCode::Char('-'), Some(KeyCode::Char('='))),
             toggle_mouse_capture: (KeyCode::Char('\\'), Some(KeyCode::Char('/'))),
+            toggle_show_stopped: (KeyCode::Backspace, Some(KeyCode::Delete)),
         };
         assert_eq!(expected, result);
     }

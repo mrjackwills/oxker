@@ -660,6 +660,14 @@ impl InputHandler {
                 self.log_panel_toggle();
             }
 
+            _ if self.keymap.toggle_show_stopped.0 == key_code
+                || self.keymap.toggle_show_stopped.1 == Some(key_code) =>
+            {
+                if self.gui_state.lock().get_selected_panel() == SelectablePanel::Containers {
+                    self.app_data.lock().toggle_show_stopped();
+                }
+            }
+
             _ if self.keymap.save_logs.0 == key_code
                 || self.keymap.save_logs.1 == Some(key_code) =>
             {

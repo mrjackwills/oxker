@@ -127,6 +127,7 @@ In application controls, these, amongst many other settings, can be customized w
 | ```( f )``` | Force clear the screen & redraw the gui.|
 | ```( h )``` | Toggle help menu.|
 | ```( m )``` | Toggle mouse capture - if disabled, text on screen can be selected.|
+| ```( r )``` | Toggle visibility of stopped containers - exited, dead, and created - only when the containers panel is selected.|
 | ```( q )``` | Quit.|
 | ```( s )``` | Save logs to `$HOME/[container_name]_[timestamp].log`, or the directory set by `--save-dir`.|
 | ```( esc )``` | Close dialog.|

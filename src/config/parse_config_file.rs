@@ -72,6 +72,7 @@ pub struct ConfigFile {
     pub save_dir: Option<String>,
     pub show_logs: Option<bool>,
     pub show_self: Option<bool>,
+    pub show_stopped: Option<bool>,
     pub show_std_err: Option<bool>,
     pub show_timestamp: Option<bool>,
     pub timestamp_format: Option<String>,
