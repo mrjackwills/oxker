@@ -161,6 +161,12 @@ pub mod tests {
     pub const COLOR_TX: Color = Color::Rgb(205, 140, 140);
     pub const COLOR_ORANGE: Color = Color::Rgb(255, 178, 36);
 
+    /// Crossterm displays Control as Ctrl on Windows. Consume the three extra
+    /// padding spaces so the snapshot still checks the original column widths.
+    pub fn help_snapshot(backend: &TestBackend) -> String {
+        backend.to_string().replace("Ctrl   ", "Control")
+    }
+
     /// Create a FrameData struct from two Arc<mutex>'s, instead of from UI
     impl From<(&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)> for FrameData {
         fn from(data: (&Arc<Mutex<AppData>>, &Arc<Mutex<GuiState>>)) -> Self {
@@ -462,7 +468,7 @@ pub mod tests {
             })
             .unwrap();
 
-        assert_snapshot!(setup.terminal.backend());
+        assert_snapshot!(help_snapshot(setup.terminal.backend()));
     }
 
     #[test]

@@ -890,7 +890,7 @@ mod tests {
     use insta::assert_snapshot;
     use ratatui::style::Color;
 
-    use crate::ui::draw_blocks::tests::{get_result, test_setup};
+    use crate::ui::draw_blocks::tests::{get_result, help_snapshot, test_setup};
 
     #[test]
     /// This test is incredibly annoying
@@ -909,7 +909,7 @@ mod tests {
             })
             .unwrap();
 
-        assert_snapshot!(setup.terminal.backend());
+        assert_snapshot!(help_snapshot(setup.terminal.backend()));
 
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
@@ -953,7 +953,7 @@ mod tests {
             })
             .unwrap();
 
-        assert_snapshot!(setup.terminal.backend());
+        assert_snapshot!(help_snapshot(setup.terminal.backend()));
 
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
@@ -996,7 +996,7 @@ mod tests {
             })
             .unwrap();
 
-        assert_snapshot!(setup.terminal.backend());
+        assert_snapshot!(help_snapshot(setup.terminal.backend()));
 
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
@@ -1039,7 +1039,7 @@ mod tests {
             })
             .unwrap();
 
-        assert_snapshot!(setup.terminal.backend());
+        assert_snapshot!(help_snapshot(setup.terminal.backend()));
 
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
@@ -1090,7 +1090,7 @@ mod tests {
             })
             .unwrap();
 
-        assert_snapshot!(setup.terminal.backend());
+        assert_snapshot!(help_snapshot(setup.terminal.backend()));
 
         for (row_index, result_row) in get_result(&setup) {
             for (result_cell_index, result_cell) in result_row.iter().enumerate() {
